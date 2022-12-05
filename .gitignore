@@ -1,0 +1,5 @@
+*.csv
+/statements/
+/notebooks/
+/clipboard.py
+/report.html
