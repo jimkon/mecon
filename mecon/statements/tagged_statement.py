@@ -6,24 +6,6 @@ from mecon.statements.combined_statement import Statement
 from mecon.tagging.tags import *
 from mecon import utils
 
-ALL_TAGS = [
-    MonzoTag,
-    RevolutTag,
-    HSBCTag,
-    ITVIncomeTag,
-    DeloitteIncomeTag,
-    IncomeTag,
-    SpotifyTag,
-    GiffgaffTag,
-    SantaderBikesTag,
-    TFLTag,
-    TherapyTag,
-    SuperMarketTag,
-    FlightTicketsTag,
-    RentTag,
-HomeBillsTag
-]
-
 
 class TaggedStatement(Statement):
     def __init__(self, taggers):

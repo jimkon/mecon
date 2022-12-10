@@ -6,6 +6,7 @@ class TagsColumnDoesNotExistException(Exception):
 
 
 class Tag(abc.ABC):
+
     def __init__(self, tag_value):
         self.tag_value = tag_value
 

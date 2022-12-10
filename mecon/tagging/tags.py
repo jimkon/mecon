@@ -94,6 +94,7 @@ class SuperMarketTag(DictTag):
             {'description.lower': {'contains': 'poundland'}},
             {'description.lower': {'contains': 'co-op'}},
             {'description.lower': {'contains': 'waitrose'}},
+            {'description.lower': {'contains': 'morrisons'}},
         ])
 
 
@@ -108,12 +109,14 @@ class FlightTicketsTag(DictTag):
             {'description.lower': {'contains': 'budgetair'}},
         ])
 
+
 class RentTag(DictTag):
     def __init__(self):
         super().__init__('Rent', [
             {'description.lower': {'contains': 'joseph'}},
             {'description.upper': {'contains': 'PEACHEY'}},
         ])
+
 
 class HomeBillsTag(DictTag):
     def __init__(self):
@@ -122,4 +125,49 @@ class HomeBillsTag(DictTag):
             {'description.lower': {'contains': 'thames water'}},
             {'description.lower': {'contains': 'exarchou'}},
             {'description.lower': {'contains': 'sideris'}},
+            {'description.lower': {'contains': 'virgin media'}},
         ])
+
+
+class OnlineOrdersTag(DictTag):
+    def __init__(self):
+        super().__init__('Online orders', [
+            {'description.lower': {'contains': 'amazon'}},
+            {'description.lower': {'contains': 'aliexpress'}},
+            {'description.lower': {'contains': 'ebay'}},
+        ])
+
+
+class TooGoodToGoTag(DictTag):
+    def __init__(self):
+        super().__init__('Too Good To Go', [
+            {'description.lower': {'contains': 'toogoodtog'}},
+        ])
+
+
+class CashTag(DictTag):
+    def __init__(self):
+        super().__init__('Cash', [
+            {'description.lower': {'contains': 'cash'}},
+        ])
+
+ALL_TAGS = [
+MonzoTag,
+RevolutTag,
+HSBCTag,
+ITVIncomeTag,
+DeloitteIncomeTag,
+IncomeTag,
+SpotifyTag,
+GiffgaffTag,
+SantaderBikesTag,
+TFLTag,
+TherapyTag,
+SuperMarketTag,
+FlightTicketsTag,
+RentTag,
+HomeBillsTag,
+OnlineOrdersTag,
+TooGoodToGoTag,
+CashTag
+]
