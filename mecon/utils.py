@@ -24,16 +24,3 @@ def fill_dates(df_in):
     df_to_append['description'] = ''
     df_to_append['tags'] = [['FILLED'] for i in range(len(df_to_append))]
     return pd.concat([df_in.copy(), df_to_append]).sort_values(by=['date', 'time']).reset_index(drop=True)
-
-
-def exchange_rate_func(curr, date=None):
-    gbp_exchange_rate_dict = {
-        'EUR': 0.88,
-        'GBP': 1,
-        'HUF': 0.0021,
-        'USD': 0.89
-    }
-    if curr not in gbp_exchange_rate_dict.keys():
-        print(f"Conversion rate for {curr} not found. Amount will be nullified")
-
-    return gbp_exchange_rate_dict[curr]

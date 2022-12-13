@@ -5,7 +5,7 @@ import datetime
 import pandas as pd
 
 from mecon.statements.statement_core import ABCFetchStatement
-from mecon.utils import exchange_rate_func
+from mecon import currency
 
 
 def _grab_statement_dfs(_dir=''):
@@ -119,7 +119,7 @@ class RevolutStatement(BankStatement):
         return pd.to_datetime(self.df_raw['Started Date'], errors='coerce').dt.time
 
     def amount(self):
-        gbp_amount = self.df_raw['Amount'] * self.df_raw['Currency'].apply(exchange_rate_func)
+        gbp_amount = self.df_raw['Amount'] * self.df_raw['Currency'].apply(currency.GBP_to_curr_exchange_rate())
         return gbp_amount
 
     def currency(self):
