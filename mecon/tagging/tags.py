@@ -3,28 +3,32 @@ from mecon.tagging.manual_tag import ManualTag
 
 
 class MonzoTag(ManualTag):
-    tag_value = 'Monzo'
+    def __init__(self):
+        super().__init__('Monzo')
 
     def condition(self, element):
         return 'Bank:Monzo' in element['description']
 
 
 class RevolutTag(ManualTag):
-    tag_value = 'Revolut'
+    def __init__(self):
+        super().__init__('Revolut')
 
     def condition(self, element):
         return 'Bank:Revolut' in element['description']
 
 
 class HSBCTag(ManualTag):
-    tag_value = 'HSBC'
+    def __init__(self):
+        super().__init__('HSBC')
 
     def condition(self, element):
         return 'Bank:HSBC' in element['description']
 
 
 class ITVIncomeTag(ManualTag):
-    tag_value = 'ITV income'
+    def __init__(self):
+        super().__init__('ITV income')
 
     def condition(self, element):
         return element['amount'] > 2000 and\
@@ -33,7 +37,8 @@ class ITVIncomeTag(ManualTag):
 
 
 class DeloitteIncomeTag(ManualTag):
-    tag_value = 'Deloitte income'
+    def __init__(self):
+        super().__init__('Deloitte income')
 
     def condition(self, element):
         return element['amount'] > 2000 and\
@@ -41,28 +46,32 @@ class DeloitteIncomeTag(ManualTag):
 
 
 class IncomeTag(ManualTag):
-    tag_value = 'Income'
+    def __init__(self):
+        super().__init__('Income')
 
     def condition(self, element):
         return ('Deloitte income' in element['tags']) or ('ITV income' in element['tags'])
 
 
 class SpotifyTag(ManualTag):
-    tag_value = 'Spotify'
+    def __init__(self):
+        super().__init__('Spotify')
 
     def condition(self, element):
         return 'Spotify'.lower() in element['description'].lower()
 
 
 class GiffgaffTag(ManualTag):
-    tag_value = 'Giffgaff'
+    def __init__(self):
+        super().__init__('Giffgaff')
 
     def condition(self, element):
         return 'giffgaff' in element['description'].lower()
 
 
 class SantaderBikesTag(ManualTag):
-    tag_value = 'SantaderBikes'
+    def __init__(self):
+        super().__init__('Santader Bikes')
 
     def condition(self, element):
         return 'Tfl Cycle Hire'.lower() in element['description'].lower()
@@ -72,7 +81,7 @@ class TFLTag(DictTag):
     def __init__(self):
         super().__init__('TFL (excluding cycle hire)', {
             'description.lower': {'contains': 'tfl'},
-            'tags': {'not_contains': SantaderBikesTag.tag_value}
+            'tags': {'not_contains': SantaderBikesTag().tag_name}
         })
 
 
@@ -152,22 +161,22 @@ class CashTag(DictTag):
         ])
 
 ALL_TAGS = [
-MonzoTag,
-RevolutTag,
-HSBCTag,
-ITVIncomeTag,
-DeloitteIncomeTag,
-IncomeTag,
-SpotifyTag,
-GiffgaffTag,
-SantaderBikesTag,
-TFLTag,
-TherapyTag,
-SuperMarketTag,
-FlightTicketsTag,
-RentTag,
-HomeBillsTag,
-OnlineOrdersTag,
-TooGoodToGoTag,
-CashTag
+MonzoTag(),
+RevolutTag(),
+HSBCTag(),
+ITVIncomeTag(),
+DeloitteIncomeTag(),
+IncomeTag(),
+SpotifyTag(),
+GiffgaffTag(),
+SantaderBikesTag(),
+TFLTag(),
+TherapyTag(),
+SuperMarketTag(),
+FlightTicketsTag(),
+RentTag(),
+HomeBillsTag(),
+OnlineOrdersTag(),
+TooGoodToGoTag(),
+CashTag()
 ]

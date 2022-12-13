@@ -4,10 +4,8 @@ from mecon.tagging.tag import Tag
 
 
 class ManualTag(Tag, abc.ABC):
-    tag_value = 'default_tag_value'
-
-    def __init__(self):
-        super().__init__(self.tag_value)
+    def __init__(self, tag_name):
+        super().__init__(tag_name)
 
     @abc.abstractmethod
     def condition(self, element):

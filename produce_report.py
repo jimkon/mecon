@@ -51,9 +51,7 @@ def create_report():
 
     report_html.add_tab("Balance", balance_plot_page())
 
-    for tag in ['TFL (excluding cycle hire)', 'Giffgaff', 'Spotify', 'SantaderBikes',
-                'Therapy', 'Super Market', 'Flight tickets', 'Rent', 'Bills', 'Online orders',
-                'Too Good To Go', 'Cash']:
+    for tag in [tagger.tag_name for tagger in TaggedData.fully_tagged_statement().taggers]:
         report_html.add_tab(tag, create_service_report(tag))
 
     report_html.save('report.html')

@@ -6,9 +6,8 @@ class TagsColumnDoesNotExistException(Exception):
 
 
 class Tag(abc.ABC):
-
-    def __init__(self, tag_value):
-        self.tag_value = tag_value
+    def __init__(self, tag_name):
+        self.tag_name = tag_name
 
     def tag(self, _df):
         return self._add_tag(_df)
@@ -18,12 +17,12 @@ class Tag(abc.ABC):
             raise TagsColumnDoesNotExistException
 
         condition = self._calc_condition(_df)
-        print(f"{self.tag_value}: {sum(condition)}/{len(condition)} rows where tagged.")
+        print(f"{self.tag_name}: {sum(condition)}/{len(condition)} rows where tagged.")
 
         def _l(x):
             tags_array, cond = x
-            if cond and self.tag_value not in tags_array:
-                tags_array.append(self.tag_value)
+            if cond and self.tag_name not in tags_array:
+                tags_array.append(self.tag_name)
             return x
 
         list(map(_l, zip(_df[tag_column], condition)))

@@ -18,7 +18,7 @@ class TaggedData:
     def _init_tags(self):
         self._df['tags'] = [[] for _ in range(len(self._df))]
         for tagger in self.taggers:
-            tagger().tag(self._df)
+            tagger.tag(self._df)
 
     @lru_cache
     def dataframe(self, fill_dates=True):
