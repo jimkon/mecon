@@ -40,9 +40,9 @@ class TaggedStatement(Statement):
         return df_res
 
     def get_tagged_rows(self, tag):
-        cond = self.dataframe()['tags'].apply(lambda x: tag in x)
+        cond = self.dataframe()['tags'].apply(lambda x: (tag in x) if tag else True)
         if cond.sum() == 0:
-            raise ValueError(f'Tag "{tag}" returned no rows.')
+            print(f'{" WARNING ":#^100}\n\tTag "{tag}" returned no rows.')
         return self.dataframe()[cond]
 
     def count_tag_appearance(self, tag):
