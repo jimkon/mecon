@@ -30,7 +30,7 @@ def create_df_table_page(df, title=''):
 def create_service_report(service_tag):
     df = TaggedStatement.fully_tagged_statement().get_tagged_rows(service_tag)
     if len(df) == 0:
-        return f"<h1>No rows are tagged as '{service_tag}' </h1>"
+        return html_pages.HTMLPage().add_element(f"<h1>No rows are tagged as '{service_tag}' </h1>")
 
     page = html_pages.HTMLPage()
 
