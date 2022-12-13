@@ -119,7 +119,7 @@ class RevolutStatement(BankStatement):
         return pd.to_datetime(self.df_raw['Started Date'], errors='coerce').dt.time
 
     def amount(self):
-        gbp_amount = self.df_raw['Amount'] * self.df_raw['Currency'].apply(currency.GBP_to_curr_exchange_rate())
+        gbp_amount = self.df_raw['Amount'] * self.df_raw['Currency'].apply(currency.GBP_to_curr_exchange_rate)
         return gbp_amount
 
     def currency(self):
