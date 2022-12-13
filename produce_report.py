@@ -3,9 +3,9 @@ import pandas as pd
 from mecon.html_pages import html_pages
 
 from mecon.plots import plots
-from mecon.statements.tagged_statement import TaggedStatement
+from mecon.statements.tagged_statement import TaggedData
 
-df = TaggedStatement.fully_tagged_statement().dataframe()
+df = TaggedData.fully_tagged_statement().dataframe()
 df.to_csv("fully_tagged_statement.csv", index_label=None)
 
 
@@ -28,7 +28,7 @@ def create_df_table_page(df, title=''):
 
 
 def create_service_report(service_tag):
-    df = TaggedStatement.fully_tagged_statement().get_tagged_rows(service_tag)
+    df = TaggedData.fully_tagged_statement().get_tagged_rows(service_tag)
     if len(df) == 0:
         return html_pages.HTMLPage().add_element(f"<h1>No rows are tagged as '{service_tag}' </h1>")
 
@@ -41,7 +41,7 @@ def create_service_report(service_tag):
     page.add_element(html_pages.ImageHTML.from_matplotlib())
 
     page.add_element(create_df_table_page(df.sort_values('date', ascending=False), title='Full table'))
-    page.add_element(create_df_table_page(df.describe(include='all').reset_index(), title=service_tag))
+    page.add_element(create_df_table_page(df.describe(include='all', datetime_is_numeric=True).reset_index(), title=service_tag))
 
     return page
 

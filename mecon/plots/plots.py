@@ -6,7 +6,7 @@ plt.style.use('bmh')
 
 import pandas as pd
 
-from mecon.statements.tagged_statement import TaggedStatement
+from mecon.statements.tagged_statement import TaggedData
 
 
 def plot_rolling_hist(x, y, rolling_bin=30, actual_line_style='-', expanding_mean=False):
@@ -22,7 +22,7 @@ def plot_rolling_hist(x, y, rolling_bin=30, actual_line_style='-', expanding_mea
 
 
 def total_balance_timeline_fig(show=True):
-    df = TaggedStatement.fully_tagged_statement().dataframe()
+    df = TaggedData.fully_tagged_statement().dataframe()
     plt.figure(figsize=(12, 5))
     plt.xticks(rotation=90);
 
@@ -47,7 +47,7 @@ def total_balance_timeline_fig(show=True):
 
 
 def plot_tag_stats(tag, show=True):
-    tagged_stat = TaggedStatement.fully_tagged_statement()
+    tagged_stat = TaggedData.fully_tagged_statement()
     df = tagged_stat.get_tagged_rows(tag)[['date', 'amount']]
 
     amount_per_day = df.groupby('date').agg({'amount': 'sum'}).reset_index()
