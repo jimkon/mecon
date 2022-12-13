@@ -1,11 +1,10 @@
-import pandas as pd
-
 from mecon.html_pages import html_pages
 
 from mecon.plots import plots
 from mecon.statements.tagged_statement import TaggedData
+from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS
 
-df = TaggedData.fully_tagged_statement().dataframe()
+df = TaggedData.fully_tagged_data().dataframe()
 df.to_csv("fully_tagged_statement.csv", index_label=None)
 
 
@@ -28,7 +27,7 @@ def create_df_table_page(df, title=''):
 
 
 def create_service_report(service_tag):
-    df = TaggedData.fully_tagged_statement().get_tagged_rows(service_tag)
+    df = TaggedData.fully_tagged_data().get_tagged_rows(service_tag)
     if len(df) == 0:
         return html_pages.HTMLPage().add_element(f"<h1>No rows are tagged as '{service_tag}' </h1>")
 
@@ -51,7 +50,7 @@ def create_report():
 
     report_html.add_tab("Balance", balance_plot_page())
 
-    for tag in [tagger.tag_name for tagger in TaggedData.fully_tagged_statement().taggers]:
+    for tag in [tagger.tag_name for tagger in SERVICE_TAGS]:
         report_html.add_tab(tag, create_service_report(tag))
 
     report_html.save('report.html')

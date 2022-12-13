@@ -160,13 +160,20 @@ class CashTag(DictTag):
             {'description.lower': {'contains': 'cash'}},
         ])
 
-ALL_TAGS = [
+
+BANK_TAGS = [
 MonzoTag(),
 RevolutTag(),
-HSBCTag(),
+HSBCTag()
+]
+
+INCOME_TAGS = [
 ITVIncomeTag(),
 DeloitteIncomeTag(),
 IncomeTag(),
+]
+
+SERVICE_TAGS = [
 SpotifyTag(),
 GiffgaffTag(),
 SantaderBikesTag(),
@@ -180,3 +187,5 @@ OnlineOrdersTag(),
 TooGoodToGoTag(),
 CashTag()
 ]
+
+ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS
