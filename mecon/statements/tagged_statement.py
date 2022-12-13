@@ -4,7 +4,7 @@ from functools import lru_cache
 import pandas as pd
 
 from mecon.statements.combined_statement import Statement
-from mecon.tagging.tags import *
+from mecon.tagging.tags import ALL_TAGS
 from mecon import utils
 
 
@@ -16,6 +16,8 @@ class TaggedData:
         self._init_tags()
 
     def _init_tags(self):
+        if len(self.taggers) == 0:
+            return
         self._df['tags'] = [[] for _ in range(len(self._df))]
         for tagger in self.taggers:
             tagger.tag(self._df)
@@ -46,17 +48,18 @@ class TaggedData:
 
     @staticmethod
     @lru_cache
-    def fully_tagged_statement():
-        if os.path.exists(r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv"):
+    def fully_tagged_data(recalculate_tags=False):
+        cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv"
+        if os.path.exists(cached_file_path):
             print("Loading tagged data...")
-            df_statement = pd.read_csv(r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv", index_col=None)
+            df_statement = pd.read_csv(cached_file_path, index_col=None)
             df_statement['date'] = pd.to_datetime(df_statement['date'])
-            tagged_data = TaggedData(df_statement, ALL_TAGS)  # if recalculate_tags else None)
+            tagged_data = TaggedData(df_statement, ALL_TAGS if recalculate_tags else None)
         else:
             print("Producing tagged data...")
             df_statement = Statement().dataframe()
             tagged_data = TaggedData(df_statement, ALL_TAGS)
             print("Saving tagged data...")
-            df_statement.to_csv(r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv", index=None)
+            df_statement.to_csv(cached_file_path, index=None)
 
         return tagged_data
