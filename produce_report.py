@@ -16,11 +16,13 @@ def balance_plot_page():
     return html_pages.ImageHTML.from_matplotlib()
 
 
-def create_service_df_tag_description(df):
+def create_service_df_tag_description(data):
+    df = data.dataframe()
+    all_tags = data.all_different_tags
     return f"""<h2>{'General info':*^50}</h2>
     <b>Count</b>: {len(df)}, <b>Total</b>: {-df['amount'].sum():.2f}, <b>min</b>: {-df['amount'].max():.2f}, <b>avg</b>: {-df['amount'].mean():.2f}, <b>max</b>: {-df['amount'].min():.2f}<br> 
     <b>Dates</b> from {df['date'].min()} to {df['date'].min()} <br>
-    <b>All tags appeared</b>: # <br>
+    <b>All tags appeared</b>: {all_tags} <br>
     {df['currency'].value_counts().to_frame().to_html()} <br>
     """
 
@@ -30,14 +32,15 @@ def create_df_table_page(df, title=''):
 
 
 def create_service_report_for_tag(service_tag):
-    df = TaggedData.fully_tagged_data().get_rows_tagged_as(service_tag).dataframe()
+    data = TaggedData.fully_tagged_data().get_rows_tagged_as(service_tag)
+    df = data.dataframe()
     if len(df) == 0:
         return html_pages.HTMLPage().add_element(f"<h1>No rows are tagged as '{service_tag}' </h1>")
 
     page = html_pages.HTMLPage()
 
     page.add_element(f"<h1>{service_tag}</h1>")
-    page.add_element(create_service_df_tag_description(df))
+    page.add_element(create_service_df_tag_description(data))
 
     plots.plot_tag_stats(service_tag, show=False)
     page.add_element(html_pages.ImageHTML.from_matplotlib())
