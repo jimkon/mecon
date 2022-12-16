@@ -1,3 +1,4 @@
+from datetime import datetime
 import multiprocessing
 
 from mecon.html_pages import html_pages
@@ -28,7 +29,7 @@ def create_df_table_page(df, title=''):
     return html_pages.SimpleHTMLTable(df, f"{title} ({df.shape[0]} rows)")
 
 
-def create_service_report(service_tag):
+def create_service_report_for_tag(service_tag):
     df = TaggedData.fully_tagged_data().get_rows_tagged_as(service_tag).dataframe()
     if len(df) == 0:
         return html_pages.HTMLPage().add_element(f"<h1>No rows are tagged as '{service_tag}' </h1>")
@@ -47,22 +48,29 @@ def create_service_report(service_tag):
     return page
 
 
-def create_report():
-    report_html = html_pages.TabsHTML()
-
-    report_html.add_tab("Balance", balance_plot_page())
-
-    tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
-    with multiprocessing.Pool() as pool:
-        service_reports = pool.map(create_service_report, tag_names)
-
-    for tag, rep in zip(tag_names, service_reports):
-        report_html.add_tab(tag, rep)
-
+def create_service_reports():
     # linear executions
     # for tag in [tagger.tag_name for tagger in SERVICE_TAGS]:
     #     report_html.add_tab(tag, create_service_report(tag))
 
+    tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
+    with multiprocessing.Pool() as pool:
+        service_reports = pool.map(create_service_report_for_tag, tag_names)
+
+    return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
+
+
+def create_report():
+    report_html = html_pages.HTMLPage()
+    report_html.add_element(f"<title>Report ({datetime.now()})</title>")
+
+    tabs_html = html_pages.TabsHTML()
+    tabs_html.add_tab("Balance", balance_plot_page())
+
+    for tag, rep_html_page in create_service_reports():
+        tabs_html.add_tab(tag, rep_html_page)
+
+    report_html.add_element(tabs_html)
     report_html.save('report.html')
 
 
