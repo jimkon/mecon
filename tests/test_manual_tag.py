@@ -6,12 +6,12 @@ from mecon.tagging import manual_tag as tag
 
 
 class TestManualTag(unittest.TestCase):
-    @patch.object(tag.ManualTag, 'condition', side_effect=[False, True, True, False])
+    @patch.object(tag.HardCodedTag, 'condition', side_effect=[False, True, True, False])
     def test__calc_condition(self, mock_cond):
         test_df = pd.DataFrame(data={'a': [1, 2, 3, 4], 'b': [1, 10, 100, 1000], 'tags': [[], [], [], []]})
 
-        tag.ManualTag.__abstractmethods__ = set()
-        tagger = tag.ManualTag('test_tag')
+        tag.HardCodedTag.__abstractmethods__ = set()
+        tagger = tag.HardCodedTag('test_tag')
         tagger.tag(test_df)
 
         self.assertEqual(set(test_df.columns), {'a', 'b', 'tags'})

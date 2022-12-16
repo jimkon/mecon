@@ -1,8 +1,8 @@
 from mecon.tagging.dict_tag import DictTag
-from mecon.tagging.manual_tag import ManualTag
+from mecon.tagging.manual_tag import HardCodedTag
 
 
-class MonzoTag(ManualTag):
+class MonzoTag(HardCodedTag):
     def __init__(self):
         super().__init__('Monzo')
 
@@ -10,7 +10,7 @@ class MonzoTag(ManualTag):
         return 'Bank:Monzo' in element['description']
 
 
-class RevolutTag(ManualTag):
+class RevolutTag(HardCodedTag):
     def __init__(self):
         super().__init__('Revolut')
 
@@ -18,7 +18,7 @@ class RevolutTag(ManualTag):
         return 'Bank:Revolut' in element['description']
 
 
-class HSBCTag(ManualTag):
+class HSBCTag(HardCodedTag):
     def __init__(self):
         super().__init__('HSBC')
 
@@ -26,7 +26,7 @@ class HSBCTag(ManualTag):
         return 'Bank:HSBC' in element['description']
 
 
-class ITVIncomeTag(ManualTag):
+class ITVIncomeTag(HardCodedTag):
     def __init__(self):
         super().__init__('ITV income')
 
@@ -36,7 +36,7 @@ class ITVIncomeTag(ManualTag):
                 ('HSBC' in element['tags'] and 'ITV PLC CR' in element['description'])
 
 
-class DeloitteIncomeTag(ManualTag):
+class DeloitteIncomeTag(HardCodedTag):
     def __init__(self):
         super().__init__('Deloitte income')
 
@@ -45,7 +45,7 @@ class DeloitteIncomeTag(ManualTag):
                 ('HSBC' in element['tags'] and 'DELOITTE LLP CR' in element['description'])
 
 
-class IncomeTag(ManualTag):
+class IncomeTag(HardCodedTag):
     def __init__(self):
         super().__init__('Income')
 
@@ -53,7 +53,7 @@ class IncomeTag(ManualTag):
         return ('Deloitte income' in element['tags']) or ('ITV income' in element['tags'])
 
 
-class SpotifyTag(ManualTag):
+class SpotifyTag(HardCodedTag):
     def __init__(self):
         super().__init__('Spotify')
 
@@ -61,7 +61,7 @@ class SpotifyTag(ManualTag):
         return 'Spotify'.lower() in element['description'].lower()
 
 
-class GiffgaffTag(ManualTag):
+class GiffgaffTag(HardCodedTag):
     def __init__(self):
         super().__init__('Giffgaff')
 
@@ -69,7 +69,7 @@ class GiffgaffTag(ManualTag):
         return 'giffgaff' in element['description'].lower()
 
 
-class SantaderBikesTag(ManualTag):
+class SantaderBikesTag(HardCodedTag):
     def __init__(self):
         super().__init__('Santader Bikes')
 

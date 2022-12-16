@@ -3,7 +3,7 @@ import abc
 from mecon.tagging.tag import Tag
 
 
-class ManualTag(Tag, abc.ABC):
+class HardCodedTag(Tag, abc.ABC):
     def __init__(self, tag_name):
         super().__init__(tag_name)
 
