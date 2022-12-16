@@ -1,3 +1,5 @@
+import multiprocessing
+
 from mecon.html_pages import html_pages
 
 from mecon.plots import plots
@@ -50,12 +52,20 @@ def create_report():
 
     report_html.add_tab("Balance", balance_plot_page())
 
-    for tag in [tagger.tag_name for tagger in SERVICE_TAGS]:
-        report_html.add_tab(tag, create_service_report(tag))
+    tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
+    with multiprocessing.Pool() as pool:
+        service_reports = pool.map(create_service_report, tag_names)
+
+    for tag, rep in zip(tag_names, service_reports):
+        report_html.add_tab(tag, rep)
+
+    # linear executions
+    # for tag in [tagger.tag_name for tagger in SERVICE_TAGS]:
+    #     report_html.add_tab(tag, create_service_report(tag))
 
     report_html.save('report.html')
 
 
 if __name__ == "__main__":
-    create_report()
-
+    import timeit
+    print(timeit.timeit(create_report, number=1))

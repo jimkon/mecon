@@ -50,7 +50,7 @@ class TaggedData:
 
     @staticmethod
     @lru_cache
-    def fully_tagged_data(recalculate_tags=True):
+    def fully_tagged_data(recalculate_tags=False):
         cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv"
         if os.path.exists(cached_file_path):
             print("Loading tagged data...")
