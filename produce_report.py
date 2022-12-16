@@ -6,16 +6,19 @@ from mecon.html_pages import html_pages
 from mecon.plots import plots
 from mecon.statements.tagged_statement import TaggedData
 from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS
+from mecon import logs
 
-df = TaggedData.fully_tagged_data().dataframe()
-df.to_csv("fully_tagged_statement.csv", index_label=None)
+# df = TaggedData.fully_tagged_data().dataframe()
+# df.to_csv("fully_tagged_statement.csv", index_label=None)
 
 
+@logs.func_execution_logging
 def balance_plot_page():
     plots.total_balance_timeline_fig(show=False)
     return html_pages.ImageHTML.from_matplotlib()
 
 
+@logs.func_execution_logging
 def create_service_df_tag_description(data):
     df = data.dataframe()
     all_tags = data.all_different_tags
@@ -27,11 +30,14 @@ def create_service_df_tag_description(data):
     """
 
 
+@logs.func_execution_logging
 def create_df_table_page(df, title=''):
     return html_pages.SimpleHTMLTable(df, f"{title} ({df.shape[0]} rows)")
 
 
+@logs.func_execution_logging
 def create_service_report_for_tag(service_tag):
+    logs.log_html(f"Creating service report for tag:{service_tag} ...")
     data = TaggedData.fully_tagged_data().get_rows_tagged_as(service_tag)
     df = data.dataframe()
     if len(df) == 0:
@@ -48,9 +54,11 @@ def create_service_report_for_tag(service_tag):
     page.add_element(create_df_table_page(df.sort_values('date', ascending=False), title='Full table'))
     page.add_element(create_df_table_page(df.describe(include='all', datetime_is_numeric=True).reset_index(), title=service_tag))
 
+    logs.log_html(f"Service report for tag:{service_tag} created.")
     return page
 
 
+@logs.func_execution_logging
 def create_service_reports():
     # linear executions
     # for tag in [tagger.tag_name for tagger in SERVICE_TAGS]:
@@ -63,7 +71,9 @@ def create_service_reports():
     return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
 
 
+@logs.func_execution_logging
 def create_report():
+    logs.log_html("Creating full report...")
     report_html = html_pages.HTMLPage()
     report_html.add_element(f"<title>Report ({datetime.now()})</title>")
 
@@ -75,8 +85,11 @@ def create_report():
 
     report_html.add_element(tabs_html)
     report_html.save('report.html')
+    logs.log_html("Full report created.")
+
 
 
 if __name__ == "__main__":
-    import timeit
-    print(timeit.timeit(create_report, number=1))
+    # import timeit
+    # print(timeit.timeit(create_report, number=1))
+    create_report()
