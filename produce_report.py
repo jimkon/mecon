@@ -27,7 +27,7 @@ def create_df_table_page(df, title=''):
 
 
 def create_service_report(service_tag):
-    df = TaggedData.fully_tagged_data().get_tagged_rows(service_tag)
+    df = TaggedData.fully_tagged_data().get_rows_tagged_as(service_tag).dataframe()
     if len(df) == 0:
         return html_pages.HTMLPage().add_element(f"<h1>No rows are tagged as '{service_tag}' </h1>")
 

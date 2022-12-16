@@ -1,5 +1,6 @@
 import os.path
-from functools import lru_cache
+from ast import literal_eval
+from functools import lru_cache, cached_property
 
 import pandas as pd
 
@@ -9,30 +10,34 @@ from mecon import utils
 
 
 class TaggedData:
-    def __init__(self, df, taggers):
+    def __init__(self, df):
         self._df = df
+        if 'tags' not in self._df.columns:
+            self._df['tags'] = [[] for _ in range(len(self._df))]
 
-        self.taggers = taggers if taggers else []
-        self._init_tags()
+    def apply_taggers(self, taggers):
+        df = self.dataframe()
+        for tagger in taggers:
+            tagger.tag(df)
+        return TaggedData(df)
 
-    def _init_tags(self):
-        if len(self.taggers) == 0:
-            return
-        self._df['tags'] = [[] for _ in range(len(self._df))]
-        for tagger in self.taggers:
-            tagger.tag(self._df)
-
-    @lru_cache
-    def dataframe(self, fill_dates=True):
-        df_res = self._df.copy()
-
-        if fill_dates:
-            df_res = utils.fill_dates(df_res)
+    def fill_dates(self):
+        df_res = self.dataframe()
+        df_res = utils.fill_dates(df_res)
         df_res = df_res.sort_values(by=['date', 'time']).reset_index(drop=True)
+        return TaggedData(df_res)
 
-        return df_res
+    def dataframe(self):
+        return self._df.copy()
 
-    def get_tagged_rows(self, tag):
+    @cached_property
+    def all_different_tags(self):
+        result = []
+        for row_tags in self._df['tags']:
+            result.extend(row_tags)
+        return sorted(set(result))
+
+    def get_rows_tagged_as(self, tag):
         df = self.dataframe()
 
         select_rows_condition = df['tags'].apply(lambda x: (tag in x) if tag else True)
@@ -41,25 +46,32 @@ class TaggedData:
         if select_rows_condition.sum() == 0:
             print(f'{" WARNING ":#^100}\n\tTag "{tag}" returned no rows.')
 
-        return res_df
-
-    def count_tag_appearance(self, tag):
-        return len(self.get_tagged_rows(tag))
+        return TaggedData(res_df)
 
     @staticmethod
     @lru_cache
-    def fully_tagged_data(recalculate_tags=False):
+    def fully_tagged_data(recalculate_tags=True):
         cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv"
         if os.path.exists(cached_file_path):
             print("Loading tagged data...")
             df_statement = pd.read_csv(cached_file_path, index_col=None)
             df_statement['date'] = pd.to_datetime(df_statement['date'])
-            tagged_data = TaggedData(df_statement, ALL_TAGS if recalculate_tags else None)
+            df_statement['tags'] = df_statement['tags'].apply(lambda x: literal_eval(x))
+            tagged_data = TaggedData(df_statement)
+            if recalculate_tags:
+                tagged_data.apply_taggers(ALL_TAGS)
         else:
             print("Producing tagged data...")
             df_statement = Statement().dataframe()
-            tagged_data = TaggedData(df_statement, ALL_TAGS)
+            tagged_data = TaggedData(df_statement).apply_taggers(ALL_TAGS)
             print("Saving tagged data...")
             df_statement.to_csv(cached_file_path, index=None)
 
         return tagged_data
+
+
+if __name__ == "__main__":
+    data = TaggedData.fully_tagged_data()
+    print(data.dataframe().head())
+    print(data.all_different_tags)
+

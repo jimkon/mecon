@@ -48,7 +48,7 @@ def total_balance_timeline_fig(show=True):
 
 def plot_tag_stats(tag, show=True):
     tagged_stat = TaggedData.fully_tagged_data()
-    df = tagged_stat.get_tagged_rows(tag)[['date', 'amount']]
+    df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'amount']]
 
     amount_per_day = df.groupby('date').agg({'amount': 'sum'}).reset_index()
     amount_per_day = fill_dates(amount_per_day)[['date', 'amount']]
@@ -56,7 +56,7 @@ def plot_tag_stats(tag, show=True):
     count_per_day = df.groupby('date').agg({'amount': 'count'}).reset_index()
     count_per_day = fill_dates(count_per_day)[['date', 'amount']]
 
-    df = tagged_stat.get_tagged_rows(tag)[['date', 'month_date', 'amount']]
+    df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'month_date', 'amount']]
 
     amount_per_month = df.groupby('month_date').agg({'amount': 'sum'}).reset_index()
 
