@@ -49,6 +49,15 @@ class TaggedData:
 
         return TaggedData(res_df)
 
+    def aggregate_df(self, group_func, agg_dict):
+        df = self.dataframe()
+
+        agg_column_name = 'agg_column_label'
+        df[agg_column_name] = df.apply(group_func, axis=1)
+        df_agg = df.groupby(agg_column_name).agg(agg_dict).reset_index().sort_values(by=['agg_column_label'])
+
+        return df_agg
+
     @staticmethod
     @lru_cache
     def fully_tagged_data(recalculate_tags=False):
@@ -75,4 +84,7 @@ if __name__ == "__main__":
     data = TaggedData.fully_tagged_data()
     print(data.dataframe().head())
     print(data.all_different_tags)
+
+    res = data.aggregate_df(lambda x:x["date"].year, {'amount': 'sum'})
+    print(res.head())
 
