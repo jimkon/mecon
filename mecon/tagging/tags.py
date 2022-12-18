@@ -1,3 +1,5 @@
+from pandas import Timestamp
+
 from mecon.tagging.dict_tag import DictTag
 from mecon.tagging.manual_tag import HardCodedTag
 
@@ -104,6 +106,7 @@ class SuperMarketTag(DictTag):
             {'description.lower': {'contains': 'co-op'}},
             {'description.lower': {'contains': 'waitrose'}},
             {'description.lower': {'contains': 'morrisons'}},
+            {'description.lower': {'contains': 'marks spencer'}},
         ])
 
 
@@ -142,7 +145,8 @@ class OnlineOrdersTag(DictTag):
     def __init__(self):
         super().__init__('Online orders', [
             {'description.lower': {'contains': 'amazon'}},
-            {'description.lower': {'contains': 'aliexpress'}},
+            {'description.lower': {'contains': 'amazon'}},
+            {'description.lower': {'contains': 'amznmktplace'}},
             {'description.lower': {'contains': 'ebay'}},
         ])
 
@@ -159,6 +163,33 @@ class CashTag(DictTag):
         super().__init__('Cash', [
             {'description.lower': {'contains': 'cash'}},
         ])
+
+
+class BarchelonaTripTag(DictTag):
+    def __init__(self):
+        super().__init__('Barcelona trip', [{
+            'date.str': {
+                'greater_equal': '2022-03-10', # 10am
+                'less_equal': '2022-03-22', # 10am?
+            }}])
+
+
+class BudapestTripTag(DictTag):
+    def __init__(self):
+        super().__init__('Budapest trip', [{
+            'date.str': {
+                'greater_equal': '2022-04-22', # 18:00
+                'less_equal': '2022-04-27', # 6am?
+            }}])
+
+
+class ParisTripTag(DictTag):
+    def __init__(self):
+        super().__init__('Paris trip', [{
+            'date.str': {
+                'greater_equal': '2022-07-07', # apogeuma
+                'less_equal': '2022-07-15', # prwi
+            }}])
 
 
 BANK_TAGS = [
@@ -185,7 +216,11 @@ RentTag(),
 HomeBillsTag(),
 OnlineOrdersTag(),
 TooGoodToGoTag(),
-CashTag()
+CashTag(),
+BarchelonaTripTag(),
+BudapestTripTag(),
+ParisTripTag(),
 ]
 
 ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS
+
