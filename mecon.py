@@ -30,6 +30,7 @@ def tag_data():
 
 def produce_the_full_report():
     print(f"{' MAKING REPORT ':#^80}")
+    FullyTaggedData.instance()
     create_report()
 
 

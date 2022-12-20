@@ -9,10 +9,6 @@ from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS
 from mecon import logs
 
 
-logs.log_calculation("Pre-initializing fully tagged data...")
-FullyTaggedData.instance()
-
-
 @logs.func_execution_logging
 def balance_plot_page():
     plots.total_balance_timeline_fig(show=False)
