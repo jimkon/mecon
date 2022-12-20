@@ -29,7 +29,7 @@ def log_html(*args, **kwargs):
     log(*args, **kwargs, rgb=(50, 200, 50))
 
 def log_calculation(*args, **kwargs):
-    log(*args, **kwargs, rgb=(50, 50, 200))
+    log(*args, **kwargs, rgb=(200, 50, 200))
 
 
 

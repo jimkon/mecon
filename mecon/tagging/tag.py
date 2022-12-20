@@ -1,5 +1,7 @@
 import abc
 
+from mecon import logs
+
 
 class TagsColumnDoesNotExistException(Exception):
     pass
@@ -17,7 +19,7 @@ class Tag(abc.ABC):
             raise TagsColumnDoesNotExistException
 
         condition = self._calc_condition(_df)
-        print(f"{self.tag_name}: {sum(condition)}/{len(condition)} rows where tagged.")
+        logs.log_calculation(f"{self.tag_name}: {sum(condition)}/{len(condition)} rows where tagged.")
 
         def _l(x):
             tags_array, cond = x
