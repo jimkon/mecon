@@ -1,19 +1,15 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <style type="text/css">
 body {font-family: Arial;}
 
 /* Style the tab */
-.tab {
+.tab_[id] {
   overflow: hidden;
   border: 1px solid #ccc;
   background-color: #f1f1f1;
 }
 
 /* Style the buttons inside the tab */
-.tab button {
+.tab_[id] button {
   background-color: inherit;
   float: left;
   border: none;
@@ -25,17 +21,17 @@ body {font-family: Arial;}
 }
 
 /* Change background color of buttons on hover */
-.tab button:hover {
+.tab_[id] button:hover {
   background-color: #ddd;
 }
 
 /* Create an active/current tablink class */
-.tab button.active {
+.tab_[id] button.active {
   background-color: #ccc;
 }
 
 /* Style the tab content */
-.tabcontent {
+.tabcontent_[id] {
   display: none;
   padding: 6px 12px;
   border: 1px solid #ccc;
@@ -54,33 +50,29 @@ th {
 }
 
 </style>
-</head>
-<body>
 
-<div class="tab">
+<div class="tab_[id]">
   [button]
 </div>
 
 [div_tab]
 
 <script>
-function openCity(evt, cityName) {
+function open_tab_[id](evt, tab_name) {
   var i, tabcontent, tablinks;
-  tabcontent = document.getElementsByClassName("tabcontent");
+  tabcontent = document.getElementsByClassName("tabcontent_[id]");
   for (i = 0; i < tabcontent.length; i++) {
     tabcontent[i].style.display = "none";
   }
-  tablinks = document.getElementsByClassName("tablinks");
+  tablinks = document.getElementsByClassName("tablinks_[id]");
   for (i = 0; i < tablinks.length; i++) {
     tablinks[i].className = tablinks[i].className.replace(" active", "");
   }
-  document.getElementById(cityName).style.display = "block";
+  document.getElementById(tab_name).style.display = "block";
   evt.currentTarget.className += " active";
 }
 
 // Get the element with id="defaultOpen" and click on it
-document.getElementById("defaultOpen").click();
+document.getElementById("defaultOpen_[id]").click();
 </script>
 
-</body>
-</html>

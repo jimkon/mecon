@@ -92,23 +92,29 @@ class ImageHTML(TemplateHTMLBuilder):
 
 
 class TabsHTML(TemplateHTMLBuilder):
+    _cnt = 0
+
     def __init__(self):
         super().__init__('tabs')
+        self._id = str(TabsHTML._cnt)
+        TabsHTML._cnt += 1
+
+        self.replace("id", self._id)
         self._add_default_id = True
 
     def _add_button(self, label):
-        default_id = "id=\"defaultOpen\"" if self._add_default_id else ""
+        default_id = f"id=\"defaultOpen_{self._id}\"" if self._add_default_id else ""
         self._add_default_id = False
-        to_add = f"<button class=\"tablinks\" onclick=\"openCity(event, '{label}')\" {default_id}>{label}</button>\n\t[button]"
+        to_add = f"<button class=\"tablinks_{self._id}\" onclick=\"open_tab_{self._id}(event, '{label}')\" {default_id}>{label}</button>\n\t[button]"
         self.replace('button', to_add)
 
     def _add_div(self, label, html_content):
-        to_add = f"<div id=\"{label}\" class=\"tabcontent\">\n{html_content}\n</div>\n[div_tab]"
+        to_add = f"<div id=\"{label}\" class=\"tabcontent_{self._id}\">\n{html_content}\n</div>\n[div_tab]"
         self.replace('div_tab', to_add)
 
     def add_tab(self, label, html_content):
         self._add_button(label)
-        self._add_div(label, html_content.html())
+        self._add_div(label, html_content.html() if issubclass(html_content.__class__, HTMLObject) else html_content)
         return self
 
     def html(self):
