@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 
 from mecon.statements.statement_core import ABCFetchStatement
@@ -38,9 +40,14 @@ class CombinedStatement(ABCFetchStatement):
 
 
 class Statement:
-    def __init__(self):
-        self._df = CombinedStatement().dataframe().reset_index(drop=True)
-        # self.dataframe().to_csv(f'C:/Users/jim/PycharmProjects/mecon/statements/combined/{self.__class__.__name__}.csv', index=False)
+    _cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\statement.csv"
+
+    def __init__(self, reset=False):
+        if os.path.exists(self._cached_file_path) and not reset:
+            self._df = pd.read_csv(self._cached_file_path)
+        else:
+            self._df = CombinedStatement().dataframe().reset_index(drop=True)
+            self._df.to_csv(self._cached_file_path)
 
     def date(self):
         return pd.to_datetime(self._df['date'])
@@ -79,8 +86,4 @@ class Statement:
         df_res = df_res.sort_values(by=['date', 'time']).reset_index(drop=True)
 
         return df_res
-
-
-
-
 

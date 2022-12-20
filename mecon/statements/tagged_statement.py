@@ -58,30 +58,35 @@ class TaggedData:
 
         return df_agg
 
-    @staticmethod
-    @lru_cache
-    def fully_tagged_data(recalculate_tags=False):
-        cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv"
-        if os.path.exists(cached_file_path):
+
+class FullyTaggedData(TaggedData):
+    _instance = None
+    _cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv"
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = FullyTaggedData()
+        return cls._instance
+
+    def __init__(self, reset_tags=False):
+        if os.path.exists(self._cached_file_path) and not reset_tags:
             logs.log_disk_io("Loading tagged data...")
-            df_statement = pd.read_csv(cached_file_path, index_col=None)
+            df_statement = pd.read_csv(self._cached_file_path, index_col=None)
             df_statement['date'] = pd.to_datetime(df_statement['date'])
             df_statement['tags'] = df_statement['tags'].apply(lambda x: literal_eval(x))
-            tagged_data = TaggedData(df_statement)
-            if recalculate_tags:
-                tagged_data.apply_taggers(ALL_TAGS)
+            super().__init__(df_statement)
         else:
             logs.log_calculation("Producing tagged data...")
             df_statement = Statement().dataframe()
-            tagged_data = TaggedData(df_statement).apply_taggers(ALL_TAGS)
+            super().__init__(df_statement)
+            self.apply_taggers(ALL_TAGS)
             logs.log_disk_io("Saving tagged data...")
-            df_statement.to_csv(cached_file_path, index=None)
-
-        return tagged_data
+            self.dataframe().to_csv(self._cached_file_path, index=None)
 
 
 if __name__ == "__main__":
-    data = TaggedData.fully_tagged_data()
+    data = FullyTaggedData.instance()
     print(data.dataframe().head())
     print(data.all_different_tags)
 

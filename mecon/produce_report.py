@@ -4,12 +4,13 @@ import multiprocessing
 from mecon.html_pages import html_pages
 
 from mecon.plots import plots
-from mecon.statements.tagged_statement import TaggedData
+from mecon.statements.tagged_statement import TaggedData, FullyTaggedData
 from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS
 from mecon import logs
 
-# df = TaggedData.fully_tagged_data().dataframe()
-# df.to_csv("fully_tagged_statement.csv", index_label=None)
+
+logs.log_calculation("Pre-initializing fully tagged data...")
+FullyTaggedData.instance()
 
 
 @logs.func_execution_logging
@@ -37,8 +38,8 @@ def create_df_table_page(df, title=''):
 
 @logs.func_execution_logging
 def create_service_report_for_tag(service_tag):
-    logs.log_html(f"Creating service report for tag:{service_tag} ...")
-    data = TaggedData.fully_tagged_data().get_rows_tagged_as(service_tag)
+    logs.log_html(f"Creating service report for tag #{service_tag}# ...")
+    data = FullyTaggedData.instance().get_rows_tagged_as(service_tag)
     df = data.dataframe()
     if len(df) == 0:
         return html_pages.HTMLPage().add_element(f"<h1>No rows are tagged as '{service_tag}' </h1>")
@@ -54,15 +55,14 @@ def create_service_report_for_tag(service_tag):
     page.add_element(create_df_table_page(df.sort_values('date', ascending=False), title='Full table'))
     page.add_element(create_df_table_page(df.describe(include='all', datetime_is_numeric=True).reset_index(), title=service_tag))
 
-    logs.log_html(f"Service report for tag:{service_tag} created.")
+    logs.log_html(f"Service report for tag #{service_tag}# created.")
     return page
 
 
 @logs.func_execution_logging
 def create_service_reports():
     # linear executions
-    # for tag in [tagger.tag_name for tagger in SERVICE_TAGS]:
-    #     report_html.add_tab(tag, create_service_report(tag))
+    # return [(tag, create_service_report_for_tag(tag)) for tag in [tagger.tag_name for tagger in SERVICE_TAGS]]
 
     tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
     with multiprocessing.Pool() as pool:
