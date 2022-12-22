@@ -1,8 +1,22 @@
 from datetime import time, timedelta
+from math import ceil
 
 import pandas as pd
 
 from mecon import logs
+
+
+def week_of_month(dt):
+    """ Returns the week of the month for the specified date.
+    https://stackoverflow.com/questions/3806473/week-number-of-the-month
+    """
+
+    first_day = dt.replace(day=1)
+
+    dom = dt.day
+    adjusted_dom = dom + first_day.weekday()
+
+    return int(ceil(adjusted_dom / 7.0))
 
 
 def date_to_month_date(date_series):

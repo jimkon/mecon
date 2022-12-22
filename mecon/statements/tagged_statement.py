@@ -6,7 +6,7 @@ import pandas as pd
 
 from mecon.statements.combined_statement import Statement
 from mecon.tagging.tags import ALL_TAGS
-from mecon import utils
+from mecon import calendar_utils
 from mecon import logs
 
 
@@ -24,7 +24,7 @@ class TaggedData:
 
     def fill_dates(self):
         df_res = self.dataframe()
-        df_res = utils.fill_dates(df_res)
+        df_res = calendar_utils.fill_dates(df_res)
         df_res = df_res.sort_values(by=['date', 'time']).reset_index(drop=True)
         return TaggedData(df_res)
 
@@ -48,15 +48,6 @@ class TaggedData:
             print(f'{" WARNING ":#^100}\n\tTag "{tag}" returned no rows.')
 
         return TaggedData(res_df)
-
-    def aggregate_df(self, group_func, agg_dict):
-        df = self.dataframe()
-
-        agg_column_name = 'agg_column_label'
-        df[agg_column_name] = df.apply(group_func, axis=1)
-        df_agg = df.groupby(agg_column_name).agg(agg_dict).reset_index().sort_values(by=['agg_column_label'])
-
-        return df_agg
 
 
 class FullyTaggedData(TaggedData):

@@ -10,8 +10,21 @@ from mecon import logs
 
 
 def balance_plot_page():
-    plots.total_balance_timeline_fig(show=False)
-    return html_pages.ImageHTML.from_matplotlib()
+    time_window_tabs = html_pages.TabsHTML()
+
+    plots.total_balance_daily_timeline_fig()
+    time_window_tabs.add_tab('Daily', html_pages.ImageHTML.from_matplotlib())
+
+    plots.total_balance_weekly_timeline_fig()
+    time_window_tabs.add_tab('Weekly', html_pages.ImageHTML.from_matplotlib())
+
+    plots.total_balance_monthly_timeline_fig()
+    time_window_tabs.add_tab('Monthly', html_pages.ImageHTML.from_matplotlib())
+
+    plots.total_balance_yearly_timeline_fig()
+    time_window_tabs.add_tab('Yearly', html_pages.ImageHTML.from_matplotlib())
+
+    return time_window_tabs
 
 
 def create_service_df_tag_description(data):
@@ -52,9 +65,10 @@ def create_service_report_for_tag(service_tag):
 
 
 @logs.func_execution_logging
-def create_services_reports():
+def create_services_reports(linear_execution=False):
     # linear executions
-    # return [(tag, create_service_report_for_tag(tag)) for tag in [tagger.tag_name for tagger in SERVICE_TAGS]]
+    if linear_execution:
+        return [(tag, create_service_report_for_tag(tag)) for tag in [tagger.tag_name for tagger in SERVICE_TAGS]]
 
     tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
     with multiprocessing.Pool() as pool:

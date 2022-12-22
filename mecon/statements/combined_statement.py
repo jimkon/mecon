@@ -4,7 +4,7 @@ import pandas as pd
 
 from mecon.statements.statement_core import ABCFetchStatement
 from mecon.statements.bank_statements import MonzoStatement, RevolutStatement, HSBCStatement
-from mecon.utils import date_to_month_date
+from mecon.calendar_utils import date_to_month_date
 
 
 class CombinedStatement(ABCFetchStatement):
