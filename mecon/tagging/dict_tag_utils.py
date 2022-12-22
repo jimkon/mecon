@@ -1,9 +1,6 @@
 import re
 
 
-
-
-
 def lower(s): return s.lower()
 
 

@@ -9,13 +9,11 @@ from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS
 from mecon import logs
 
 
-@logs.func_execution_logging
 def balance_plot_page():
     plots.total_balance_timeline_fig(show=False)
     return html_pages.ImageHTML.from_matplotlib()
 
 
-@logs.func_execution_logging
 def create_service_df_tag_description(data):
     df = data.dataframe()
     all_tags = data.all_different_tags
@@ -27,12 +25,10 @@ def create_service_df_tag_description(data):
     """
 
 
-@logs.func_execution_logging
 def create_df_table_page(df, title=''):
     return html_pages.SimpleHTMLTable(df, f"{title} ({df.shape[0]} rows)")
 
 
-@logs.func_execution_logging
 def create_service_report_for_tag(service_tag):
     logs.log_html(f"Creating service report for tag #{service_tag}# ...")
     data = FullyTaggedData.instance().get_rows_tagged_as(service_tag)
@@ -76,16 +72,15 @@ def create_report():
     tabs_html = html_pages.TabsHTML()
     tabs_html.add_tab("Balance", balance_plot_page())
 
+    service_tabs = html_pages.TabsHTML()
     for tag, rep_html_page in create_service_reports():
-        tabs_html.add_tab(tag, rep_html_page)
+        service_tabs.add_tab(tag, rep_html_page)
+    tabs_html.add_tab("Services", service_tabs)
 
     report_html.add_element(tabs_html)
     report_html.save('report.html')
-    logs.log_html("Full report created.")
-
+    logs.log_html(f"Full report stored in 'report.html'. Size:{len(report_html.html())} ({len(report_html.html())/1024**2:.1f}MB)")
 
 
 if __name__ == "__main__":
-    # import timeit
-    # print(timeit.timeit(create_report, number=1))
     create_report()
