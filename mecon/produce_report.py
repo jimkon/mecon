@@ -5,7 +5,7 @@ from mecon.html_pages import html_pages
 
 from mecon.plots import plots
 from mecon.statements.tagged_statement import TaggedData, FullyTaggedData
-from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS
+from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS, TRIPS
 from mecon import logs
 
 
@@ -52,11 +52,23 @@ def create_service_report_for_tag(service_tag):
 
 
 @logs.func_execution_logging
-def create_service_reports():
+def create_services_reports():
     # linear executions
     # return [(tag, create_service_report_for_tag(tag)) for tag in [tagger.tag_name for tagger in SERVICE_TAGS]]
 
     tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
+    with multiprocessing.Pool() as pool:
+        service_reports = pool.map(create_service_report_for_tag, tag_names)
+
+    return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
+
+
+@logs.func_execution_logging
+def create_trips_reports():
+    # linear executions
+    # return [(tag, create_service_report_for_tag(tag)) for tag in [tagger.tag_name for tagger in SERVICE_TAGS]]
+
+    tag_names = [tagger.tag_name for tagger in TRIPS]
     with multiprocessing.Pool() as pool:
         service_reports = pool.map(create_service_report_for_tag, tag_names)
 
@@ -72,10 +84,15 @@ def create_report():
     tabs_html = html_pages.TabsHTML()
     tabs_html.add_tab("Balance", balance_plot_page())
 
-    service_tabs = html_pages.TabsHTML()
-    for tag, rep_html_page in create_service_reports():
-        service_tabs.add_tab(tag, rep_html_page)
-    tabs_html.add_tab("Services", service_tabs)
+    services_tabs = html_pages.TabsHTML()
+    for tag, rep_html_page in create_services_reports():
+        services_tabs.add_tab(tag, rep_html_page)
+    tabs_html.add_tab("Services", services_tabs)
+
+    trips_tabs = html_pages.TabsHTML()
+    for tag, rep_html_page in create_trips_reports():
+        trips_tabs.add_tab(tag, rep_html_page)
+    tabs_html.add_tab("Trips", trips_tabs)
 
     report_html.add_element(tabs_html)
     report_html.save('report.html')

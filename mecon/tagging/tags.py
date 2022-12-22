@@ -217,6 +217,9 @@ HomeBillsTag(),
 OnlineOrdersTag(),
 TooGoodToGoTag(),
 CashTag(),
+]
+
+TRIPS = [
 BarchelonaTripTag(),
 BudapestTripTag(),
 ParisTripTag(),
