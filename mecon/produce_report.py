@@ -12,17 +12,9 @@ from mecon import logs
 def balance_plot_page():
     time_window_tabs = html_pages.TabsHTML()
 
-    plots.total_balance_daily_timeline_fig()
-    time_window_tabs.add_tab('Daily', html_pages.ImageHTML.from_matplotlib())
-
-    plots.total_balance_weekly_timeline_fig()
-    time_window_tabs.add_tab('Weekly', html_pages.ImageHTML.from_matplotlib())
-
-    plots.total_balance_monthly_timeline_fig()
-    time_window_tabs.add_tab('Monthly', html_pages.ImageHTML.from_matplotlib())
-
-    plots.total_balance_yearly_timeline_fig()
-    time_window_tabs.add_tab('Yearly', html_pages.ImageHTML.from_matplotlib())
+    for time_unit in ['day', 'week', 'month', 'year']:
+        plots.total_balance_timeline_fig(time_unit)
+        time_window_tabs.add_tab(time_unit.capitalize(), html_pages.ImageHTML.from_matplotlib())
 
     return time_window_tabs
 
