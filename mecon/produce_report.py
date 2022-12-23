@@ -12,7 +12,8 @@ from mecon import logs
 def balance_plot_page():
     time_window_tabs = html_pages.TabsHTML()
 
-    for time_unit in ['day', 'week', 'month', 'year']:
+    for time_unit in ['day', 'week', 'month', 'working month', 'year']:
+        logs.log_html(f"Creating balance report for time unit #{time_unit}# ...")
         plots.total_balance_timeline_fig(time_unit)
         time_window_tabs.add_tab(time_unit.capitalize(), html_pages.ImageHTML.from_matplotlib())
 

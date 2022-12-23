@@ -10,7 +10,7 @@ class DataGrouping(DataFrameGroupBy):
 
     def __init__(self, df):
         df[self.col_name] = self.generate_grouping_column(df)
-        super().__init__(df, keys=self.col_name)
+        super().__init__(df.copy(), keys=self.col_name)
 
     @abc.abstractmethod
     def generate_grouping_column(self, df):
@@ -50,5 +50,16 @@ class YearlyGrouping(DataGrouping):
 
     def generate_grouping_column(self, df):
         df[self.col_name] = df['date'].dt.year.astype(str)
+        return df[self.col_name]
+
+
+class WorkingMonthGrouping(DataGrouping):
+    col_name = 'working month'
+
+    def generate_grouping_column(self, df):
+
+        df['is_income'] = df['tags'].apply(lambda tags: 1 if ('Income' in tags) else 0)
+        df[self.col_name] = df['is_income'].cumsum()
+        df.to_csv('test.csv')
         return df[self.col_name]
 

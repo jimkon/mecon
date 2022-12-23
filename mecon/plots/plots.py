@@ -31,6 +31,7 @@ def total_balance_timeline_fig(time_unit='day'):
         'day': {'rolling_bin': 30, 'grouper': grouping.DailyGrouping},
         'week': {'rolling_bin': 12, 'grouper': grouping.WeeklyGrouping},
         'month': {'rolling_bin': 4, 'grouper': grouping.MonthlyGrouping},
+        'working month': {'rolling_bin': 4, 'grouper': grouping.WorkingMonthGrouping},
         'year': {'rolling_bin': 1, 'grouper': grouping.YearlyGrouping},
     }
     assert time_unit in time_units
