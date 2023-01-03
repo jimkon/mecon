@@ -10,7 +10,7 @@ import pandas as pd
 from mecon.statements.tagged_statement import TaggedData, FullyTaggedData
 
 
-def plot_vericals(dates, months=True, years=True):
+def plot_verticals(dates, months=True, years=True):
     if months:
         for date in pd.date_range(dates.min(), dates.max(), freq='M'):
             plt.axvline(date, color='r', alpha=0.2, linewidth=1, linestyle='--')
@@ -20,9 +20,9 @@ def plot_vericals(dates, months=True, years=True):
             plt.axvline(date, color='g', alpha=0.2, linewidth=1, linestyle='--')
 
 
-def plot_rolling_hist(x, y, rolling_bin=30, actual_line_style='-', expanding_mean=False, verticals=True):
+def plot_rolling_hist(x, y, rolling_bin=30, actual_line_style='-', expanding_mean=False):
     if actual_line_style is not None:
-        plt.plot(x, y, actual_line_style, label='actual', color='C0')
+        plt.plot(x, y, actual_line_style, label='actual', color='C0', linewidth=1)
 
     if rolling_bin == 1:
         return
@@ -58,15 +58,7 @@ def total_balance_timeline_fig(time_unit='day'):
     plt.xticks(rotation=90)
 
     plot_rolling_hist(df_agg['date'], df_agg['amount'].cumsum(), rolling_bin=rolling_bin)
-    plot_vericals(df_agg['date'])
-
-    _x = df_agg[df_agg['date'].dt.day == 1]['date'].apply(pd.Timestamp)
-    for date in _x:
-        plt.axvline(date, color='r', alpha=0.2, linewidth=1, linestyle='--')
-
-    _x = df_agg[(df_agg['date'].dt.day == 1) & (df_agg['date'].dt.month == 1)]['date'].apply(pd.Timestamp)
-    for date in _x:
-        plt.axvline(date, color='g', alpha=0.2, linewidth=1, linestyle='--')
+    plot_verticals(df_agg['date'])
 
     plt.legend()
     plt.title(f"Total balance ({len(df_agg)} {time_unit}s)")
@@ -94,7 +86,7 @@ def plot_tag_stats(tag, show=True):
     plt.figure(figsize=(16, 9))
     plt.subplot(2, 2, 2)
     plt.title(f"Daily {tag} amount")
-    plot_vericals(df['date'])
+    plot_verticals(df['date'])
     plot_rolling_hist(amount_per_day['date'], amount_per_day['amount'].abs(), actual_line_style='.',
                       expanding_mean=True)
     plt.legend()
@@ -102,14 +94,14 @@ def plot_tag_stats(tag, show=True):
     plt.subplot(2, 2, 4)
     plt.title(f"Daily {tag} freq")
     plot_rolling_hist(count_per_day['date'], count_per_day['amount'].abs(), actual_line_style='.', expanding_mean=True)
-    plot_vericals(df['date'])
+    plot_verticals(df['date'])
     plt.legend()
 
     plt.subplot(2, 2, 1)
     plt.title(f"Monthly {tag} amount")
     plot_rolling_hist(amount_per_month['date'], amount_per_month['amount'].abs(), rolling_bin=3,
                       actual_line_style='.', expanding_mean=True)
-    plot_vericals(df['date'])
+    plot_verticals(df['date'])
     plt.xticks(rotation=90)
     plt.legend()
 
@@ -117,7 +109,7 @@ def plot_tag_stats(tag, show=True):
     plt.title(f"Monthly {tag} freq")
     plot_rolling_hist(count_per_month['date'], count_per_month['amount'].abs(), rolling_bin=3,
                       actual_line_style='.', expanding_mean=True)
-    plot_vericals(df['date'])
+    plot_verticals(df['date'])
     plt.xticks(rotation=90)
     plt.legend()
 
