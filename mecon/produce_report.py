@@ -9,13 +9,20 @@ from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS, TRIPS
 from mecon import logs
 
 
-def balance_plot_page():
+def overview_plot_page():
     time_window_tabs = html_pages.TabsHTML()
 
     for time_unit in ['day', 'week', 'month', 'working month', 'year']:
         logs.log_html(f"Creating balance report for time unit #{time_unit}# ...")
+        page = html_pages.HTMLPage()
+
         plots.total_balance_timeline_fig(time_unit)
-        time_window_tabs.add_tab(time_unit.capitalize(), html_pages.ImageHTML.from_matplotlib())
+        page.add_element(html_pages.ImageHTML.from_matplotlib())
+
+        # plots.total_trips_timeline_fig(time_unit)
+        # page.add_element(html_pages.ImageHTML.from_matplotlib())
+
+        time_window_tabs.add_tab(time_unit.capitalize(), page)
 
     return time_window_tabs
 
@@ -89,7 +96,7 @@ def create_report():
     report_html.add_element(f"<title>Report ({datetime.now()})</title>")
 
     tabs_html = html_pages.TabsHTML()
-    tabs_html.add_tab("Balance", balance_plot_page())
+    tabs_html.add_tab("Balance", overview_plot_page())
 
     services_tabs = html_pages.TabsHTML()
     for tag, rep_html_page in create_services_reports():
@@ -97,6 +104,9 @@ def create_report():
     tabs_html.add_tab("Services", services_tabs)
 
     trips_tabs = html_pages.TabsHTML()
+    plots.total_trips_timeline_fig()
+    trips_tabs.add_tab('Overview', html_pages.ImageHTML.from_matplotlib())
+
     for tag, rep_html_page in create_trips_reports():
         trips_tabs.add_tab(tag, rep_html_page)
     tabs_html.add_tab("Trips", trips_tabs)

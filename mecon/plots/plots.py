@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 
 from mecon.calendar_utils import fill_dates, week_of_month
 from mecon import grouping
+from mecon.grouping import LocationGrouping
 
 plt.style.use('bmh')
 
@@ -62,8 +63,34 @@ def total_balance_timeline_fig(time_unit='day'):
 
     plt.legend()
     plt.title(f"Total balance ({len(df_agg)} {time_unit}s)")
-    plt.xlabel('Money (£)')
+    plt.ylabel('Money (£)')
     plt.xlabel(f'Time ({time_unit})')
+    plt.tight_layout()
+
+
+def total_trips_timeline_fig():
+    data = FullyTaggedData.instance().fill_dates()
+    df = data.dataframe()
+
+    df_trips = LocationGrouping(df).agg({'date': ['min', 'max'], 'amount': 'sum', 'location': 'first'}).reset_index(drop=True)
+
+    df_trips.columns = ["_".join(pair) for pair in df_trips.columns]
+
+    plt.figure(figsize=(12, 5))
+    plt.xticks(rotation=90)
+
+    for ind, row in df_trips.iterrows():
+        min_date, max_date, amount, loc = row.tolist()
+        amount = -amount
+        if loc == 'London':
+            continue
+        days = (max_date-min_date).days
+        plt.fill_between([min_date, max_date], [0], [amount/days], label=f"{loc} (Total: £{amount:.0f})")
+
+    plt.legend()
+    plt.title(f"Trips timeline")
+    plt.ylabel('Money per day (£)')
+    plt.xlabel(f'Time (days)')
     plt.tight_layout()
 
 

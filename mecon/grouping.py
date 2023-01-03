@@ -3,6 +3,7 @@ import abc
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 from mecon.calendar_utils import week_of_month
+from mecon.tagging.tags import TRIPS
 
 
 class DataGrouping(DataFrameGroupBy):
@@ -57,9 +58,27 @@ class WorkingMonthGrouping(DataGrouping):
     col_name = 'working month'
 
     def generate_grouping_column(self, df):
-
         df['is_income'] = df['tags'].apply(lambda tags: 1 if ('Income' in tags) else 0)
         df[self.col_name] = df['is_income'].cumsum()
-        df.to_csv('test.csv')
+        return df[self.col_name]
+
+
+class LocationGrouping(DataGrouping):
+    col_name = 'location'
+
+    def generate_grouping_column(self, df):
+        trip_tags = {trip.tag_name for trip in TRIPS}
+
+        def _which_trip_tag(tags):
+            inter = trip_tags.intersection(set(tags)) - {'Trip'}
+            if len(inter) == 0:
+                return 'London'
+            elif len(inter) == 1:
+                return inter.pop()
+            else:
+                raise ValueError(f"More than one trip tags for this row: {tags}")
+
+        df[self.col_name] = df['tags'].apply(_which_trip_tag)
+
         return df[self.col_name]
 

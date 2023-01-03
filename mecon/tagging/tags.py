@@ -132,12 +132,21 @@ class RentTag(DictTag):
 
 class HomeBillsTag(DictTag):
     def __init__(self):
-        super().__init__('Bills', [
+        super().__init__('Home Bills', [
             {'tags': {'contains': 'Rent'}},
             {'description.lower': {'contains': 'thames water'}},
             {'description.lower': {'contains': 'exarchou'}},
             {'description.lower': {'contains': 'sideris'}},
             {'description.lower': {'contains': 'virgin media'}},
+        ])
+
+
+class OtherBillsTag(DictTag):
+    def __init__(self):
+        super().__init__('Other Bills', [
+            {'tags': {'contains': 'Spotify'}},
+            {'tags': {'contains': 'Giffgaff'}},
+            {'tags': {'contains': 'Therapy'}},
         ])
 
 
@@ -165,13 +174,17 @@ class CashTag(DictTag):
         ])
 
 
-class BarchelonaTripTag(DictTag):
+class BarcelonaTripTag(DictTag):
     def __init__(self):
         super().__init__('Barcelona trip', [{
             'date.str': {
                 'greater_equal': '2022-03-10', # 10am
                 'less_equal': '2022-03-22', # 10am?
-            }}])
+            },
+            'tags': {
+                'not_contains': 'Home Bills'
+            }
+        }])
 
 
 class BudapestTripTag(DictTag):
@@ -180,15 +193,42 @@ class BudapestTripTag(DictTag):
             'date.str': {
                 'greater_equal': '2022-04-22', # 18:00
                 'less_equal': '2022-04-27', # 6am?
-            }}])
+            },
+            'tags': {
+                'not_contains': 'Home Bills'
+            }
+        }])
 
 
 class ParisTripTag(DictTag):
     def __init__(self):
         super().__init__('Paris trip', [{
-            'date.str': {
-                'greater_equal': '2022-07-07', # apogeuma
-                'less_equal': '2022-07-15', # prwi
+                'date.str': {
+                    'greater_equal': '2022-07-07', # apogeuma
+                    'less_equal': '2022-07-15', # prwi
+                },
+                'tags': {
+                    'not_contains': ['Home Bills', 'Other Bills']
+                }
+            },
+            {
+                'description': {
+                    'contains': 'To Ifigeneia Giannoukakou-Leontsini'
+                }
+            },
+             {
+                 'description.lower': {
+                     'contains': 'velib metropole'
+                 }
+             },
+        ])
+
+
+class TripsTag(DictTag):
+    def __init__(self):
+        super().__init__('Trip', [{
+            'tags.str': {
+                'contains': 'trip'
             }}])
 
 
@@ -214,16 +254,18 @@ SuperMarketTag(),
 FlightTicketsTag(),
 RentTag(),
 HomeBillsTag(),
+OtherBillsTag(),
 OnlineOrdersTag(),
 TooGoodToGoTag(),
 CashTag(),
 ]
 
 TRIPS = [
-BarchelonaTripTag(),
+BarcelonaTripTag(),
 BudapestTripTag(),
 ParisTripTag(),
+TripsTag()
 ]
 
-ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS
+ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS + TRIPS  # order matters
 
