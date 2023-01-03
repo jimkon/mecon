@@ -71,6 +71,13 @@ class GiffgaffTag(HardCodedTag):
         return 'giffgaff' in element['description'].lower()
 
 
+class CosmoteTag(DictTag):
+    def __init__(self):
+        super().__init__('Cosmote', [
+            {'description.lower': {'contains': 'cosmote'}},
+        ])
+
+
 class SantaderBikesTag(HardCodedTag):
     def __init__(self):
         super().__init__('Santader Bikes')
@@ -107,6 +114,16 @@ class SuperMarketTag(DictTag):
             {'description.lower': {'contains': 'waitrose'}},
             {'description.lower': {'contains': 'morrisons'}},
             {'description.lower': {'contains': 'marks spencer'}},
+            {'description.lower': {'contains': 'nisa'}},
+        ])
+
+
+class FoodDeliveryTag(DictTag):
+    def __init__(self):
+        super().__init__('Food Delivery', [
+            {'description.lower': {'contains': ['just', 'eat']}},
+            {'description.lower': {'contains': ['uber', 'eat']}},
+            {'description.lower': {'contains': 'efood'}},
         ])
 
 
@@ -115,10 +132,18 @@ class FlightTicketsTag(DictTag):
         super().__init__('Flight tickets', [
             {'description.lower': {'contains': 'ryanair'}},
             {'description.lower': {'contains': 'kiwi.com'}},
-            {'description.lower': {'contains': 'easyjet.com'}},
+            {'description.lower': {'contains': 'easyjet'}},
             {'description.lower': {'contains': 'sky express'}},
             {'description.lower': {'contains': 'krhtikes aeroporikes'}},
             {'description.lower': {'contains': 'budgetair'}},
+        ])
+
+
+class TrainTicketsTag(DictTag):
+    def __init__(self):
+        super().__init__('Train tickets', [
+            {'description.lower': {'contains': 'trainline'}},
+            {'description.lower': {'contains': 'stansted express'}},
         ])
 
 
@@ -157,6 +182,8 @@ class OnlineOrdersTag(DictTag):
             {'description.lower': {'contains': 'amazon'}},
             {'description.lower': {'contains': 'amznmktplace'}},
             {'description.lower': {'contains': 'ebay'}},
+            {'description.lower': {'contains': 'asos'}},
+            {'description.lower': {'contains': 'samsung'}},
         ])
 
 
@@ -247,11 +274,14 @@ IncomeTag(),
 SERVICE_TAGS = [
 SpotifyTag(),
 GiffgaffTag(),
+CosmoteTag(),
 SantaderBikesTag(),
 TFLTag(),
 TherapyTag(),
 SuperMarketTag(),
+FoodDeliveryTag(),
 FlightTicketsTag(),
+TrainTicketsTag(),
 RentTag(),
 HomeBillsTag(),
 OtherBillsTag(),
