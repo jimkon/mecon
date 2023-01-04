@@ -1,0 +1,27 @@
+<style>
+
+.dropmenu_content_[id] {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+</style>
+
+<select id="test" name="form_select" onchange="showDiv_[id](this)">
+   [option_label]
+</select>
+[option_div]
+<script>
+    function showDiv_[id](element)
+{
+   var i, tabcontent;
+   tabcontent = document.getElementsByClassName("dropmenu_content_[id]");
+   for (i = 0; i < tabcontent.length; i++) {
+      tabcontent[i].style.display = "none";
+   }
+   document.getElementById("hidden_div"+element.value+"_[id]").style.display = 'block';
+}
+
+document.getElementById("hidden_div0_[id]").style.display = 'block';
+</script>

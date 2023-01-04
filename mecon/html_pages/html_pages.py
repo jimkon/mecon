@@ -99,17 +99,16 @@ class TabsHTML(TemplateHTMLBuilder):
         self._id = str(TabsHTML._cnt)
         TabsHTML._cnt += 1
 
-        self.replace("id", self._id)
         self._add_default_id = True
 
     def _add_button(self, label):
-        default_id = f"id=\"defaultOpen_{self._id}\"" if self._add_default_id else ""
+        default_id = f"id=\"defaultOpen_[id]\"" if self._add_default_id else ""
         self._add_default_id = False
-        to_add = f"<button class=\"tablinks_{self._id}\" onclick=\"open_tab_{self._id}(event, '{label}')\" {default_id}>{label}</button>\n\t[button]"
+        to_add = f"<button class=\"tablinks_[id]\" onclick=\"open_tab_[id](event, '{label}_[id]')\" {default_id}>{label}</button>\n\t[button]"
         self.replace('button', to_add)
 
     def _add_div(self, label, html_content):
-        to_add = f"<div id=\"{label}\" class=\"tabcontent_{self._id}\">\n{html_content}\n</div>\n[div_tab]"
+        to_add = f"<div id=\"{label}_[id]\" class=\"tabcontent_[id]\">\n{html_content}\n</div>\n[div_tab]"
         self.replace('div_tab', to_add)
 
     def add_tab(self, label, html_content):
@@ -120,6 +119,42 @@ class TabsHTML(TemplateHTMLBuilder):
     def html(self):
         self.replace("button", '')
         self.replace("div_tab", '')
+        self.replace("id", self._id)
+        return self._html_str
+
+
+class DropMenuHTML(TemplateHTMLBuilder):
+    _cnt = 0
+
+    def __init__(self):
+        super().__init__('dropmenu')
+        self._id = str(DropMenuHTML._cnt)
+        DropMenuHTML._cnt += 1
+
+        self._add_default_id = True
+        self._opt_cnt = 0
+
+    def _add_label(self, label):
+        to_add = f"<option class=\"opt\" {'selected' if self._add_default_id else ''} value=\"{self._opt_cnt}\">{label}</option>\n\t[option_label]"
+        self._add_default_id = False
+        self.replace('option_label', to_add)
+
+    def _add_div(self, label, html_content):
+        to_add = f"<div class=\"dropmenu_content_[id]\" id=\"hidden_div{self._opt_cnt}_[id]\">{html_content}</div>\n\t[option_div]"
+        self.replace('option_div', to_add)
+
+
+    def add_option(self, label, html_content):
+        self._add_label(label)
+        self._add_div(label, html_content.html() if issubclass(html_content.__class__, HTMLObject) else html_content)
+        self._opt_cnt += 1
+        return self
+
+    def html(self):
+        self.replace("option_label", '')
+        self.replace("option_div", '')
+        self.replace("id", self._id)
+
         return self._html_str
 
 
