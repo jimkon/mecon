@@ -3,6 +3,7 @@ import base64
 import os
 import tempfile
 import matplotlib.pyplot as plt
+import uuid
 
 _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 
@@ -92,12 +93,10 @@ class ImageHTML(TemplateHTMLBuilder):
 
 
 class TabsHTML(TemplateHTMLBuilder):
-    _cnt = 0
-
     def __init__(self):
+
         super().__init__('tabs')
-        self._id = str(TabsHTML._cnt)
-        TabsHTML._cnt += 1
+        self._id = uuid.uuid4().hex[:6].upper()
 
         self._add_default_id = True
 
@@ -124,12 +123,10 @@ class TabsHTML(TemplateHTMLBuilder):
 
 
 class DropMenuHTML(TemplateHTMLBuilder):
-    _cnt = 0
 
     def __init__(self):
         super().__init__('dropmenu')
-        self._id = str(DropMenuHTML._cnt)
-        DropMenuHTML._cnt += 1
+        self._id = uuid.uuid4().hex[:6].upper()
 
         self._add_default_id = True
         self._opt_cnt = 0
