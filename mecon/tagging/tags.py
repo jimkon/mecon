@@ -175,6 +175,7 @@ class OtherBillsTag(DictTag):
             {'tags': {'contains': 'Spotify'}},
             {'tags': {'contains': 'Giffgaff'}},
             {'tags': {'contains': 'Therapy'}},
+            {'description.lower': {'contains': 'vision express'}},
         ])
 
 
@@ -214,37 +215,29 @@ class CashTag(DictTag):
 class ChaniaTripTag(DictTag):
     def __init__(self):
         super().__init__('Chania trip', [
-            {'date.str': {'greater_equal': '2019-04-11', 'less_equal': '2020-01-01'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2020-05-16', 'less_equal': '2020-07-01'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2020-07-11', 'less_equal': '2020-09-05'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2021-07-02', 'less_equal': '2021-07-11'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2021-07-22', 'less_equal': '2021-07-09'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2022-01-01', 'less_equal': '2022-01-08'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2022-04-07', 'less_equal': '2022-04-19'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2022-05-25', 'less_equal': '2022-06-04'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
-            {'date.str': {'greater_equal': '2022-08-04', 'less_equal': '2022-09-08'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2019-04-11', 'less': '2020-01-01'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2020-05-16', 'less': '2020-07-01'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2020-07-11', 'less': '2020-09-05'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2021-07-02', 'less': '2021-07-11'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2021-07-22', 'less': '2021-07-09'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2022-01-01', 'less': '2022-01-08'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2022-04-07', 'less': '2022-04-19'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2022-05-25', 'less': '2022-06-04'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2022-08-04', 'less': '2022-09-08'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
         ])
 
 
 class AthensTripTag(DictTag):
     def __init__(self):
         super().__init__('Athens trip', [
-            {'date.str': {'greater_equal': '2020-01-01', 'less_equal': '2020-01-04'},
-             'tags': {'not_contains': 'Home Bills'}},
-            {'date.str': {'greater_equal': '2020-07-02', 'less_equal': '2020-07-11'},
-             'tags': {'not_contains': 'Home Bills'}},
-            {'date.str': {'greater_equal': '2021-07-12', 'less_equal': '2021-07-22'},
-             'tags': {'not_contains': 'Home Bills'}},
-            {'date.str': {'greater_equal': '2021-08-10', 'less_equal': '2021-08-14'},
-             'tags': {'not_contains': 'Home Bills'}},
-            {'date.str': {'greater_equal': '2021-12-14', 'less_equal': '2022-01-01'},
-             'tags': {'not_contains': 'Home Bills'}},
-            {'date.str': {'greater_equal': '2022-01-09', 'less_equal': '2022-01-09'},
-             'tags': {'not_contains': 'Home Bills'}},
-            {'date.str': {'greater_equal': '2022-06-04', 'less_equal': '2022-06-07'},
-             'tags': {'not_contains': 'Home Bills'}},
-            {'date.str': {'greater_equal': '2022-09-08', 'less_equal': '2022-10-12'},
-             'tags': {'not_contains': 'Home Bills'}}
+            {'date.str': {'greater_equal': '2020-01-01', 'less': '2020-01-04'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2020-07-02', 'less': '2020-07-11'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2021-07-12', 'less': '2021-07-22'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2021-08-10', 'less': '2021-08-14'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2021-12-14', 'less': '2022-01-01'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2022-01-09', 'less': '2022-01-09'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2022-06-04', 'less': '2022-06-07'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2022-09-08', 'less': '2022-10-12'}, 'tags': {'not_contains': ['Home Bills', 'Income']}},
         ])
 
 
@@ -254,11 +247,7 @@ class BarcelonaTripTag(DictTag):
             'date.str': {
                 'greater_equal': '2022-03-10', # 10am
                 'less_equal': '2022-03-22', # 10am?
-            },
-            'tags': {
-                'not_contains': 'Home Bills'
-            }
-        }])
+            }, 'tags': {'not_contains': ['Home Bills', 'Income']}},])
 
 
 class BudapestTripTag(DictTag):
@@ -267,11 +256,7 @@ class BudapestTripTag(DictTag):
             'date.str': {
                 'greater_equal': '2022-04-22', # 18:00
                 'less_equal': '2022-04-27', # 6am?
-            },
-            'tags': {
-                'not_contains': 'Home Bills'
-            }
-        }])
+            }, 'tags': {'not_contains': ['Home Bills', 'Income']}},])
 
 
 class ParisTripTag(DictTag):
@@ -280,11 +265,7 @@ class ParisTripTag(DictTag):
                 'date.str': {
                     'greater_equal': '2022-07-07', # apogeuma
                     'less_equal': '2022-07-15', # prwi
-                },
-                'tags': {
-                    'not_contains': ['Home Bills', 'Other Bills']
-                }
-            },
+                }, 'tags': {'not_contains': ['Home Bills', 'Income']}},
             {
                 'description': {
                     'contains': 'To Ifigeneia Giannoukakou-Leontsini'
@@ -304,6 +285,14 @@ class TripsTag(DictTag):
             'tags.str': {
                 'contains': 'trip'
             }}])
+
+
+class BankTransferTag(DictTag):
+    def __init__(self):
+        super().__init__('Bank transfer', [
+            {'description.lower': {'contains': 'dimitrios kontzedakis'}}
+        ])
+
 
 
 BANK_TAGS = [
@@ -336,6 +325,7 @@ OnlineOrdersTag(),
 TooGoodToGoTag(),
 CashTag(),
 AirbnbTag(),
+BankTransferTag()
 ]
 
 TRIPS = [
