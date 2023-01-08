@@ -46,6 +46,9 @@ class Rule:
     def condition_value(self):
         return self._condition_value
 
+    def __repr__(self):
+        return f"Rule: {self._condition_function}( {self._preprocessing_function}({self._column}) , {self._condition_value} )"
+
 
 def analyse_rule_dict(rule_dict):
     rules_list = []
