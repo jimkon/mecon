@@ -1,9 +1,32 @@
 from datetime import time, timedelta
+from enum import Enum
 from math import ceil
 
 import pandas as pd
 
 from mecon import logs
+
+
+class DayOfWeek(Enum):
+    MONDAY = 'Monday'
+    TUESDAY = 'Tuesday'
+    WEDNESDAY = 'Wednesday'
+    THURSDAY = 'Thursday'
+    FRIDAY = 'Friday'
+    SATURDAY = 'Saturday'
+    SUNDAY = 'Sunday'
+
+
+def dayofweek(s):
+    return {
+        0: DayOfWeek.MONDAY.value,
+        1: DayOfWeek.TUESDAY.value,
+        2: DayOfWeek.WEDNESDAY.value,
+        3: DayOfWeek.THURSDAY.value,
+        4: DayOfWeek.FRIDAY.value,
+        5: DayOfWeek.SATURDAY.value,
+        6: DayOfWeek.SUNDAY.value
+    }[s.weekday()]
 
 
 def week_of_month(dt):

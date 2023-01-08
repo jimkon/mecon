@@ -1,5 +1,6 @@
 from pandas import Timestamp
 
+from mecon.calendar_utils import DayOfWeek
 from mecon.tagging.dict_tag import DictTag
 from mecon.tagging.manual_tag import HardCodedTag
 
@@ -294,6 +295,41 @@ class BankTransferTag(DictTag):
         ])
 
 
+class MondayTag(DictTag):
+    def __init__(self):
+        super().__init__(DayOfWeek.MONDAY.value, {'date.dayofweek': {'equals': DayOfWeek.MONDAY.value}})
+
+
+class TuesdayTag(DictTag):
+    def __init__(self):
+        super().__init__(DayOfWeek.TUESDAY.value, {'date.dayofweek': {'equals': DayOfWeek.TUESDAY.value}})
+
+
+class WednesdayTag(DictTag):
+    def __init__(self):
+        super().__init__(DayOfWeek.WEDNESDAY.value, {'date.dayofweek': {'equals': DayOfWeek.WEDNESDAY.value}})
+
+
+class ThursdayTag(DictTag):
+    def __init__(self):
+        super().__init__(DayOfWeek.THURSDAY.value, {'date.dayofweek': {'equals': DayOfWeek.THURSDAY.value}})
+
+
+class FridayTag(DictTag):
+    def __init__(self):
+        super().__init__(DayOfWeek.FRIDAY.value, {'date.dayofweek': {'equals': DayOfWeek.FRIDAY.value}})
+
+
+class SaturdayTag(DictTag):
+    def __init__(self):
+        super().__init__(DayOfWeek.SATURDAY.value, {'date.dayofweek': {'equals': DayOfWeek.SATURDAY.value}})
+
+
+class SundayTag(DictTag):
+    def __init__(self):
+        super().__init__(DayOfWeek.SUNDAY.value, {'date.dayofweek': {'equals': DayOfWeek.SUNDAY.value}})
+
+
 
 BANK_TAGS = [
 MonzoTag(),
@@ -328,6 +364,16 @@ AirbnbTag(),
 BankTransferTag()
 ]
 
+TIME = [
+MondayTag(),
+TuesdayTag(),
+WednesdayTag(),
+ThursdayTag(),
+FridayTag(),
+SaturdayTag(),
+SundayTag(),
+]
+
 TRIPS = [
 ChaniaTripTag(),
 AthensTripTag(),
@@ -337,5 +383,5 @@ ParisTripTag(),
 TripsTag()
 ]
 
-ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS + TRIPS  # order matters
+ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS + TIME + TRIPS  # order matters
 

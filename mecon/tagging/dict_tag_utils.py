@@ -1,6 +1,8 @@
 import re
 from functools import wraps
 
+from mecon import calendar_utils
+
 
 def lower(s): return s.lower()
 
@@ -13,7 +15,8 @@ field_processing_functions_dict = {
     'upper': upper,
     'abs': abs,
     'int': int,
-    'str': str
+    'str': str,
+    'dayofweek': calendar_utils.dayofweek,
 }
 
 

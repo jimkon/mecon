@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import patch, call
+from datetime import date
+
 
 import mecon.tagging.dict_tag_utils as utils
 
@@ -10,6 +11,15 @@ class TestPreprocessingFunctions(unittest.TestCase):
 
     def test_upper(self):
         self.assertEqual(utils.lower("AaAa"), 'AAAA')
+
+    def test_dayofweek(self):
+        self.assertEqual(utils.dayofweek(date(2023, 1, 9)), 'Monday')
+        self.assertEqual(utils.dayofweek(date(2023, 1, 10)), 'Tuesday')
+        self.assertEqual(utils.dayofweek(date(2023, 1, 11)), 'Wednesday')
+        self.assertEqual(utils.dayofweek(date(2023, 1, 12)), 'Thursday')
+        self.assertEqual(utils.dayofweek(date(2023, 1, 13)), 'Friday')
+        self.assertEqual(utils.dayofweek(date(2023, 1, 14)), 'Saturday')
+        self.assertEqual(utils.dayofweek(date(2023, 1, 15)), 'Sunday')
 
 
 class TestMatchFunctions(unittest.TestCase):
