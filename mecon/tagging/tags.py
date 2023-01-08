@@ -124,6 +124,7 @@ class FoodDeliveryTag(DictTag):
             {'description.lower': {'contains': ['just', 'eat']}},
             {'description.lower': {'contains': ['uber', 'eat']}},
             {'description.lower': {'contains': 'efood'}},
+            {'description.lower': {'contains': 'e food'}},
         ])
 
 
@@ -136,6 +137,7 @@ class FlightTicketsTag(DictTag):
             {'description.lower': {'contains': 'sky express'}},
             {'description.lower': {'contains': 'krhtikes aeroporikes'}},
             {'description.lower': {'contains': 'budgetair'}},
+            {'description.lower': {'contains': 'olympic'}},
         ])
 
 
@@ -163,6 +165,7 @@ class HomeBillsTag(DictTag):
             {'description.lower': {'contains': 'exarchou'}},
             {'description.lower': {'contains': 'sideris'}},
             {'description.lower': {'contains': 'virgin media'}},
+            {'description.lower': {'contains': 'bulb energy'}},
         ])
 
 
