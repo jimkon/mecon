@@ -24,7 +24,7 @@ def date_to_month_date(date_series):
 
 
 @logs.func_execution_logging
-def fill_dates(df_in):
+def fill_days(df_in):
     if len(df_in) == 0:
         return df_in
 

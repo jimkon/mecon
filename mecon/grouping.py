@@ -6,6 +6,12 @@ from mecon.calendar_utils import week_of_month
 from mecon.tagging.tags import TRIPS
 
 
+def get_grouper(unit):
+    for grouper in [DailyGrouping, WeeklyGrouping, MonthlyGrouping, WorkingMonthGrouping, WeeklyGrouping, YearlyGrouping, LocationGrouping]:
+        if unit == grouper.col_name:
+            return grouper
+
+
 class DataGrouping(DataFrameGroupBy):
     col_name = None
 
@@ -19,25 +25,25 @@ class DataGrouping(DataFrameGroupBy):
 
 
 class DailyGrouping(DataGrouping):
-    _col_name = 'date'
+    col_name = 'date'
 
     def generate_grouping_column(self, df):
-        return df[self._col_name]
+        return df[self.col_name]
 
 
 class WeeklyGrouping(DataGrouping):
-    col_name = 'year-week'
+    col_name = 'week'
 
     def generate_grouping_column(self, df):
         df['year'] = df['date'].dt.year.astype(str)
         df['month'] = df['date'].dt.month.apply(lambda x: f"{str(x):0>2}")
         df['week'] = df['date'].apply(week_of_month).apply(lambda x: f"{str(x):0>2}")
-        df[self.col_name] = df['year'] + '-' + df['month'] + '-' + df['week']
+        df[self.col_name] = df['year'] + '-' + df['month'] + '/' + df['week']
         return df[self.col_name]
 
 
 class MonthlyGrouping(DataGrouping):
-    col_name = 'year-month'
+    col_name = 'month'
 
     def generate_grouping_column(self, df):
         df['year'] = df['date'].dt.year.astype(str)

@@ -9,22 +9,27 @@ from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS, TRIPS
 from mecon import logs
 
 
-def overview_plot_page():
+def iterarate_over_time_units(plot_func, *args, time_units=None, **kwargs):
+    if not time_units:
+        time_units = ['date', 'week', 'month', 'working month', 'year']
+
     time_window_tabs = html_pages.TabsHTML()
-
-    for time_unit in ['day', 'week', 'month', 'working month', 'year']:
-        logs.log_html(f"Creating balance report for time unit #{time_unit}# ...")
-        page = html_pages.HTMLPage()
-
-        plots.total_balance_timeline_fig(time_unit)
-        page.add_element(html_pages.ImageHTML.from_matplotlib())
-
-        # plots.total_trips_timeline_fig(time_unit)
-        # page.add_element(html_pages.ImageHTML.from_matplotlib())
-
+    for time_unit in time_units:
+        page = plot_func(*args, time_unit=time_unit, **kwargs)
         time_window_tabs.add_tab(time_unit.capitalize(), page)
-
     return time_window_tabs
+
+
+
+def create_total_balance_timeline_graph_page(time_unit):
+    page = html_pages.HTMLPage()
+    plots.total_balance_timeline_fig(time_unit)
+    page.add_element(html_pages.ImageHTML.from_matplotlib())
+    return page
+
+
+def overview_plot_page():
+    return iterarate_over_time_units(create_total_balance_timeline_graph_page)
 
 
 def create_service_df_tag_description(data):
@@ -42,6 +47,17 @@ def create_df_table_page(df, title=''):
     return html_pages.SimpleHTMLTable(df, f"{title} ({df.shape[0]} rows)")
 
 
+def create_plot_tag_stats(tag, time_unit):
+    page = html_pages.HTMLPage()
+    # plots.plot_tag_stats(tag)
+    plots.tag_amount_stats(tag, time_unit)
+    page.add_element(html_pages.ImageHTML.from_matplotlib())
+
+    plots.tag_frequency_stats(tag, time_unit)
+    page.add_element(html_pages.ImageHTML.from_matplotlib())
+    return page
+
+
 def create_service_report_for_tag(service_tag):
     logs.log_html(f"Creating service report for tag #{service_tag}# ...")
     data = FullyTaggedData.instance().get_rows_tagged_as(service_tag)
@@ -54,8 +70,8 @@ def create_service_report_for_tag(service_tag):
     page.add_element(f"<h1>{service_tag}</h1>")
     page.add_element(create_service_df_tag_description(data))
 
-    plots.plot_tag_stats(service_tag, show=False)
-    page.add_element(html_pages.ImageHTML.from_matplotlib())
+    plot_html = iterarate_over_time_units(create_plot_tag_stats, service_tag)
+    page.add_element(plot_html)
 
     page.add_element(create_df_table_page(df.sort_values('date', ascending=False), title='Full table'))
     page.add_element(create_df_table_page(df.describe(include='all', datetime_is_numeric=True).reset_index(), title=service_tag))

@@ -22,9 +22,9 @@ class TaggedData:
             tagger.tag(df)
         return TaggedData(df)
 
-    def fill_dates(self):
+    def fill_days(self):
         df_res = self.dataframe()
-        df_res = calendar_utils.fill_dates(df_res)
+        df_res = calendar_utils.fill_days(df_res)
         df_res = df_res.sort_values(by=['date', 'time']).reset_index(drop=True)
         return TaggedData(df_res)
 
@@ -38,14 +38,17 @@ class TaggedData:
             result.extend(row_tags)
         return sorted(set(result))
 
-    def get_rows_tagged_as(self, tag):
+    def get_rows_tagged_as(self, tags):
+        if not isinstance(tags, list):
+            tags = [tags]
+
         df = self.dataframe()
 
-        select_rows_condition = df['tags'].apply(lambda x: (tag in x) if tag else True)
+        select_rows_condition = df['tags'].apply(lambda x: any([((tag in x) if tag else True) for tag in tags]))
         res_df = df[select_rows_condition]
 
         if select_rows_condition.sum() == 0:
-            print(f'{" WARNING ":#^100}\n\tTag "{tag}" returned no rows.')
+            print(f'{" WARNING ":#^100}\n\tTags "{tags}" returned no rows.')
 
         return TaggedData(res_df)
 

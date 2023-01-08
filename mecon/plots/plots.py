@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from mecon.calendar_utils import fill_dates, week_of_month
+from mecon.calendar_utils import fill_days, week_of_month
 from mecon import grouping
 from mecon.grouping import LocationGrouping
 
@@ -9,6 +9,19 @@ plt.style.use('bmh')
 import pandas as pd
 
 from mecon.statements.tagged_statement import TaggedData, FullyTaggedData
+
+
+def calc_rolling_bin(time_unit):
+    if time_unit == "date":
+        return 30
+    elif time_unit == "week":
+        return 12
+    elif time_unit == "month":
+        return 4
+    elif time_unit == 'working month':
+        return 4
+    elif time_unit == 'year':
+        return 1
 
 
 def plot_verticals(dates, months=True, years=True):
@@ -22,24 +35,24 @@ def plot_verticals(dates, months=True, years=True):
 
 
 def plot_rolling_hist(x, y, rolling_bin=30, actual_line_style='-', expanding_mean=False):
+    if rolling_bin > 1:
+        plt.plot(x, y.rolling(rolling_bin, center=True).mean(), label='mean', color='C1')
+        plt.fill_between(x, y.rolling(rolling_bin, center=True).min(), y.rolling(rolling_bin, center=True).max(),
+                         color='gray', alpha=.1,
+                         label='min_max')
+        if expanding_mean:
+            plt.plot(x, y.expanding().mean(), label=f'expanding_mean (last value: {y.mean():.2f})', color='C2')
+
     if actual_line_style is not None:
-        plt.plot(x, y, actual_line_style, label='actual', color='C0', linewidth=1)
-
-    if rolling_bin == 1:
-        return
-
-    plt.plot(x, y.rolling(rolling_bin, center=True).mean(), label='mean', color='C1')
-    plt.fill_between(x, y.rolling(rolling_bin, center=True).min(), y.rolling(rolling_bin, center=True).max(),
-                     color='gray', alpha=.1,
-                     label='min_max')
-
-    if expanding_mean:
-        plt.plot(x, y.expanding().mean(), label=f'expanding_mean (last value: {y.mean():.2f})', color='C2')
+        if rolling_bin == 1:
+            plt.plot(x, y, ':.', label='actual', color='C0', linewidth=1)
+        else:
+            plt.plot(x, y, actual_line_style, label='actual', color='C0', linewidth=1)
 
 
 def total_balance_timeline_fig(time_unit='day'):
     time_units = {
-        'day': {'rolling_bin': 30, 'grouper': grouping.DailyGrouping},
+        'date': {'rolling_bin': 30, 'grouper': grouping.DailyGrouping},
         'week': {'rolling_bin': 12, 'grouper': grouping.WeeklyGrouping},
         'month': {'rolling_bin': 4, 'grouper': grouping.MonthlyGrouping},
         'working month': {'rolling_bin': 4, 'grouper': grouping.WorkingMonthGrouping},
@@ -47,13 +60,13 @@ def total_balance_timeline_fig(time_unit='day'):
     }
     assert time_unit in time_units
 
-    data = FullyTaggedData.instance().fill_dates()
+    data = FullyTaggedData.instance().fill_days()
     df = data.dataframe()
 
     grouper = time_units[time_unit]['grouper']
     rolling_bin = time_units[time_unit]['rolling_bin']
 
-    df_agg = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index()
+    df_agg = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
 
     plt.figure(figsize=(12, 5))
     plt.xticks(rotation=90)
@@ -69,7 +82,7 @@ def total_balance_timeline_fig(time_unit='day'):
 
 
 def total_trips_timeline_fig():
-    data = FullyTaggedData.instance().fill_dates()
+    data = FullyTaggedData.instance().fill_days()
     df = data.dataframe()
 
     df_trips = LocationGrouping(df).agg({'date': ['min', 'max'], 'amount': 'sum', 'location': 'first'}).reset_index(drop=True)
@@ -94,15 +107,56 @@ def total_trips_timeline_fig():
     plt.tight_layout()
 
 
-def plot_tag_stats(tag, show=True):
+def tag_amount_stats(tag, time_unit):
+    tagged_stat = FullyTaggedData.instance()
+    df = tagged_stat.get_rows_tagged_as(tag).fill_days().dataframe()
+
+    # amount_per_day = df.groupby('date').agg({'amount': 'sum'}).reset_index()
+    grouper = grouping.get_grouper(time_unit)
+    amount_per_day = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
+    if time_unit == 'date':
+        amount_per_day = fill_days(amount_per_day)[['date', 'amount']]
+
+    plt.figure(figsize=(12, 3))
+    plt.title(f"{tag} cost per {time_unit} {grouper}")
+    plot_verticals(amount_per_day['date'])
+    r = calc_rolling_bin(time_unit)
+    plot_rolling_hist(amount_per_day['date'], -amount_per_day['amount'], actual_line_style='.',
+                      expanding_mean=True, rolling_bin=calc_rolling_bin(time_unit))
+    plt.ylabel('Amount')
+    plt.legend()
+    plt.tight_layout()
+
+
+def tag_frequency_stats(tag, time_unit):
+    # tag_amount_stats(tag, time_unit)
+    tagged_stat = FullyTaggedData.instance()
+    df = tagged_stat.get_rows_tagged_as(tag).dataframe()
+
+    grouper = grouping.get_grouper(time_unit)
+    count_per_day = grouper(df).agg({'date': 'first', 'amount': 'count'}).reset_index(drop=True)
+    if time_unit == 'date':
+        count_per_day = fill_days(count_per_day)[['date', 'amount']]
+
+    plt.figure(figsize=(12, 3))
+    plt.title(f"{tag} freq per {time_unit}")
+    plot_rolling_hist(count_per_day['date'], count_per_day['amount'].abs(), actual_line_style='.',
+                          expanding_mean=True, rolling_bin=calc_rolling_bin(time_unit))
+    plot_verticals(df['date'])
+    plt.ylabel('Count')
+    plt.legend()
+    plt.tight_layout()
+
+
+def plot_tag_stats(tag):
     tagged_stat = FullyTaggedData.instance()
     df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'amount']]
 
     amount_per_day = df.groupby('date').agg({'amount': 'sum'}).reset_index()
-    amount_per_day = fill_dates(amount_per_day)[['date', 'amount']]
+    amount_per_day = fill_days(amount_per_day)[['date', 'amount']]
 
     count_per_day = df.groupby('date').agg({'amount': 'count'}).reset_index()
-    count_per_day = fill_dates(count_per_day)[['date', 'amount']]
+    count_per_day = fill_days(count_per_day)[['date', 'amount']]
 
     df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'month_date', 'amount']]
 
@@ -141,6 +195,3 @@ def plot_tag_stats(tag, show=True):
     plt.legend()
 
     plt.tight_layout()
-
-    if show:
-        plt.show()
