@@ -1,6 +1,7 @@
 from datetime import datetime
 import multiprocessing
 
+from mecon.configs import LINEAR_EXECUTION
 from mecon.html_pages import html_pages
 
 from mecon.plots import plots
@@ -107,28 +108,29 @@ def create_service_report_for_tag(service_tag):
 
 
 @logs.func_execution_logging
-def create_services_reports(linear_execution=False):
-    # linear executions
-    if linear_execution:
-        return [(tag, create_service_report_for_tag(tag)) for tag in [tagger.tag_name for tagger in SERVICE_TAGS]]
-
+def create_services_reports():
     tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
-    with multiprocessing.Pool() as pool:
-        service_reports = pool.map(create_service_report_for_tag, tag_names)
 
-    return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
+    if LINEAR_EXECUTION:
+        return [(tag, create_service_report_for_tag(tag)) for tag in tag_names]
+    else:
+        with multiprocessing.Pool() as pool:
+            service_reports = pool.map(create_service_report_for_tag, tag_names)
+
+        return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
 
 
 @logs.func_execution_logging
 def create_trips_reports():
-    # linear executions
-    # return [(tag, create_service_report_for_tag(tag)) for tag in [tagger.tag_name for tagger in SERVICE_TAGS]]
-
     tag_names = [tagger.tag_name for tagger in TRIPS]
-    with multiprocessing.Pool() as pool:
-        service_reports = pool.map(create_service_report_for_tag, tag_names)
 
-    return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
+    if LINEAR_EXECUTION:
+        return [(tag, create_service_report_for_tag(tag)) for tag in tag_names]
+    else:
+        with multiprocessing.Pool() as pool:
+            service_reports = pool.map(create_service_report_for_tag, tag_names)
+
+        return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
 
 
 @logs.func_execution_logging
