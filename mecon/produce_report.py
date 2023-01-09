@@ -96,6 +96,7 @@ def create_df_table_page(df, title=''):
     return html_pages.SimpleHTMLTable(df, f"{title} ({df.shape[0]} rows)")
 
 
+@logs.func_execution_logging
 def create_stats_plot_for_tag(tag):
     def plot_page(time_unit):
         page = html_pages.HTMLPage()
@@ -180,4 +181,4 @@ def create_report():
 
 
 if __name__ == "__main__":
-    create_report()
+   create_report()
