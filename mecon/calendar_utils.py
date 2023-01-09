@@ -46,25 +46,44 @@ def date_to_month_date(date_series):
     return date_series.dt.year.astype(str) + '-' + date_series.dt.month.astype(str).apply(lambda x: f'{x:0>2}')
 
 
+def days_in_between(start_date, end_date):
+    return [start_date+timedelta(days=i) for i in range((end_date-start_date).days+1)]
+
+
+_fill_days_df = None
+
+
+def _get_fill_dates(dates_to_fill):
+    min_date, max_date = min(dates_to_fill), max(dates_to_fill)
+    global _fill_days_df
+    if _fill_days_df is None or min_date < _fill_days_df['date'].min() or max_date > _fill_days_df['date'].max():
+        logs.log_html(f"Creating prebuilt fill days table...")
+        df = pd.DataFrame({'date': days_in_between(min_date, max_date)})
+        df['month_date'] = date_to_month_date(df['date'])
+        df['time'] = time(0, 0, 0)
+        df['amount'] = .0
+        df['currency'] = 'GBP'
+        df['amount_curr'] = .0
+        df['description'] = ''
+        df['tags'] = [['FILLED'] for i in range(len(df))]
+
+        _fill_days_df = df
+
+    return _fill_days_df[_fill_days_df['date'].isin(dates_to_fill)]
+
+
 @logs.func_execution_logging
 def fill_days(df_in):
     if len(df_in) == 0:
         return df_in
 
     existing_dates = set(pd.to_datetime(df_in['date'].unique()))
-    all_dates = {df_in['date'].min()+timedelta(days=i) for i in range((df_in['date'].max()-df_in['date'].min()).days+1)}
-    to_fill_dates = all_dates - existing_dates
+    all_dates = days_in_between(df_in['date'].min(), df_in['date'].max())
+    dates_to_fill = set(all_dates) - existing_dates
 
-    if len(to_fill_dates) == 0:
+    if len(dates_to_fill) == 0:
         return df_in
 
-    logs.log_calculation(f"Filling {len(to_fill_dates)} days. Unique dates:{len(existing_dates)}, Time period in days: {len(all_dates)}, min day: {df_in['date'].min()}, max day: {df_in['date'].max()}")
-    df_to_append = pd.DataFrame({'date': list(to_fill_dates)})
-    df_to_append['month_date'] = date_to_month_date(df_to_append['date'])
-    df_to_append['time'] = time(0, 0, 0)
-    df_to_append['amount'] = .0
-    df_to_append['currency'] = 'GBP'
-    df_to_append['amount_curr'] = .0
-    df_to_append['description'] = ''
-    df_to_append['tags'] = [['FILLED'] for i in range(len(df_to_append))]
+    logs.log_calculation(f"Filling {len(dates_to_fill)} days. Unique dates:{len(existing_dates)}, Time period in days: {len(all_dates)}, min day: {df_in['date'].min()}, max day: {df_in['date'].max()}")
+    df_to_append = _get_fill_dates(dates_to_fill)
     return pd.concat([df_in.copy(), df_to_append]).sort_values(by=['date', 'time']).reset_index(drop=True)
