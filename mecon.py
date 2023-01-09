@@ -29,6 +29,11 @@ def tag_data():
 
 
 def produce_the_full_report():
+    print(f"{' PRELOAD FOR REPORT ':#^80}")
+    from mecon.calendar_utils import _get_fill_dates
+    df = FullyTaggedData.instance().dataframe()
+    _get_fill_dates([df['date'].min(), df['date'].max()])
+
     print(f"{' MAKING REPORT ':#^80}")
     FullyTaggedData.instance()
     create_report()

@@ -57,7 +57,10 @@ def _get_fill_dates(dates_to_fill):
     min_date, max_date = min(dates_to_fill), max(dates_to_fill)
     global _fill_days_df
     if _fill_days_df is None or min_date < _fill_days_df['date'].min() or max_date > _fill_days_df['date'].max():
-        logs.log_html(f"Creating prebuilt fill days table...")
+        if _fill_days_df is not None:
+            min_date, max_date = min(min_date, _fill_days_df['date'].min()), max(max_date, _fill_days_df['date'].max())
+
+        logs.log_html(f"Creating prebuilt fill days table... ({min_date} to {max_date}")
         df = pd.DataFrame({'date': days_in_between(min_date, max_date)})
         df['month_date'] = date_to_month_date(df['date'])
         df['time'] = time(0, 0, 0)
