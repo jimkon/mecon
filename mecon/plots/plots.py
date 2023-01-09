@@ -104,11 +104,7 @@ def total_trips_timeline_fig():
     plt.tight_layout()
 
 
-def tag_amount_stats(tag, time_unit):
-    tagged_stat = FullyTaggedData.instance()
-    df = tagged_stat.get_rows_tagged_as(tag).fill_days().dataframe()
-
-    # amount_per_day = df.groupby('date').agg({'amount': 'sum'}).reset_index()
+def tag_amount_stats(df, tag, time_unit):
     grouper = grouping.get_grouper(time_unit)
     amount_per_day = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
     if time_unit == 'date':
@@ -124,11 +120,7 @@ def tag_amount_stats(tag, time_unit):
     plt.tight_layout()
 
 
-def tag_frequency_stats(tag, time_unit):
-    # tag_amount_stats(tag, time_unit)
-    tagged_stat = FullyTaggedData.instance()
-    df = tagged_stat.get_rows_tagged_as(tag).dataframe()
-
+def tag_frequency_stats(df, tag, time_unit):
     grouper = grouping.get_grouper(time_unit)
     count_per_day = grouper(df).agg({'date': 'min', 'amount': 'count'}).reset_index(drop=True)
     if time_unit == 'date':

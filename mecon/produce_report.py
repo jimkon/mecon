@@ -1,13 +1,12 @@
-from datetime import datetime
 import multiprocessing
+from datetime import datetime
 
+from mecon import logs
 from mecon.configs import LINEAR_EXECUTION
 from mecon.html_pages import html_pages
-
 from mecon.plots import plots
-from mecon.statements.tagged_statement import TaggedData, FullyTaggedData
-from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS, TRIPS
-from mecon import logs
+from mecon.statements.tagged_statement import FullyTaggedData
+from mecon.tagging.tags import SERVICE_TAGS, TRIPS
 
 
 def plot_to_html(plot_func, *args, **kwargs):
@@ -97,14 +96,19 @@ def create_df_table_page(df, title=''):
     return html_pages.SimpleHTMLTable(df, f"{title} ({df.shape[0]} rows)")
 
 
-def create_stats_plot_for_tag(tag, time_unit):
-    page = html_pages.HTMLPage()
-    plots.tag_amount_stats(tag, time_unit)
-    page.add_element(html_pages.ImageHTML.from_matplotlib())
+def create_stats_plot_for_tag(tag):
+    def plot_page(time_unit):
+        page = html_pages.HTMLPage()
+        plots.tag_amount_stats(df_filled, tag, time_unit)
+        page.add_element(html_pages.ImageHTML.from_matplotlib())
+        plots.tag_frequency_stats(df_unfilled, tag, time_unit)
+        page.add_element(html_pages.ImageHTML.from_matplotlib())
+        return page
 
-    plots.tag_frequency_stats(tag, time_unit)
-    page.add_element(html_pages.ImageHTML.from_matplotlib())
-    return page
+    data = FullyTaggedData.instance().get_rows_tagged_as(tag)
+    df_filled, df_unfilled = data.fill_days().dataframe(), data.dataframe()
+
+    return iterate_over_time_units(plot_page)
 
 
 def create_report_for_tag(service_tag):
@@ -119,7 +123,7 @@ def create_report_for_tag(service_tag):
     page.add_element(f"<h1>{service_tag}</h1>")
     page.add_element(create_service_df_tag_description(data))
 
-    plot_html = iterate_over_time_units(create_stats_plot_for_tag, service_tag)
+    plot_html = create_stats_plot_for_tag(service_tag)
     page.add_element(plot_html)
 
     page.add_element(create_df_table_page(df.sort_values('date', ascending=False), title='Full table'))
