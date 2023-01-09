@@ -364,37 +364,37 @@ class BankTransferTag(DictTag):
 
 class MondayTag(DictTag):
     def __init__(self):
-        super().__init__(DayOfWeek.MONDAY.value, {'date.dayofweek': {'equals': DayOfWeek.MONDAY.value}})
+        super().__init__(DayOfWeek.MONDAY.value, {'date.dayofweek': {'equals': DayOfWeek.MONDAY.value}, 'tags': {'contains': 'Tap'}})
 
 
 class TuesdayTag(DictTag):
     def __init__(self):
-        super().__init__(DayOfWeek.TUESDAY.value, {'date.dayofweek': {'equals': DayOfWeek.TUESDAY.value}})
+        super().__init__(DayOfWeek.TUESDAY.value, {'date.dayofweek': {'equals': DayOfWeek.TUESDAY.value}, 'tags': {'contains': 'Tap'}})
 
 
 class WednesdayTag(DictTag):
     def __init__(self):
-        super().__init__(DayOfWeek.WEDNESDAY.value, {'date.dayofweek': {'equals': DayOfWeek.WEDNESDAY.value}})
+        super().__init__(DayOfWeek.WEDNESDAY.value, {'date.dayofweek': {'equals': DayOfWeek.WEDNESDAY.value}, 'tags': {'contains': 'Tap'}})
 
 
 class ThursdayTag(DictTag):
     def __init__(self):
-        super().__init__(DayOfWeek.THURSDAY.value, {'date.dayofweek': {'equals': DayOfWeek.THURSDAY.value}})
+        super().__init__(DayOfWeek.THURSDAY.value, {'date.dayofweek': {'equals': DayOfWeek.THURSDAY.value}, 'tags': {'contains': 'Tap'}})
 
 
 class FridayTag(DictTag):
     def __init__(self):
-        super().__init__(DayOfWeek.FRIDAY.value, {'date.dayofweek': {'equals': DayOfWeek.FRIDAY.value}})
+        super().__init__(DayOfWeek.FRIDAY.value, {'date.dayofweek': {'equals': DayOfWeek.FRIDAY.value}, 'tags': {'contains': 'Tap'}})
 
 
 class SaturdayTag(DictTag):
     def __init__(self):
-        super().__init__(DayOfWeek.SATURDAY.value, {'date.dayofweek': {'equals': DayOfWeek.SATURDAY.value}})
+        super().__init__(DayOfWeek.SATURDAY.value, {'date.dayofweek': {'equals': DayOfWeek.SATURDAY.value}, 'tags': {'contains': 'Tap'}})
 
 
 class SundayTag(DictTag):
     def __init__(self):
-        super().__init__(DayOfWeek.SUNDAY.value, {'date.dayofweek': {'equals': DayOfWeek.SUNDAY.value}})
+        super().__init__(DayOfWeek.SUNDAY.value, {'date.dayofweek': {'equals': DayOfWeek.SUNDAY.value}, 'tags': {'contains': 'Tap'}})
 
 
 

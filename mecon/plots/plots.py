@@ -170,7 +170,7 @@ def tag_frequency_stats(tag, time_unit):
 
 
 def plot_multi_tags_timeline(tags, time_unit):
-    plt.figure(figsize=(12, 3))
+    plt.figure(figsize=(12, 5))
 
     for tag in tags:
         tagged_stat = FullyTaggedData.instance()
@@ -178,7 +178,7 @@ def plot_multi_tags_timeline(tags, time_unit):
         grouper = grouping.get_grouper(time_unit)
         amount_per_date = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
 
-        plt.plot(amount_per_date['date'], amount_per_date['amount'], linewidth=1, label=tag)
+        plt.plot(amount_per_date['date'], -amount_per_date['amount'], '.', linewidth=1, alpha=0.75, label=tag)
 
     plot_verticals(df['date'])
 
