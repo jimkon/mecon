@@ -50,19 +50,7 @@ def plot_rolling_hist(x, y, rolling_bin=30, actual_line_style='-', expanding_mea
             plt.plot(x, y, actual_line_style, label='actual', color='C0', linewidth=1)
 
 
-def total_balance_timeline_fig(time_unit='day'):
-    time_units = {
-        'date': {'rolling_bin': 30, 'grouper': grouping.DailyGrouping},
-        'week': {'rolling_bin': 12, 'grouper': grouping.WeeklyGrouping},
-        'month': {'rolling_bin': 4, 'grouper': grouping.MonthlyGrouping},
-        'working month': {'rolling_bin': 4, 'grouper': grouping.WorkingMonthGrouping},
-        'year': {'rolling_bin': 1, 'grouper': grouping.YearlyGrouping},
-    }
-    assert time_unit in time_units
-
-    data = FullyTaggedData.instance().fill_days()
-    df = data.dataframe()
-
+def plot_timeline_fig(df, time_unit, cumsum=False, actual_line_style='-', title=''):
     grouper = grouping.get_grouper(time_unit)
     rolling_bin = calc_rolling_bin(time_unit)
 
@@ -71,35 +59,22 @@ def total_balance_timeline_fig(time_unit='day'):
     plt.figure(figsize=(12, 5))
     plt.xticks(rotation=90)
 
-    plot_rolling_hist(df_agg['date'], df_agg['amount'].cumsum(), rolling_bin=rolling_bin)
+    plot_rolling_hist(df_agg['date'],
+                      df_agg['amount'].cumsum() if cumsum else -df_agg['amount'],
+                      rolling_bin=rolling_bin,
+                      actual_line_style=actual_line_style)
     plot_verticals(df_agg['date'])
 
     plt.legend()
-    plt.title(f"Total balance ({len(df_agg)} {time_unit}s)")
+    plt.title(title)
     plt.ylabel('Money (£)')
-    plt.xlabel(f'Time ({time_unit})')
+    plt.xlabel(f'Time ({len(df_agg)} {time_unit}s)')
     plt.tight_layout()
 
 
-def total_cost_timeline_fig(time_unit):
-    data = FullyTaggedData.instance().get_rows_tagged_as('Tap').fill_days()
-    df = data.dataframe()
-
-    grouper = grouping.get_grouper(time_unit)
-    rolling_bin=calc_rolling_bin(time_unit)
-
-    df_agg = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
-
-    plt.figure(figsize=(12, 5))
-    plt.xticks(rotation=90)
-
-    plot_rolling_hist(df_agg['date'], -df_agg['amount'], rolling_bin=rolling_bin)
-    plot_verticals(df_agg['date'])
-
-    plt.legend()
-    plt.title(f"Total daily costs ({len(df_agg)} {time_unit}s)")
-    plt.ylabel('Money (£)')
-    plt.xlabel(f'Time ({time_unit})')
+def total_cost_timeline_fig(df, time_unit):
+    plot_timeline_fig(df, time_unit, actual_line_style='.')
+    plt.title(f"Total daily costs")
     plt.tight_layout()
 
 

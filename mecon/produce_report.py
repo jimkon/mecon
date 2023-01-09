@@ -10,7 +10,14 @@ from mecon.tagging.tags import ALL_TAGS, SERVICE_TAGS, TRIPS
 from mecon import logs
 
 
-def iterarate_over_time_units(plot_func, *args, time_units=None, **kwargs):
+def plot_to_html(plot_func, *args, **kwargs):
+    page = html_pages.HTMLPage()
+    plot_func(*args, **kwargs)
+    page.add_element(html_pages.ImageHTML.from_matplotlib())
+    return page
+
+
+def iterate_over_time_units(plot_func, *args, time_units=None, **kwargs):
     if not time_units:
         time_units = ['date', 'week', 'month', 'working month', 'year']
 
@@ -21,20 +28,35 @@ def iterarate_over_time_units(plot_func, *args, time_units=None, **kwargs):
     return time_window_tabs
 
 
-def create_total_balance_timeline_graph_page(time_unit):
-    page = html_pages.HTMLPage()
-    plots.total_balance_timeline_fig(time_unit)
-    page.add_element(html_pages.ImageHTML.from_matplotlib())
-    return page
+@logs.func_execution_logging
+def create_total_balance_timeline_graph_page():
+    def plot_page(time_unit):
+        plots.plot_timeline_fig(df,
+                                time_unit,
+                                cumsum=True,
+                                title=f"Total balance")
+        return html_pages.ImageHTML.from_matplotlib()
+
+    df = FullyTaggedData.instance().fill_days().dataframe()
+
+    return iterate_over_time_units(plot_page)
 
 
-def create_total_cost_timeline_graph_page(time_unit):
-    page = html_pages.HTMLPage()
-    plots.total_cost_timeline_fig(time_unit)
-    page.add_element(html_pages.ImageHTML.from_matplotlib())
-    return page
+@logs.func_execution_logging
+def create_total_cost_timeline_graph_page():
+    def plot_page(time_unit):
+        plots.plot_timeline_fig(df,
+                                time_unit,
+                                actual_line_style='.',
+                                title=f"Total daily costs")
+        return html_pages.ImageHTML.from_matplotlib()
+
+    df = FullyTaggedData.instance().get_rows_tagged_as('Tap').fill_days().dataframe()
+
+    return iterate_over_time_units(plot_page)
 
 
+@logs.func_execution_logging
 def create_week_graph(time_unit):
     page = html_pages.HTMLPage()
     plots.plot_multi_tags_timeline(tags=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
@@ -43,15 +65,16 @@ def create_week_graph(time_unit):
     return page
 
 
+@logs.func_execution_logging
 def overview_plot_page():
     page = html_pages.HTMLPage()
 
-    page.add_element(iterarate_over_time_units(create_total_balance_timeline_graph_page))
+    page.add_element(create_total_balance_timeline_graph_page())
 
-    page.add_element(iterarate_over_time_units(create_total_cost_timeline_graph_page))
+    page.add_element(create_total_cost_timeline_graph_page())
 
-    page.add_element(iterarate_over_time_units(create_week_graph,
-                                               time_units=['week', 'month', 'year']))
+    page.add_element(iterate_over_time_units(create_week_graph,
+                                             time_units=['week', 'month', 'year']))
 
     plots.total_trips_timeline_fig()
     page.add_element(html_pages.ImageHTML.from_matplotlib())
@@ -74,9 +97,8 @@ def create_df_table_page(df, title=''):
     return html_pages.SimpleHTMLTable(df, f"{title} ({df.shape[0]} rows)")
 
 
-def create_plot_tag_stats(tag, time_unit):
+def create_stats_plot_for_tag(tag, time_unit):
     page = html_pages.HTMLPage()
-    # plots.plot_tag_stats(tag)
     plots.tag_amount_stats(tag, time_unit)
     page.add_element(html_pages.ImageHTML.from_matplotlib())
 
@@ -85,7 +107,7 @@ def create_plot_tag_stats(tag, time_unit):
     return page
 
 
-def create_service_report_for_tag(service_tag):
+def create_report_for_tag(service_tag):
     logs.log_html(f"Creating service report for tag #{service_tag}# ...")
     data = FullyTaggedData.instance().get_rows_tagged_as(service_tag)
     df = data.dataframe()
@@ -97,7 +119,7 @@ def create_service_report_for_tag(service_tag):
     page.add_element(f"<h1>{service_tag}</h1>")
     page.add_element(create_service_df_tag_description(data))
 
-    plot_html = iterarate_over_time_units(create_plot_tag_stats, service_tag)
+    plot_html = iterate_over_time_units(create_stats_plot_for_tag, service_tag)
     page.add_element(plot_html)
 
     page.add_element(create_df_table_page(df.sort_values('date', ascending=False), title='Full table'))
@@ -107,30 +129,31 @@ def create_service_report_for_tag(service_tag):
     return page
 
 
-@logs.func_execution_logging
-def create_services_reports():
-    tag_names = [tagger.tag_name for tagger in SERVICE_TAGS]
+def create_reports_for_tags(tags):
+    tag_names = [tagger.tag_name for tagger in tags]
 
     if LINEAR_EXECUTION:
-        return [(tag, create_service_report_for_tag(tag)) for tag in tag_names]
+        res = [(tag, create_report_for_tag(tag)) for tag in tag_names]
     else:
         with multiprocessing.Pool() as pool:
-            service_reports = pool.map(create_service_report_for_tag, tag_names)
+            service_reports = pool.map(create_report_for_tag, tag_names)
 
-        return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
+        res = [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
+
+    tabs = html_pages.TabsHTML()
+    for tag, rep_html_page in res:
+        tabs.add_tab(tag, rep_html_page)
+    return tabs
+
+
+@logs.func_execution_logging
+def create_services_reports():
+    return create_reports_for_tags(SERVICE_TAGS)
 
 
 @logs.func_execution_logging
 def create_trips_reports():
-    tag_names = [tagger.tag_name for tagger in TRIPS]
-
-    if LINEAR_EXECUTION:
-        return [(tag, create_service_report_for_tag(tag)) for tag in tag_names]
-    else:
-        with multiprocessing.Pool() as pool:
-            service_reports = pool.map(create_service_report_for_tag, tag_names)
-
-        return [(tag, rep_html_page) for tag, rep_html_page in zip(tag_names, service_reports)]
+    return create_reports_for_tags(TRIPS)
 
 
 @logs.func_execution_logging
@@ -140,20 +163,12 @@ def create_report():
     report_html.add_element(f"<title>Report ({datetime.now()})</title>")
 
     tabs_html = html_pages.TabsHTML()
-    tabs_html.add_tab("Balance", overview_plot_page())
 
-    services_tabs = html_pages.TabsHTML()
-    for tag, rep_html_page in create_services_reports():
-        services_tabs.add_tab(tag, rep_html_page)
-    tabs_html.add_tab("Services", services_tabs)
+    tabs_html.add_tab("Overview", overview_plot_page())
 
-    trips_tabs = html_pages.TabsHTML()
-    plots.total_trips_timeline_fig()
-    trips_tabs.add_tab('Overview', html_pages.ImageHTML.from_matplotlib())
-    for tag, rep_html_page in create_trips_reports():
-        trips_tabs.add_tab(tag, rep_html_page)
-    tabs_html.add_tab("Trips", trips_tabs)
+    tabs_html.add_tab("Services", create_services_reports())
 
+    tabs_html.add_tab("Trips", create_trips_reports())
 
     report_html.add_element(tabs_html)
     report_html.save('report.html')
