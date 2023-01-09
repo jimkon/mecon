@@ -63,8 +63,8 @@ def total_balance_timeline_fig(time_unit='day'):
     data = FullyTaggedData.instance().fill_days()
     df = data.dataframe()
 
-    grouper = time_units[time_unit]['grouper']
-    rolling_bin = time_units[time_unit]['rolling_bin']
+    grouper = grouping.get_grouper(time_unit)
+    rolling_bin = calc_rolling_bin(time_unit)
 
     df_agg = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
 
@@ -76,6 +76,28 @@ def total_balance_timeline_fig(time_unit='day'):
 
     plt.legend()
     plt.title(f"Total balance ({len(df_agg)} {time_unit}s)")
+    plt.ylabel('Money (£)')
+    plt.xlabel(f'Time ({time_unit})')
+    plt.tight_layout()
+
+
+def total_cost_timeline_fig(time_unit):
+    data = FullyTaggedData.instance().get_rows_tagged_as('Tap').fill_days()
+    df = data.dataframe()
+
+    grouper = grouping.get_grouper(time_unit)
+    rolling_bin=calc_rolling_bin(time_unit)
+
+    df_agg = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
+
+    plt.figure(figsize=(12, 5))
+    plt.xticks(rotation=90)
+
+    plot_rolling_hist(df_agg['date'], -df_agg['amount'], rolling_bin=rolling_bin)
+    plot_verticals(df_agg['date'])
+
+    plt.legend()
+    plt.title(f"Total daily costs ({len(df_agg)} {time_unit}s)")
     plt.ylabel('Money (£)')
     plt.xlabel(f'Time ({time_unit})')
     plt.tight_layout()
@@ -120,7 +142,6 @@ def tag_amount_stats(tag, time_unit):
     plt.figure(figsize=(12, 3))
     plt.title(f"{tag} cost per {time_unit} {grouper}")
     plot_verticals(amount_per_day['date'])
-    r = calc_rolling_bin(time_unit)
     plot_rolling_hist(amount_per_day['date'], -amount_per_day['amount'], actual_line_style='.',
                       expanding_mean=True, rolling_bin=calc_rolling_bin(time_unit))
     plt.ylabel('Amount')
@@ -134,7 +155,7 @@ def tag_frequency_stats(tag, time_unit):
     df = tagged_stat.get_rows_tagged_as(tag).dataframe()
 
     grouper = grouping.get_grouper(time_unit)
-    count_per_day = grouper(df).agg({'date': 'first', 'amount': 'count'}).reset_index(drop=True)
+    count_per_day = grouper(df).agg({'date': 'min', 'amount': 'count'}).reset_index(drop=True)
     if time_unit == 'date':
         count_per_day = fill_days(count_per_day)[['date', 'amount']]
 
@@ -148,50 +169,69 @@ def tag_frequency_stats(tag, time_unit):
     plt.tight_layout()
 
 
-def plot_tag_stats(tag):
-    tagged_stat = FullyTaggedData.instance()
-    df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'amount']]
+def plot_multi_tags_timeline(tags, time_unit):
+    plt.figure(figsize=(12, 3))
 
-    amount_per_day = df.groupby('date').agg({'amount': 'sum'}).reset_index()
-    amount_per_day = fill_days(amount_per_day)[['date', 'amount']]
+    for tag in tags:
+        tagged_stat = FullyTaggedData.instance()
+        df = tagged_stat.get_rows_tagged_as(tag).dataframe()
+        grouper = grouping.get_grouper(time_unit)
+        amount_per_date = grouper(df).agg({'date': 'min', 'amount': 'sum'}).reset_index(drop=True)
 
-    count_per_day = df.groupby('date').agg({'amount': 'count'}).reset_index()
-    count_per_day = fill_days(count_per_day)[['date', 'amount']]
+        plt.plot(amount_per_date['date'], amount_per_date['amount'], linewidth=1, label=tag)
 
-    df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'month_date', 'amount']]
-
-    amount_per_month = df.groupby('month_date').agg({'date': 'min', 'amount': 'sum'}).reset_index()
-
-    count_per_month = df.groupby('month_date').agg({'date': 'min', 'amount': 'count'}).reset_index()
-
-    plt.figure(figsize=(16, 9))
-    plt.subplot(2, 2, 2)
-    plt.title(f"Daily {tag} amount")
     plot_verticals(df['date'])
-    plot_rolling_hist(amount_per_day['date'], amount_per_day['amount'].abs(), actual_line_style='.',
-                      expanding_mean=True)
-    plt.legend()
 
-    plt.subplot(2, 2, 4)
-    plt.title(f"Daily {tag} freq")
-    plot_rolling_hist(count_per_day['date'], count_per_day['amount'].abs(), actual_line_style='.', expanding_mean=True)
-    plot_verticals(df['date'])
+    plt.title(f"{tags}")
+    plt.ylabel('Amount')
     plt.legend()
-
-    plt.subplot(2, 2, 1)
-    plt.title(f"Monthly {tag} amount")
-    plot_rolling_hist(amount_per_month['date'], amount_per_month['amount'].abs(), rolling_bin=3,
-                      actual_line_style='.', expanding_mean=True)
-    plot_verticals(df['date'])
-    plt.xticks(rotation=90)
-    plt.legend()
-
-    plt.subplot(2, 2, 3)
-    plt.title(f"Monthly {tag} freq")
-    plot_rolling_hist(count_per_month['date'], count_per_month['amount'].abs(), rolling_bin=3,
-                      actual_line_style='.', expanding_mean=True)
-    plot_verticals(df['date'])
-    plt.xticks(rotation=90)
-    plt.legend()
-
     plt.tight_layout()
+
+
+# def plot_tag_stats(tag):
+#     tagged_stat = FullyTaggedData.instance()
+#     df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'amount']]
+#
+#     amount_per_day = df.groupby('date').agg({'amount': 'sum'}).reset_index()
+#     amount_per_day = fill_days(amount_per_day)[['date', 'amount']]
+#
+#     count_per_day = df.groupby('date').agg({'amount': 'count'}).reset_index()
+#     count_per_day = fill_days(count_per_day)[['date', 'amount']]
+#
+#     df = tagged_stat.get_rows_tagged_as(tag).dataframe()[['date', 'month_date', 'amount']]
+#
+#     amount_per_month = df.groupby('month_date').agg({'date': 'min', 'amount': 'sum'}).reset_index()
+#
+#     count_per_month = df.groupby('month_date').agg({'date': 'min', 'amount': 'count'}).reset_index()
+#
+#     plt.figure(figsize=(16, 9))
+#     plt.subplot(2, 2, 2)
+#     plt.title(f"Daily {tag} amount")
+#     plot_verticals(df['date'])
+#     plot_rolling_hist(amount_per_day['date'], amount_per_day['amount'].abs(), actual_line_style='.',
+#                       expanding_mean=True)
+#     plt.legend()
+#
+#     plt.subplot(2, 2, 4)
+#     plt.title(f"Daily {tag} freq")
+#     plot_rolling_hist(count_per_day['date'], count_per_day['amount'].abs(), actual_line_style='.', expanding_mean=True)
+#     plot_verticals(df['date'])
+#     plt.legend()
+#
+#     plt.subplot(2, 2, 1)
+#     plt.title(f"Monthly {tag} amount")
+#     plot_rolling_hist(amount_per_month['date'], amount_per_month['amount'].abs(), rolling_bin=3,
+#                       actual_line_style='.', expanding_mean=True)
+#     plot_verticals(df['date'])
+#     plt.xticks(rotation=90)
+#     plt.legend()
+#
+#     plt.subplot(2, 2, 3)
+#     plt.title(f"Monthly {tag} freq")
+#     plot_rolling_hist(count_per_month['date'], count_per_month['amount'].abs(), rolling_bin=3,
+#                       actual_line_style='.', expanding_mean=True)
+#     plot_verticals(df['date'])
+#     plt.xticks(rotation=90)
+#     plt.legend()
+#
+#     plt.tight_layout()

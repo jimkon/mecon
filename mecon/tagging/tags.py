@@ -90,7 +90,7 @@ class SantaderBikesTag(HardCodedTag):
 class TFLTag(DictTag):
     def __init__(self):
         super().__init__('TFL (excluding cycle hire)', {
-            'description.lower': {'contains': 'tfl'},
+            'description.lower': {'contains': 'tfl', 'not_contains': 'netflix'},
             'tags': {'not_contains': SantaderBikesTag().tag_name}
         })
 
@@ -210,6 +210,73 @@ class CashTag(DictTag):
     def __init__(self):
         super().__init__('Cash', [
             {'description.lower': {'contains': 'cash'}},
+        ])
+
+
+class CafeTag(DictTag): # TODO
+    def __init__(self):
+        super().__init__('Cafe', [
+            {'description.lower': {'contains': 'cafe'}},
+            {'description.lower': {'contains': 'coffee'}},
+            {'description.lower': {'contains': 'briki'}},
+        ])
+
+
+class FoodOutTag(DictTag): # TODO
+    def __init__(self):
+        super().__init__('Food out', [
+            {'description.lower': {'contains': 'nando'}},
+            {'description.lower': {'contains': 'kfc'}},
+            {'description.lower': {'contains': 'mcdonalds'}},
+            {'description.lower': {'contains': 'resta'}},
+            {'description.lower': {'contains': 'pizza'}},
+            {'description.lower': {'contains': 'burger'}},
+            {'description.lower': {'contains': 'grill'}},
+        ])
+
+
+class FoodTag(DictTag): # TODO
+    def __init__(self):
+        super().__init__('Food', [
+            {'tags': {'contains': SuperMarketTag().tag_name}},
+            {'tags': {'contains': FoodDeliveryTag().tag_name}},
+            {'tags': {'contains': TooGoodToGoTag().tag_name}},
+            {'tags': {'contains': FoodOutTag().tag_name}},
+        ])
+
+
+class CommuteTag(DictTag): # TODO
+    def __init__(self):
+        super().__init__('Commute', [
+            {'tags': {'contains': SantaderBikesTag().tag_name}},
+            {'tags': {'contains': TFLTag().tag_name}},
+            {'description.lower': {'contains': 'uber', 'not_contains': 'eat'}},
+        ])
+
+
+class DrinksTag(DictTag): # TODO
+    def __init__(self):
+        super().__init__('Drinks', [
+            # {'tags': {'contains': SantaderBikesTag().tag_name}},
+            # {'tags': {'contains': TFLTag().tag_name}},
+        ])
+
+
+class EntertainmentTag(DictTag): # TODO
+    def __init__(self):
+        super().__init__('Entertainment', [
+            # {'tags': {'contains': SantaderBikesTag().tag_name}},
+            # {'tags': {'contains': TFLTag().tag_name}},
+        ])
+
+
+class TapTag(DictTag):
+    def __init__(self):
+        super().__init__('Tap', [
+            {'tags': {'contains': CommuteTag().tag_name}},
+            {'tags': {'contains': FoodTag().tag_name}},
+            {'tags': {'contains': DrinksTag().tag_name}},
+            {'tags': {'contains': EntertainmentTag().tag_name}},
         ])
 
 
@@ -361,7 +428,14 @@ OnlineOrdersTag(),
 TooGoodToGoTag(),
 CashTag(),
 AirbnbTag(),
-BankTransferTag()
+BankTransferTag(),
+CafeTag(),
+FoodOutTag(),
+FoodTag(),
+CommuteTag(),
+DrinksTag(),
+EntertainmentTag(),
+TapTag(),
 ]
 
 TIME = [

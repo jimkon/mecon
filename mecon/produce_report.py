@@ -20,7 +20,6 @@ def iterarate_over_time_units(plot_func, *args, time_units=None, **kwargs):
     return time_window_tabs
 
 
-
 def create_total_balance_timeline_graph_page(time_unit):
     page = html_pages.HTMLPage()
     plots.total_balance_timeline_fig(time_unit)
@@ -28,8 +27,35 @@ def create_total_balance_timeline_graph_page(time_unit):
     return page
 
 
+def create_total_cost_timeline_graph_page(time_unit):
+    page = html_pages.HTMLPage()
+    plots.total_cost_timeline_fig(time_unit)
+    page.add_element(html_pages.ImageHTML.from_matplotlib())
+    return page
+
+
+def create_week_graph(time_unit):
+    page = html_pages.HTMLPage()
+    plots.plot_multi_tags_timeline(tags=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                                   time_unit=time_unit)
+    page.add_element(html_pages.ImageHTML.from_matplotlib())
+    return page
+
+
 def overview_plot_page():
-    return iterarate_over_time_units(create_total_balance_timeline_graph_page)
+    page = html_pages.HTMLPage()
+
+    page.add_element(iterarate_over_time_units(create_total_balance_timeline_graph_page))
+
+    page.add_element(iterarate_over_time_units(create_total_cost_timeline_graph_page))
+
+    page.add_element(iterarate_over_time_units(create_week_graph,
+                                               time_units=['week', 'month', 'year']))
+
+    plots.total_trips_timeline_fig()
+    page.add_element(html_pages.ImageHTML.from_matplotlib())
+
+    return page
 
 
 def create_service_df_tag_description(data):
@@ -122,10 +148,10 @@ def create_report():
     trips_tabs = html_pages.TabsHTML()
     plots.total_trips_timeline_fig()
     trips_tabs.add_tab('Overview', html_pages.ImageHTML.from_matplotlib())
-
     for tag, rep_html_page in create_trips_reports():
         trips_tabs.add_tab(tag, rep_html_page)
     tabs_html.add_tab("Trips", trips_tabs)
+
 
     report_html.add_element(tabs_html)
     report_html.save('report.html')

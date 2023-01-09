@@ -52,6 +52,10 @@ class TaggedData:
 
         return TaggedData(res_df)
 
+    def merge(self, tagged_data): # TODO check
+        df = pd.concat([self.dataframe(), tagged_data.dataframe()]).drop_duplicates()
+        return TaggedData(df)
+
 
 class FullyTaggedData(TaggedData):
     _instance = None
