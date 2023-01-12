@@ -1,12 +1,16 @@
+import json
 import multiprocessing
 from datetime import datetime
+from io import StringIO
+
+import pandas as pd
 
 from mecon import logs
 from mecon.configs import LINEAR_EXECUTION
 from mecon.html_pages import html_pages
 from mecon.plots import plots
 from mecon.statements.tagged_statement import FullyTaggedData
-from mecon.tagging.tags import SERVICE_TAGS, TRIPS
+from mecon.tagging.tags import SERVICE_TAGS, TRIPS, ALL_TAGS
 
 
 def plot_to_html(plot_func, *args, **kwargs):
@@ -64,8 +68,27 @@ def create_week_graph(time_unit):
     return page
 
 
+def create_tags_overview_table():
+    all_tag_values = [tag.tag_name for tag in ALL_TAGS]
+    page = html_pages.HTMLPage()
+
+    res = []
+    for tag in all_tag_values:
+        df = FullyTaggedData.instance().get_rows_tagged_as(tag).dataframe()
+        res.append({
+            'Tag': tag,
+            'Total': df['amount'].sum(),
+            'Count': len(df),
+            'Min date': str(df['date'].min()),
+            'Max date': str(df['date'].max()),
+        })
+
+    page.add_element(create_df_table_page(pd.read_json(StringIO(json.dumps(res)))))
+    return page
+
+
 @logs.func_execution_logging
-def overview_plot_page():
+def overview_page():
     page = html_pages.HTMLPage()
 
     page.add_element(create_total_balance_timeline_graph_page())
@@ -77,6 +100,8 @@ def overview_plot_page():
 
     plots.total_trips_timeline_fig()
     page.add_element(html_pages.ImageHTML.from_matplotlib())
+
+    page.add_element(create_tags_overview_table())
 
     return page
 
@@ -169,7 +194,7 @@ def create_report():
 
     tabs_html = html_pages.TabsHTML()
 
-    tabs_html.add_tab("Overview", overview_plot_page())
+    tabs_html.add_tab("Overview", overview_page())
 
     tabs_html.add_tab("Services", create_services_reports())
 
