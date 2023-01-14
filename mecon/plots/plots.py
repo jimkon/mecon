@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from datetime import time
 
 from mecon.calendar_utils import fill_days, week_of_month
 from mecon import grouping
@@ -69,6 +70,31 @@ def plot_timeline_fig(df, time_unit, cumsum=False, actual_line_style='-', title=
     plt.title(title)
     plt.ylabel('Money (£)')
     plt.xlabel(f'Time ({len(df_agg)} {time_unit}s)')
+    plt.tight_layout()
+
+
+def plot_time_vs_date_fig(df, actual_line_style='-', title=''):
+    from datetime import datetime
+
+    plt.figure(figsize=(12, 5))
+    plt.xticks(rotation=90)
+
+    df['time_int'] = df['time'].\
+        apply(lambda time_str: datetime.strptime(time_str, '%H:%M:%S').time()).\
+        apply(lambda x: x.hour*100+x.minute)
+
+    plot_rolling_hist(df['date'],
+                      df['time_int'],
+                      rolling_bin=30,
+                      actual_line_style=actual_line_style)
+
+    plot_verticals(df['date'])
+
+    plt.legend()
+    plt.title(title)
+    plt.ylabel('Time')
+    plt.xlabel(f"Dates ({df['date'].nunique()} days)")
+    plt.yticks(range(0, 2401, 100), [f"{t//100}:00" for t in range(0, 2401, 100)])
     plt.tight_layout()
 
 

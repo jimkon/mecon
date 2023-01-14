@@ -54,9 +54,19 @@ def create_total_cost_timeline_graph_page():
                                 title=f"Total daily costs")
         return html_pages.ImageHTML.from_matplotlib()
 
-    df = FullyTaggedData.instance().get_rows_tagged_as('Tap').fill_days().dataframe()
+    df = FullyTaggedData.instance().get_rows_tagged_as('Tap').dataframe()
 
     return iterate_over_time_units(plot_page)
+
+
+def create_time_of_day_graph_page():
+    df = FullyTaggedData.instance().get_rows_tagged_as('Tap').dataframe()
+
+    plots.plot_time_vs_date_fig(df,
+                            actual_line_style='.',
+                            title=f"Time of the day ({len(df)} points for 'Tap')")
+
+    return html_pages.ImageHTML.from_matplotlib()
 
 
 @logs.func_execution_logging
@@ -91,12 +101,14 @@ def create_tags_overview_table():
 def overview_page():
     page = html_pages.HTMLPage()
 
-    # page.add_element(create_total_balance_timeline_graph_page())
-    #
-    # page.add_element(create_total_cost_timeline_graph_page())
-    #
-    # page.add_element(iterate_over_time_units(create_week_graph,
-    #                                          time_units=['week', 'month', 'year']))
+    page.add_element(create_total_balance_timeline_graph_page())
+
+    page.add_element(create_total_cost_timeline_graph_page())
+
+    page.add_element(create_time_of_day_graph_page())
+
+    page.add_element(iterate_over_time_units(create_week_graph,
+                                             time_units=['week', 'month', 'year']))
 
     plots.total_trips_timeline_fig()
     page.add_element(html_pages.ImageHTML.from_matplotlib())

@@ -73,7 +73,7 @@ class TripGrouping(DataGrouping):
     col_name = 'location'
 
     def generate_grouping_column(self, df):
-        trip_tags = {trip.tag_name for trip in LOCATIONS}
+        trip_tags = {trip.tag_name for trip in LOCATIONS if 'trip' in trip.tag_name.lower()}
 
         def _which_trip_tag(tags):
             inter = trip_tags.intersection(set(tags)) - {'Trip'}
