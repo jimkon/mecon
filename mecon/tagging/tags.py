@@ -271,6 +271,15 @@ class EntertainmentTag(DictTag):  # TODO
         ])
 
 
+class NightOutTag(DictTag):  # TODO
+    def __init__(self):
+        super().__init__('Night out', [
+            {'time.str': {'greater_equal': "21:00:00"}, 'tags': {'not_contains': ['Home Bills', 'Income', 'Bank transfer']}},
+            {'time.str': {'less': "08:00:00"}, 'tags': {'not_contains': ['Home Bills', 'Income', 'Bank transfer']}},
+            # {'tags': {'contains': TFLTag().tag_name}},
+        ])
+
+
 class TapTag(DictTag):
     def __init__(self):
         super().__init__('Tap', [
@@ -278,6 +287,7 @@ class TapTag(DictTag):
             {'tags': {'contains': FoodTag().tag_name}},
             {'tags': {'contains': DrinksTag().tag_name}},
             {'tags': {'contains': EntertainmentTag().tag_name}},
+            {'tags': {'contains': NightOutTag().tag_name}},
         ])
 
 
@@ -511,6 +521,7 @@ SERVICE_TAGS = [
     CommuteTag(),
     DrinksTag(),
     EntertainmentTag(),
+    NightOutTag(),
     TapTag(),
     Guest(),
 ]
