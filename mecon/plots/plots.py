@@ -75,12 +75,13 @@ def plot_timeline_fig(df, time_unit, cumsum=False, actual_line_style='-', title=
 
 def plot_time_vs_date_fig(df, actual_line_style='-', title=''):
     from datetime import datetime
+    import mecon.calendar_utils as utils
 
     plt.figure(figsize=(12, 5))
     plt.xticks(rotation=90)
 
     df['time_int'] = df['time'].\
-        apply(lambda time_str: datetime.strptime(time_str, '%H:%M:%S').time()).\
+        apply(lambda time_str: datetime.strptime(str(time_str), '%H:%M:%S').time()).\
         apply(lambda x: x.hour*100+x.minute)
 
     plot_rolling_hist(df['date'],
@@ -88,7 +89,27 @@ def plot_time_vs_date_fig(df, actual_line_style='-', title=''):
                       rolling_bin=30,
                       actual_line_style=actual_line_style)
 
+    df['hour'] = df['time_int']//100
+    df['part_of_day'] = df['hour'].apply(utils.part_of_day)
+    df_agg = df.groupby(['date', 'part_of_day']).agg({'amount': 'sum', 'hour': [min, max]}).reset_index()
+    df_agg.columns = ["_".join(pair) if len(pair[1])>0 else pair[0] for pair in df_agg.columns]
+    # df_agg = fill_days(df_agg)
+
+    d = df_agg[df_agg['hour_min'] != df_agg['hour_max']]
+
+    idx = df_agg.groupby(['date'])['amount_sum'].transform(min) == df_agg['amount_sum']
+    df_part = df_agg[idx]
+    df_part['part_min'] = df_part['part_of_day'].apply(lambda x:utils.hour_range_of_part_of_day(x)[0])
+    df_part['part_max'] = df_part['part_of_day'].apply(lambda x:utils.hour_range_of_part_of_day(x)[1])
+
+    # plt.fill_between(df_part['date'], 100*df_part['hour_min'], 100*df_part['hour_max'], color='y', label='max', alpha=0.5)
+    plt.fill_between(df_part['date'], 100*df_part['part_min'], 100*df_part['part_max'], color='y', label='max', alpha=0.5)
+
     plot_verticals(df['date'])
+    for p in ['Monring', 'Afternoon', 'Evening', 'Night']:
+        _min, _max = utils.hour_range_of_part_of_day(p)
+        plt.axhline(100*_min, color='r', alpha=0.2, linewidth=1, linestyle='--')
+        plt.axhline(100*_max, color='r', alpha=0.2, linewidth=1, linestyle='--')
 
     plt.legend()
     plt.title(title)

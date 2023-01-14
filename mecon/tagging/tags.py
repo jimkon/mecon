@@ -403,43 +403,43 @@ class BankTransferTag(DictTag):
 class MondayTag(DictTag):
     def __init__(self):
         super().__init__(DayOfWeek.MONDAY.value,
-                         {'date.dayofweek': {'equals': DayOfWeek.MONDAY.value}, 'tags': {'contains': 'Tap'}})
+                         {'date.dayofweek': {'equals': DayOfWeek.MONDAY.value}})
 
 
 class TuesdayTag(DictTag):
     def __init__(self):
         super().__init__(DayOfWeek.TUESDAY.value,
-                         {'date.dayofweek': {'equals': DayOfWeek.TUESDAY.value}, 'tags': {'contains': 'Tap'}})
+                         {'date.dayofweek': {'equals': DayOfWeek.TUESDAY.value}})
 
 
 class WednesdayTag(DictTag):
     def __init__(self):
         super().__init__(DayOfWeek.WEDNESDAY.value,
-                         {'date.dayofweek': {'equals': DayOfWeek.WEDNESDAY.value}, 'tags': {'contains': 'Tap'}})
+                         {'date.dayofweek': {'equals': DayOfWeek.WEDNESDAY.value}})
 
 
 class ThursdayTag(DictTag):
     def __init__(self):
         super().__init__(DayOfWeek.THURSDAY.value,
-                         {'date.dayofweek': {'equals': DayOfWeek.THURSDAY.value}, 'tags': {'contains': 'Tap'}})
+                         {'date.dayofweek': {'equals': DayOfWeek.THURSDAY.value}})
 
 
 class FridayTag(DictTag):
     def __init__(self):
         super().__init__(DayOfWeek.FRIDAY.value,
-                         {'date.dayofweek': {'equals': DayOfWeek.FRIDAY.value}, 'tags': {'contains': 'Tap'}})
+                         {'date.dayofweek': {'equals': DayOfWeek.FRIDAY.value}})
 
 
 class SaturdayTag(DictTag):
     def __init__(self):
         super().__init__(DayOfWeek.SATURDAY.value,
-                         {'date.dayofweek': {'equals': DayOfWeek.SATURDAY.value}, 'tags': {'contains': 'Tap'}})
+                         {'date.dayofweek': {'equals': DayOfWeek.SATURDAY.value}})
 
 
 class SundayTag(DictTag):
     def __init__(self):
         super().__init__(DayOfWeek.SUNDAY.value,
-                         {'date.dayofweek': {'equals': DayOfWeek.SUNDAY.value}, 'tags': {'contains': 'Tap'}})
+                         {'date.dayofweek': {'equals': DayOfWeek.SUNDAY.value}})
 
 
 class Guest(DictTag):

@@ -50,6 +50,28 @@ def days_in_between(start_date, end_date):
     return [start_date+timedelta(days=i) for i in range((end_date-start_date).days+1)]
 
 
+def part_of_day(hour):
+    if 5 < hour <= 12:
+        return 'Morning'
+    elif 12 < hour <= 17:
+        return 'Afternoon'
+    elif 17 < hour <= 21:
+        return 'Evening'
+    else:
+        return 'Night'
+
+
+def hour_range_of_part_of_day(hour):
+    if hour == 'Morning':
+        return (5, 12)
+    elif hour == 'Afternoon':
+        return (12, 17)
+    elif hour == 'Evening':
+        return (17, 21)
+    else:
+        return (21, 5)
+
+
 _fill_days_df = None
 
 
