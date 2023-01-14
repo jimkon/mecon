@@ -3,11 +3,11 @@ import abc
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 from mecon.calendar_utils import week_of_month
-from mecon.tagging.tags import TRIPS
+from mecon.tagging.tags import LOCATIONS
 
 
 def get_grouper(unit):
-    for grouper in [DailyGrouping, WeeklyGrouping, MonthlyGrouping, WorkingMonthGrouping, WeeklyGrouping, YearlyGrouping, LocationGrouping]:
+    for grouper in [DailyGrouping, WeeklyGrouping, MonthlyGrouping, WorkingMonthGrouping, WeeklyGrouping, YearlyGrouping, TripGrouping]:
         if unit == grouper.col_name:
             return grouper
 
@@ -69,11 +69,11 @@ class WorkingMonthGrouping(DataGrouping):
         return df[self.col_name]
 
 
-class LocationGrouping(DataGrouping):
+class TripGrouping(DataGrouping):
     col_name = 'location'
 
     def generate_grouping_column(self, df):
-        trip_tags = {trip.tag_name for trip in TRIPS}
+        trip_tags = {trip.tag_name for trip in LOCATIONS}
 
         def _which_trip_tag(tags):
             inter = trip_tags.intersection(set(tags)) - {'Trip'}

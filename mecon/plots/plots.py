@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 from mecon.calendar_utils import fill_days, week_of_month
 from mecon import grouping
-from mecon.grouping import LocationGrouping
+from mecon.grouping import TripGrouping
 
 plt.style.use('bmh')
 
@@ -82,7 +82,7 @@ def total_trips_timeline_fig():
     data = FullyTaggedData.instance().fill_days()
     df = data.dataframe()
 
-    df_trips = LocationGrouping(df).agg({'date': ['min', 'max'], 'amount': 'sum', 'location': 'first'}).reset_index(drop=True)
+    df_trips = TripGrouping(df).agg({'date': ['min', 'max'], 'amount': 'sum', 'location': 'first'}).reset_index(drop=True)
 
     df_trips.columns = ["_".join(pair) for pair in df_trips.columns]
 

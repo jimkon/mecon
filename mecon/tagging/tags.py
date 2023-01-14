@@ -281,11 +281,31 @@ class TapTag(DictTag):
         ])
 
 
+class LondonResTag(DictTag):
+    def __init__(self):
+        super().__init__('London residency', {'date.str': {'greater_equal': '2020-01-05', 'less': '2099-01-01'}})
+
+
+class LondonTripTag(DictTag):
+    def __init__(self):
+        super().__init__('London trip', [
+            {'date.str': {'greater_equal': '2019-05-10', 'less': '2019-06-13'},
+             'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2019-09-16', 'less': '2019-09-21'},
+             'tags': {'not_contains': ['Home Bills', 'Income']}},
+            {'date.str': {'greater_equal': '2019-11-24', 'less': '2019-11-28'},
+             'tags': {'not_contains': ['Home Bills', 'Income']}},
+        ])
+
+
+class ChaniaResTag(DictTag):
+    def __init__(self):
+        super().__init__('Chania residency', {'date.str': {'greater_equal': '2000-01-01', 'less': '2020-01-01'}})
+
+
 class ChaniaTripTag(DictTag):
     def __init__(self):
         super().__init__('Chania trip', [
-            {'date.str': {'greater_equal': '2019-04-11', 'less': '2020-01-01'},
-             'tags': {'not_contains': ['Home Bills', 'Income']}},
             {'date.str': {'greater_equal': '2020-05-16', 'less': '2020-07-01'},
              'tags': {'not_contains': ['Home Bills', 'Income']}},
             {'date.str': {'greater_equal': '2020-07-11', 'less': '2020-09-05'},
@@ -505,7 +525,8 @@ TIME = [
     SundayTag(),
 ]
 
-TRIPS = [
+LOCATIONS = [
+    LondonResTag(),
     ChaniaTripTag(),
     AthensTripTag(),
     BarcelonaTripTag(),
@@ -514,4 +535,4 @@ TRIPS = [
     TripsTag()
 ]
 
-ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS + TIME + TRIPS  # order matters
+ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS + TIME + LOCATIONS  # order matters

@@ -10,7 +10,7 @@ from mecon.configs import LINEAR_EXECUTION
 from mecon.html_pages import html_pages
 from mecon.plots import plots
 from mecon.statements.tagged_statement import FullyTaggedData
-from mecon.tagging.tags import SERVICE_TAGS, TRIPS, ALL_TAGS
+from mecon.tagging.tags import SERVICE_TAGS, LOCATIONS, ALL_TAGS
 
 
 def plot_to_html(plot_func, *args, **kwargs):
@@ -91,12 +91,12 @@ def create_tags_overview_table():
 def overview_page():
     page = html_pages.HTMLPage()
 
-    page.add_element(create_total_balance_timeline_graph_page())
-
-    page.add_element(create_total_cost_timeline_graph_page())
-
-    page.add_element(iterate_over_time_units(create_week_graph,
-                                             time_units=['week', 'month', 'year']))
+    # page.add_element(create_total_balance_timeline_graph_page())
+    #
+    # page.add_element(create_total_cost_timeline_graph_page())
+    #
+    # page.add_element(iterate_over_time_units(create_week_graph,
+    #                                          time_units=['week', 'month', 'year']))
 
     plots.total_trips_timeline_fig()
     page.add_element(html_pages.ImageHTML.from_matplotlib())
@@ -183,7 +183,7 @@ def create_services_reports():
 
 @logs.func_execution_logging
 def create_trips_reports():
-    return create_reports_for_tags(TRIPS)
+    return create_reports_for_tags(LOCATIONS)
 
 
 @logs.func_execution_logging
@@ -196,9 +196,9 @@ def create_report():
 
     tabs_html.add_tab("Overview", overview_page())
 
-    tabs_html.add_tab("Services", create_services_reports())
-
-    tabs_html.add_tab("Trips", create_trips_reports())
+    # tabs_html.add_tab("Services", create_services_reports())
+    #
+    # tabs_html.add_tab("Trips", create_trips_reports())
 
     report_html.add_element(tabs_html)
     report_html.save('report.html')
