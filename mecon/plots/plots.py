@@ -7,6 +7,8 @@ from mecon.grouping import TripGrouping, PlaceGrouping
 from mecon.tagging.tags import TRIPS, RESIDENCE
 
 plt.style.use('bmh')
+plt.rc('legend',fontsize=6)
+# plt.legend(fontsize="x-large")
 
 import pandas as pd
 
