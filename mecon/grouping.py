@@ -3,13 +3,25 @@ import abc
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 from mecon.calendar_utils import week_of_month
-from mecon.tagging.tags import LOCATIONS
+from mecon.tagging.tags import LOCATIONS, TRIPS, RESIDENCE
 
 
 def get_grouper(unit):
     for grouper in [DailyGrouping, WeeklyGrouping, MonthlyGrouping, WorkingMonthGrouping, WeeklyGrouping, YearlyGrouping, TripGrouping]:
         if unit == grouper.col_name:
             return grouper
+
+
+def which_loc(tags):
+    for trip_tagger in TRIPS:
+        if trip_tagger.tag_name == 'Trip':
+            continue
+        if trip_tagger.tag_name in tags:
+            return trip_tagger.tag_name
+    for res_tagger in RESIDENCE:
+        if res_tagger.tag_name in tags:
+            return res_tagger.tag_name
+    return 'Unknown location'
 
 
 class DataGrouping(DataFrameGroupBy):
@@ -70,7 +82,7 @@ class WorkingMonthGrouping(DataGrouping):
 
 
 class TripGrouping(DataGrouping):
-    col_name = 'location'
+    col_name = 'trip'
 
     def generate_grouping_column(self, df):
         trip_tags = {trip.tag_name for trip in LOCATIONS if 'trip' in trip.tag_name.lower()}
@@ -78,7 +90,7 @@ class TripGrouping(DataGrouping):
         def _which_trip_tag(tags):
             inter = trip_tags.intersection(set(tags)) - {'Trip'}
             if len(inter) == 0:
-                return 'London'
+                return 'Not in trip'
             elif len(inter) == 1:
                 return inter.pop()
             else:
@@ -87,4 +99,34 @@ class TripGrouping(DataGrouping):
         df[self.col_name] = df['tags'].apply(_which_trip_tag)
 
         return df[self.col_name]
+
+
+class LocationGrouping(DataGrouping):
+    col_name = 'location'
+
+    def generate_grouping_column(self, df):
+        df[self.col_name] = df['tags'].apply(which_loc)
+        return df[self.col_name]
+
+
+class PlaceGrouping(DataGrouping):
+    # Same as location but also include time
+    col_name = 'place'
+
+    def generate_grouping_column(self, df):
+        df[self.col_name] = df['tags'].apply(which_loc)
+        df['place_before'] = df['place'].shift(1)
+        df['changes_places'] = (df['place'] != df['place_before']).astype(int)
+        df['changes_places_cumsum'] = df['changes_places'].cumsum()
+        df['place_label'] = df['place']+df['changes_places_cumsum'].astype(str)
+
+        df['date_str'] = df['date'].apply(lambda d: str(d)[:10])
+
+        df_agg = df.groupby('place_label').agg({'date_str': ['min', 'max']}).reset_index()
+        df_agg.columns = ["_".join(pair) for pair in df_agg.columns]
+        df_agg['min_max_dates'] = " ("+df_agg['date_str_min']+" to "+df_agg['date_str_max']+")"
+
+        df_merged = df.merge(df_agg, left_on="place_label", right_on="place_label_")
+        df_merged['place'] = df_merged['place']+df_merged['min_max_dates']
+        return df_merged[self.col_name]  #
 

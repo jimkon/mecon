@@ -3,7 +3,8 @@ from datetime import time
 
 from mecon.calendar_utils import fill_days, week_of_month
 from mecon import grouping
-from mecon.grouping import TripGrouping
+from mecon.grouping import TripGrouping, PlaceGrouping
+from mecon.tagging.tags import TRIPS, RESIDENCE
 
 plt.style.use('bmh')
 
@@ -126,23 +127,29 @@ def total_cost_timeline_fig(df, time_unit):
 
 
 def total_trips_timeline_fig():
-    data = FullyTaggedData.instance().fill_days()
+    data = FullyTaggedData.instance().get_rows_tagged_as(['Tap'])
     df = data.dataframe()
 
-    df_trips = TripGrouping(df).agg({'date': ['min', 'max'], 'amount': 'sum', 'location': 'first'}).reset_index(drop=True)
-
+    # df_trips = PlaceGrouping(df).generate_grouping_column(df)
+    df_trips = PlaceGrouping(df).agg({'date': ['min', 'max'], 'amount': 'sum', 'place': 'first'}).reset_index(drop=True)
     df_trips.columns = ["_".join(pair) for pair in df_trips.columns]
+    df_trips['days'] = (df_trips['date_max']-df_trips['date_min']).dt.days
+
+    df_trips['loc'] = df_trips['place_first'].apply(lambda s: s.split('(')[0])
+    df_trips['loc_cat'] = df_trips['loc'].astype('category')
+    df_trips['loc_idx'] = df_trips['loc_cat'].astype('category').cat.codes
 
     plt.figure(figsize=(12, 5))
     plt.xticks(rotation=90)
 
+    locs_passed = set()
     for ind, row in df_trips.iterrows():
-        min_date, max_date, amount, loc = row.tolist()
-        amount = -amount
-        if loc == 'London':
-            continue
-        days = (max_date-min_date).days
-        plt.fill_between([min_date, max_date], [0], [amount/days], label=f"{loc} (Total: £{amount:.0f})")
+        plt.fill_between([row["date_min"], row["date_max"]],
+                         [0],
+                         [row["amount_sum"]/max(row["days"], 1)],
+                         color=f"C{row['loc_idx']}",
+                         label=f"{row['loc']}" if (row['loc'] not in locs_passed) else None)
+        locs_passed.add(row['loc'])
 
     plt.legend()
     plt.title(f"Trips timeline")

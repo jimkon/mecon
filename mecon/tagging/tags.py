@@ -536,14 +536,20 @@ TIME = [
     SundayTag(),
 ]
 
-LOCATIONS = [
-    LondonResTag(),
+TRIPS = [
     ChaniaTripTag(),
     AthensTripTag(),
     BarcelonaTripTag(),
     BudapestTripTag(),
     ParisTripTag(),
-    TripsTag()
+    TripsTag(),
 ]
+
+RESIDENCE = [
+    LondonResTag(),
+    ChaniaResTag(),
+]
+
+LOCATIONS = RESIDENCE+TRIPS
 
 ALL_TAGS = BANK_TAGS + INCOME_TAGS + SERVICE_TAGS + TIME + LOCATIONS  # order matters
