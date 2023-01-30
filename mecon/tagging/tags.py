@@ -156,6 +156,7 @@ class RentTag(DictTag):
         super().__init__('Rent', [
             {'description.lower': {'contains': 'joseph'}},
             {'description.upper': {'contains': 'PEACHEY'}},
+            {'description.upper': {'contains': 'GRADY ALWYNE'}},
         ])
 
 
