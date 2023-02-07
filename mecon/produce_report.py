@@ -100,15 +100,15 @@ def create_tags_overview_table():
 @logs.func_execution_logging
 def overview_page():
     page = html_pages.HTMLPage()
-    #
-    # page.add_element(create_total_balance_timeline_graph_page())
-    #
-    # page.add_element(create_total_cost_timeline_graph_page())
-    #
-    # page.add_element(create_time_of_day_graph_page())
-    #
-    # page.add_element(iterate_over_time_units(create_week_graph,
-    #                                          time_units=['week', 'month', 'year']))
+
+    page.add_element(create_total_balance_timeline_graph_page())
+
+    page.add_element(create_total_cost_timeline_graph_page())
+
+    page.add_element(create_time_of_day_graph_page())
+
+    page.add_element(iterate_over_time_units(create_week_graph,
+                                             time_units=['week', 'month', 'year']))
 
     plots.total_trips_timeline_fig()
     page.add_element(html_pages.ImageHTML.from_matplotlib())
@@ -165,7 +165,7 @@ def create_report_for_tag(service_tag):
     page.add_element(plot_html)
 
     page.add_element(create_df_table_page(df.sort_values('date', ascending=False), title='Full table'))
-    page.add_element(create_df_table_page(df.describe(include='all', datetime_is_numeric=True).reset_index(), title=service_tag))
+    # page.add_element(create_df_table_page(df.describe(include='all', datetime_is_numeric=True).reset_index(), title=service_tag))
 
     logs.log_html(f"Service report for tag #{service_tag}# created.")
     return page

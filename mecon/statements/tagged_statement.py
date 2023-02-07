@@ -8,6 +8,7 @@ from mecon.statements.combined_statement import Statement
 from mecon.tagging.tags import ALL_TAGS
 from mecon import calendar_utils
 from mecon import logs
+from mecon.configs import FULLY_TAGGED_DATASET_CSV
 
 
 class TaggedData:
@@ -59,7 +60,6 @@ class TaggedData:
 
 class FullyTaggedData(TaggedData):
     _instance = None
-    _cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\fully_tagged_statement.csv"
 
     @classmethod
     def instance(cls):
@@ -68,9 +68,9 @@ class FullyTaggedData(TaggedData):
         return cls._instance
 
     def __init__(self, reset_tags=False):
-        if os.path.exists(self._cached_file_path) and not reset_tags:
+        if os.path.exists(FULLY_TAGGED_DATASET_CSV) and not reset_tags:
             logs.log_disk_io("Loading tagged data...")
-            df_statement = pd.read_csv(self._cached_file_path, index_col=None)
+            df_statement = pd.read_csv(FULLY_TAGGED_DATASET_CSV, index_col=None)
             df_statement['date'] = pd.to_datetime(df_statement['date'])
             df_statement['tags'] = df_statement['tags'].apply(lambda x: literal_eval(x))
             super().__init__(df_statement)
@@ -80,7 +80,7 @@ class FullyTaggedData(TaggedData):
             super().__init__(df_statement)
             self.apply_taggers(ALL_TAGS)
             logs.log_disk_io("Saving tagged data...")
-            self.dataframe().to_csv(self._cached_file_path, index=None)
+            self.dataframe().to_csv(FULLY_TAGGED_DATASET_CSV, index=None)
 
 
 if __name__ == "__main__":
@@ -88,6 +88,5 @@ if __name__ == "__main__":
     print(data.dataframe().head())
     print(data.all_different_tags)
 
-    res = data.aggregate_df(lambda x:x["date"].year, {'amount': 'sum'})
-    print(res.head())
+
 
