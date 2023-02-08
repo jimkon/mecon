@@ -18,6 +18,9 @@ class TaggedData:
             self._df['tags'] = [[] for _ in range(len(self._df))]
 
     def apply_taggers(self, taggers):
+        if not isinstance(taggers, list):
+            taggers = [taggers]
+
         df = self.dataframe()
         for tagger in taggers:
             tagger.tag(df)

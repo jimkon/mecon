@@ -10,5 +10,6 @@ RUN pip install -r requirements.txt
 COPY . .
 RUN pip install -e .
 
-CMD [ "python", "-m" , "flask", "run", "--host=0.0.0.0"]
+#CMD [ "python", "-m" , "flask", "run", "--host=0.0.0.0"]
+CMD [ "flask", "--debug", "run", "--host=0.0.0.0"]
 
