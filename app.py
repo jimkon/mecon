@@ -1,6 +1,6 @@
 import datetime
 
-from flask import Flask
+from flask import Flask, url_for
 from markupsafe import escape  # https://flask.palletsprojects.com/en/2.2.x/quickstart/#html-escaping
 import redis
 
@@ -39,23 +39,26 @@ def overview():
 @app.route('/tags/')
 def tags():
     from mecon.tagging.tags import ALL_TAGS
+
+    urls_for_tags = {_tag.tag_name: url_for('tag_report', tag=_tag.tag_name) for _tag in ALL_TAGS}
+
     html = f"""
     <a href=http://localhost:5000/>Home</a>
     <h1>Tags</h1>
     <ul>
-        <li>{'</li><li>'.join(['<a href=http://localhost:5000/tags/'+_tag.tag_name+'>'+_tag.tag_name+'</a>' for _tag in ALL_TAGS])}</li>
+        <li>{'</li><li>'.join(['<a href=http://localhost:5000/'+url+'>'+tag_name+'</a>' for tag_name, url in urls_for_tags.items()])}</li>
     </ul>
     """
     return html
 
 
 @app.route('/tags/<tag>')
-def tag(tag):
-    tag_report = reports.create_report_for_tag(tag).html()
+def tag_report(tag):
+    tag_report_html = reports.create_report_for_tag(tag).html()
     html = f"""
     <a href=http://localhost:5000/>Home</a>
     <h1>Tag "{escape(tag)}"</h1>
-    {tag_report}
+    {tag_report_html}
     """
     return html
 
