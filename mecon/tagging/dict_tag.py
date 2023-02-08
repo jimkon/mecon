@@ -68,9 +68,13 @@ class DictTag(Tag):
     def __init__(self, tag_name, _json):
         super().__init__(tag_name)
         self._rule_tree = []
-        _json = _json if isinstance(_json, list) else [_json]
-        for _dict in _json:
+        self._json = _json if isinstance(_json, list) else [_json]
+        for _dict in self._json:
             self._add_rules(_dict)
+
+    @property
+    def json(self):
+        return self._json
 
     def _add_rules(self, _dict):
         rules = analyse_rule_dict(_dict)

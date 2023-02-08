@@ -38,15 +38,26 @@ def overview():
 
 @app.route('/tags/')
 def tags():
+    import json
     from mecon.tagging.tags import ALL_TAGS
+    from mecon.tagging.dict_tag import DictTag
 
-    urls_for_tags = {_tag.tag_name: url_for('tag_report', tag=_tag.tag_name) for _tag in ALL_TAGS}
+    urls_for_tag_reports = {_tag.tag_name: url_for('tag_report', tag=_tag.tag_name) for _tag in ALL_TAGS}
+    urls_for_tag_tables = {_tag.tag_name: url_for('data_table_from_json_tag',
+                                                  tag_name=_tag.tag_name,
+                                                  tag_json_str=json.dumps(_tag.json)) if isinstance(_tag, DictTag) else ''
+                           for _tag in ALL_TAGS}
 
     html = f"""
     <a href=http://localhost:5000/>Home</a>
     <h1>Tags</h1>
     <ul>
-        <li>{'</li><li>'.join(['<a href=http://localhost:5000/'+url+'>'+tag_name+'</a>' for tag_name, url in urls_for_tags.items()])}</li>
+        <li>{'</li><li>'.join([
+        '<a href=http://localhost:5000/'+urls_for_tag_reports[tag.tag_name]+'>'+tag.tag_name+'</a>, '+
+        '<a href=http://localhost:5000/'+urls_for_tag_tables[tag.tag_name]+'>'+('Table' if urls_for_tag_tables[tag.tag_name]!='' else '')+'</a>'
+        for tag 
+        in ALL_TAGS
+    ])}</li>
     </ul>
     """
     return html
@@ -63,14 +74,12 @@ def tag_report(tag):
     return html
 
 
-@app.route('/tags/json/<name_and_tag_json_str>')
-def calc_tag(name_and_tag_json_str):
+@app.route('/tags/json/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
+def data_table_from_json_tag(tag_name, tag_json_str):
     import json
     from mecon.statements.tagged_statement import FullyTaggedData
     from mecon.tagging.dict_tag import DictTag
 
-    tag_name = name_and_tag_json_str.split(':')[0]
-    tag_json_str = name_and_tag_json_str[len(tag_name)+1:]
     tag_json = json.loads(tag_json_str)
     tagger = DictTag(tag_name, tag_json)
     data = FullyTaggedData.instance().apply_taggers(tagger).get_rows_tagged_as(tag_name)
