@@ -35,7 +35,8 @@ def overview():
         """
     return html
 
-@app.route('/tags')
+
+@app.route('/tags/')
 def tags():
     from mecon.tagging.tags import ALL_TAGS
     html = f"""
