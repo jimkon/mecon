@@ -1,9 +1,9 @@
 import datetime
 
 from flask import Flask
+from markupsafe import escape  # https://flask.palletsprojects.com/en/2.2.x/quickstart/#html-escaping
 import redis
 
-from mecon.tagging.tags import ALL_TAGS
 import mecon.produce_report as reports
 
 app = Flask(__name__)
@@ -37,6 +37,7 @@ def overview():
 
 @app.route('/tags')
 def tags():
+    from mecon.tagging.tags import ALL_TAGS
     html = f"""
     <a href=http://localhost:5000/>Home</a>
     <h1>Tags</h1>
@@ -52,9 +53,29 @@ def tag(tag):
     tag_report = reports.create_report_for_tag(tag).html()
     html = f"""
     <a href=http://localhost:5000/>Home</a>
-    <h1>Tag "{tag}"</h1>
+    <h1>Tag "{escape(tag)}"</h1>
     {tag_report}
     """
+    return html
+
+
+@app.route('/tags/json/<name_and_tag_json_str>')
+def calc_tag(name_and_tag_json_str):
+    import json
+    from mecon.statements.tagged_statement import FullyTaggedData
+    from mecon.tagging.dict_tag import DictTag
+
+    tag_name = name_and_tag_json_str.split(':')[0]
+    tag_json_str = name_and_tag_json_str[len(tag_name)+1:]
+    tag_json = json.loads(tag_json_str)
+    tagger = DictTag(tag_name, tag_json)
+    data = FullyTaggedData.instance().apply_taggers(tagger).get_rows_tagged_as(tag_name)
+    tag_table = reports.create_df_table_page(data.dataframe()).html()
+    html = f"""
+        <a href=http://localhost:5000/>Home</a>
+        <h1>Tag "{escape(tag_name)}"</h1>
+        {tag_table}
+        """
     return html
 
 
