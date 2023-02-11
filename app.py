@@ -34,7 +34,7 @@ def main():
 def overview():
     overview_page = reports.overview_page().html()
     html = f"""
-        <a href=http://localhost:5000/>Home</a>
+        <a href={url_for('main')}>Home</a>
         {overview_page}
         """
     return html
@@ -53,7 +53,7 @@ def tags():
                            for _tag in ALL_TAGS}
 
     html = f"""
-    <a href=http://localhost:5000/>Home</a>
+    <a href={url_for('main')}>Home</a>
     <h1>Tags</h1>
     <ul>
         <li>{'</li><li>'.join([
@@ -71,7 +71,7 @@ def tags():
 def tag_report(tag):
     tag_report_html = reports.create_report_for_tag(tag).html()
     html = f"""
-    <a href=http://localhost:5000/>Home</a>
+    <a href={url_for('main')}>Home</a>
     <h1>Tag "{escape(tag)}"</h1>
     {tag_report_html}
     """
@@ -89,7 +89,7 @@ def query_data(tag_name, tag_json_str):
     data = FullyTaggedData.instance().apply_taggers(tagger).get_rows_tagged_as(tag_name)
     tag_table = reports.create_df_table_page(data.dataframe()).html()
     html = f"""
-        <a href=http://localhost:5000/>Home</a>
+        <a href={url_for('main')}>Home</a>
         <h1>Tag "{escape(tag_name)}"</h1>
         {tag_table}
         """
@@ -107,8 +107,7 @@ def edit_query_get(tag_name, tag_json_str):
     data = FullyTaggedData.instance().copy().apply_taggers(tagger).get_rows_tagged_as(tag_name)
     tag_table = reports.create_df_table_page(data.dataframe()).html()
     html = f"""
-    {id(FullyTaggedData.instance().copy())=}
-    <a href=http://localhost:5000/>Home</a>
+    <a href={url_for('main')}>Home</a>
     <h1>Edit a tag</h1>
         <form method="POST">
           <label for="tag_name">Tag name</label>
