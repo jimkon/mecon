@@ -18,6 +18,12 @@ _start_datetime = datetime.datetime.now()
 @app.route('/')
 def main():
     html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <link rel="stylesheet" href={url_for('static', filename='styles.css')}>
+    </head>
+    <body>
     <h1>Mecon app</h1>
     <p>Deployed: {_start_datetime}</p>
     Links:
