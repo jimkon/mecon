@@ -17,6 +17,9 @@ class TaggedData:
         if 'tags' not in self._df.columns:
             self._df['tags'] = [[] for _ in range(len(self._df))]
 
+    def copy(self):
+        return TaggedData(self.dataframe())
+
     def apply_taggers(self, taggers):
         if not isinstance(taggers, list):
             taggers = [taggers]
