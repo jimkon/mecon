@@ -1,6 +1,6 @@
 import datetime
 
-from flask import Flask, url_for, request, redirect
+from flask import Flask, url_for, request, redirect, render_template
 from markupsafe import escape  # https://flask.palletsprojects.com/en/2.2.x/quickstart/#html-escaping
 import redis
 
@@ -10,40 +10,18 @@ app = Flask(__name__)
 cache = None
 # cache = redis.StrictRedis(host='redis', port=6379, db=0)
 # print("REDIS ping:", cache.ping())
-_start_datetime = datetime.datetime.now()
+DEPLOYMENT_DATETIME = datetime.datetime.now()
 
-
-# next https://flask.palletsprojects.com/en/2.2.x/quickstart/#http-methods
 
 @app.route('/')
 def main():
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <link rel="stylesheet" href={url_for('static', filename='styles.css')}>
-    </head>
-    <body>
-    <h1>Mecon app</h1>
-    <p>Deployed: {_start_datetime}</p>
-    Links:
-    <ul>
-      <li><a href={url_for('overview')}>Overview</a></li>
-      <li><a href={url_for('tags')}>Tags</a></li>
-      <li><a href={url_for('edit_query_get', tag_name='new_tag', tag_json_str='[{}]')}>Edit tag</a></li>
-    </ul>
-    """
-    return html
+    return render_template('index.html', **globals())
 
 
 @app.route('/overview')
 def overview():
     overview_page = reports.overview_page().html()
-    html = f"""
-        <a href={url_for('main')}>Home</a>
-        {overview_page}
-        """
-    return html
+    return render_template('overview.html', overview_page=overview_page)
 
 
 @app.route('/tags/')
@@ -52,36 +30,24 @@ def tags():
     from mecon.tagging.tags import ALL_TAGS
     from mecon.tagging.dict_tag import DictTag
 
-    urls_for_tag_reports = {_tag.tag_name: url_for('tag_report', tag=_tag.tag_name) for _tag in ALL_TAGS}
-    urls_for_tag_tables = {_tag.tag_name: url_for('query_data',
-                                                  tag_name=_tag.tag_name,
-                                                  tag_json_str=json.dumps(_tag.json)) if isinstance(_tag, DictTag) else ''
-                           for _tag in ALL_TAGS}
-
-    html = f"""
-    <a href={url_for('main')}>Home</a>
-    <h1>Tags</h1>
-    <ul>
-        <li>{'</li><li>'.join([
-        '<a href=http://localhost:5000/'+urls_for_tag_reports[tag.tag_name]+'>'+tag.tag_name+'</a>, '+
-        '<a href=http://localhost:5000/'+urls_for_tag_tables[tag.tag_name]+'>'+('Table' if urls_for_tag_tables[tag.tag_name]!='' else '')+'</a>'
-        for tag 
-        in ALL_TAGS
-    ])}</li>
-    </ul>
-    """
-    return html
+    tag_names = [tag.tag_name for tag in ALL_TAGS]
+    urls_for_tag_reports = [url_for('tag_report', tag=_tag.tag_name) for _tag in ALL_TAGS]
+    urls_for_tag_tables = [url_for('query_data',
+                                  tag_name=_tag.tag_name,
+                                  tag_json_str=json.dumps(_tag.json)) if isinstance(_tag, DictTag) else None
+                           for _tag in ALL_TAGS]
+    links = list(zip(tag_names, urls_for_tag_reports, urls_for_tag_tables))
+    kwargs = globals().copy()
+    kwargs.update(locals())
+    return render_template('tags_menu.html', **kwargs)
 
 
 @app.route('/tags/<tag>')
 def tag_report(tag):
-    tag_report_html = reports.create_report_for_tag(tag).html()
-    html = f"""
-    <a href={url_for('main')}>Home</a>
-    <h1>Tag "{escape(tag)}"</h1>
-    {tag_report_html}
-    """
-    return html
+    tag_report_page = reports.create_report_for_tag(tag).html()
+    kwargs = globals().copy()
+    kwargs.update(locals())
+    return render_template('tag_report.html', **kwargs)
 
 
 @app.route('/data/query/table/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
@@ -93,13 +59,10 @@ def query_data(tag_name, tag_json_str):
     tag_json = json.loads(tag_json_str)
     tagger = DictTag(tag_name, tag_json)
     data = FullyTaggedData.instance().apply_taggers(tagger).get_rows_tagged_as(tag_name)
-    tag_table = reports.create_df_table_page(data.dataframe()).html()
-    html = f"""
-        <a href={url_for('main')}>Home</a>
-        <h1>Tag "{escape(tag_name)}"</h1>
-        {tag_table}
-        """
-    return html
+    table = data.dataframe().to_html()
+    kwargs = globals().copy()
+    kwargs.update(locals())
+    return render_template('table.html', **kwargs)
 
 
 @app.get('/tag/edit/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
@@ -111,22 +74,12 @@ def edit_query_get(tag_name, tag_json_str):
     tag_json = json.loads(tag_json_str)
     tagger = DictTag(tag_name, tag_json)
     data = FullyTaggedData.instance().copy().apply_taggers(tagger).get_rows_tagged_as(tag_name)
-    tag_table = reports.create_df_table_page(data.dataframe()).html()
-    html = f"""
-    <a href={url_for('main')}>Home</a>
-    <h1>Edit a tag</h1>
-        <form method="POST">
-          <label for="tag_name">Tag name</label>
-          <input type="text" id="tag_name" name="tag_name_input" value={tag_name}><br><br>
-          <label for="query_text">Query JSON</label>
-          <textarea id="query_text" name="query_text_input" rows="4" cols="50">{tag_json_str}</textarea><br><br>
-          <a href={url_for('edit_query_get', tag_name='new_tag', tag_json_str='[{}]')}><input type="button" value="Reset"></a>
-          <input type="submit" value="Refresh">
-        </form>
-        <h1>Tag "{escape(tag_name)}"</h1>
-        {tag_table}
-        """
-    return html
+    df = data.dataframe()
+    table = df.to_html()
+    number_of_rows = len(df)
+    kwargs = globals().copy()
+    kwargs.update(locals())
+    return render_template('query_edit.html', **kwargs)
 
 
 @app.post('/tag/edit/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
@@ -134,7 +87,6 @@ def edit_query_post(tag_name, tag_json_str):
     new_tag_name = request.form['tag_name_input']
     new_query_str = request.form['query_text_input']
     return redirect(url_for('edit_query_get', tag_name=new_tag_name, tag_json_str=new_query_str))
-
 
 
 if __name__ == "__main__":
