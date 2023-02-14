@@ -1,17 +1,49 @@
 import datetime
+import json
+from functools import wraps
 
 from flask import Flask, url_for, request, redirect, render_template
-from markupsafe import escape  # https://flask.palletsprojects.com/en/2.2.x/quickstart/#html-escaping
 import redis
 
 import mecon.produce_report as reports
 
 app = Flask(__name__)
-cache = None
-# cache = redis.StrictRedis(host='redis', port=6379, db=0)
+# cache = None
+cache = redis.StrictRedis(host='redis', port=6379, db=0)
 # print("REDIS ping:", cache.ping())
 DEPLOYMENT_DATETIME = datetime.datetime.now()
 
+
+def cached_html(func):
+    """
+    Decorator that caches the results of the function call.
+
+    We use Redis in this example, but any cache (e.g. memcached) will work.
+    We also assume that the result of the function can be seralized as JSON,
+    which obviously will be untrue in many situations. Tweak as needed.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Generate the cache key from the function's arguments.
+        key_parts = [func.__name__] + list(args)
+        key = '-'.join(key_parts)+json.dumps(kwargs)
+        app.logger.info(f'{key=}')
+        result = cache.get(key)
+
+        if result is None:
+            # Run the function and cache the result for next time.
+            html_page = func(*args, **kwargs)
+            cache.set(key, html_page)
+            app.logger.info(f'{key=} SET')
+        else:
+            # Skip the function entirely and use the cached value instead.
+            app.logger.info(f'{key=} FOUND')
+            html_page = result.decode('utf-8')
+
+        return html_page
+
+    return wrapper
 
 @app.route('/')
 def main():
@@ -43,6 +75,7 @@ def tags():
 
 
 @app.route('/tags/<tag>')
+@cached_html
 def tag_report(tag):
     tag_report_page = reports.create_report_for_tag(tag).html()
     kwargs = globals().copy()
