@@ -27,7 +27,7 @@ def cached_html(func):
     def wrapper(*args, **kwargs):
         # Generate the cache key from the function's arguments.
         key_parts = [func.__name__] + list(args)
-        key = '-'.join(key_parts)+json.dumps(kwargs)
+        key = 'cached_html:'+'-'.join(key_parts)+json.dumps(kwargs)
         app.logger.info(f'{key=}')
         result = cache.get(key)
 
@@ -44,6 +44,12 @@ def cached_html(func):
         return html_page
 
     return wrapper
+
+
+def reset_cache():
+    for key in cache.scan_iter("cached_html:*"):
+        cache.delete(key)
+
 
 @app.route('/')
 def main():
