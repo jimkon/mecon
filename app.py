@@ -6,6 +6,7 @@ from flask import Flask, url_for, request, redirect, render_template, flash
 import redis
 
 import mecon.produce_report as reports
+from mecon.data import DataObject
 
 app = Flask(__name__)
 app.secret_key = b'secret_key'
@@ -13,6 +14,7 @@ app.secret_key = b'secret_key'
 cache = redis.StrictRedis(host='redis', port=6379, db=0)
 # print("REDIS ping:", cache.ping())
 DEPLOYMENT_DATETIME = datetime.datetime.now()
+data_object = DataObject.local_data()
 
 
 def cached_html(func):
@@ -66,39 +68,58 @@ def overview():
 @app.route('/tags/')
 def tags():
     import json
-    from mecon.tagging.tags import ALL_TAGS
     from mecon.tagging.dict_tag import DictTag
 
-    tag_names = [tag.tag_name for tag in ALL_TAGS]
-    urls_for_tag_reports = [url_for('tag_report', tag=_tag.tag_name) for _tag in ALL_TAGS]
-    urls_for_tag_tables = [url_for('query_data',
-                                  tag_name=_tag.tag_name,
-                                  tag_json_str=json.dumps(_tag.json)) if isinstance(_tag, DictTag) else None
-                           for _tag in ALL_TAGS]
-    links = list(zip(tag_names, urls_for_tag_reports, urls_for_tag_tables))
+    all_tags = data_object.tags['found']
+
+    tag_names = [tag.tag_name for tag in all_tags]
+    # urls_for_tag_reports = [url_for('tag_report', tag=_tag.tag_name) for _tag in all_tags]
+    # urls_for_tag_tables = [url_for('query_data',
+    #                               tag_name=_tag.tag_name,
+    #                               tag_json_str=json.dumps(_tag.json)) if isinstance(_tag, DictTag) else None
+    #                        for _tag in all_tags]
+    # links = list(zip(tag_names, urls_for_tag_reports, urls_for_tag_tables))
     kwargs = globals().copy()
     kwargs.update(locals())
     return render_template('tags_menu.html', **kwargs)
 
 
-@app.route('/tags/<tag>')
+@app.route('/tags/<tag_name>')
+def tag_page(tag_name):
+    kwargs = globals().copy()
+    kwargs.update(locals())
+    return render_template('tag_page.html', **kwargs)
+
+
+@app.route('/tags/report/<tag_name>')
 @cached_html
-def tag_report(tag):
-    tag_report_page = reports.create_report_for_tag(tag).html()
+def tag_report(tag_name):
+    tag_report_page = reports.create_report_for_tag(tag_name).html()
     kwargs = globals().copy()
     kwargs.update(locals())
     return render_template('tag_report.html', **kwargs)
 
 
+@app.route('/tags/table/<tag_name>')
+def tag_table(tag_name):
+    tagged_data = data_object.transactions['tagged_transactions']
+    data = tagged_data.get_rows_tagged_as(tag_name)
+    df = data.dataframe()
+    table = df.to_html()
+    kwargs = globals().copy()
+    kwargs.update(locals())
+    return render_template('table.html', **kwargs)
+
+
 @app.route('/data/query/table/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
 def query_data(tag_name, tag_json_str):
     import json
-    from mecon.statements.tagged_statement import FullyTaggedData
     from mecon.tagging.dict_tag import DictTag
 
     tag_json = json.loads(tag_json_str)
     tagger = DictTag(tag_name, tag_json)
-    data = FullyTaggedData.instance().apply_taggers(tagger).get_rows_tagged_as(tag_name)
+    tagged_data = data_object.transactions['tagged_transactions']
+    data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
     table = data.dataframe().to_html()
     kwargs = globals().copy()
     kwargs.update(locals())
@@ -108,12 +129,12 @@ def query_data(tag_name, tag_json_str):
 @app.get('/tag/edit/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
 def edit_query_get(tag_name, tag_json_str):
     import json
-    from mecon.statements.tagged_statement import FullyTaggedData
     from mecon.tagging.dict_tag import DictTag
 
     tag_json = json.loads(tag_json_str)
     tagger = DictTag(tag_name, tag_json)
-    data = FullyTaggedData.instance().copy().apply_taggers(tagger).get_rows_tagged_as(tag_name)
+    tagged_data = data_object.transactions['tagged_transactions']
+    data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
     df = data.dataframe()
     table = df.to_html()
     number_of_rows = len(df)

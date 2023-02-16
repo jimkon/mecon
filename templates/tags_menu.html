@@ -3,18 +3,23 @@
 {% block content %}
     <h1>Tags menu</h1>
     <ul>
-        {% for tag_name, report_url, table_url in links %}
+        {% for tag_name in tag_names %}
             <li>
-                <b>{{ tag_name }}:</b>
-
-                <a href={{ report_url }}>Report</a>
-
-                {% if table_url is not none %}
-                <a href={{ table_url }}>Table</a>
-                {% else %}
-                No table preview available
-                {% endif %}
+                <a href={{ url_for('tag_page', tag_name=tag_name) }}>{{ tag_name }}</a>
             </li>
         {% endfor %}
+{#        {% for tag_name, report_url, table_url in links %}#}
+{#                <li>#}
+{#                    <b>{{ tag_name }}:</b>#}
+{#    #}
+{#                    <a href={{ report_url }}>Report</a>#}
+{#    #}
+{#                    {% if table_url is not none %}#}
+{#                    <a href={{ table_url }}>Table</a>#}
+{#                    {% else %}#}
+{#                    No table preview available#}
+{#                    {% endif %}#}
+{#                </li>#}
+{#            {% endfor %}#}
     </ul>
 {% endblock content %}

@@ -1,3 +1,6 @@
+import json
+import os
+
 import pandas as pd
 
 from mecon.tagging.tag import Tag
@@ -65,6 +68,17 @@ def analyse_rule_dict(rule_dict):
 
 
 class DictTag(Tag):
+    @staticmethod
+    def load_from_json_file(filepath):
+        full_filename = os.path.basename(filepath)
+        filename, ext = os.path.splitext(full_filename)
+        if ext == '.json':
+            with open(filepath, 'r') as fp:
+                json_content = json.load(fp)
+                return DictTag(filename, json_content)
+        else:
+            raise ValueError(f"File has to be a JSON file. Got {ext} instead ({filepath}).")
+
     def __init__(self, tag_name, _json):
         super().__init__(tag_name)
         self._rule_tree = []
