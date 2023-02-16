@@ -4,11 +4,11 @@ from functools import lru_cache, cached_property
 
 import pandas as pd
 
-from mecon.statements.combined_statement import Statement
+from mecon.statements.combined_statement import Transactions
 from mecon.tagging.tags import ALL_TAGS
 from mecon import calendar_utils
 from mecon import logs
-from mecon.configs import FULLY_TAGGED_DATASET_CSV
+from mecon import configs
 
 
 class TaggedData:
@@ -74,19 +74,19 @@ class FullyTaggedData(TaggedData):
         return cls._instance
 
     def __init__(self, reset_tags=False):
-        if os.path.exists(FULLY_TAGGED_DATASET_CSV) and not reset_tags:
-            logs.log_disk_io("Loading tagged data...")
-            df_statement = pd.read_csv(FULLY_TAGGED_DATASET_CSV, index_col=None)
+        if os.path.exists(configs.FULLY_TAGGED_DATASET_CSV) and not reset_tags:
+            logs.log_disk_io("Loading tagged datasets...")
+            df_statement = pd.read_csv(configs.FULLY_TAGGED_DATASET_CSV, index_col=None)
             df_statement['date'] = pd.to_datetime(df_statement['date'])
             df_statement['tags'] = df_statement['tags'].apply(lambda x: literal_eval(x))
             super().__init__(df_statement)
         else:
-            logs.log_calculation("Producing tagged data...")
-            df_statement = Statement().dataframe()
+            logs.log_calculation("Producing tagged datasets...")
+            df_statement = Transactions().dataframe()
             super().__init__(df_statement)
             self.apply_taggers(ALL_TAGS)
-            logs.log_disk_io("Saving tagged data...")
-            self.dataframe().to_csv(FULLY_TAGGED_DATASET_CSV, index=None)
+            logs.log_disk_io("Saving tagged datasets...")
+            self.dataframe().to_csv(configs.FULLY_TAGGED_DATASET_CSV, index=None)
 
 
 if __name__ == "__main__":

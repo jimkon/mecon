@@ -1,6 +1,6 @@
 import argparse
 
-from mecon.statements.combined_statement import Statement
+from mecon.statements.combined_statement import Transactions
 from mecon.statements.tagged_statement import TaggedData, FullyTaggedData
 from mecon.produce_report import create_report
 
@@ -20,7 +20,7 @@ def read_args():
 
 def parse_statements():
     print(f"{' PARSING STATEMENTS ':#^80}")
-    Statement(reset=True)
+    Transactions(reset=True)
 
 
 def tag_data():
