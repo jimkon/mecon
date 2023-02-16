@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 
+from mecon import configs
 from mecon.statements.statement_core import ABCFetchStatement
 from mecon.statements.bank_statements import MonzoStatement, RevolutStatement, HSBCStatement
 from mecon.calendar_utils import date_to_month_date
@@ -36,18 +37,17 @@ class CombinedStatement(ABCFetchStatement):
         return self.df_raw['description']
 
     def to_csv(self):
-        self.dataframe().to_csv(r'C:/Users/jim/PycharmProjects/mecon/statements/combined/combined_statement.csv')
+        self.dataframe().to_csv(configs.COMBINED_STATEMENT_CSV_PATH)
 
 
-class Statement:
-    _cached_file_path = r"C:\Users\jim\PycharmProjects\mecon\statements\statement.csv"
+class Transactions:
 
     def __init__(self, reset=False):
-        if os.path.exists(self._cached_file_path) and not reset:
-            self._df = pd.read_csv(self._cached_file_path)
+        if os.path.exists(configs.TRANSACTIONS_CSV_PATH) and not reset:
+            self._df = pd.read_csv(configs.TRANSACTIONS_CSV_PATH)
         else:
             self._df = CombinedStatement().dataframe().reset_index(drop=True)
-            self._df.to_csv(self._cached_file_path)
+            self._df.to_csv(configs.TRANSACTIONS_CSV_PATH)
 
     def date(self):
         return pd.to_datetime(self._df['date'])

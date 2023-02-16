@@ -1,16 +1,55 @@
 import datetime
+import json
+from functools import wraps
 
-from flask import Flask, url_for, request, redirect, render_template
-from markupsafe import escape  # https://flask.palletsprojects.com/en/2.2.x/quickstart/#html-escaping
+from flask import Flask, url_for, request, redirect, render_template, flash
 import redis
 
 import mecon.produce_report as reports
 
 app = Flask(__name__)
-cache = None
-# cache = redis.StrictRedis(host='redis', port=6379, db=0)
+app.secret_key = b'secret_key'
+# cache = None
+cache = redis.StrictRedis(host='redis', port=6379, db=0)
 # print("REDIS ping:", cache.ping())
 DEPLOYMENT_DATETIME = datetime.datetime.now()
+
+
+def cached_html(func):
+    """
+    Decorator that caches the results of the function call.
+
+    We use Redis in this example, but any cache (e.g. memcached) will work.
+    We also assume that the result of the function can be seralized as JSON,
+    which obviously will be untrue in many situations. Tweak as needed.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Generate the cache key from the function's arguments.
+        key_parts = [func.__name__] + list(args)
+        key = 'cached_html:'+'-'.join(key_parts)+json.dumps(kwargs)
+        app.logger.info(f'{key=}')
+        result = cache.get(key)
+
+        if result is None:
+            # Run the function and cache the result for next time.
+            html_page = func(*args, **kwargs)
+            cache.set(key, html_page)
+            app.logger.info(f'{key=} SET')
+        else:
+            # Skip the function entirely and use the cached value instead.
+            app.logger.info(f'{key=} FOUND')
+            html_page = result.decode('utf-8')
+
+        return html_page
+
+    return wrapper
+
+
+def reset_cache():
+    for key in cache.scan_iter("cached_html:*"):
+        cache.delete(key)
 
 
 @app.route('/')
@@ -43,6 +82,7 @@ def tags():
 
 
 @app.route('/tags/<tag>')
+@cached_html
 def tag_report(tag):
     tag_report_page = reports.create_report_for_tag(tag).html()
     kwargs = globals().copy()
@@ -87,6 +127,38 @@ def edit_query_post(tag_name, tag_json_str):
     new_tag_name = request.form['tag_name_input']
     new_query_str = request.form['query_text_input']
     return redirect(url_for('edit_query_get', tag_name=new_tag_name, tag_json_str=new_query_str))
+
+
+@app.route('/statement/upload/<bank_name>/', methods=['GET', 'POST'])
+def upload_statement(bank_name):
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            message = f"No file part"
+            flash(message)
+            reset_cache()
+            return render_template('upload_file.html',
+                                   file_info=bank_name,
+                                   message=message)
+        file = request.files['file']
+        if file.filename == '':
+            message = f"No selected file"
+            flash(message)
+            reset_cache()
+            return render_template('upload_file.html',
+                                   file_info=bank_name,
+                                   message=message)
+        message = f"Uploading files in not implemented yet. File {file.filename} was not uploaded."
+        flash(message)
+        reset_cache()
+        return render_template('upload_file.html',
+                               file_info=bank_name,
+                               message=message)
+
+    file_info = bank_name
+    kwargs = globals().copy()
+    kwargs.update(locals())
+    return render_template('upload_file.html', **kwargs)
+
 
 
 if __name__ == "__main__":
