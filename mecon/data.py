@@ -1,9 +1,9 @@
 import abc
 import os
+from collections import OrderedDict
 
 from mecon.statements.tagged_statement import FullyTaggedData
 from mecon.tagging.dict_tag import DictTag
-from mecon.tagging.tags import ALL_TAGS
 from mecon import configs
 
 
@@ -26,14 +26,25 @@ class LocalFileAdapter(DataAdapter):
         pass
 
     def get_transactions(self):
-        trans_dict = {'tagged_transactions': FullyTaggedData.instance().copy()}
+        trans_dict = {'tagged': FullyTaggedData.instance().copy()}
         return trans_dict
 
     def get_tags(self):
-        tags_dict = {
-            'found': ALL_TAGS,
-            'json': self._load_json_tags()
-        }
+        json_tags = self._load_json_tags()
+        transactions = self.get_transactions()['tagged']
+        data_tag_names = transactions.all_different_tags
+        tags_dict = {}
+        for tag_name in data_tag_names:
+            tags_dict[tag_name] = {'tag_value': tag_name}
+
+        for tag in json_tags:
+            tag_name = tag.tag_name
+            tags_dict[tag_name] = {'tag_value': tag_name, 'tagger': tag, 'json': tag.json}
+
+        for tag_name in tags_dict:
+            tags_dict[tag_name]['n_rows'] = len(transactions.get_rows_tagged_as(tag_name).dataframe())
+
+        tags_dict = OrderedDict(sorted(tags_dict.items(), key=lambda x: x[1]['n_rows'], reverse=True))
         return tags_dict
 
     def _load_json_tags(self):

@@ -3,9 +3,9 @@
 {% block content %}
     <h1>Tags menu</h1>
     <ul>
-        {% for tag in tag_info %}
+        {% for tag_name, tag_info in tags_dict.items() %}
             <li>
-                <a href={{ url_for('tag_page', tag_name=tag.name) }}>{{ tag.name }}</a>
+                <a href={{ url_for('tag_page', tag_name=tag_name) }}>{{ tag_name }} ({{ tag_info.n_rows }})</a>
             </li>
         {% endfor %}
     </ul>

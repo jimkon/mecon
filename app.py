@@ -68,12 +68,7 @@ def overview():
 
 @app.route('/tags/')
 def tags():
-    all_tags = data_object.tags['found']
-
-    tag_info = [{
-        'name': tag.tag_name,
-        'is_json_tag': issubclass(tag.__class__, DictTag)
-    } for tag in all_tags]
+    tags_dict = data_object.tags
 
     kwargs = globals().copy()
     kwargs.update(locals())
@@ -82,7 +77,7 @@ def tags():
 
 @app.route('/tags/<tag_name>')
 def tag_page(tag_name):
-    is_json_tag = any([issubclass(tag.__class__, DictTag) for tag in data_object.tags['found']])
+    is_json_tag = data_object.tags[tag_name].get('json', None)
     kwargs = globals().copy()
     kwargs.update(locals())
     return render_template('tag_page.html', **kwargs)
@@ -99,7 +94,7 @@ def tag_report(tag_name):
 
 @app.route('/tags/table/<tag_name>')
 def tag_table(tag_name):
-    tagged_data = data_object.transactions['tagged_transactions']
+    tagged_data = data_object.transactions['tagged']
     data = tagged_data.get_rows_tagged_as(tag_name)
     df = data.dataframe()
     table_html = df.to_html()
@@ -109,10 +104,10 @@ def tag_table(tag_name):
 
 @app.route('/tags/edit/<tag_name>')
 def tag_edit(tag_name):
-    tag_json = [tag.json for tag in data_object.tags['found'] if issubclass(tag.__class__, DictTag)]
+    tag_json = data_object.tags[tag_name].get('json', None)
     tag_json_str = json.dumps(tag_json, indent=4)
 
-    tagged_data = data_object.transactions['tagged_transactions']
+    tagged_data = data_object.transactions['tagged']
     data = tagged_data.get_rows_tagged_as(tag_name)
     df = data.dataframe()
     table_html = df.to_html()
@@ -125,7 +120,7 @@ def tag_edit(tag_name):
 def query_data(tag_name, tag_json_str):
     tag_json = json.loads(tag_json_str)
     tagger = DictTag(tag_name, tag_json)
-    tagged_data = data_object.transactions['tagged_transactions']
+    tagged_data = data_object.transactions['tagged']
     data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
     table_html = data.dataframe().to_html()
     kwargs = globals().copy()
@@ -140,7 +135,7 @@ def edit_query_get(tag_name, tag_json_str):
 
     tag_json = json.loads(tag_json_str)
     tagger = DictTag(tag_name, tag_json)
-    tagged_data = data_object.transactions['tagged_transactions']
+    tagged_data = data_object.transactions['tagged']
     data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
     df = data.dataframe()
     table_html = df.to_html()
