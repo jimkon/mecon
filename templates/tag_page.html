@@ -2,7 +2,12 @@
 
 {% block content %}
     <h1>{{ tag_name }}</h1>
-     <a href={{ url_for('tag_report', tag_name=tag_name) }}>Report</a>
-     <a href={{ url_for('tag_table', tag_name=tag_name) }}>Table</a>
+    <a href={{ url_for('tag_report', tag_name=tag_name) }}>Report</a>
+    <a href={{ url_for('tag_table', tag_name=tag_name) }}>Table</a>
+    {% if is_json_tag %}
+    <a href={{ url_for('tag_edit', tag_name=tag_name) }} >Edit</a>
+    {% else %}
+    <a href={{ url_for('tag_edit', tag_name=tag_name) }} disabled >Edit</a>
+    {% endif %}
     {{ tag_page_content|safe }}
 {% endblock content %}
