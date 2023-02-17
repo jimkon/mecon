@@ -77,7 +77,7 @@ def tags():
 
 @app.route('/tags/<tag_name>')
 def tag_page(tag_name):
-    is_json_tag = data_object.tags[tag_name].get('json', None)
+    is_json_tag = 'json' in data_object.tags[tag_name].keys()
     kwargs = globals().copy()
     kwargs.update(locals())
     return render_template('tag_page.html', **kwargs)

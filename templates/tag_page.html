@@ -7,7 +7,7 @@
     {% if is_json_tag %}
     <a href={{ url_for('tag_edit', tag_name=tag_name) }} >Edit</a>
     {% else %}
-    <a href={{ url_for('tag_edit', tag_name=tag_name) }} disabled >Edit</a>
+    Not editable
     {% endif %}
     {{ tag_page_content|safe }}
 {% endblock content %}
