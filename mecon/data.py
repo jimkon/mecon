@@ -3,7 +3,7 @@ import os
 from collections import OrderedDict
 
 from mecon.statements.tagged_statement import FullyTaggedData
-from mecon.tagging.dict_tag import DictTag
+from mecon.tagging.json_tags import JsonTag
 from mecon import configs
 
 
@@ -52,7 +52,7 @@ class LocalFileAdapter(DataAdapter):
         for tag_filepath in os.listdir(configs.TAGS_DIRECTORY):
             filepath = os.path.join(configs.TAGS_DIRECTORY, tag_filepath)
             try:
-                tagger = DictTag.load_from_json_file(filepath)
+                tagger = JsonTag.from_json_file(filepath)
                 result_taggers.append(tagger)
             except ValueError as e:
                 print(f"File {filepath} skipped because it is not a JSON.")

@@ -1,7 +1,7 @@
 from pandas import Timestamp
 
 from mecon.calendar_utils import DayOfWeek
-from mecon.tagging.dict_tag import DictTag
+from mecon.tagging.json_tags import JsonTag
 from mecon.tagging.manual_tag import HardCodedTag
 
 
@@ -73,7 +73,7 @@ class GiffgaffTag(HardCodedTag):
         return 'giffgaff' in element['description'].lower()
 
 
-class CosmoteTag(DictTag):
+class CosmoteTag(JsonTag):
     def __init__(self):
         super().__init__('Cosmote', [
             {'description.lower': {'contains': 'cosmote'}},
@@ -88,7 +88,7 @@ class SantaderBikesTag(HardCodedTag):
         return 'Tfl Cycle Hire'.lower() in element['description'].lower()
 
 
-class TFLTag(DictTag):
+class TFLTag(JsonTag):
     def __init__(self):
         super().__init__('TFL (excluding cycle hire)', {
             'description.lower': {'contains': 'tfl', 'not_contains': 'netflix'},
@@ -96,14 +96,14 @@ class TFLTag(DictTag):
         })
 
 
-class TherapyTag(DictTag):
+class TherapyTag(JsonTag):
     def __init__(self):
         super().__init__('Therapy', {
             'description.lower': {'contains': 'karamanos'},
         })
 
 
-class SuperMarketTag(DictTag):
+class SuperMarketTag(JsonTag):
     def __init__(self):
         super().__init__('Super Market', [
             {'description.lower': {'contains': 'sainsbury', 'not_contains': 'cash sainsby'}},
@@ -120,7 +120,7 @@ class SuperMarketTag(DictTag):
         ])
 
 
-class FoodDeliveryTag(DictTag):
+class FoodDeliveryTag(JsonTag):
     def __init__(self):
         super().__init__('Food Delivery', [
             {'description.lower': {'contains': ['just', 'eat']}},
@@ -130,7 +130,7 @@ class FoodDeliveryTag(DictTag):
         ])
 
 
-class FlightTicketsTag(DictTag):
+class FlightTicketsTag(JsonTag):
     def __init__(self):
         super().__init__('Flight tickets', [
             {'description.lower': {'contains': 'ryanair'}},
@@ -143,7 +143,7 @@ class FlightTicketsTag(DictTag):
         ])
 
 
-class TrainTicketsTag(DictTag):
+class TrainTicketsTag(JsonTag):
     def __init__(self):
         super().__init__('Train tickets', [
             {'description.lower': {'contains': 'trainline'}},
@@ -151,7 +151,7 @@ class TrainTicketsTag(DictTag):
         ])
 
 
-class RentTag(DictTag):
+class RentTag(JsonTag):
     def __init__(self):
         super().__init__('Rent', [
             {'description.lower': {'contains': 'joseph'}},
@@ -160,7 +160,7 @@ class RentTag(DictTag):
         ])
 
 
-class HomeBillsTag(DictTag):
+class HomeBillsTag(JsonTag):
     def __init__(self):
         super().__init__('Home Bills', [
             {'tags': {'contains': 'Rent'}},
@@ -172,7 +172,7 @@ class HomeBillsTag(DictTag):
         ])
 
 
-class OtherBillsTag(DictTag):
+class OtherBillsTag(JsonTag):
     def __init__(self):
         super().__init__('Other Bills', [
             {'tags': {'contains': 'Spotify'}},
@@ -182,7 +182,7 @@ class OtherBillsTag(DictTag):
         ])
 
 
-class OnlineOrdersTag(DictTag):
+class OnlineOrdersTag(JsonTag):
     def __init__(self):
         super().__init__('Online orders', [
             {'description.lower': {'contains': 'amazon'}},
@@ -194,28 +194,28 @@ class OnlineOrdersTag(DictTag):
         ])
 
 
-class AirbnbTag(DictTag):
+class AirbnbTag(JsonTag):
     def __init__(self):
         super().__init__('Airbnb', [
             {'description.lower': {'contains': 'airbnb'}},
         ])
 
 
-class TooGoodToGoTag(DictTag):
+class TooGoodToGoTag(JsonTag):
     def __init__(self):
         super().__init__('Too Good To Go', [
             {'description.lower': {'contains': 'toogoodtog'}},
         ])
 
 
-class CashTag(DictTag):
+class CashTag(JsonTag):
     def __init__(self):
         super().__init__('Cash', [
             {'description.lower': {'contains': 'cash'}},
         ])
 
 
-class CafeTag(DictTag):  # TODO
+class CafeTag(JsonTag):  # TODO
     def __init__(self):
         super().__init__('Cafe', [
             {'description.lower': {'contains': 'cafe'}},
@@ -224,7 +224,7 @@ class CafeTag(DictTag):  # TODO
         ])
 
 
-class FoodOutTag(DictTag):  # TODO
+class FoodOutTag(JsonTag):  # TODO
     def __init__(self):
         super().__init__('Food out', [
             {'description.lower': {'contains': 'nando'}},
@@ -237,7 +237,7 @@ class FoodOutTag(DictTag):  # TODO
         ])
 
 
-class FoodTag(DictTag):  # TODO
+class FoodTag(JsonTag):  # TODO
     def __init__(self):
         super().__init__('Food', [
             {'tags': {'contains': SuperMarketTag().tag_name}},
@@ -247,7 +247,7 @@ class FoodTag(DictTag):  # TODO
         ])
 
 
-class CommuteTag(DictTag):  # TODO
+class CommuteTag(JsonTag):  # TODO
     def __init__(self):
         super().__init__('Commute', [
             {'tags': {'contains': SantaderBikesTag().tag_name}},
@@ -256,7 +256,7 @@ class CommuteTag(DictTag):  # TODO
         ])
 
 
-class DrinksTag(DictTag):  # TODO
+class DrinksTag(JsonTag):  # TODO
     def __init__(self):
         super().__init__('Drinks', [
             # {'tags': {'contains': SantaderBikesTag().tag_name}},
@@ -264,7 +264,7 @@ class DrinksTag(DictTag):  # TODO
         ])
 
 
-class EntertainmentTag(DictTag):  # TODO
+class EntertainmentTag(JsonTag):  # TODO
     def __init__(self):
         super().__init__('Entertainment', [
             # {'tags': {'contains': SantaderBikesTag().tag_name}},
@@ -272,7 +272,7 @@ class EntertainmentTag(DictTag):  # TODO
         ])
 
 
-class NightOutTag(DictTag):  # TODO
+class NightOutTag(JsonTag):  # TODO
     def __init__(self):
         super().__init__('Night out', [
             {'time.str': {'greater_equal': "21:00:00"}, 'tags': {'not_contains': ['Home Bills', 'Income', 'Bank transfer']}},
@@ -281,7 +281,7 @@ class NightOutTag(DictTag):  # TODO
         ])
 
 
-class TapTag(DictTag):
+class TapTag(JsonTag):
     def __init__(self):
         super().__init__('Tap', [
             {'tags': {'contains': CommuteTag().tag_name}},
@@ -292,12 +292,12 @@ class TapTag(DictTag):
         ])
 
 
-class LondonResTag(DictTag):
+class LondonResTag(JsonTag):
     def __init__(self):
         super().__init__('London residency', {'date.str': {'greater_equal': '2020-01-05', 'less': '2099-01-01'}})
 
 
-class LondonTripTag(DictTag):
+class LondonTripTag(JsonTag):
     def __init__(self):
         super().__init__('London trip', [
             {'date.str': {'greater_equal': '2019-05-10', 'less': '2019-06-13'},
@@ -309,12 +309,12 @@ class LondonTripTag(DictTag):
         ])
 
 
-class ChaniaResTag(DictTag):
+class ChaniaResTag(JsonTag):
     def __init__(self):
         super().__init__('Chania residency', {'date.str': {'greater_equal': '2000-01-01', 'less': '2020-01-01'}})
 
 
-class ChaniaTripTag(DictTag):
+class ChaniaTripTag(JsonTag):
     def __init__(self):
         super().__init__('Chania trip', [
             {'date.str': {'greater_equal': '2020-05-16', 'less': '2020-07-01'},
@@ -336,7 +336,7 @@ class ChaniaTripTag(DictTag):
         ])
 
 
-class AthensTripTag(DictTag):
+class AthensTripTag(JsonTag):
     def __init__(self):
         super().__init__('Athens trip', [
             {'date.str': {'greater_equal': '2020-01-01', 'less': '2020-01-04'},
@@ -358,7 +358,7 @@ class AthensTripTag(DictTag):
         ])
 
 
-class BarcelonaTripTag(DictTag):
+class BarcelonaTripTag(JsonTag):
     def __init__(self):
         super().__init__('Barcelona trip', [{
             'date.str': {
@@ -367,7 +367,7 @@ class BarcelonaTripTag(DictTag):
             }, 'tags': {'not_contains': ['Home Bills', 'Income']}}, ])
 
 
-class BudapestTripTag(DictTag):
+class BudapestTripTag(JsonTag):
     def __init__(self):
         super().__init__('Budapest trip', [{
             'date.str': {
@@ -376,7 +376,7 @@ class BudapestTripTag(DictTag):
             }, 'tags': {'not_contains': ['Home Bills', 'Income']}}, ])
 
 
-class ParisTripTag(DictTag):
+class ParisTripTag(JsonTag):
     def __init__(self):
         super().__init__('Paris trip', [{
             'date.str': {
@@ -396,7 +396,7 @@ class ParisTripTag(DictTag):
         ])
 
 
-class TripsTag(DictTag):
+class TripsTag(JsonTag):
     def __init__(self):
         super().__init__('Trip', [{
             'tags.str': {
@@ -404,56 +404,56 @@ class TripsTag(DictTag):
             }}])
 
 
-class BankTransferTag(DictTag):
+class BankTransferTag(JsonTag):
     def __init__(self):
         super().__init__('Bank transfer', [
             {'description.lower': {'contains': 'dimitrios kontzedakis'}}
         ])
 
 
-class MondayTag(DictTag):
+class MondayTag(JsonTag):
     def __init__(self):
         super().__init__(DayOfWeek.MONDAY.value,
                          {'date.dayofweek': {'equals': DayOfWeek.MONDAY.value}})
 
 
-class TuesdayTag(DictTag):
+class TuesdayTag(JsonTag):
     def __init__(self):
         super().__init__(DayOfWeek.TUESDAY.value,
                          {'date.dayofweek': {'equals': DayOfWeek.TUESDAY.value}})
 
 
-class WednesdayTag(DictTag):
+class WednesdayTag(JsonTag):
     def __init__(self):
         super().__init__(DayOfWeek.WEDNESDAY.value,
                          {'date.dayofweek': {'equals': DayOfWeek.WEDNESDAY.value}})
 
 
-class ThursdayTag(DictTag):
+class ThursdayTag(JsonTag):
     def __init__(self):
         super().__init__(DayOfWeek.THURSDAY.value,
                          {'date.dayofweek': {'equals': DayOfWeek.THURSDAY.value}})
 
 
-class FridayTag(DictTag):
+class FridayTag(JsonTag):
     def __init__(self):
         super().__init__(DayOfWeek.FRIDAY.value,
                          {'date.dayofweek': {'equals': DayOfWeek.FRIDAY.value}})
 
 
-class SaturdayTag(DictTag):
+class SaturdayTag(JsonTag):
     def __init__(self):
         super().__init__(DayOfWeek.SATURDAY.value,
                          {'date.dayofweek': {'equals': DayOfWeek.SATURDAY.value}})
 
 
-class SundayTag(DictTag):
+class SundayTag(JsonTag):
     def __init__(self):
         super().__init__(DayOfWeek.SUNDAY.value,
                          {'date.dayofweek': {'equals': DayOfWeek.SUNDAY.value}})
 
 
-class Guest(DictTag):
+class Guest(JsonTag):
     def __init__(self):
         super().__init__('Guest', [{
                 'date.str': {  # Golfidis

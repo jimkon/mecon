@@ -7,7 +7,7 @@ import redis
 
 import mecon.produce_report as reports
 from mecon.data import DataObject
-from mecon.tagging.dict_tag import DictTag
+from mecon.tagging.json_tags import JsonTag
 
 app = Flask(__name__)
 app.secret_key = b'secret_key'
@@ -119,7 +119,7 @@ def tag_edit(tag_name):
 @app.route('/data/query/table/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
 def query_data(tag_name, tag_json_str):
     tag_json = json.loads(tag_json_str)
-    tagger = DictTag(tag_name, tag_json)
+    tagger = JsonTag(tag_name, tag_json)
     tagged_data = data_object.transactions['tagged']
     data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
     table_html = data.dataframe().to_html()
@@ -131,10 +131,10 @@ def query_data(tag_name, tag_json_str):
 @app.get('/tag/edit/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
 def edit_query_get(tag_name, tag_json_str):
     import json
-    from mecon.tagging.dict_tag import DictTag
+    from mecon.tagging.json_tags import JsonTag
 
     tag_json = json.loads(tag_json_str)
-    tagger = DictTag(tag_name, tag_json)
+    tagger = JsonTag(tag_name, tag_json)
     tagged_data = data_object.transactions['tagged']
     data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
     df = data.dataframe()
