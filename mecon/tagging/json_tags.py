@@ -2,10 +2,9 @@ import json
 import os
 
 import numpy as np
-import pandas as pd
 
-from mecon.tagging.tag import Tag
 from mecon.tagging.json_tag_utils import field_processing_functions_dict, match_funcs_dict
+from mecon.tagging.tag import Tag
 
 
 class SelectCondition:

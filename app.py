@@ -2,8 +2,8 @@ import datetime
 import json
 from functools import wraps
 
-from flask import Flask, url_for, request, redirect, render_template, flash
 import redis
+from flask import Flask, url_for, request, redirect, render_template, flash
 
 import mecon.produce_report as reports
 from mecon.data import DataObject
@@ -69,27 +69,20 @@ def overview():
 @app.route('/tags/')
 def tags():
     tags_dict = data_object.tags
-
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('tags_menu.html', **kwargs)
+    return render_template('tags_menu.html', **globals(), **locals())
 
 
 @app.route('/tags/<tag_name>')
 def tag_page(tag_name):
     is_json_tag = 'json' in data_object.tags[tag_name].keys()
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('tag_page.html', **kwargs)
+    return render_template('tag_page.html', **globals(), **locals())
 
 
 @app.route('/tags/report/<tag_name>')
 @cached_html
 def tag_report(tag_name):
     tag_report_page = reports.create_report_for_tag(tag_name).html()
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('tag_report.html', **kwargs)
+    return render_template('tag_report.html', **globals(), **locals())
 
 
 @app.route('/tags/table/<tag_name>')
@@ -98,9 +91,7 @@ def tag_table(tag_name):
     data = tagged_data.get_rows_tagged_as(tag_name)
     df = data.dataframe()
     table_html = df.to_html()
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('table.html', **kwargs)
+    return render_template('table.html', **globals(), **locals())
 
 @app.route('/tags/edit/<tag_name>')
 def tag_edit(tag_name):
@@ -111,9 +102,7 @@ def tag_edit(tag_name):
     data = tagged_data.get_rows_tagged_as(tag_name)
     df = data.dataframe()
     table_html = df.to_html()
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('table_edit.html', **kwargs)
+    return render_template('table_edit.html', **globals(), **locals())
 
 
 @app.route('/data/query/table/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
@@ -123,9 +112,7 @@ def query_data(tag_name, tag_json_str):
     tagged_data = data_object.transactions['tagged']
     data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
     table_html = data.dataframe().to_html()
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('table.html', **kwargs)
+    return render_template('table.html', **globals(), **locals())
 
 
 @app.get('/tag/edit/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
@@ -140,9 +127,7 @@ def edit_query_get(tag_name, tag_json_str):
     df = data.dataframe()
     table_html = df.to_html()
     number_of_rows = len(df)
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('query_edit.html', **kwargs)
+    return render_template('query_edit.html', **globals(), **locals())
 
 
 @app.post('/tag/edit/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
@@ -178,9 +163,7 @@ def upload_statement(bank_name):
                                message=message)
 
     file_info = bank_name
-    kwargs = globals().copy()
-    kwargs.update(locals())
-    return render_template('upload_file.html', **kwargs)
+    return render_template('upload_file.html', **globals(), **locals())
 
 
 

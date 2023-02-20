@@ -1,8 +1,8 @@
 import unittest
-from unittest.mock import patch, call
 
 import numpy as np
 import pandas as pd
+
 from mecon.tagging import json_tags as tag
 
 
