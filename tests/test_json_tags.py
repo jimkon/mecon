@@ -115,7 +115,7 @@ class TestSelectQuery(unittest.TestCase):
             }
         ]
 
-        cond_values = tag.SelectQuery(test_json).calculate(test_df)
+        cond_values = tag.SelectQuery(test_json).calculate_cond_values(test_df)
         expected_cond_values = [False, True, False, True]
         self.assertTrue(np.array_equal(cond_values, expected_cond_values))
 
@@ -144,3 +144,7 @@ class TestDictTag(unittest.TestCase):
 
         self.assertEqual(set(test_df.columns), {'a', 'b', 'c', 'tags'})
         self.assertListEqual(test_df['tags'].to_list(), [[], ['test_tag'], ['test_tag'], []])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -87,3 +87,7 @@ class Transactions:
 
         return df_res
 
+
+if __name__ == "__main__":
+    data = Transactions()
+    print(data.dataframe().head())

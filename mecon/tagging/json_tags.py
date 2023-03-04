@@ -108,6 +108,9 @@ class SelectQuery:
         return self.calculate(_df)
 
     def calculate(self, _df):
+        return _df[self.calculate_cond_values(_df)]
+
+    def calculate_cond_values(self, _df):
         rules_res = [rule(_df) for rule in self._rules]
         return np.logical_or.reduce(rules_res)
 
@@ -138,4 +141,4 @@ class JsonTag(Tag):
         return self._query.json
 
     def _calc_condition(self, _df):
-        return self._query(_df)
+        return self._query.calculate_cond_values(_df)

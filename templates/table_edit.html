@@ -7,7 +7,9 @@
       <input type="text" id="tag_name" name="tag_name_input" value="{{ tag_name }}" disabled><br><br>
       <label for="query_text">Query JSON</label>
       <textarea id="query_text" name="query_text_input" rows="10" cols="150">{{ tag_json_str }}</textarea><br><br>
-      <input type="submit" value="Refresh">
+      <input type="submit" name="refresh" value="Refresh">
+      <input type="submit" name="reset" value="Reset">
+      <input type="submit" name="save" value="Save">
     </form>
     <h1>Table for {{ tag_name }}, {{ number_of_rows }} rows</h1>
     {{ table_html|safe }}

@@ -20,6 +20,10 @@ class TaggedData:
     def copy(self):
         return TaggedData(self.dataframe())
 
+    def query_data(self, query):
+        new_df = query(self.dataframe())
+        return TaggedData(new_df)
+
     def apply_taggers(self, taggers):
         if not isinstance(taggers, list):
             taggers = [taggers]
@@ -64,6 +68,20 @@ class TaggedData:
         return TaggedData(df)
 
 
+class UntaggedData(TaggedData):
+    _instance = None
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = UntaggedData()
+        return cls._instance
+
+    def __init__(self, reset_tags=False):
+        df = Transactions().dataframe()
+        super().__init__(df)
+
+
 class FullyTaggedData(TaggedData):
     _instance = None
 
@@ -90,9 +108,23 @@ class FullyTaggedData(TaggedData):
 
 
 if __name__ == "__main__":
+    data = UntaggedData.instance()
+    print(data.dataframe().head())
+    print(data.all_different_tags)
+
     data = FullyTaggedData.instance()
     print(data.dataframe().head())
     print(data.all_different_tags)
+
+    from mecon.tagging.json_tags import SelectQuery
+    res = data.query_data(SelectQuery([
+    {
+        "description": {
+            "contains": "Bank:Revolut"
+        }
+    }
+]))
+    t = 0
 
 
 

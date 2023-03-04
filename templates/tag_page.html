@@ -5,7 +5,7 @@
     <a href={{ url_for('tag_report', tag_name=tag_name) }}>Report</a>
     <a href={{ url_for('tag_table', tag_name=tag_name) }}>Table</a>
     {% if is_json_tag %}
-    <a href={{ url_for('tag_edit', tag_name=tag_name) }} >Edit</a>
+    <a href={{ url_for('tag_edit_get', tag_name=tag_name) }} >Edit</a>
     {% else %}
     Not editable
     {% endif %}
