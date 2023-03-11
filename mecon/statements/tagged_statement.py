@@ -1,14 +1,14 @@
 import os.path
 from ast import literal_eval
-from functools import lru_cache, cached_property
+from functools import cached_property
 
 import pandas as pd
 
+from mecon import calendar_utils
+from mecon import configs
+from mecon import logs
 from mecon.statements.combined_statement import Transactions
 from mecon.tagging.tags import ALL_TAGS
-from mecon import calendar_utils
-from mecon import logs
-from mecon import configs
 
 
 class TaggedData:
@@ -18,7 +18,7 @@ class TaggedData:
             self._df['tags'] = [[] for _ in range(len(self._df))]
 
     def copy(self):
-        return TaggedData(self.dataframe())
+        return TaggedData(self.dataframe().copy())
 
     def query_data(self, query):
         new_df = query(self.dataframe())
