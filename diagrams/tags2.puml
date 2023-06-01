@@ -1,0 +1,76 @@
+@startuml
+
+title Tagging system\n \n Everything around how we tag data
+
+class AbstractBooleanFunction {
+    + compute(element)
+}
+class Rule {
+    "A simple rule or boolean operation applied to a field."
+
+    - field
+    - transformation_function
+    - compare_operation
+    - compare_value
+}
+
+note top of Rule
+     compare_operation(transformation_function(field), compare_value)
+end note
+
+note right of Rule
+     to be extended based on the different type of data.
+end note
+
+class Conjunction {
+    "A set of Rules that work in conjunction"
+}
+class Disjunction {
+    "A set of Rules or Conjunctions that work in disjunction"
+}
+class Condition {
+    "A disjunction of conjunctions"
+}
+class Tag {
+    "Tag is a name/Condition combination. Every element satisfying the 'condition' can be tagged as 'name'"
+    - tag_name: str
+    - condition: Condition
+}
+
+
+class DataframeTagger {
+    "Goes through all the rows of a DataFrame and tags them"
+}
+class ManualTagger {
+    "Goes through all the rows of a DataFrame and tags them"
+}
+
+class TransactionRule {
+    "Fields will be among the transaction fields"
+}
+
+class TransactionGroupRule {
+    "Fields will be among the transaction group fields"
+}
+
+note right of Rule
+     to be extended based on the different type of data.
+end note
+
+
+Rule ..|> AbstractBooleanFunction
+Conjunction ..|> AbstractBooleanFunction
+Disjunction ..|> AbstractBooleanFunction
+Condition ..|> AbstractBooleanFunction
+DataframeTagger ..|> AbstractBooleanFunction
+
+Rule *-- Conjunction
+Conjunction *-- Disjunction
+Disjunction o-- Condition
+Condition o-- Tag
+Tag o-- DataframeTagger
+
+Rule <|-- TransactionRule
+Rule <|-- TransactionGroupRule
+
+@enduml

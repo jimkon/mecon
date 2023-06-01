@@ -1,0 +1,59 @@
+@startuml
+allowmixing
+
+
+
+package data {
+   file ingection {
+      class IngectionStragy
+      class DataSourceAdapter
+
+   }
+   file db
+   file tags {
+      class ApplyMixin {
+         + apply(element)
+      }
+      class Rule(ApplyMixin) {
+         "A simple rule or boolean operation applied to a field"
+         - field
+         - boolean_operation
+         + apply(element)
+      }
+      class Conjunction(ApplyMixin) {
+         "A set of Rules that work in conjunction"
+         + apply(element)
+      }
+      class Disjunction(ApplyMixin) {
+         "A set of Rules or Conjunctions that work in disjunction"
+         + apply(element)
+      }
+      class Condition(ApplyMixin) {
+         "A disjunction of conjunctions"
+         + apply(element)
+      }
+      class Tag {
+         "Tag is a name/Condition combination. Every element satisfing the 'condition' can be tagged as 'name'"
+         - tag_name: str
+         - condition: Condition
+      }
+      class DataframeTagger(ApplyMixin) {
+         "Goes through all the rows of a DataFrame and tags them"
+         + apply(element)
+      }
+   }
+   file transactions
+
+}
+package visualisations {
+
+}
+package app
+rectangle browser #cyan/green
+
+
+
+app --> browser : html pages
+data <--> app
+app <--> visualisations
+@enduml

@@ -1,0 +1,92 @@
+@startuml
+
+title Ingestion/ETL\n \n The processed and the pipelines between the data, the sources and the storage. In other words it is the cables and adapters between data objects and data sources
+
+rectangle Storage {
+    database sqlite3 [
+    SQLite3
+    ]
+
+}
+
+class StorageControllerABC {
+    "General controller"
+    + read_json()
+    + write_json()
+    + read_csv()
+    + write_csv()
+}
+note top of StorageControllerABC
+Allows for other storage options, ex FileSystem, S3 files, etc
+end note
+
+class SQLiteController {
+    "SQLAlchemy"
+    - connection
+    - cursor
+    + query()
+}
+SQLiteController ---|> StorageControllerABC
+note right of SQLiteController
+https://www.youtube.com/watch?v=cYWiDiIUxQc&ab_channel=CoreySchafer
+end note
+
+
+rectangle Models {
+    class TagModel
+    TagModel --|> Model
+    class TransactionsModel
+    TransactionsModel --|> Model
+    class MonzoTransactionsModel
+    MonzoTransactionsModel --|> Model
+    class HSBCTransactionsModel
+    HSBCTransactionsModel --|> Model
+    class RevoTransactionsModel
+    RevoTransactionsModel --|> Model
+}
+
+rectangle App {
+    class StorageAppControllerABC {
+        "Singleton"
+        + tags() # all tags
+        + get_tag(tag_name)
+        + update_tag(tag_name, json)
+        + delete_tag((tag_name)
+        + transactions(tags, amounts, dates, )
+    }
+    class StorageAppControllerSQLite
+    StorageAppControllerSQLite --|> StorageAppControllerABC
+    StorageAppControllerSQLite --o StorageControllerABC
+'    StorageAppControllerSQLite --o SQLiteController
+}
+
+object tags
+StorageAppControllerABC -- tags: instantiates
+object transactions
+StorageAppControllerABC -- transactions: instantiates
+
+
+
+rectangle ETL {
+    class StorageETLControllerABC {
+        "Singleton"
+        + import_raw_transactions(bank)
+        + create_tagged_transactions()
+    }
+    class StorageETLControllerSQLite
+    StorageETLControllerSQLite --|> StorageETLControllerABC
+    StorageETLControllerSQLite --o StorageControllerABC
+'    StorageETLControllerSQLite --o SQLiteController
+}
+
+StorageAppControllerABC -- TagModel
+StorageAppControllerABC -- TransactionsModel
+StorageETLControllerABC -- MonzoTransactionsModel: populates
+StorageETLControllerABC -- RevoTransactionsModel: populates
+StorageETLControllerABC -- HSBCTransactionsModel: populates
+
+sqlite3 -- SQLiteController: connects
+
+
+
+@enduml

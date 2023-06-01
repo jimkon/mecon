@@ -1,0 +1,18 @@
+@startuml
+
+title Data\n \n All data objects
+
+
+class Transaction
+
+class TransactionsDataframe
+
+class TransactionGroup
+
+class JSONTag
+
+class TagSet
+
+
+
+@enduml

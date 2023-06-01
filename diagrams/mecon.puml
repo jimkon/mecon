@@ -1,0 +1,66 @@
+@startuml
+
+rectangle raw_data {
+    file mails
+    file bank_statements
+    file map_locations
+}
+
+rectangle data {
+    json transaction {
+        "datetime": "20-05-2023 23:32:02",
+        "amount": "15.06",
+        "currency": "£",
+        "description": "beers at Shacklewell arms",
+        "tags": "NightOut,Drinks,Saturday"
+    }
+
+    json location {
+        "datetime": "20-05-2023 23:32:02",
+        "longitude": "15.06",
+        "latitude": "15.06",
+        "description": "Shacklewell arms",
+        "tags": "Dalston,London,UK"
+    }
+
+    json event {
+        "datetime": "20-05-2023 21:00:00",
+        "description": "Shacklewell arms party ticket £7",
+        "tags": "Party"
+    }
+
+    json tag {
+        "name": "drinks",
+        "rule": "if tap in Shacklewell arms after 19:00"
+    }
+
+}
+
+rectangle MailProcessing
+mails --> MailProcessing : extract booking information
+MailProcessing .. event
+
+rectangle TransactionETL
+bank_statements --> TransactionETL : standardize and merge
+TransactionETL --> transaction
+
+rectangle Locations
+map_locations --> Locations : identify locations (London, Dalston, "Shacklewell arms")
+Locations --> location
+
+rectangle app
+transaction --> app
+event --> app
+location --> app
+app ..> raw_data : import raw data
+app --> tag : create tags
+tag --> transaction : tag transactions
+tag --> event : tag events
+tag --> location : tag locations
+
+rectangle browser #cyan/green
+app --> browser : graphs
+
+
+
+@enduml
