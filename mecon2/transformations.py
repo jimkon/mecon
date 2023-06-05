@@ -1,4 +1,7 @@
 class TransformationFunction:
+    """
+    Transformation operation used by Condition
+    """
     def __init__(self, name, function):
         self.name = name
         self.function = function
@@ -14,3 +17,4 @@ class TransformationFunction:
         pass
 
 
+STR = TransformationFunction('str', lambda x: str(x))

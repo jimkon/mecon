@@ -1,5 +1,6 @@
-Flask==2.2.2
-matplotlib==3.4.2
-pandas==1.2.5
-redis==4.4.2
-setuptools==50.3.1
+Flask==2.3.2
+Flask-SQLAlchemy
+matplotlib==3.7.1
+pandas==2.0.2
+redis==4.5.5
+setuptools==67.8.0

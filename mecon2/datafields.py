@@ -3,9 +3,6 @@ class ColumnMixin:
     def __init__(self, df):
         pass
 
-    def apply_abf(self, abf):
-        pass
-
 
 class DateTimeColumnMixin:
     def date(self):
