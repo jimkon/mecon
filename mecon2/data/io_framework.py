@@ -1,4 +1,7 @@
 import abc
+from typing import List
+
+import pandas as pd
 
 
 class TagsIOABC(abc.ABC):
@@ -11,6 +14,10 @@ class TagsIOABC(abc.ABC):
 
     @abc.abstractmethod
     def set_tag(self, name, value):
+        pass
+
+    @abc.abstractmethod
+    def delete_tag(self, name):
         pass
 
     @abc.abstractmethod
@@ -30,30 +37,39 @@ class TransactionsIOABC(abc.ABC):
     def update_transactions(self, df):
         pass
 
+    @abc.abstractmethod
+    def delete_transactions(self, df):
+        pass
 
-class HSBCTransactionsIOABC(abc.ABC):
+
+class RawTransactionsIOABC(abc.ABC):
+    @abc.abstractmethod
+    def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
+        pass
+
+    @abc.abstractmethod
+    def get_transactions(self) -> pd.DataFrame:
+        pass
+
+    @abc.abstractmethod
+    def delete_all(self) -> None:
+        pass
+
+
+class HSBCTransactionsIOABC(RawTransactionsIOABC, abc.ABC):
     """
     HSBC bank statement files
     """
-    @abc.abstractmethod
-    def import_statement(self, df):
-        pass
 
 
-class MonzoTransactionsIOABC(abc.ABC):
+class MonzoTransactionsIOABC(RawTransactionsIOABC, abc.ABC):
     """
     Monzo bank statement files
     """
-    @abc.abstractmethod
-    def import_statement(self, df):
-        pass
 
 
-class RevoTransactionsIOABC(abc.ABC):
+class RevoTransactionsIOABC(RawTransactionsIOABC, abc.ABC):
     """
     Revolut bank statement files
     """
-    @abc.abstractmethod
-    def import_statement(self, df):
-        pass
 

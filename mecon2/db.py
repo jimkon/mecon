@@ -1,14 +1,15 @@
-from mecon2 import io_framework as io
-from mecon2 import db_controller
+import pandas as pd
+
+from mecon2.data import io_framework as io, db_controller
 
 
 class TagsDBAccessor(io.TagsIOABC):
-    def get_tag(self, name):
+    def get_tag(self, name) -> dict:
         tag = db_controller.TagsDBTable.query.filter_by(name=name).first()
         return tag
 
     def set_tag(self, name, conditions_json):
-        if len(conditions_json) > 2000:
+        if len(conditions_json) > 2000:# TODO make this a constant config
             raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
                              f" Consider increasing the upper limit.")
         tag = db_controller.TagsDBTable(
@@ -18,13 +19,13 @@ class TagsDBAccessor(io.TagsIOABC):
         db_controller.db.session.add(tag)
         db_controller.db.session.commit()
 
-    def all_tags(self):
+    def all_tags(self) -> dict:
         tags = db_controller.TagsDBTable.query.all()
         return tags
 
 
 class TransactionsDBAccessor(io.TransactionsIOABC):
-    def get_transactions(self):
+    def get_transactions(self) -> pd.DataFrame:
         pass
 
     def update_transactions(self, df):
