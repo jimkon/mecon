@@ -5,7 +5,7 @@ from mecon2.utils.currency import currency_rate_function
 
 
 class HSBCTransformer:
-    def transform(self, df_hsbc):
+    def transform(self, df_hsbc):  # TODO make it more readable
         # Add prefix to id
         df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
 
@@ -26,9 +26,9 @@ class HSBCTransformer:
 
 
 class MonzoTransformer:
-    def transform(self, df_monzo):
+    def transform(self, df_monzo):  # TODO make it more readable
         df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
-        df_monzo['datetime'] = pd.to_datetime(df_monzo['date'] + ' ' + df_monzo['time'])
+        df_monzo['datetime'] = pd.to_datetime(df_monzo['date']) + pd.to_timedelta(df_monzo['time'].astype(str))
         df_monzo['currency'] = df_monzo['local_currency']
         df_monzo['amount_cur'] = df_monzo['local_amount']
 
