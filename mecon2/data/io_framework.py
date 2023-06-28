@@ -26,33 +26,18 @@ class TagsIOABC(abc.ABC):
 
 
 class TransactionsIOABC(abc.ABC):
-    """
-    The interface of transactions io operations used by the app
-    """
-    @abc.abstractmethod
-    def get_transactions(self):
-        pass
-
-    @abc.abstractmethod
-    def update_transactions(self, df):
-        pass
-
-    @abc.abstractmethod
-    def delete_transactions(self, df):
-        pass
-
-
-class RawTransactionsIOABC(abc.ABC):
-    @abc.abstractmethod
-    def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
-        pass
-
     @abc.abstractmethod
     def get_transactions(self) -> pd.DataFrame:
         pass
 
     @abc.abstractmethod
     def delete_all(self) -> None:
+        pass
+
+
+class RawTransactionsIOABC(TransactionsIOABC, abc.ABC):
+    @abc.abstractmethod
+    def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
         pass
 
 
@@ -72,4 +57,17 @@ class RevoTransactionsIOABC(RawTransactionsIOABC, abc.ABC):
     """
     Revolut bank statement files
     """
+
+
+class CombinedTransactionsIOABC(TransactionsIOABC, abc.ABC):
+    """
+    The interface of transactions io operations used by the app
+    """
+    @abc.abstractmethod
+    def load_transactions(self):
+        pass
+
+    @abc.abstractmethod
+    def update_tags(self, df_tags):
+        pass
 

@@ -24,7 +24,7 @@ class TagsDBAccessor(io.TagsIOABC):
         return tags
 
 
-class TransactionsDBAccessor(io.TransactionsIOABC):
+class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
     def get_transactions(self) -> pd.DataFrame:
         pass
 

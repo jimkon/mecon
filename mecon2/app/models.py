@@ -98,11 +98,24 @@ class RevoTransactionsDBTable(db.Model):
             'balance': self.balance,
         }
 
-# class TransactionsDBTable(db.Model):
-#     datetime = db.Column(db.DateTime, nullable=False)
-#     amount = db.Column(db.Float, nullable=False)
-#     currency = db.Column(db.String(10), nullable=False)
-#     amount_cur = db.Column(db.Float, nullable=False)
-#     description = db.Column(db.String(200), nullable=True)
-#
-#
+
+class TransactionsDBTable(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    datetime = db.Column(db.DateTime, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(10), nullable=False)
+    amount_cur = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(200), nullable=True)
+    tags = db.Column(db.String(2000), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'datetime': self.datetime,
+            'amount': self.amount,
+            'currency': self.currency,
+            'amount_cur': self.amount_cur,
+            'description': self.description,
+            'tags': self.tags,
+        }
+

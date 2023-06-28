@@ -1,10 +1,10 @@
-import json
-from typing import Dict, Any, List
+from typing import Any, List
 
 import pandas as pd
 
-from mecon2.app.extensions import db
 from mecon2.app import models
+from mecon2.app.extensions import db
+from mecon2.data import etl
 from mecon2.data import io_framework as io
 
 
@@ -52,7 +52,7 @@ class HSBCTransactionsDBAccessor(io.HSBCTransactionsIOABC):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
         merged_df.to_sql(models.HSBCTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
 
-    def get_transactions(self) -> pd.DataFrame:
+    def get_transactions(self) -> pd.DataFrame:  # TODO get and delete transactions is the same for all tables. deal with duplicated code
         transactions = models.HSBCTransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df)>0 else None
@@ -89,9 +89,39 @@ class RevoTransactionsDBAccessor(io.RevoTransactionsIOABC):
         db.session.query(models.RevoTransactionsDBTable).delete()
 
 
-# class TransactionsDBAccessor(io.TransactionsIOABC):
-#     def get_transactions(self) -> pd.DataFrame:
-#         pass
-#
-#     def update_transactions(self, df):
-#         pass
+class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
+    def get_transactions(self) -> pd.DataFrame:
+        transactions = models.TransactionsDBTable.query.all()
+        transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
+        return transactions_df if len(transactions_df) > 0 else None
+
+    def delete_all(self):
+        db.session.query(models.TransactionsDBTable).delete()
+
+    def load_transactions(self):
+        df_hsbc = HSBCTransactionsDBAccessor().get_transactions()
+        df_monzo = MonzoTransactionsDBAccessor().get_transactions()
+        df_revo = RevoTransactionsDBAccessor().get_transactions()
+
+        df_hsbc_transofrmed = etl.HSBCTransformer().transform(df_hsbc)
+        df_monzo_transofrmed = etl.MonzoTransformer().transform(df_monzo)
+        df_revo_transofrmed = etl.RevoTransformer().transform(df_revo)
+
+        df_merged = pd.concat([df_hsbc_transofrmed, df_monzo_transofrmed, df_revo_transofrmed])
+        df_merged['tags'] = ''
+
+        df_merged.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+
+    def update_tags(self, df_tags):
+        transaction_ids = df_tags['id'].to_list()
+        update_values = df_tags.set_index('id')['tags'].to_dict()
+
+        for transaction_id, tags in update_values.items():
+            db.session.query(models.TransactionsDBTable).filter_by(id=transaction_id).update({'tags': tags})
+
+        # from sqlalchemy.sql.expression import case  # more efficient but uses an extra dependency (sqlalchemy)
+        # db.session.query(models.TransactionsDBTable).filter(models.TransactionsDBTable.id.in_(transaction_ids)).update(
+        #     {models.TransactionsDBTable.tags: case(update_values, value=models.TransactionsDBTable.id)},
+        #     synchronize_session=False
+        # )
+        db.session.commit()

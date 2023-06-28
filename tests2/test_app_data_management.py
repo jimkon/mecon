@@ -9,20 +9,29 @@ from mecon2.app import db, models
 from mecon2.data import db_controller
 
 
+def _create_app():
+    app = Flask(__name__, instance_relative_config=False)
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///:memory:"
+    app.config['TESTING'] = True
+
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
+    return app
+
+
 class TestTagsDBData(TestCase):
     def create_app(self):
-        app = Flask(__name__, instance_relative_config=False)
-
-        app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///:memory:"
-        app.config['TESTING'] = True
-
-        db.init_app(app)
-        with app.app_context():
-            db.create_all()
-        return app
+        return _create_app()
 
     def setUp(self):
         self.accessor = db_controller.TagsDBAccessor()
+
+    def tearDown(self):
+        with self.app.app_context():
+            db.session.remove()
+            db.drop_all()
 
     def test_get_non_existing_tag(self):
         returned_tag = self.accessor.get_tag('a non existing tag')
@@ -70,21 +79,10 @@ class TestTagsDBData(TestCase):
         returned_tags = self.accessor.all_tags()
         self.assertEqual(expected_tags, returned_tags)
 
-    def tearDown(self):
-        with self.app.app_context():
-            db.session.remove()
-            db.drop_all()
-
 
 class HSBCTransactionsDBAccessorTestCase(TestCase):
     def create_app(self):
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        app.config['TESTING'] = True
-        db.init_app(app)
-        with app.app_context():
-            db.create_all()
-        return app
+        return _create_app()
 
     def setUp(self):
         self.accessor = db_controller.HSBCTransactionsDBAccessor()
@@ -174,13 +172,7 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
 
 class MonzoTransactionsDBAccessorTestCase(TestCase):
     def create_app(self):
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        app.config['TESTING'] = True
-        db.init_app(app)
-        with app.app_context():
-            db.create_all()
-        return app
+        return _create_app()
 
     def setUp(self):
         self.accessor = db_controller.MonzoTransactionsDBAccessor()
@@ -340,13 +332,7 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
 
 class RevoTransactionsDBAccessorTestCase(TestCase):
     def create_app(self):
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        app.config['TESTING'] = True
-        db.init_app(app)
-        with app.app_context():
-            db.create_all()
-        return app
+        return _create_app()
 
     def setUp(self):
         self.accessor = db_controller.RevoTransactionsDBAccessor()
@@ -467,6 +453,173 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
         self.accessor.delete_all()
         transactions = self.accessor.get_transactions()
         self.assertEqual(transactions, None)
+
+
+class TransactionsDBAccessorssorTestCase(TestCase):
+    def create_app(self):
+        return _create_app()
+
+    def setUp(self):
+        self.accessor = db_controller.TransactionsDBAccessor()
+
+    def tearDown(self):
+        with self.app.app_context():
+            db.session.remove()
+            db.drop_all()
+
+    def _load_db(self):
+        db_controller.HSBCTransactionsDBAccessor().delete_all()
+        db_controller.HSBCTransactionsDBAccessor().import_statement(
+            pd.DataFrame(
+                {
+                    'id': [1, 2, 3],
+                    'date': ['2022-01-01', '2022-01-02', '2022-01-03'],  # dates and times here are strings because we call import_statement
+                    'amount': [100.0, 200.0, 300.0],
+                    'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
+                }
+            )
+        )
+
+        db_controller.MonzoTransactionsDBAccessor().delete_all()
+        db_controller.MonzoTransactionsDBAccessor().import_statement(
+            pd.DataFrame(
+                {
+                    'id': [1, 2, 3],
+                    'date': ['2022-01-01', '2022-01-02', '2022-01-03'],  # dates and times here are strings because we call import_statement
+                    'time': ['10:00:00', '11:00:00', '12:00:00'],  # dates and times here are strings because we call import_statement
+                    'transaction_type': ['Payment', 'Expense', 'Payment'],
+                    'name': ['John Doe', 'Groceries', 'Jane Smith'],
+                    'emoji': ['💳', '🛒', '💳'],
+                    'category': ['Shopping', 'Food', 'Shopping'],
+                    'amount': [100.0, 50.0, 200.0],
+                    'currency': ['GBP', 'GBP', 'GBP'],
+                    'local_amount': [100.0, 50.0, 200.0],
+                    'local_currency': ['GBP', 'GBP', 'GBP'],
+                    'notes_tags': ['Note 1', None, 'Tag1, Tag2'],
+                    'address': ['123 Main St', None, '456 Elm St'],
+                    'receipt': ['https://example.com/receipt1', None, 'https://example.com/receipt2'],
+                    'description': ['Description 1', 'Description 2', 'Description 3'],
+                    'category_split': [None, 'Food/Groceries', None],
+                    'money_out': [None, 50.0, None],
+                    'money_in': [100.0, None, 200.0]
+                }
+            )
+        )
+
+        db_controller.RevoTransactionsDBAccessor().delete_all()
+        db_controller.RevoTransactionsDBAccessor().import_statement(
+            pd.DataFrame(
+                {
+                    'id': [1, 2, 3],
+                    'type': ['Type 1', 'Type 2', 'Type 3'],
+                    'product': ['Product A', 'Product B', 'Product C'],
+                    'start_date': ['2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00'],  # dates and times here are strings because we call import_statement
+                    'completed_date': ['2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00'],  # dates and times here are strings because we call import_statement
+                    'description': ['Description 1', 'Description 2', 'Description 3'],
+                    'amount': [130.0, 240.0, 300.0],
+                    'fee': [10.0, 20.0, 30.0],
+                    'currency': ['USD', 'EUR', 'GBP'],
+                    'state': ['State 1', 'State 2', 'State 3'],
+                    'balance': [1000.0, 2000.0, 3000.0]
+                }
+            )
+        )
+
+        expected_df = pd.DataFrame(
+            {
+                'id': [11, 12, 13, 21, 22, 23, 31, 32, 33],
+                'datetime': pd.to_datetime(['2022-01-01 00:00:00', '2022-01-02 00:00:00', '2022-01-03 00:00:00', '2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00', '2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00']),
+                'amount': [100.0, 200.0, 300.0, 100.0, 50.0, 200.0, 100.0, 200.0, 300.0],
+                'currency': ['GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'USD', 'EUR', 'GBP'],
+                'amount_cur': [100.0, 200.0, 300.0, 100.0, 50.0, 200.0, 130.0, 240.0, 300.0],
+                'description': ['Transaction 1',
+                                'Transaction 2',
+                                'Transaction 3',
+                                'transaction_type: Payment, name: John Doe, emoji: 💳, category: Shopping, notes_tags: Note 1, address: 123 Main St, receipt: https://example.com/receipt1, description: Description 1, category_split: none, money_out: none, money_in: 100.0',
+                                'transaction_type: Expense, name: Groceries, emoji: 🛒, category: Food, notes_tags: none, address: none, receipt: none, description: Description 2, category_split: Food/Groceries, money_out: 50.0, money_in: none',
+                                'transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0',
+                                'type: Type 1, product: Product A, completed_date: 2022-01-01 10:00:00, description: Description 1, fee: 10.0, state: State 1, balance: 1000.0',
+                                'type: Type 2, product: Product B, completed_date: 2022-01-02 11:00:00, description: Description 2, fee: 20.0, state: State 2, balance: 2000.0',
+                                'type: Type 3, product: Product C, completed_date: 2022-01-03 12:00:00, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0'],
+                'tags': ['', '', '', '', '', '', '', '', '']
+            }
+        )
+        return expected_df
+
+    def test_get_transactions(self):
+        self.assertIsNone(self.accessor.get_transactions())
+        # expected_df = self._load_db()
+        df = pd.DataFrame({
+            'id': [11, 12, 13],
+            'datetime': pd.to_datetime(['2022-01-01', '2022-01-02', '2022-01-03']),
+            'amount': [100.0, 200.0, 300.0],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        })
+        df.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+
+        transactions = self.accessor.get_transactions()
+        self.assertEqual(len(transactions), 3)
+        pd.testing.assert_frame_equal(transactions, df)
+
+    def test_delete_transactions(self):
+        df = pd.DataFrame({
+            'id': [11, 12, 13],
+            'datetime': pd.to_datetime(['2022-01-01', '2022-01-02', '2022-01-03']),
+            'amount': [100.0, 200.0, 300.0],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        })
+        df.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+
+        transactions = self.accessor.get_transactions()
+        self.assertEqual(len(transactions), 3)
+
+        self.accessor.delete_all()
+
+        self.assertIsNone(self.accessor.get_transactions())
+
+    def test_load_transactions(self):
+        self.accessor.delete_all()
+        expected_df = self._load_db()
+
+        self.accessor.load_transactions()
+        transactions = self.accessor.get_transactions()
+        self.assertEqual(len(transactions), 9)
+        pd.testing.assert_frame_equal(transactions, expected_df)
+
+    def test_update_tags(self):
+        df = pd.DataFrame({
+            'id': [11, 12, 13],
+            'datetime': pd.to_datetime(['2022-01-01', '2022-01-02', '2022-01-03']),
+            'amount': [100.0, 200.0, 300.0],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        })
+        df.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+
+        transactions = self.accessor.get_transactions()
+        self.assertEqual(len(transactions), 3)
+        pd.testing.assert_frame_equal(transactions, df)
+
+        df_tags = pd.DataFrame(
+            {
+                'id': [12, 11, 13],  # id order is different
+                'tags': ['tag2', '', 'tag2,tag1']
+            }
+        )
+        self.accessor.update_tags(df_tags)
+
+        df['tags'] = ['', 'tag2', 'tag2,tag1']
+        transactions = self.accessor.get_transactions()
+        self.assertEqual(len(transactions), 3)
+        pd.testing.assert_frame_equal(transactions, df)
 
 
 if __name__ == '__main__':
