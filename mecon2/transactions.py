@@ -1,7 +1,7 @@
 import mecon2.datafields as fields
 
 
-class Transactions(fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.TagsColumnMixin):
+class Transactions(fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.TagsColumnMixin, fields.DescriptionColumnMixin):
     """
     Responsible for holding the transactions dataframe and controlling the access to it, like a DataFrame Facade.
     Columns are specified and only accessed and modifies by the corresponding mixins. Key goal of this object
@@ -11,7 +11,7 @@ class Transactions(fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.
     Not responsible for any IO operations.
     """
     def __init__(self, df):
-        pass
+        super().__init__(df)
 
     def dataframe(self):
         pass

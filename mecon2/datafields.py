@@ -1,10 +1,21 @@
+import pandas as pd
 
-class ColumnMixin:
-    def __init__(self, df):
+
+class IdColumnMixin:
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
+    def id(self):
         pass
 
 
 class DateTimeColumnMixin:
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
+    def datetime(self):
+        pass
+
     def date(self):
         pass
 
@@ -13,6 +24,9 @@ class DateTimeColumnMixin:
 
 
 class AmountColumnMixin:
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
     def amount(self):
         pass
 
@@ -24,10 +38,24 @@ class AmountColumnMixin:
 
 
 class TagsColumnMixin:
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
     def tags(self):
         pass
 
-    def add_tag(self, tag, computable):
+    def add_tag(self, tag_obj):
+        pass
+
+    def remove_tag(self, tag_name):
+        pass
+
+
+class DescriptionColumnMixin:
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
+
+    def description(self):
         pass
 
 
