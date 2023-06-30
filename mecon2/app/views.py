@@ -1,18 +1,47 @@
-from flask import Blueprint
+from flask import Blueprint, redirect, url_for
 
-main = Blueprint('main', __name__)
+main_bp = Blueprint('main', __name__)
+data_bp = Blueprint('data', __name__, url_prefix='/data')
+tags_bp = Blueprint('tags', __name__, url_prefix='/tags')
+reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
 
-@main.route('/')
+@main_bp.route('/')
 def index():
+    return redirect(url_for('main.home'))  # TODO what?? why it works with main and not main_bp
+
+
+@main_bp.route('/home')
+def home():
     return 'Index'
 
 
-@main.route('/test')
-def test():
-    from mecon2.db import TagsDBAccessor
+@data_bp.route('/')
+def data():
+    return 'Data'
 
-    tags = TagsDBAccessor()
-    tags.set_tag('test_tag1', "{'a': 1}")
-    t = tags.get_tag('test_tag1')
-    return f"{t=}"
+
+@reports_bp.route('/')
+def reports():
+    return 'reports'
+
+
+@tags_bp.route('/')
+def tags():
+    return 'tags'
+
+
+@tags_bp.route('/new')
+def tags_new():
+    return 'tags_new'
+
+
+@tags_bp.get('/edit/<tag_name>')
+def tags_edit_get(tag_name):
+    return f'tags_edit_get {tag_name=}'
+
+
+@tags_bp.post('/edit/<tag_name>')
+def tags_edit_post(tag_name):
+    return f'tags_edit_post {tag_name=}'
+
