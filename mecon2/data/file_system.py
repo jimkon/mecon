@@ -1,5 +1,15 @@
 import pathlib
+from typing import List, Dict
 
+
+def _subfolder_csvs(path):
+    result = {}
+    for subfolder in path.iterdir():
+        if subfolder.is_dir():
+            csv_files = [p.name for p in subfolder.glob("*.csv")]
+            result[subfolder.name] = csv_files
+
+    return result
 
 class Dataset:
     def __init__(self, path: str | pathlib.Path):
@@ -13,17 +23,21 @@ class Dataset:
         self._statements.mkdir(parents=True, exist_ok=True)
 
     @property
-    def sqlite(self):
+    def db(self):
         return self._sqlite / 'sqlite3'
 
     @property
     def statements(self):
         return self._statements
 
+    def statement_files(self) -> Dict:
+        return _subfolder_csvs(self.statements)
+
     def add_statement(self, bank_name: str, statement_path: str|pathlib.Path):
         statement_path = pathlib.Path(statement_path)
         filename = statement_path.name
         new_statement_path = self.statements / bank_name / filename
+        new_statement_path.parent.mkdir(parents=True, exist_ok=True)
         new_statement_path.write_bytes(statement_path.read_bytes())
 
 
