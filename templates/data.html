@@ -1,21 +1,18 @@
 {% extends "layout.html" %}
 
 {% block content %}
-    <h1><Data></Data></h1>
-    <h2>Statements</h2>{# autogenerate that #}
-    <ul>
-        <li>HSBC</li>
+
+    <h1>Data</h1>
+
+    <h2>Statements</h2>
+    {% for bank_key in menu_dict %}
+        <li>{{ bank_key }}</li>
+       {% for statement_filepath, statement_filename in menu_dict[bank_key] %}
             <ul>
-              <li><a href={{url_for('data.data_view', item='HSBC')}}>HSBC statement 1</a></li>
+                <li><a href={{url_for('data.datafile_view', path=statement_filepath)}}>{{ statement_filename }}</a></li>
             </ul>
-        <li>Monzo</li>
-        <li>Revolut</li>
-            <ul>
-                <li><a href={{url_for('data.data_view', item='Revolut1')}}>revo statement 1</a></li>
-                <li><a href={{url_for('data.data_view', item='Revolut2')}}>revo statement 2</a></li>
-                <li><a href={{url_for('data.data_view', item='Revolut3')}}>revo statement 3</a></li>
-            </ul>
-    </ul>
+       {% endfor %}
+    {% endfor %}
 
     <form method="POST" action="/data/import" enctype="multipart/form-data">
       <h2>Load bank statement</h2>
