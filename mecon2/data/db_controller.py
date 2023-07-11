@@ -108,6 +108,7 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_revo_transofrmed = etl.RevoTransformer().transform(df_revo)
 
         df_merged = pd.concat([df_hsbc_transofrmed, df_monzo_transofrmed, df_revo_transofrmed])
+        # TODO remove duplicates
         df_merged['tags'] = ''
 
         df_merged.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)

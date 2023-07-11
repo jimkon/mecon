@@ -71,3 +71,42 @@ class CombinedTransactionsIOABC(TransactionsIOABC, abc.ABC):
     def update_tags(self, df_tags):
         pass
 
+
+class ImportDataAccess:
+    def __init__(self,
+                    hsbc: HSBCTransactionsIOABC,
+                    monzo: MonzoTransactionsIOABC,
+                    revo: RevoTransactionsIOABC
+             ):
+        self._hsbc = hsbc
+        self._monzo = monzo
+        self._revo = revo
+
+    @property
+    def hsbc_statements(self):
+        return self._hsbc
+
+    @property
+    def monzo_statements(self):
+        return self._monzo
+
+    @property
+    def revo_statements(self):
+        return self._revo
+
+
+class DataAccess:
+    def __init__(self,
+                     transactions: CombinedTransactionsIOABC,
+                     tags: TagsIOABC,
+                 ):
+        self._transactions = transactions
+        self._tags = tags
+
+    @property
+    def transactions(self):
+        return self._transactions
+
+    @property
+    def tags(self):
+        return self._tags
