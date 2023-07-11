@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h1><Data></Data></h1>
+    <h2>Statements</h2>{# autogenerate that #}
+    <ul>
+        <li>HSBC</li>
+            <ul>
+              <li><a href={{url_for('data.data_view', item='HSBC')}}>HSBC statement 1</a></li>
+            </ul>
+        <li>Monzo</li>
+        <li>Revolut</li>
+            <ul>
+                <li><a href={{url_for('data.data_view', item='Revolut1')}}>revo statement 1</a></li>
+                <li><a href={{url_for('data.data_view', item='Revolut2')}}>revo statement 2</a></li>
+                <li><a href={{url_for('data.data_view', item='Revolut3')}}>revo statement 3</a></li>
+            </ul>
+    </ul>
+
+    <form method="POST" action="/data/import" enctype="multipart/form-data">
+      <h2>Load bank statement</h2>
+      <label for="file_input">Path:</label>
+      <input type="text" id="filepath_input" name="filepath_input" size="50">
+      <input type="button" id="browse_button" value="Browse" disabled>
+      <input type="submit" id="filepath_load_button" value="Load Path">
+      <input type="file" id="file_input" name="file_input" style="display: none;">
+    </form>
+
+    <script>
+      document.getElementById('browse_button').addEventListener('click', function() {
+        document.getElementById('file_input').click();
+      });
+
+      document.getElementById('file_input').addEventListener('change', function(event) {
+        const filename = event.target.files[0].name;
+        document.getElementById('filepath_input').value = filename;
+      });
+    </script>
+{% endblock content %}
