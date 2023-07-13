@@ -38,6 +38,7 @@ def _db_transactions_info():
     res = {}
     hsbc_trans = import_data_access.hsbc_statements.get_transactions()
     if hsbc_trans is not None:
+        hsbc_trans['date'] = pd.to_datetime(hsbc_trans['date'], format="%d/%m/%Y")
         res['HSBC'] = {
             'transactions': len(hsbc_trans),
             'days': hsbc_trans['date'].nunique(),
@@ -47,6 +48,7 @@ def _db_transactions_info():
 
     monzo_trans = import_data_access.monzo_statements.get_transactions()
     if monzo_trans is not None:
+        monzo_trans['date'] = pd.to_datetime(monzo_trans['date'], format="%d/%m/%Y")
         res['Monzo'] = {
             'transactions': len(monzo_trans),
             'days': monzo_trans['date'].nunique(),
@@ -56,6 +58,7 @@ def _db_transactions_info():
 
     revo_trans = import_data_access.revo_statements.get_transactions()
     if revo_trans is not None:
+        revo_trans['start_date'] = pd.to_datetime(revo_trans['start_date'], format="%Y-%m-%d %H:%M:%S")
         res['Revolut'] = {
             'transactions': len(revo_trans),
             'days': revo_trans['start_date'].nunique(),
