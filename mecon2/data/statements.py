@@ -23,7 +23,8 @@ class StatementCSV:
 
 
 class HSBCStatementCSV(StatementCSV):
-    pass
+    def load(self):
+        return pd.read_csv(self._path, names=['date', 'description', 'amount'], header=None)
 
 
 class MonzoStatementCSV(StatementCSV):
