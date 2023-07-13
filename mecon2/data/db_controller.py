@@ -3,9 +3,10 @@ from typing import Any, List
 import pandas as pd
 
 from mecon2.app import models
-from mecon2.app.extensions import db
+from mecon2.app.db_extension import db
 from mecon2.data import etl
 from mecon2.data import io_framework as io
+from mecon2.data.io_framework import ImportDataAccess, DataAccess
 
 
 class TagsDBAccessor(io.TagsIOABC):
@@ -103,18 +104,23 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
         df_revo = RevoTransactionsDBAccessor().get_transactions()
 
-        df_hsbc_transofrmed = etl.HSBCTransformer().transform(df_hsbc)
-        df_monzo_transofrmed = etl.MonzoTransformer().transform(df_monzo)
-        df_revo_transofrmed = etl.RevoTransformer().transform(df_revo)
+        df_hsbc_transformed = etl.HSBCTransformer().transform(df_hsbc)
+        df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo)
+        df_revo_transformed = etl.RevoTransformer().transform(df_revo)
 
-        df_merged = pd.concat([df_hsbc_transofrmed, df_monzo_transofrmed, df_revo_transofrmed])
-        # TODO remove duplicates
+        dup_cols = ['datetime', 'amount', 'currency', 'amount_cur', 'description']
+        df_hsbc_transformed = df_hsbc_transformed.drop_duplicates(subset=dup_cols)
+        df_monzo_transformed = df_monzo_transformed.drop_duplicates(subset=dup_cols)
+        df_revo_transformed = df_revo_transformed.drop_duplicates(subset=dup_cols)
+
+        df_merged = pd.concat([df_hsbc_transformed, df_monzo_transformed, df_revo_transformed])
+        df_merged = df_merged.sort_values(by='datetime')
         df_merged['tags'] = ''
 
         df_merged.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
 
     def update_tags(self, df_tags):
-        transaction_ids = df_tags['id'].to_list()
+        # transaction_ids = df_tags['id'].to_list()
         update_values = df_tags.set_index('id')['tags'].to_dict()
 
         for transaction_id, tags in update_values.items():
@@ -126,3 +132,15 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         #     synchronize_session=False
         # )
         db.session.commit()
+
+
+import_data_access = ImportDataAccess(HSBCTransactionsDBAccessor(),
+                                      MonzoTransactionsDBAccessor(),
+                                      RevoTransactionsDBAccessor())
+data_access = DataAccess(TransactionsDBAccessor(),
+                         TagsDBAccessor())
+
+
+def reset_db():
+    db.drop_all()
+    db.create_all()

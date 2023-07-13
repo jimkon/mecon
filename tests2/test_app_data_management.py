@@ -96,7 +96,7 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         # Create a sample DataFrame
         data = {
             'id': [1, 2, 3],
-            'date': [date(2022, 1, 1), date(2022, 1, 2), date(2022, 1, 3)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
             'amount': [100.0, 200.0, 300.0],
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
         }
@@ -115,13 +115,13 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         # Create sample DataFrames
         data1 = {
             'id': [1, 2, 3],
-            'date': [date(2022, 1, 1), date(2022, 1, 2), date(2022, 1, 3)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
             'amount': [100.0, 200.0, 300.0],
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
         }
         data2 = {
             'id': [4, 5, 6],
-            'date': [date(2022, 1, 4), date(2022, 1, 5), date(2022, 1, 6)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
             'amount': [400.0, 500.0, 600.0],
             'description': ['Transaction 4', 'Transaction 5', 'Transaction 6']
         }
@@ -143,7 +143,7 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         # Create sample DataFrames
         data1 = {
             'id': [1, 2, 3],
-            'date': [date(2022, 1, 1), date(2022, 1, 2), date(2022, 1, 3)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
             'amount': [100.0, 200.0, 300.0],
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
         }
@@ -155,7 +155,7 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
 
         data2 = {
             'id': [4, 5, 6],
-            'date': [date(2022, 1, 4), date(2022, 1, 5), date(2022, 1, 6)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
             'amount': [400.0, 500.0, 600.0],
             'description': ['Transaction 4', 'Transaction 5', 'Transaction 6']
         }
@@ -186,8 +186,8 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         # Create a sample DataFrame
         data = {
             'id': [1, 2, 3],
-            'date': [date(2022, 1, 1), date(2022, 1, 2), date(2022, 1, 3)],
-            'time': [time(12, 0, 0), time(13, 30, 0), time(15, 45, 0)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+            'time': ["00:00:00", "12:30:30", "23:59:59"],
             'transaction_type': ['Expense', 'Income', 'Expense'],
             'name': ['John Doe', 'Jane Smith', 'John Doe'],
             'emoji': ['🍔', '💰', '🍺'],
@@ -219,8 +219,8 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         # Create sample DataFrames
         data1 = {
             'id': [1, 2, 3],
-            'date': [date(2022, 1, 1), date(2022, 1, 2), date(2022, 1, 3)],
-            'time': [time(12, 0, 0), time(13, 30, 0), time(15, 45, 0)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+            'time': ["00:00:00", "12:30:30", "23:59:59"],
             'transaction_type': ['Expense', 'Income', 'Expense'],
             'name': ['John Doe', 'Jane Smith', 'John Doe'],
             'emoji': ['🍔', '💰', '🍺'],
@@ -239,8 +239,8 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         }
         data2 = {
             'id': [4, 5, 6],
-            'date': [date(2022, 1, 4), date(2022, 1, 5), date(2022, 1, 6)],
-            'time': [time(9, 30, 0), time(10, 45, 0), time(14, 15, 0)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+            'time': ["00:00:00", "12:30:30", "23:59:59"],
             'transaction_type': ['Expense', 'Income', 'Expense'],
             'name': ['John Doe', 'Jane Smith', 'John Doe'],
             'emoji': ['🍕', '💰', '🍻'],
@@ -275,8 +275,8 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         # Create sample DataFrames
         data1 = {
             'id': [1, 2, 3],
-            'date': [date(2022, 1, 1), date(2022, 1, 2), date(2022, 1, 3)],
-            'time': [time(12, 0, 0), time(13, 30, 0), time(15, 45, 0)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+            'time': ["00:00:00", "12:30:30", "23:59:59"],
             'transaction_type': ['Expense', 'Income', 'Expense'],
             'name': ['John Doe', 'Jane Smith', 'John Doe'],
             'emoji': ['🍔', '💰', '🍺'],
@@ -301,8 +301,8 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
 
         data2 = {
             'id': [4, 5, 6],
-            'date': [date(2022, 1, 4), date(2022, 1, 5), date(2022, 1, 6)],
-            'time': [time(9, 30, 0), time(10, 45, 0), time(14, 15, 0)],
+            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+            'time': ["00:00:00", "12:30:30", "23:59:59"],
             'transaction_type': ['Expense', 'Income', 'Expense'],
             'name': ['John Doe', 'Jane Smith', 'John Doe'],
             'emoji': ['🍕', '💰', '🍻'],
@@ -348,8 +348,8 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
             'id': [1, 2, 3],
             'type': ['Purchase', 'Withdrawal', 'Purchase'],
             'product': ['Credit Card', 'Savings Account', 'Credit Card'],
-            'start_date': [datetime(2022, 1, 1, 9, 0, 0), datetime(2022, 1, 2, 14, 30, 0), datetime(2022, 1, 3, 11, 45, 0)],
-            'completed_date': [datetime(2022, 1, 1, 10, 0, 0), datetime(2022, 1, 2, 15, 0, 0), datetime(2022, 1, 3, 12, 0, 0)],
+            'start_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
+            'completed_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
             'description': ['Purchase 1', 'Withdrawal 1', 'Purchase 2'],
             'amount': [100.0, 50.0, 80.0],
             'fee': [2.0, 1.0, 1.5],
@@ -374,8 +374,8 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
             'id': [1, 2, 3],
             'type': ['Purchase', 'Withdrawal', 'Purchase'],
             'product': ['Credit Card', 'Savings Account', 'Credit Card'],
-            'start_date': [datetime(2022, 1, 1, 9, 0, 0), datetime(2022, 1, 2, 14, 30, 0), datetime(2022, 1, 3, 11, 45, 0)],
-            'completed_date': [datetime(2022, 1, 1, 10, 0, 0), datetime(2022, 1, 2, 15, 0, 0), datetime(2022, 1, 3, 12, 0, 0)],
+            'start_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
+            'completed_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
             'description': ['Purchase 1', 'Withdrawal 1', 'Purchase 2'],
             'amount': [100.0, 50.0, 80.0],
             'fee': [2.0, 1.0, 1.5],
@@ -387,8 +387,8 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
             'id': [4, 5, 6],
             'type': ['Purchase', 'Withdrawal', 'Purchase'],
             'product': ['Credit Card', 'Savings Account', 'Credit Card'],
-            'start_date': [datetime(2022, 1, 4, 9, 30, 0), datetime(2022, 1, 5, 14, 45, 0), datetime(2022, 1, 6, 10, 15, 0)],
-            'completed_date': [datetime(2022, 1, 4, 10, 0, 0), datetime(2022, 1, 5, 15, 0, 0), datetime(2022, 1, 6, 10, 30, 0)],
+            'start_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
+            'completed_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
             'description': ['Purchase 3', 'Withdrawal 2', 'Purchase 4'],
             'amount': [120.0, 70.0, 90.0],
             'fee': [2.5, 1.5, 1.0],
@@ -416,8 +416,8 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
             'id': [1, 2, 3],
             'type': ['Purchase', 'Withdrawal', 'Purchase'],
             'product': ['Credit Card', 'Savings Account', 'Credit Card'],
-            'start_date': [datetime(2022, 1, 1, 9, 0, 0), datetime(2022, 1, 2, 14, 30, 0), datetime(2022, 1, 3, 11, 45, 0)],
-            'completed_date': [datetime(2022, 1, 1, 10, 0, 0), datetime(2022, 1, 2, 15, 0, 0), datetime(2022, 1, 3, 12, 0, 0)],
+            'start_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
+            'completed_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
             'description': ['Purchase 1', 'Withdrawal 1', 'Purchase 2'],
             'amount': [100.0, 50.0, 80.0],
             'fee': [2.0, 1.0, 1.5],
@@ -435,8 +435,8 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
             'id': [4, 5, 6],
             'type': ['Purchase', 'Withdrawal', 'Purchase'],
             'product': ['Credit Card', 'Savings Account', 'Credit Card'],
-            'start_date': [datetime(2022, 1, 4, 9, 30, 0), datetime(2022, 1, 5, 14, 45, 0), datetime(2022, 1, 6, 10, 15, 0)],
-            'completed_date': [datetime(2022, 1, 4, 10, 0, 0), datetime(2022, 1, 5, 15, 0, 0), datetime(2022, 1, 6, 10, 30, 0)],
+            'start_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
+            'completed_date': ["2022-01-01 00:00:00", "2022-06-15 12:30:30", "2022-12-31 23:59:59"],
             'description': ['Purchase 3', 'Withdrawal 2', 'Purchase 4'],
             'amount': [120.0, 70.0, 90.0],
             'fee': [2.5, 1.5, 1.0],
@@ -473,7 +473,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             pd.DataFrame(
                 {
                     'id': [1, 2, 3],
-                    'date': ['2022-01-01', '2022-01-02', '2022-01-03'],  # dates and times here are strings because we call import_statement
+                    'date': ["01/01/2023", "15/06/2023", "31/12/2023"],
                     'amount': [100.0, 200.0, 300.0],
                     'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
                 }
@@ -485,8 +485,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             pd.DataFrame(
                 {
                     'id': [1, 2, 3],
-                    'date': ['2022-01-01', '2022-01-02', '2022-01-03'],  # dates and times here are strings because we call import_statement
-                    'time': ['10:00:00', '11:00:00', '12:00:00'],  # dates and times here are strings because we call import_statement
+                    'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+                    'time': ["00:00:00", "12:30:30", "23:59:59"],
                     'transaction_type': ['Payment', 'Expense', 'Payment'],
                     'name': ['John Doe', 'Groceries', 'Jane Smith'],
                     'emoji': ['💳', '🛒', '💳'],
@@ -513,8 +513,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
                     'id': [1, 2, 3],
                     'type': ['Type 1', 'Type 2', 'Type 3'],
                     'product': ['Product A', 'Product B', 'Product C'],
-                    'start_date': ['2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00'],  # dates and times here are strings because we call import_statement
-                    'completed_date': ['2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00'],  # dates and times here are strings because we call import_statement
+                    'start_date': ["2021-01-01 00:00:00", "2021-06-15 12:30:30", "2021-12-31 23:59:59"],
+                    'completed_date': ["2021-01-01 00:00:00", "2021-06-15 12:30:30", "2021-12-31 23:59:59"],
                     'description': ['Description 1', 'Description 2', 'Description 3'],
                     'amount': [130.0, 240.0, 300.0],
                     'fee': [10.0, 20.0, 30.0],
@@ -527,20 +527,20 @@ class TransactionsDBAccessorssorTestCase(TestCase):
 
         expected_df = pd.DataFrame(
             {
-                'id': [11, 12, 13, 21, 22, 23, 31, 32, 33],
-                'datetime': pd.to_datetime(['2022-01-01 00:00:00', '2022-01-02 00:00:00', '2022-01-03 00:00:00', '2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00', '2022-01-01 10:00:00', '2022-01-02 11:00:00', '2022-01-03 12:00:00']),
+                'id': [31, 32, 33, 21, 22, 23, 11, 12, 13],
+                'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59), datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30), datetime(2022, 12, 31, 23, 59, 59), datetime(2023, 1, 1, 0, 0, 0), datetime(2023, 6, 15, 0, 0, 0), datetime(2023, 12, 31, 0, 0, 0)],
                 'amount': [100.0, 200.0, 300.0, 100.0, 50.0, 200.0, 100.0, 200.0, 300.0],
-                'currency': ['GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'USD', 'EUR', 'GBP'],
-                'amount_cur': [100.0, 200.0, 300.0, 100.0, 50.0, 200.0, 130.0, 240.0, 300.0],
-                'description': ['Transaction 1',
-                                'Transaction 2',
-                                'Transaction 3',
+                'currency': ['USD', 'EUR', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP'],
+                'amount_cur': [130.0, 240.0, 300.0, 100.0, 50.0, 200.0, 100.0, 200.0, 300.0],
+                'description': ['type: Type 1, product: Product A, completed_date: 2021-01-01 00:00:00, description: Description 1, fee: 10.0, state: State 1, balance: 1000.0',
+                                'type: Type 2, product: Product B, completed_date: 2021-06-15 12:30:30, description: Description 2, fee: 20.0, state: State 2, balance: 2000.0',
+                                'type: Type 3, product: Product C, completed_date: 2021-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0',
                                 'transaction_type: Payment, name: John Doe, emoji: 💳, category: Shopping, notes_tags: Note 1, address: 123 Main St, receipt: https://example.com/receipt1, description: Description 1, category_split: none, money_out: none, money_in: 100.0',
                                 'transaction_type: Expense, name: Groceries, emoji: 🛒, category: Food, notes_tags: none, address: none, receipt: none, description: Description 2, category_split: Food/Groceries, money_out: 50.0, money_in: none',
                                 'transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0',
-                                'type: Type 1, product: Product A, completed_date: 2022-01-01 10:00:00, description: Description 1, fee: 10.0, state: State 1, balance: 1000.0',
-                                'type: Type 2, product: Product B, completed_date: 2022-01-02 11:00:00, description: Description 2, fee: 20.0, state: State 2, balance: 2000.0',
-                                'type: Type 3, product: Product C, completed_date: 2022-01-03 12:00:00, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0'],
+                                'Transaction 1',
+                                'Transaction 2',
+                                'Transaction 3'],
                 'tags': ['', '', '', '', '', '', '', '', '']
             }
         )
@@ -551,7 +551,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
         # expected_df = self._load_db()
         df = pd.DataFrame({
             'id': [11, 12, 13],
-            'datetime': pd.to_datetime(['2022-01-01', '2022-01-02', '2022-01-03']),
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 200.0, 300.0],
@@ -567,7 +567,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
     def test_delete_transactions(self):
         df = pd.DataFrame({
             'id': [11, 12, 13],
-            'datetime': pd.to_datetime(['2022-01-01', '2022-01-02', '2022-01-03']),
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 200.0, 300.0],
@@ -595,7 +595,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
     def test_update_tags(self):
         df = pd.DataFrame({
             'id': [11, 12, 13],
-            'datetime': pd.to_datetime(['2022-01-01', '2022-01-02', '2022-01-03']),
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 200.0, 300.0],

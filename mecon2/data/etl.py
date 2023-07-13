@@ -5,12 +5,12 @@ from mecon2.utils.currency import currency_rate_function
 
 
 class HSBCTransformer:
-    def transform(self, df_hsbc):  # TODO make it more readable
+    def transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO make it more readable
         # Add prefix to id
         df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
 
         # Combine date and time to create datetime
-        df_hsbc['datetime'] = pd.to_datetime(df_hsbc['date']) + pd.Timedelta('00:00:00')
+        df_hsbc['datetime'] = pd.to_datetime(df_hsbc['date'], format="%d/%m/%Y") + pd.Timedelta('00:00:00')
 
         # Set currency to GBP and amount_cur to amount
         df_hsbc['currency'] = 'GBP'
@@ -26,9 +26,9 @@ class HSBCTransformer:
 
 
 class MonzoTransformer:
-    def transform(self, df_monzo):  # TODO make it more readable
+    def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO make it more readable
         df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
-        df_monzo['datetime'] = pd.to_datetime(df_monzo['date']) + pd.to_timedelta(df_monzo['time'].astype(str))
+        df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(df_monzo['time'].astype(str))
         df_monzo['currency'] = df_monzo['local_currency']
         df_monzo['amount_cur'] = df_monzo['local_amount']
 
@@ -49,9 +49,9 @@ class MonzoTransformer:
 
 
 class RevoTransformer:
-    def transform(self, df_revo):
+    def transform(self, df_revo: pd.DataFrame) -> pd.DataFrame:
         df_transformed = pd.DataFrame({'id': ('3' + df_revo['id'].astype(str)).astype(np.int64)})
-        df_transformed['datetime'] = df_revo['start_date']
+        df_transformed['datetime'] = pd.to_datetime(df_revo['start_date'], format="%Y-%m-%d %H:%M:%S")
         currency_rates = df_revo['currency'].apply(lambda curr: currency_rate_function(curr)) # TODO find why it doesn't work without the lambda
         df_transformed['amount'] = df_revo['amount'] / currency_rates
         df_transformed['currency'] = df_revo['currency']
