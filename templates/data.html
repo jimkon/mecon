@@ -2,24 +2,21 @@
 
 {% block content %}
 
+
     <h1>Data</h1>
 
-    <h2>Statements</h2>
-    {% for bank_key in menu_dict %}
-        <li>{{ bank_key }}</li>
-       {% for statement_filepath, statement_filename in menu_dict[bank_key] %}
-            <ul>
-                <li><a href={{url_for('data.datafile_view', path=statement_filepath)}}>{{ statement_filename }}</a></li>
-            </ul>
-       {% endfor %}
-    {% endfor %}
+    <h2>Database</h2>
+    {{ db_transactions_info_dict | safe  }}
+    <form method="POST" action="/data/reload" enctype="multipart/form-data">
+      <input type="submit" id="reload_button" value="Load statements into DB">
+    </form>
 
+    <h2>Statements</h2>
     <form method="POST" action="/data/import" enctype="multipart/form-data">
-      <h2>Load bank statement</h2>
-      <label for="file_input">Path:</label>
-      <input type="text" id="filepath_input" name="filepath_input" size="50">
+      <label for="file_input"><h3>Load bank statement</h3>CSV file path:</label>
+      <input type="text" id="filepath_input" name="filepath_input" size="50" disabled>
       <input type="button" id="browse_button" value="Browse" disabled>
-      <input type="submit" id="filepath_load_button" value="Load Path">
+      <input type="submit" id="filepath_load_button" value="Load Path" disabled>
       <input type="file" id="file_input" name="file_input" style="display: none;">
     </form>
 
@@ -33,4 +30,15 @@
         document.getElementById('filepath_input').value = filename;
       });
     </script>
+    <br>
+    {% for bank_key in files_info_dict %}
+        <li>{{ bank_key }}</li>
+       {% for statement_filepath, statement_filename, size in files_info_dict[bank_key] %}
+            <ul>
+                <li><a href={{url_for('data.datafile_view', path=statement_filepath)}}>{{ statement_filename }}   ({{ size }} transactions)</a></li>
+            </ul>
+       {% endfor %}
+    {% endfor %}
+
+
 {% endblock content %}
