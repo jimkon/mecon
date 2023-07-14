@@ -102,7 +102,6 @@ def data_import():
 
 @data_bp.route('/view/file/<path>')
 def datafile_view(path):
-    # TODO get the df (either statement or the transactions) and return to_httml
     return pd.read_csv(path).to_html()
 
 
