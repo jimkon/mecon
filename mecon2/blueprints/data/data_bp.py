@@ -8,11 +8,9 @@ from json2html import json2html
 from mecon2.app.datasets import current_dataset
 from mecon2.data.db_controller import reset_db, import_data_access, data_access
 from mecon2.data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
+from mecon2.transactions import Transactions, ZeroSizeTransactionsError
 
-# from mecon2.data import file_system as fs
-
-# data_bp = Blueprint('data', __name__, template_folder='templates')
-data_bp = Blueprint('data', __name__)
+data_bp = Blueprint('data', __name__, template_folder='templates')
 
 
 def _statement_files_info() -> Dict:
@@ -34,7 +32,7 @@ def _statement_files_info() -> Dict:
     return transformed_dict
 
 
-def _db_transactions_info():
+def _db_statements_info():
     res = {}
     hsbc_trans = import_data_access.hsbc_statements.get_transactions()
     if hsbc_trans is not None:
@@ -66,14 +64,25 @@ def _db_transactions_info():
             'max_date': revo_trans['start_date'].max(),
         }
 
+    return res
 
+
+def _db_transactions_info():
+    try:
+        transactions = Transactions(data_access.transactions.get_transactions())
+        res = {
+            'rows': transactions.size()
+        }
+    except ZeroSizeTransactionsError:
+        res = {'No transaction data'}
     return res
 
 
 @data_bp.route('/menu')
 def data_menu():
+    db_transactions_info = _db_transactions_info()
+    db_statements_info = json2html.convert(json=_db_statements_info())
     files_info_dict = _statement_files_info()
-    db_transactions_info_dict = json2html.convert(json = _db_transactions_info())
     return render_template('data.html', **locals(), **globals())
 
 
@@ -91,9 +100,11 @@ def data_reload():
         elif bank_name == 'Revolut':  # TODO maybe use enums instead of literals
             dfs = [RevoStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
             import_data_access.revo_statements.import_statement(dfs)
-        print(f"{len(dfs)} {bank_name} statements imported")
+
+    data_access.transactions.load_transactions()
 
     return redirect(url_for('data.data_menu'))
+
 
 @data_bp.post('/import')
 def data_import():

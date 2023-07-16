@@ -4,15 +4,17 @@
 
 
     <h1>Data</h1>
-
-    <h2>Database</h2>
-    {{ db_transactions_info_dict | safe  }}
+    <h2>Transactions</h2>
+    {{ db_transactions_info | safe  }}
+    <h2>Statements</h2>
+    <h3>Database</h3>
+    {{ db_statements_info | safe  }}
     <form method="POST" action="/data/reload" enctype="multipart/form-data">
       <input type="submit" id="reload_button" value="Load statements into DB">
     </form>
 
-    <h2>Statements</h2>
-    <h3>Load bank statement</h3>
+    <h3>CSV files</h3>
+    <h4>Load bank statement</h4>
     Disabled! please copy files instead
     <form method="POST" action="/data/import" enctype="multipart/form-data">
       <label for="file_input">CSV file path:</label>
