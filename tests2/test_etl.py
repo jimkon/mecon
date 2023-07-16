@@ -22,7 +22,7 @@ class HSBCTransformerTest(unittest.TestCase):
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 200.0, 300.0],
-            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
+            'description': ['bank:HSBC, Transaction 1', 'bank:HSBC, Transaction 2', 'bank:HSBC, Transaction 3']
         })  # TODO check results
 
         transformer = etl.HSBCTransformer()
@@ -61,9 +61,9 @@ class MonzoTransformerTest(unittest.TestCase):
             'amount': [100.0, 50.0, 200.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 50.0, 200.0],
-            'description': ['transaction_type: Payment, name: John Doe, emoji: 💳, category: Shopping, notes_tags: Note 1, address: 123 Main St, receipt: https://example.com/receipt1, description: Description 1, category_split: none, money_out: none, money_in: 100.0',
-                            'transaction_type: Expense, name: Groceries, emoji: 🛒, category: Food, notes_tags: none, address: none, receipt: none, description: Description 2, category_split: Food/Groceries, money_out: 50.0, money_in: none',
-                            'transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0']
+            'description': ['bank:Monzo, transaction_type: Payment, name: John Doe, emoji: 💳, category: Shopping, notes_tags: Note 1, address: 123 Main St, receipt: https://example.com/receipt1, description: Description 1, category_split: none, money_out: none, money_in: 100.0',
+                            'bank:Monzo, transaction_type: Expense, name: Groceries, emoji: 🛒, category: Food, notes_tags: none, address: none, receipt: none, description: Description 2, category_split: Food/Groceries, money_out: 50.0, money_in: none',
+                            'bank:Monzo, transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0']
         })  # TODO check results
 
         transformer = etl.MonzoTransformer()
@@ -102,9 +102,9 @@ class RevoTransformerTest(unittest.TestCase):
             'amount': [100.0, 200.0, 300.0],
             'currency': ['USD', 'EUR', 'GBP'],
             'amount_cur': [130.0, 240.0, 300.0],
-            'description': ['type: Type 1, product: Product A, completed_date: 2022-01-01 00:00:00, description: Description 1, fee: 10.0, state: State 1, balance: 1000.0',
-                            'type: Type 2, product: Product B, completed_date: 2022-06-15 12:30:30, description: Description 2, fee: 20.0, state: State 2, balance: 2000.0',
-                            'type: Type 3, product: Product C, completed_date: 2022-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0']
+            'description': ['bank:Revolut, type: Type 1, product: Product A, completed_date: 2022-01-01 00:00:00, description: Description 1, fee: 10.0, state: State 1, balance: 1000.0',
+                            'bank:Revolut, type: Type 2, product: Product B, completed_date: 2022-06-15 12:30:30, description: Description 2, fee: 20.0, state: State 2, balance: 2000.0',
+                            'bank:Revolut, type: Type 3, product: Product C, completed_date: 2022-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0']
         })
 
         transformer = etl.RevoTransformer()

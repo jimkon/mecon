@@ -15,6 +15,7 @@ class HSBCTransformer:
         # Set currency to GBP and amount_cur to amount
         df_hsbc['currency'] = 'GBP'
         df_hsbc['amount_cur'] = df_hsbc['amount']
+        df_hsbc['description'] = 'bank:HSBC, ' + df_hsbc['description']
 
         # Select and rename columns
         df_transformed = df_hsbc[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
@@ -42,6 +43,7 @@ class MonzoTransformer:
             lambda x: ', '.join([col+": "+(str(x[col]) if pd.notnull(x[col]) else 'none') for col in cols_to_concat]),
             axis=1
         )
+        df_transformed['description'] = 'bank:Monzo, ' + df_transformed['description']
 
         df_transformed = df_transformed.reindex(columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
@@ -63,6 +65,7 @@ class RevoTransformer:
             lambda x: ', '.join([f"{col}: {x[col]}" for col in cols_to_concat if pd.notnull(x[col])]),
             axis=1
         )
+        df_transformed['description'] = 'bank:Revolut, ' + df_transformed['description']
 
         # df_transformed = df_revo[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
         # df_transformed = df_transformed.reindex(
