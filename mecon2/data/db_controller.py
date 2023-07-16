@@ -109,6 +109,9 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_revo_transformed = etl.RevoTransformer().transform(df_revo)
 
         dup_cols = ['datetime', 'amount', 'currency', 'amount_cur', 'description']
+        print(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} "
+              f"Monzo->{df_monzo_transformed.duplicated(subset=dup_cols).sum()} "
+              f"Revolut->{df_revo_transformed.duplicated(subset=dup_cols).sum()}")
         df_hsbc_transformed = df_hsbc_transformed.drop_duplicates(subset=dup_cols)
         df_monzo_transformed = df_monzo_transformed.drop_duplicates(subset=dup_cols)
         df_revo_transformed = df_revo_transformed.drop_duplicates(subset=dup_cols)
