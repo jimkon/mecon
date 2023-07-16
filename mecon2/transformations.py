@@ -1,5 +1,6 @@
 from mecon2.utils import calendar_utils
 
+
 class TransformationFunctionDoesNotExistError(Exception):
     pass
 
@@ -22,6 +23,9 @@ class TransformationFunction:
             raise TransformationFunctionAlreadyExistError
         self._instances[name] = self
 
+    def __call__(self, value):
+        return self.apply(value)
+
     def apply(self, value):
         return self.function(value)
 
@@ -33,9 +37,6 @@ class TransformationFunction:
         if key not in cls._instances:
             raise TransformationFunctionDoesNotExistError
         return cls._instances[key]
-
-    def __call__(self, value):
-        return self.apply(value)
 
 
 STR = TransformationFunction('str', lambda x: str(x))
