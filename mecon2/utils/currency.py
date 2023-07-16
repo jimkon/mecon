@@ -10,6 +10,8 @@ class FixedRateCurrencyConverter:
         self._rates = currency_rates if len(currency_rates) else FixedRateCurrencyConverter.currency_rates
 
     def curr_to_GBP(self, curr):
+        if curr not in self._rates:
+            return .0
         return self._rates[curr]
 
 
