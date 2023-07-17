@@ -26,6 +26,12 @@ class TestInstances(unittest.TestCase):
 
 
 class TestTransformationFunctions(unittest.TestCase):
+    def test_none(self):
+        tf = trns.TransformationFunction.from_key('none')
+
+        self.assertEqual(tf('1'), '1')
+        self.assertEqual(tf(1), 1)
+
     def test_str(self):
         tf = trns.TransformationFunction.from_key('str')
 

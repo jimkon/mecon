@@ -17,7 +17,7 @@ class TransformationFunction:
 
     def __init__(self, name, function):
         self.name = name
-        self.function = function
+        self.function = function if function is not None else lambda x: x
 
         if name in self._instances:
             raise TransformationFunctionAlreadyExistError
@@ -35,9 +35,11 @@ class TransformationFunction:
     @classmethod
     def from_key(cls, key):
         if key not in cls._instances:
-            raise TransformationFunctionDoesNotExistError
+            raise TransformationFunctionDoesNotExistError(f"Transformation function '{key=}' does not exist.")
         return cls._instances[key]
 
+
+NO_TRANSFORMATION = TransformationFunction('none', None)
 
 STR = TransformationFunction('str', lambda x: str(x))
 LOWER = TransformationFunction('lower', lambda x: str(x).lower())
