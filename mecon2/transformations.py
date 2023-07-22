@@ -38,6 +38,9 @@ class TransformationFunction:
             raise TransformationFunctionDoesNotExistError(f"Transformation function '{key=}' does not exist.")
         return cls._instances[key]
 
+    def __repr__(self):
+        return f"TransformationFunction({self.name})"
+
 
 NO_TRANSFORMATION = TransformationFunction('none', None)
 

@@ -38,6 +38,10 @@ class CompareOperator:
             raise ComparisonFunctionDoesNotExistError
         return cls._instances[key]
 
+    def __repr__(self):
+        return f"CompareOp({self.name})"
+
+
 
 GREATER = CompareOperator('greater', lambda a, b: a > b)
 GREATER_EQUAL = CompareOperator('greater_equal', lambda a, b: a >= b)
