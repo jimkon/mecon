@@ -37,14 +37,21 @@ class AmountColumnMixin:
         pass
 
 
+class TagsColumnDoesNotExistInDataframe(Exception):
+    pass
+
+
 class TagsColumnMixin:
     def __init__(self, df: pd.DataFrame):
+        if 'tags' not in df.column:
+            raise TagsColumnDoesNotExistInDataframe
+
         self._df = df
 
     def tags(self):
         pass
 
-    def add_tag(self, tag_obj):
+    def add_tag(self, tag_name):
         pass
 
     def remove_tag(self, tag_name):
