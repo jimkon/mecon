@@ -12,16 +12,16 @@ class HSBCTransformerTest(unittest.TestCase):
         df_hsbc = pd.DataFrame({
             'id': [1, 2, 3],
             'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
-            'amount': [100.0, 200.0, 300.0],
+            'amount': ['100.0', '2,000.0', '300.0'],
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
         })
 
         expected_output = pd.DataFrame({
             'id': [11, 12, 13],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 0, 0, 0), datetime(2022, 12, 31, 0, 0, 0)],
-            'amount': [100.0, 200.0, 300.0],
+            'amount': [100.0, 2000.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
-            'amount_cur': [100.0, 200.0, 300.0],
+            'amount_cur': [100.0, 2000.0, 300.0],
             'description': ['bank:HSBC, Transaction 1', 'bank:HSBC, Transaction 2', 'bank:HSBC, Transaction 3']
         })  # TODO check results
 

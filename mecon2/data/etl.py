@@ -14,6 +14,7 @@ class HSBCTransformer:
 
         # Set currency to GBP and amount_cur to amount
         df_hsbc['currency'] = 'GBP'
+        df_hsbc['amount'] = df_hsbc['amount'].str.replace(',', '').astype(float)
         df_hsbc['amount_cur'] = df_hsbc['amount']
         df_hsbc['description'] = 'bank:HSBC, ' + df_hsbc['description']
 

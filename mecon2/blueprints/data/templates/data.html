@@ -9,6 +9,7 @@
     <h2>Statements</h2>
     <h3>Database</h3>
     {{ db_statements_info | safe  }}
+    <br>
     <form method="POST" action="/data/reload" enctype="multipart/form-data">
       <input type="submit" id="reload_button" value="Load statements into DB">
     </form>
