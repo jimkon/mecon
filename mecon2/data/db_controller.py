@@ -1,5 +1,7 @@
+import datetime
 from typing import Any, List
 
+import numpy as np
 import pandas as pd
 
 from mecon2.app import models
@@ -90,7 +92,62 @@ class RevoTransactionsDBAccessor(io.RevoTransactionsIOABC):
         db.session.query(models.RevoTransactionsDBTable).delete()
 
 
+class InvalidTransactionsDataframeColumnsException(Exception):
+    valid_cols = {'id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'}
+
+    def __init__(self, df):
+        self.found_cols = set(list(df.columns))
+        super().__init__(f"Transaction dataframe has to contain these fields: {self.valid_cols}. "
+                         f"Found: {self.found_cols}, Missing: {self.missing_cols}, "
+                         f"Extra: {self.extra_cols}")
+
+    @property
+    def missing_cols(self):
+        return self.valid_cols - self.found_cols
+
+    @property
+    def extra_cols(self):
+        return self.found_cols - self.valid_cols
+
+
+class InvalidTransactionsDataframeDataTypesException(Exception):
+    def __init__(self, invalid_types):
+        self.invalid_types = invalid_types
+        super().__init__(f"Invalid types: {self.invalid_types}")
+
+
 class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
+    @staticmethod
+    def _transaction_df_validation(df):
+        TransactionsDBAccessor._transaction_df_columns_validation(df)
+        TransactionsDBAccessor._transaction_df_types_validation(df)
+
+    @staticmethod
+    def _transaction_df_columns_validation(df):
+        valid_cols = InvalidTransactionsDataframeColumnsException.valid_cols
+        found_cols = set(list(df.columns))
+        if found_cols != valid_cols:
+            raise InvalidTransactionsDataframeColumnsException(df)
+
+    @staticmethod
+    def _transaction_df_types_validation(df):
+        invalid_types = []
+        if not pd.api.types.is_integer_dtype(df['id']):
+            invalid_types.append(f"invalid type for column 'id'. expected: int, got: {df['id'].dtype}")
+        if not pd.api.types.is_datetime64_dtype(df['datetime']):
+            invalid_types.append(f"invalid type for column 'datetime'. expected: datetime, got: {df['datetime'].dtype}")
+        if not pd.api.types.is_numeric_dtype(df['amount']):
+            invalid_types.append(f"invalid type for column 'amount'. expected: number, got: {df['amount'].dtype}")
+        if not pd.api.types.is_string_dtype(df['currency']):
+            invalid_types.append(f"invalid type for column 'currency'. expected: string, got: {df['currency'].dtype}")
+        if not pd.api.types.is_numeric_dtype(df['amount_cur']):
+            invalid_types.append(f"invalid type for column 'amount_cur'. expected: number, got: {df['amount_cur'].dtype}")
+        if not pd.api.types.is_string_dtype(df['description']):
+            invalid_types.append(f"invalid type for column 'description'. expected: string, got: {df['description'].dtype}")
+
+        if len(invalid_types) > 0:
+            raise InvalidTransactionsDataframeDataTypesException(invalid_types)
+
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
@@ -115,6 +172,10 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_hsbc_transformed = df_hsbc_transformed.drop_duplicates(subset=dup_cols)
         df_monzo_transformed = df_monzo_transformed.drop_duplicates(subset=dup_cols)
         df_revo_transformed = df_revo_transformed.drop_duplicates(subset=dup_cols)
+
+        self._transaction_df_validation(df_hsbc_transformed)
+        self._transaction_df_validation(df_monzo_transformed)
+        self._transaction_df_validation(df_revo_transformed)
 
         df_merged = pd.concat([df_hsbc_transformed, df_monzo_transformed, df_revo_transformed])
         df_merged = df_merged.sort_values(by='datetime')

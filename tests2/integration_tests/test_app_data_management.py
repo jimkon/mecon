@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 from datetime import datetime, date, time
 
 import pandas as pd
@@ -545,6 +546,62 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             }
         )
         return expected_df
+
+    def test__transaction_df_validation_columns(self):
+        try:
+            df_mock = mock.MagicMock()
+            df_mock.columns = {'id', 'datetime', 'amount', 'extra_col'}
+            db_controller.TransactionsDBAccessor._transaction_df_columns_validation(df_mock)
+        except db_controller.InvalidTransactionsDataframeColumnsException as cols_error:
+            self.assertEqual(cols_error.missing_cols, {'currency', 'amount_cur', 'description'})
+            self.assertEqual(cols_error.extra_cols, {'extra_col'})
+        else:
+            self.fail(f"Expecting InvalidTransactionsDataframeColumnsException but not raised.")
+        # with self.assertRaises(db_controller.InvalidTransactionsDataframeColumnsException) as error:
+        #     df_mock = mock.MagicMock()
+        #     df_mock.columns = {'id', 'datetime', 'amount'}
+        #     db_controller.TransactionsDBAccessor._transaction_df_validation(df_mock)
+        #     cols_error = error.exception
+        #     self.assertEqual(cols_error.missing_cols, {'currency', 'amount_cur', 'description'})
+        #     self.assertEqual(cols_error.extra_cols, {'extra_col'})
+
+    def test__transaction_df_validation_types_success(self):
+        test_df = pd.DataFrame({
+            'id': [0, 1, 2],
+            'datetime': [datetime(2000, 1, 1, 0, 0, 0), datetime(2000, 1, 1, 0, 0, 0),
+                         datetime(2000, 1, 1, 0, 0, 0)],
+            'amount': [.0, 1, .2],
+            'currency': ['0', '1', '2'],
+            'amount_cur': [.0, 1, .2],
+            'description': ['0', '1', '2']
+
+        })
+        db_controller.TransactionsDBAccessor._transaction_df_types_validation(test_df)
+
+    def test__transaction_df_validation_types_fail(self):
+        try:
+            test_df = pd.DataFrame({
+                'id': ['0', '1', '2'],
+                'datetime': [0, 1, 2],
+                'amount': ['0', '1', '2'],
+                'currency': [0, 1, 2],
+                'amount_cur': ['0', '1', '2'],
+                'description': [0, 1, 2]
+
+            })
+            db_controller.TransactionsDBAccessor._transaction_df_types_validation(test_df)
+        except db_controller.InvalidTransactionsDataframeDataTypesException as inv_types_error:
+            expected_errors = [
+                "invalid type for column 'id'. expected: int, got: object",
+                "invalid type for column 'datetime'. expected: datetime, got: int64",
+                "invalid type for column 'amount'. expected: number, got: object",
+                "invalid type for column 'currency'. expected: string, got: int64",
+                "invalid type for column 'amount_cur'. expected: number, got: object",
+                "invalid type for column 'description'. expected: string, got: int64"
+            ]
+            self.assertEqual(inv_types_error.invalid_types, expected_errors)
+        else:
+            self.fail(f"Expecting InvalidTransactionsDataframeDataTypesException but not raised.")
 
     def test_get_transactions(self):
         self.assertIsNone(self.accessor.get_transactions())
