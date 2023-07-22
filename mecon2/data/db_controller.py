@@ -116,11 +116,18 @@ class InvalidTransactionsDataframeDataTypesException(Exception):
         super().__init__(f"Invalid types: {self.invalid_types}")
 
 
+class InvalidTransactionsDataframeDataValueException(Exception):
+    def __init__(self, value_errors):
+        self.value_errors = value_errors
+        super().__init__(f"Invalid value range: {self.value_errors}")
+
+
 class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
     @staticmethod
     def _transaction_df_validation(df):
         TransactionsDBAccessor._transaction_df_columns_validation(df)
         TransactionsDBAccessor._transaction_df_types_validation(df)
+        TransactionsDBAccessor._transaction_df_values_validation(df)
 
     @staticmethod
     def _transaction_df_columns_validation(df):
@@ -148,6 +155,16 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         if len(invalid_types) > 0:
             raise InvalidTransactionsDataframeDataTypesException(invalid_types)
 
+    @staticmethod
+    def _transaction_df_values_validation(df):
+        value_errors = []
+        if df['amount'].isna().sum()>0:
+            value_errors.append(f"Amount column contains NaN values: {df['amount'].isna().sum()}")
+
+        if len(value_errors):
+            raise InvalidTransactionsDataframeDataValueException(value_errors)
+
+
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
@@ -161,9 +178,9 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
         df_revo = RevoTransactionsDBAccessor().get_transactions()
 
-        df_hsbc_transformed = etl.HSBCTransformer().transform(df_hsbc)
-        df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo)
-        df_revo_transformed = etl.RevoTransformer().transform(df_revo)
+        df_hsbc_transformed = etl.HSBCTransformer().transform(df_hsbc.copy())
+        df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo.copy())
+        df_revo_transformed = etl.RevoTransformer().transform(df_revo.copy())
 
         dup_cols = ['datetime', 'amount', 'currency', 'amount_cur', 'description']
         print(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} "
