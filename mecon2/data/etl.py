@@ -57,7 +57,7 @@ class RevoTransformer:
         df_transformed = pd.DataFrame({'id': ('3' + df_revo['id'].astype(str)).astype(np.int64)})
         df_transformed['datetime'] = pd.to_datetime(df_revo['start_date'], format="%Y-%m-%d %H:%M:%S")
         currency_rates = df_revo['currency'].apply(lambda curr: currency_rate_function(curr)) # TODO find why it doesn't work without the lambda
-        df_transformed['amount'] = df_revo['amount'] / currency_rates
+        df_transformed['amount'] = df_revo['amount'] / currency_rates  # TODO take care of inf values
         df_transformed['currency'] = df_revo['currency']
         df_transformed['amount_cur'] = df_revo['amount']
 

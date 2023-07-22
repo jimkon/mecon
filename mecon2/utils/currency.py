@@ -11,7 +11,7 @@ class FixedRateCurrencyConverter:
 
     def curr_to_GBP(self, curr):
         if curr not in self._rates:
-            return .0
+            return 1
         return self._rates[curr]
 
 
