@@ -168,7 +168,7 @@ class DisjunctionTestCase(unittest.TestCase):
 
 
 class TestTagger(unittest.TestCase):
-    def test_rows_to_tag(self):
+    def test_get_index_for_rule(self):
         class TestRule:
             def compute(self, x):
                 return x['field'] == 2
@@ -177,8 +177,21 @@ class TestTagger(unittest.TestCase):
 
         tagger = tagging.Tagger()
 
-        rows_to_tag = tagger._rows_to_tag(df, rule)
+        rows_to_tag = tagger.get_index_for_rule(df, rule)
         self.assertListEqual(rows_to_tag.to_list(), [False, False, True, False, False])
+
+    def test_filter_df_with_rule(self):
+        class TestRule:
+            def compute(self, x):
+                return x['a'] == 2 or x['b'] == '4'
+        rule = TestRule()
+        df = pd.DataFrame({'a': [0, 1, 2, 3, 4], 'b': ['0', '1', '2', '3', '4']})
+
+        tagger = tagging.Tagger()
+
+        res_df = tagger.filter_df_with_rule(df, rule)
+        pd.testing.assert_frame_equal(res_df.reset_index(drop=True), pd.DataFrame({'a': [2, 4], 'b': ['2', '4']}).reset_index(drop=True))
+
 
     def test_already_tagged_rows(self):
         tag_name = 'test_tag'

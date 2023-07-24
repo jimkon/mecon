@@ -26,10 +26,16 @@ class Transactions(fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.
         super().__init__(df)
 
     def apply_rule(self, rule: tagging.AbstractRule) -> Transactions:
-        return self
+        tagger = tagging.Tagger()
+        df = self.dataframe().copy()
+        new_df = tagger.filter_df_with_rule(df, rule)
+        return Transactions(new_df)
 
-    def apply_tag(self, tag : tagging.Tag) -> Transactions:
-        return self
+    def apply_tag(self, tag: tagging.Tag) -> Transactions:
+        tagger = tagging.Tagger()
+        df = self.dataframe().copy()
+        tagger.tag(tag, df)
+        return Transactions(df)
 
     def filter_by(self, **kwargs) -> Transactions:
         return self

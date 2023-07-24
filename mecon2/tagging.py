@@ -143,16 +143,22 @@ class Tagger(abc.ABC):
         if remove_old_tags:
             Tagger._remove_tag(tag_name, df)
 
-        rows_to_tag = Tagger._rows_to_tag(df, tag.rule)
+        rows_to_tag = Tagger.get_index_for_rule(df, tag.rule)
         Tagger._add_tag(tag_name, df, rows_to_tag)
 
     @staticmethod
-    def _rows_to_tag(df, rule):
+    def get_index_for_rule(df, rule):
         rows_to_tag = df.apply(lambda x: rule.compute(x), axis=1)
         return rows_to_tag
 
     @staticmethod
-    def _already_tagged_rows(tag_name, df):
+    def filter_df_with_rule(df, rule):
+        rows_to_tag = Tagger.get_index_for_rule(df, rule)
+        res_df = df[rows_to_tag].reset_index(drop=True)
+        return res_df
+
+    @staticmethod
+    def _already_tagged_rows(tag_name, df):  # TODO not used
         already_tagged_rows = df['tags'].apply(lambda tags_row: tag_name in tags_row.split(','))
         return already_tagged_rows
 
