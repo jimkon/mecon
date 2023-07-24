@@ -19,7 +19,6 @@ def render_tag_page(title='Tag page',
                     rename_button_flag=False,
                     message_text=''):
     title = 'Create a new tag'
-    tag_name = 'test_tag'
     tag_json_str = '{}' if tag_json_str is None else tag_json_str
     # tag_json_str = '{"amount.int": {"greater": 1000}}'
     tag = Tag.from_json_string(tag_name, tag_json_str)
@@ -46,7 +45,7 @@ def tags_new():
             tag_json_str = request.form.get('query_text_input')
         elif "reset" in request.form:
             tag_json_str = None
-        elif "save" in request.form:
+        elif "save" in request.form or "save_and_close" in request.form:
             tag_name = request.form.get('tag_name_input')
             tag_json_str = request.form.get('query_text_input')
 
@@ -58,7 +57,11 @@ def tags_new():
                 except Exception as e:
                     message_text = f"Error: {e}"
                 else:
-                    return redirect(url_for('tags.tag_edit_get', tag_name=tag_name))
+                    if "save_and_close" in request.form:
+                        return redirect(url_for('tags.tag_info', tag_name=tag_name))
+                    else:
+                        return redirect(url_for('tags.tag_edit_get', tag_name=tag_name))
+
     return render_tag_page(title='Create a new tag', **locals())
 
 
@@ -70,3 +73,8 @@ def tag_edit_get(tag_name):
 @tags_bp.post('/edit/<tag_name>')
 def tag_edit_post(tag_name):
     return f'tags_edit_post {tag_name=}'
+
+@tags_bp.route('/info/<tag_name>', methods = ['POST', 'GET'])
+def tag_info(tag_name):
+    return f'tags_info {tag_name=}'
+
