@@ -19,7 +19,6 @@ def render_tag_page(title='Tag page', tag_name='', tag_json_str=None, rename_fla
     tag_name = 'test_tag'
     tag_json_str = '{}' if tag_json_str is None else tag_json_str
     # tag_json_str = '{"amount.int": {"greater": 1000}}'
-    # tag_json_str = '{}'
     tag = Tag.from_json_string(tag_name, tag_json_str)
     transactions = get_transactions().apply_rule(tag.rule)
     data_df = transactions.filter_by().dataframe()
@@ -36,8 +35,10 @@ def tags_menu():
 @tags_bp.route('/new', methods = ['POST', 'GET'])
 def tags_new():
     if request.method == 'POST':
-        tag_json_str = request.form.get('query_text_input')
-    print(locals())
+        if "refresh" in request.form:
+            tag_json_str = request.form.get('query_text_input')
+        elif "reset" in request.form:
+            tag_json_str = None
     return render_tag_page(title='Create a new tag', **locals())
 
 
