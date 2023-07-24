@@ -1,4 +1,4 @@
-from flask import Blueprint, redirect, url_for, render_template
+from flask import Blueprint, render_template, request
 
 from mecon2.data.db_controller import data_access
 from mecon2.tagging import Tag
@@ -13,11 +13,12 @@ def get_transactions() -> Transactions:
     return transactions
 
 
-def render_tag_page(title='Tag page', tag_name='', tag_json_str="{}", rename_flag=False):
+def render_tag_page(title='Tag page', tag_name='', tag_json_str=None, rename_flag=False):
     title = 'Create a new tag'
     rename_flag = False
     tag_name = 'test_tag'
-    tag_json_str = '{"amount.int": {"greater": 1000}}'
+    tag_json_str = '{}' if tag_json_str is None else tag_json_str
+    # tag_json_str = '{"amount.int": {"greater": 1000}}'
     # tag_json_str = '{}'
     tag = Tag.from_json_string(tag_name, tag_json_str)
     transactions = get_transactions().apply_rule(tag.rule)
@@ -32,9 +33,12 @@ def tags_menu():
     return render_template('tags_menu.html', **locals(), **globals())
 
 
-@tags_bp.route('/new')
+@tags_bp.route('/new', methods = ['POST', 'GET'])
 def tags_new():
-    return render_tag_page(title='Create a new tag')
+    if request.method == 'POST':
+        tag_json_str = request.form.get('query_text_input')
+    print(locals())
+    return render_tag_page(title='Create a new tag', **locals())
 
 
 @tags_bp.get('/edit/<tag_name>')
