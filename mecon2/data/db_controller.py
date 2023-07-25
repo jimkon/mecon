@@ -222,6 +222,14 @@ data_access = DataAccess(TransactionsDBAccessor(),
                          TagsDBAccessor())
 
 
+def reset_transactions():
+    models.HSBCTransactionsDBTable.__table__.drop(db.engine)
+    models.RevoTransactionsDBTable.__table__.drop(db.engine)
+    models.MonzoTransactionsDBTable.__table__.drop(db.engine)
+    models.TransactionsDBTable.__table__.drop(db.engine)
+    db.create_all()
+
+
 def reset_db():
     db.drop_all()
     db.create_all()

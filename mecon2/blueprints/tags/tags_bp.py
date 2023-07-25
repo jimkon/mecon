@@ -31,9 +31,14 @@ def render_tag_page(title='Tag page',
 
 @tags_bp.route('/')
 def tags_menu():
-    all_tags = sorted(data_access.tags.all_tags(), key=lambda x:x['name'])
-    for tag in all_tags:
-        tag['n_rows'] = 0
+    try:
+        all_tags = sorted(data_access.tags.all_tags(), key=lambda x: x['name'])
+    except Exception as e:
+        all_tags = f"Error: {e}"
+    else:
+        for tag in all_tags:
+            tag['n_rows'] = 0
+
     return render_template('tags_menu.html', **locals(), **globals())
 
 

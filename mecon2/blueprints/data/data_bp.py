@@ -6,7 +6,7 @@ from flask import Blueprint, redirect, url_for, render_template
 from json2html import json2html
 
 from mecon2.app.datasets import current_dataset
-from mecon2.data.db_controller import reset_db, import_data_access, data_access
+from mecon2.data.db_controller import reset_transactions, import_data_access, data_access
 from mecon2.data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from mecon2.transactions import Transactions, ZeroSizeTransactionsError
 
@@ -88,7 +88,7 @@ def data_menu():
 
 @data_bp.post('/reload')
 def data_reload():
-    reset_db()
+    reset_transactions()
     statements_info = _statement_files_info()
     for bank_name in statements_info:
         if bank_name == 'HSBC':  # TODO maybe use enums instead of literals
@@ -118,5 +118,5 @@ def datafile_view(path):
 
 @data_bp.route('/view/<item>')
 def data_view(item):
-    # TODO get the df (either statement or the transactions) and return to_httml
+    # TODO get the df (either statement or the transactions) and return to_html
     return f"data view {item}"
