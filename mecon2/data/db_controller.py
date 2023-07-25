@@ -230,6 +230,11 @@ def reset_transactions():
     db.create_all()
 
 
-def reset_db():
-    db.drop_all()
+def reset_tags():
+    models.TagsDBTable.__table__.drop(db.engine)
     db.create_all()
+
+
+def reset_db():
+    reset_transactions()
+    reset_tags()

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from mecon2.data.db_controller import data_access
+from mecon2.data.db_controller import data_access, reset_tags
 from mecon2.tagging import Tag
 from mecon2.transactions import Transactions
 
@@ -79,7 +79,15 @@ def tag_edit_get(tag_name):
 def tag_edit_post(tag_name):
     return f'tags_edit_post {tag_name=}'
 
+
 @tags_bp.route('/info/<tag_name>', methods = ['POST', 'GET'])
 def tag_info(tag_name):
     return f'tags_info {tag_name=}'
+
+
+@tags_bp.post('/reset')
+def tags_reset():
+    reset_tags()
+    return redirect(url_for('tags.tags_menu'))
+
 
