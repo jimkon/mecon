@@ -1,7 +1,5 @@
-import datetime
 from typing import Any, List
 
-import numpy as np
 import pandas as pd
 
 from mecon2.app import models
@@ -12,7 +10,7 @@ from mecon2.data.io_framework import ImportDataAccess, DataAccess
 
 
 class TagsDBAccessor(io.TagsIOABC):
-    def get_tag(self, name) -> dict[str, Any] | None:
+    def get_tag(self, name) -> list[str, Any] | None:
         tag = models.TagsDBTable.query.filter_by(name=name).first()
 
         if tag is None:
@@ -20,8 +18,8 @@ class TagsDBAccessor(io.TagsIOABC):
 
         return tag.to_dict()
 
-    def set_tag(self, name: str, conditions_json: dict) -> None:
-        if len(conditions_json) > 2000:# TODO make this a constant config
+    def set_tag(self, name: str, conditions_json: list | dict) -> None:
+        if len(conditions_json) > 2000:  # TODO make this a constant config
             raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
                              f" Consider increasing the upper limit.")
 

@@ -9,8 +9,7 @@ class TagsDBTable(db.Model):
 
     def to_dict(self):
         tag_name = self.name
-        conditions_json = json.loads(self.conditions_json.replace("'", '"'))
-        return {'name': tag_name, 'conditions_json': conditions_json}
+        return {'name': tag_name, 'conditions_json': self.conditions_json}
 
 
 class HSBCTransactionsDBTable(db.Model):
