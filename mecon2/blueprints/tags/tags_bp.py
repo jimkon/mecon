@@ -13,6 +13,12 @@ def _json_from_str(json_str):
     return _json
 
 
+def _reformat_json_str(json_str):
+    json_str = json_str.replace("'", '"')
+    json_str = json.dumps(json.loads(json_str), indent=4)
+    return json_str
+
+
 def get_transactions() -> Transactions:
     data_df = data_access.transactions.get_transactions().sort_values(by='datetime', ascending=False).reset_index(drop=True)
     transactions = Transactions(data_df)
@@ -38,22 +44,20 @@ def save_and_recalculate_tags(tag_name, tag_json_str):
 
 def render_tag_page(title='Tag page',
                     tag_name='',
-                    tag_json_str=None,
+                    tag_json_str='[{}]',
                     rename_flag=False,
                     rename_button_flag=False,
                     message_text='',
                     delete_button=False,
                     confirm_delete=False):
-    tag_json_str = '[{}]' if tag_json_str is None else tag_json_str
-    # tag_json_str = '[{"amount.abs": {"greater": 1000}}]'
     try:
-        _json_from_str(tag_json_str)
+        # _json_from_str(tag_json_str)
         tag = Tag.from_json_string(tag_name, tag_json_str)
         transactions = get_transactions().apply_rule(tag.rule)
         data_df = transactions.filter_by().dataframe()
         table_html = None if data_df is None else data_df.to_html()
         number_of_rows = 0 if data_df is None else len(data_df)
-        tag_json_str = json.dumps(json.loads(tag_json_str), indent=4)
+        tag_json_str = _reformat_json_str(tag_json_str)
     except json.decoder.JSONDecodeError as json_error:
         message_text = f"JSON Syntax error: {json_error}"
     except Exception as e:
@@ -117,8 +121,6 @@ def tag_edit(tag_name):
 
         elif "reset" in request.form:
             tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
-            # tag_json_str = tag_json_str.replace("'", '"')  # todo tansformation moved to Tag.from_string
-
         elif "save" in request.form or "save_and_close" in request.form:
             tag_json_str = request.form.get('query_text_input')
 
@@ -143,9 +145,7 @@ def tag_edit(tag_name):
 
     else:
         tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
-        # tag_json_str = tag_json_str.replace("'", '"')  # todo tansformation moved to Tag.from_string
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
-    # return f'tags_edit_get {tag_name=}'
 
 
 @tags_bp.post('/edit/<tag_name>')
