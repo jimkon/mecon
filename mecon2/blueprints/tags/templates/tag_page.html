@@ -16,6 +16,13 @@
       <input type="submit" name="reset" value="Reset">
       <input type="submit" name="save" value="Save">
       <input type="submit" name="save_and_close" value="Save & Back">
+      {% if delete_button %}
+        {% if not confirm_delete %}
+        <input type="submit" name="delete" value="Delete">
+          {% else %}
+            <input type="submit" name="confirm_delete" value="Are you sure?!">
+          {% endif %}
+      {% endif %}
 {#      <a href={{ url_for('main.home') }} ><button>Back</button></a></a>#}
     </form>
     {% if table_html is not none %}

@@ -25,7 +25,9 @@ def render_tag_page(title='Tag page',
                     tag_json_str=None,
                     rename_flag=False,
                     rename_button_flag=False,
-                    message_text=''):
+                    message_text='',
+                    delete_button=False,
+                    confirm_delete=False):
     # title = 'Create a new tag'
     tag_json_str = '[{}]' if tag_json_str is None else tag_json_str
     # tag_json_str = '[{"amount.abs": {"greater": 1000}}]'
@@ -83,6 +85,7 @@ def tags_new():
 @tags_bp.route('/edit/<tag_name>', methods=['POST', 'GET'])
 def tag_edit(tag_name):
     rename_flag = False
+    delete_button = True
     # rename_button_flag = True
     if request.method == 'POST':
         if "refresh" in request.form:
@@ -103,6 +106,13 @@ def tag_edit(tag_name):
                 else:
                     return redirect(url_for('tags.tag_edit', tag_name=tag_name))
         # tag_json_str = json.dumps(data_access.tags.get_tag(tag_name))
+        elif "delete" in request.form:
+            confirm_delete = True
+            tag_json_str = request.form.get('query_text_input')
+            render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
+        elif "confirm_delete" in request.form:
+            data_access.tags.delete_tag(tag_name)
+            return redirect(url_for('tags.tags_menu'))
     else:
         tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
         tag_json_str = tag_json_str.replace("'", '"')
