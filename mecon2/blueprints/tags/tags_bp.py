@@ -8,8 +8,7 @@ from mecon2.transactions import Transactions
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
 
-def condition_json_from_str(json_str):
-
+def _json_from_str(json_str):
     _json = json.loads(json_str)
     return _json
 
@@ -28,15 +27,21 @@ def render_tag_page(title='Tag page',
                     message_text='',
                     delete_button=False,
                     confirm_delete=False):
-    # title = 'Create a new tag'
     tag_json_str = '[{}]' if tag_json_str is None else tag_json_str
     # tag_json_str = '[{"amount.abs": {"greater": 1000}}]'
-    tag = Tag.from_json_string(tag_name, tag_json_str)
-    transactions = get_transactions().apply_rule(tag.rule)
-    data_df = transactions.filter_by().dataframe()
-    table_html = None if data_df is None else data_df.to_html()
-    number_of_rows = 0 if data_df is None else len(data_df)
-    tag_json_str = json.dumps(json.loads(tag_json_str), indent=4)
+    try:
+        _json_from_str(tag_json_str)
+        tag = Tag.from_json_string(tag_name, tag_json_str)
+        transactions = get_transactions().apply_rule(tag.rule)
+        data_df = transactions.filter_by().dataframe()
+        table_html = None if data_df is None else data_df.to_html()
+        number_of_rows = 0 if data_df is None else len(data_df)
+        tag_json_str = json.dumps(json.loads(tag_json_str), indent=4)
+    except json.decoder.JSONDecodeError as json_error:
+        message_text = f"JSON Syntax error: {json_error}"
+    except Exception as e:
+        message_text = f"General exception: {e}"
+
     return render_template('tag_page.html', **locals(), **globals())
 
 
@@ -58,6 +63,7 @@ def tags_new():
     rename_flag = True
     if request.method == 'POST':
         if "refresh" in request.form:
+            tag_name = request.form.get('tag_name_input')
             tag_json_str = request.form.get('query_text_input')
         elif "reset" in request.form:
             tag_json_str = None
@@ -69,13 +75,12 @@ def tags_new():
                 message_text = f"Tag '{tag_name}' already exists. Please use another name"
             else:
                 try:
-                    condition_json = condition_json_from_str(tag_json_str)
-                    data_access.tags.set_tag(tag_name, condition_json)
+                    data_access.tags.set_tag(tag_name, _json_from_str(tag_json_str))
                 except Exception as e:
                     message_text = f"Error: {e}"
                 else:
                     if "save_and_close" in request.form:
-                        return redirect(url_for('tags.tag_info', tag_name=tag_name))
+                        return redirect(url_for('tags.tags_menu'))
                     else:
                         return redirect(url_for('tags.tag_edit', tag_name=tag_name))
 
@@ -97,12 +102,12 @@ def tag_edit(tag_name):
             tag_json_str = request.form.get('query_text_input')
 
             try:
-                data_access.tags.set_tag(tag_name, condition_json_from_str(tag_json_str))
+                data_access.tags.set_tag(tag_name, _json_from_str(tag_json_str))
             except Exception as e:
                 message_text = f"Error: {e}"
             else:
                 if "save_and_close" in request.form:
-                    return redirect(url_for('tags.tag_info', tag_name=tag_name))
+                    return redirect(url_for('tags.tags_menu'))
                 else:
                     return redirect(url_for('tags.tag_edit', tag_name=tag_name))
         # tag_json_str = json.dumps(data_access.tags.get_tag(tag_name))
