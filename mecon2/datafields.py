@@ -51,11 +51,11 @@ class TagsColumnMixin:
     def tags(self):
         pass
 
-    def add_tag(self, tag_name):
-        pass
-
-    def remove_tag(self, tag_name):
-        pass
+    # def add_tag(self, tag_name):
+    #     pass
+    #
+    # def remove_tag(self, tag_name):
+    #     pass
 
 
 class DescriptionColumnMixin:

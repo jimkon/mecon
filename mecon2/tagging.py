@@ -133,6 +133,7 @@ class Tag:
 
     @staticmethod
     def from_json_string(name, _json_str):
+        _json_str = _json_str.replace("'", '"')
         return Tag.from_json(name, json.loads(_json_str))
 
 

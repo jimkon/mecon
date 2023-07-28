@@ -21,7 +21,10 @@
         {% endfor %}
         </ul>
     {% endif %}
-
+    <form method="POST" action="/tags/recalculate" enctype="multipart/form-data">
+        <input type="submit" id="recalculate_tags" value="Recalculate tags">
+    </form>
+    <br>
     <form method="POST" action="/tags/reset" enctype="multipart/form-data">
         <input type="submit" id="reset_tags" value="Reset tags" disabled>
         <h3 style="color:Tomato;"> (WARNING: it will delete all the saved tags)</h3>

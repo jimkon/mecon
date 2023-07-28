@@ -39,15 +39,15 @@ class TestTagsDBData(TestCase):
         self.assertIsNone(returned_tag)
 
     def test_set_and_get_tag(self):
-        expected_tag = {'name': 'test_tag1', 'conditions_json': {"a": 1}}
+        expected_tag = {'name': 'test_tag1', 'conditions_json': "{'a': 1}"}
         self.accessor.set_tag(**expected_tag)
         returned_tag = self.accessor.get_tag(expected_tag['name'])
         self.assertEqual(expected_tag, returned_tag)
 
     def test_update_tag(self):
-        tag = {'name': 'test_tag2', 'conditions_json': {"a": 1}}
+        tag = {'name': 'test_tag2', 'conditions_json': "{'a': 1}"}
         self.accessor.set_tag(**tag)
-        updated_tag = {'name': 'test_tag2', 'conditions_json': {"a": 2}}
+        updated_tag = {'name': 'test_tag2', 'conditions_json': "{'a': 2}"}
         self.accessor.set_tag(**updated_tag)
         returned_tag = self.accessor.get_tag('test_tag2')
         self.assertEqual(updated_tag, returned_tag)
@@ -69,9 +69,9 @@ class TestTagsDBData(TestCase):
         self.accessor.delete_tag('test_tag4')
 
         expected_tags = [
-            {'name': 'test_tag5', 'conditions_json': {"a": 1}},
-            {'name': 'test_tag6', 'conditions_json': {"a": 2}},
-            {'name': 'test_tag7', 'conditions_json': {"a": 3}},
+            {'name': 'test_tag5', 'conditions_json': "{'a': 1}"},
+            {'name': 'test_tag6', 'conditions_json': "{'a': 2}"},
+            {'name': 'test_tag7', 'conditions_json': "{'a': 3}"},
         ]
         self.accessor.set_tag(**expected_tags[0])
         self.accessor.set_tag(**expected_tags[1])
