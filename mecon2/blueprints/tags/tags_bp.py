@@ -31,9 +31,11 @@ def recalculate_tags():
     for tag_dict in data_access.tags.all_tags():
         curr_tag_name, curr_tag_json = tag_dict['name'], tag_dict['conditions_json']
         tag = Tag.from_json_string(curr_tag_name, curr_tag_json)
+        print(f"Applying {curr_tag_name} tag to transaction.")
         transactions = transactions.apply_tag(tag)
 
     data_df = transactions.dataframe()
+    print(f"Updating transactions in DB.")
     data_access.transactions.update_tags(data_df)
 
 
@@ -86,7 +88,7 @@ def tags_new():
         if "refresh" in request.form:
             tag_name = request.form.get('tag_name_input')
             tag_json_str = request.form.get('query_text_input')
-
+            tag_json_str = _reformat_json_str(tag_json_str)
         elif "reset" in request.form:
             tag_json_str = None
 
@@ -118,6 +120,7 @@ def tag_edit(tag_name):
     if request.method == 'POST':
         if "refresh" in request.form:
             tag_json_str = request.form.get('query_text_input')
+            tag_json_str = _reformat_json_str(tag_json_str)
 
         elif "reset" in request.form:
             tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
