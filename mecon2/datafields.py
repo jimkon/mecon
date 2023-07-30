@@ -54,13 +54,18 @@ class DateTimeColumnMixin:
 
 class AmountColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
+        self._df_wrapper_obj = df_wrapper
         pass
 
     def amount(self):
         pass
 
-    def currency(self):
-        pass
+    @property
+    def currency(self) -> pd.Series:
+        return self._df_wrapper_obj.dataframe()['currency']
+
+    def all_currencies(self):
+        return self._df_wrapper_obj.dataframe()['currency'].unique().tolist()
 
     def amount_cur(self):
         pass
@@ -89,7 +94,7 @@ class TagsColumnMixin:
     def tags(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['tags']
 
-    def tags_set(self):
+    def all_tags(self):
         tags = self.tags.apply(lambda s: s.split(',')).to_list()
         tags_set = set(chain.from_iterable(tags))
         if '' in tags_set:

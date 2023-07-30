@@ -41,7 +41,7 @@ class TestTagsColumnMixin(unittest.TestCase):
     def test_tags_set(self):
         result_set = ExampleDataframeWrapper(pd.DataFrame({
             'tags': ['', 'tag1', 'tag1,tag2', 'tag1,tag3']
-        })).tags_set()
+        })).all_tags()
         self.assertEqual(result_set, {'tag1', 'tag2', 'tag3'})
 
     def test_contains_tag(self):

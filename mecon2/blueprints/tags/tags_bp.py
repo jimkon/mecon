@@ -1,6 +1,9 @@
 import json
 
 from flask import Blueprint, render_template, request, redirect, url_for
+from json2html import json2html
+
+from mecon2 import reports
 from mecon2.data.db_controller import data_access, reset_tags
 from mecon2.tagging import Tag, Tagger
 from mecon2.transactions import Transactions
@@ -56,7 +59,7 @@ def render_tag_page(title='Tag page',
         # _json_from_str(tag_json_str)
         tag = Tag.from_json_string(tag_name, tag_json_str)
         transactions = get_transactions().apply_rule(tag.rule)
-        data_df = transactions.filter_by().dataframe()
+        data_df = transactions.dataframe()
         table_html = None if data_df is None else data_df.to_html()
         number_of_rows = 0 if data_df is None else len(data_df)
         tag_json_str = _reformat_json_str(tag_json_str)
@@ -159,7 +162,12 @@ def tag_edit_post(tag_name):
 
 @tags_bp.route('/info/<tag_name>', methods=['POST', 'GET'])
 def tag_info(tag_name):
-    return redirect(url_for('tags.tag_edit', tag_name=tag_name))  # TODO change when info page is built
+    transactions = get_transactions().contains_tag(tag_name)
+    data_df = transactions.dataframe()
+    table_html = data_df.to_html()
+    transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
+    return render_template('tag_info.html', **locals(), **globals())
+    # return redirect(url_for('tags.tag_edit', tag_name=tag_name))  # TODO change when info page is built
 
 
 @tags_bp.post('/reset')
