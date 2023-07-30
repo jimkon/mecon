@@ -19,3 +19,11 @@ def transactions_stats(transactions: transactions.Transactions):
         'Currencies': transactions.all_currencies()
     }
 
+
+def plot(transactions,
+         date_range=None,
+         grouping=None,
+         fill_values=None,
+         cumsum=False,
+         tags=None,):
+    pass

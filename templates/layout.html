@@ -8,6 +8,7 @@
 <body>
 {#<p>Deployed: not working{{ DEPLOYMENT_DATETIME }}</p>#}
 <a href={{ url_for('main.home') }}>Home</a>
+<a href={{ url_for('reports.reports_menu') }}>Reports</a>
 <a href={{ url_for('tags.tags_menu') }}>Tags</a>
 <a href={{ url_for('data.data_menu') }}>Data</a>
 {% block content %}
