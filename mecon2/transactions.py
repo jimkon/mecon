@@ -10,7 +10,7 @@ class ZeroSizeTransactionsError(Exception):
     pass
 
 
-class Transactions(fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.TagsColumnMixin, fields.DescriptionColumnMixin):
+class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.DescriptionColumnMixin, fields.TagsColumnMixin):
     """
     Responsible for holding the transactions dataframe and controlling the access to it, like a DataFrame Facade.
     Columns are specified and only accessed and modifies by the corresponding mixins. Key goal of this object
@@ -19,11 +19,17 @@ class Transactions(fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.
 
     Not responsible for any IO operations.
     """
-    def __init__(self, df):
+
+    def __init__(self, df: pd.DataFrame):
         if df is None:
             raise ZeroSizeTransactionsError
-        self._df = df
-        super().__init__(df)
+        super().__init__(df=df)
+        fields.IdColumnMixin.__init__(self, df_wrapper=self)
+        fields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+        fields.AmountColumnMixin.__init__(self, df_wrapper=self)
+        fields.DescriptionColumnMixin.__init__(self, df_wrapper=self)
+        fields.TagsColumnMixin.__init__(self, df_wrapper=self)
+        fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     def apply_rule(self, rule: tagging.AbstractRule) -> Transactions:
         tagger = tagging.Tagger()
@@ -40,15 +46,5 @@ class Transactions(fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.
     def filter_by(self, **kwargs) -> Transactions:
         return self
 
-    def dataframe(self) -> pd.DataFrame:
-        return self._df
 
-    def copy(self) -> Transactions:
-        return Transactions(self.dataframe())
 
-    def merge(self, transactions) -> Transactions:
-        df = pd.concat([self.dataframe(), transactions.dataframe()]).drop_duplicates()
-        return Transactions(df)
-
-    def size(self):
-        return len(self._df)
