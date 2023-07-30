@@ -75,8 +75,9 @@ def tags_menu():
     except Exception as e:
         all_tags = f"Error: {e}"
     else:
+        transactions = get_transactions()
         for tag in all_tags:
-            tag['n_rows'] = 0
+            tag['n_rows'] = transactions.contains_tag(tag['name']).size()
 
     return render_template('tags_menu.html', **locals(), **globals())
 
