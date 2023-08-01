@@ -1,22 +1,22 @@
 from mecon2 import transactions
 
 
-def transactions_stats(transactions: transactions.Transactions):
-    df = transactions.dataframe()
+def transactions_stats(trans: transactions.Transactions):
+    df = trans.dataframe()
     return {
-        '#': transactions.size(),
-        'All tags': list(transactions.all_tags()),
+        '#': trans.size(),
         'Amount': {
             'Total': df['amount'].sum(),
             'Pos': df[df['amount'] > 0]['amount'].sum(),
             'Neg': df[df['amount'] < 0]['amount'].sum(),
         },
         'Dates': {
-            'min': df['datetime'].min(),
-            'max': df['datetime'].max(),
-            '# unique': df['datetime'].nunique(),
+            'min': trans.date.min(),
+            'max': trans.date.max(),
+            '# unique': trans.date.nunique(),
         },
-        'Currencies': transactions.all_currencies()
+        'All tags': list(trans.all_tags()),
+        'Currencies': trans.all_currencies()
     }
 
 

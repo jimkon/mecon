@@ -40,22 +40,24 @@ class IdColumnMixin:
 
 class DateTimeColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
-        pass
+        self._df_wrapper_obj = df_wrapper
 
-    def datetime(self):
-        pass
+    @property
+    def datetime(self) -> pd.Series:
+        return self._df_wrapper_obj.dataframe()['datetime']
 
-    def date(self):
-        pass
+    @property
+    def date(self) -> pd.Series:
+        return self.datetime.dt.date
 
-    def time(self):
-        pass
+    @property
+    def time(self) -> pd.Series:
+        return self.datetime.dt.time
 
 
 class AmountColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
-        pass
 
     def amount(self):
         pass
