@@ -59,18 +59,20 @@ class AmountColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
 
+    @property
     def amount(self):
-        pass
+        return self._df_wrapper_obj.dataframe()['amount']
 
     @property
     def currency(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['currency']
 
-    def all_currencies(self):
-        return self._df_wrapper_obj.dataframe()['currency'].unique().tolist()
-
+    @property
     def amount_cur(self):
-        pass
+        return self._df_wrapper_obj.dataframe()['amount_cur']
+
+    def all_currencies(self):
+        return self.currency.unique().tolist()
 
 
 class DescriptionColumnMixin:
