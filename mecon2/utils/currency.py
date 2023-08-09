@@ -23,3 +23,22 @@ def currency_rate_function(curr):
     return CURRENCY_CONVERTER.curr_to_GBP(curr)
 
 
+# pip install forex-python
+#
+# from forex_python.converter import CurrencyRates
+#
+# def amount_to_gbp(amount, currency, date):
+#     # Create a CurrencyRates object to access exchange rate data
+#     c = CurrencyRates()
+#
+#     # Convert the amount to GBP using historical exchange rate data
+#     gbp_amount = c.convert(currency, 'GBP', amount, date)
+#
+#     return gbp_amount
+#
+# amount = 100  # Original amount
+# currency = 'EUR'  # Original currency (Euro)
+# date = '2023-07-15'  # Date for historical exchange rate
+#
+# converted_amount = amount_to_gbp(amount, currency, date)
+# print(f"{amount} {currency} is equivalent to {converted_amount:.2f} GBP on {date}")
