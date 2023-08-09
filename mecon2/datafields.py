@@ -54,6 +54,9 @@ class DateTimeColumnMixin:
     def time(self) -> pd.Series:
         return self.datetime.dt.time
 
+    def date_range(self):
+        return self.date.min(), self.date.max()
+
 
 class AmountColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
@@ -105,8 +108,10 @@ class TagsColumnMixin:
             tags_set.remove('')
         return tags_set
 
-    def contains_tag(self, tag_name):
-        rule = tagging.Condition.from_string_values('tags', None, 'contains', tag_name)
+    def contains_tag(self, tags):
+        tags = [tags] if isinstance(tags, str) else tags
+        tag_rules = [tagging.Condition.from_string_values('tags', None, 'contains', tag) for tag in tags]
+        rule = tagging.Conjunction(tag_rules)
         tag_contained = self._df_wrapper_obj.dataframe().apply(rule.compute, axis=1)
         new_df = self._df_wrapper_obj.dataframe()[tag_contained]
         return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
