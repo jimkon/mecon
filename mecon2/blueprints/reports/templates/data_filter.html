@@ -1,0 +1,45 @@
+{#{% block data_filter %}#}
+    <style>
+        /* CSS to display form elements horizontally */
+        form {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        label, input, select {
+            margin: 5px;
+        }
+    </style>
+    <form method="POST">
+        <!-- Custom start date input -->
+        <label for="start_date">From:</label>
+        <input type="date" id="start_date" name="start_date" value={{ start_date }}>
+
+        <!-- Custom end date input -->
+        <label for="end_date">To:</label>
+        <input type="date" id="end_date" name="end_date" value={{ end_date }}>
+
+
+        <!-- Dropdown with values: sample, day, week, month, year -->
+{#        <label for="interval">Interval:</label>#}
+{#        <select id="interval" name="interval">#}
+{#            <option value="sample">Sample</option>#}
+{#            <option value="day">Day</option>#}
+{#            <option value="week">Week</option>#}
+{#            <option value="month">Month</option>#}
+{#            <option value="year">Year</option>#}
+{#        </select>#}
+{##}
+{#        <!-- Checkbox -->#}
+{#        <label for="cumsum_checkbox">Cumsum:</label>#}
+{#        <input type="checkbox" id="cumsum_checkbox" name="cumsum_checkbox">#}
+
+        <!-- Text box -->
+        <label for="tags_text_box">Tags:</label>
+        <input type="text" id="tags_text_box" name="tags_text_box" value="{{ tags | e }}" size="40">
+
+        <!-- Submit button -->
+        <input type="submit" name="filter" value="Filter">
+    </form>
+{#{% endblock data_filter %}#}
