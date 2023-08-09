@@ -40,7 +40,7 @@ def get_filtered_transactions(tag_name):
         tags = _split_tags(tags_str).union({tag_name})
         transactions = get_transactions().contains_tag(tags)
     else:  # if request.method == 'GET':
-        tags = tag_name
+        tags = {tag_name}
         transactions = get_transactions().contains_tag(tag_name)
         start_date, end_date = transactions.date_range()
 
