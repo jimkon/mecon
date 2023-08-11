@@ -48,6 +48,7 @@ def save_and_recalculate_tags(tag_name, tag_json_str):
 def render_tag_page(title='Tag page',
                     tag_name='',
                     tag_json_str='[{}]',
+                    create_flag=False,
                     rename_flag=False,
                     rename_button_flag=False,
                     message_text='',
@@ -111,7 +112,7 @@ def tags_new():
                     else:
                         return redirect(url_for('tags.tag_edit', tag_name=tag_name))
 
-    return render_tag_page(title='Create a new tag', **locals())
+    return render_tag_page(title='Create a new tag', create_flag=True, **locals())
 
 
 @tags_bp.route('/edit/<tag_name>', methods=['POST', 'GET'])
