@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 from json2html import json2html
 import re
 
+from mecon2.blueprints.reports import graphs
 from mecon2.transactions import Transactions
 from mecon2.data.db_controller import data_access, reset_tags
 from mecon2 import reports
@@ -64,6 +65,7 @@ def tag_info(tag_name):
     data_df = transactions.dataframe()
     table_html = data_df.to_html()
     transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
+    graph_html = graphs.general_cost_stats_html_img(transactions.datetime, transactions.amount)
     return render_template('tag_info.html', **locals(), **globals())
     # return redirect(url_for('tags.tag_edit', tag_name=tag_name))  # TODO change when info page is built
 

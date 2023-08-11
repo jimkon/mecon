@@ -5,15 +5,15 @@
     <br>
     {% include "data_filter.html" %}
     <h1>Tag info: {{ tag_name }}</h1>
-{#    <div style="display: flex;">#}
-{#        <div style="flex: 1;">#}
+    <div style="display: flex;">
+        <div style="flex: 1;">
             <h2>Stats</h2>
             {{ transactions_stats_json | safe }}
-{#        </div>#}
-
-{#        <div style="flex: 2;">#}
-{#        </div>#}
-{#    </div>#}
+        </div>
+        <div style="flex: 2;">
+            {{ graph_html | safe }}
+        </div>
+    </div>
 
     {% if table_html is not none %}
         <h1>Transactions</h1>
