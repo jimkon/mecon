@@ -116,7 +116,10 @@ class TagsColumnMixin:
         new_df = self._df_wrapper_obj.dataframe()[tag_contained]
         return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
 
-
+    def reset_tags(self):
+        new_df = self._df_wrapper_obj.dataframe().copy()
+        new_df['tags'] = ''
+        return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
 
 
 
