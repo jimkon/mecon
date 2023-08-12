@@ -27,7 +27,7 @@ def get_transactions() -> Transactions:
 
 
 def recalculate_tags():
-    transactions = get_transactions()
+    transactions = get_transactions().reset_tags()
 
     for tag_dict in data_access.tags.all_tags():
         curr_tag_name, curr_tag_json = tag_dict['name'], tag_dict['conditions_json']
@@ -59,7 +59,7 @@ def render_tag_page(title='Tag page',
         tag = Tag.from_json_string(tag_name, tag_json_str)
         transactions = get_transactions().apply_rule(tag.rule)
         data_df = transactions.dataframe()
-        table_html = None if data_df is None else data_df.to_html()
+        table_html = None if data_df is None else data_df.to_html()  # TODO add also the other untagged rows
         number_of_rows = 0 if data_df is None else len(data_df)
         tag_json_str = _reformat_json_str(tag_json_str)
     except json.decoder.JSONDecodeError as json_error:
