@@ -37,11 +37,11 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
         new_df = tagger.filter_df_with_rule(df, rule)
         return Transactions(new_df)
 
-    def apply_tag(self, tag: tagging.Tag) -> Transactions:
+    def apply_negated_rule(self, rule: tagging.AbstractRule) -> Transactions:
         tagger = tagging.Tagger()
         df = self.dataframe().copy()
-        tagger.tag(tag, df)
-        return Transactions(df)
+        new_df = tagger.filter_df_with_negated_rule(df, rule)
+        return Transactions(new_df)
 
     def filter_by(self, **kwargs) -> Transactions:
         return self

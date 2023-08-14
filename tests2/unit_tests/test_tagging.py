@@ -190,8 +190,21 @@ class TestTagger(unittest.TestCase):
         tagger = tagging.Tagger()
 
         res_df = tagger.filter_df_with_rule(df, rule)
-        pd.testing.assert_frame_equal(res_df.reset_index(drop=True), pd.DataFrame({'a': [2, 4], 'b': ['2', '4']}).reset_index(drop=True))
+        expected_df = pd.DataFrame({'a': [2, 4], 'b': ['2', '4']}).reset_index(drop=True)
+        pd.testing.assert_frame_equal(res_df.reset_index(drop=True), expected_df)
 
+    def test_filter_df_with_negated_rule(self):
+        class TestRule:
+            def compute(self, x):
+                return x['a'] == 2 or x['b'] == '4'
+        rule = TestRule()
+        df = pd.DataFrame({'a': [0, 1, 2, 3, 4], 'b': ['0', '1', '2', '3', '4']})
+
+        tagger = tagging.Tagger()
+
+        res_df = tagger.filter_df_with_negated_rule(df, rule)
+        expected_df = pd.DataFrame({'a': [0, 1, 3], 'b': ['0', '1', '3']}).reset_index(drop=True)
+        pd.testing.assert_frame_equal(res_df.reset_index(drop=True), expected_df)
 
     def test_already_tagged_rows(self):
         tag_name = 'test_tag'
