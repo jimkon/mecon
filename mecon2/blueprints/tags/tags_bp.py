@@ -47,7 +47,7 @@ def save_and_recalculate_tags(tag_name, tag_json_str):
 
 def render_tag_page(title='Tag page',
                     tag_name='',
-                    tag_json_str='[{}]',
+                    tag_json_str='[{"description":{"contains":"something"}}]',
                     create_flag=False,
                     rename_flag=False,
                     rename_button_flag=False,
