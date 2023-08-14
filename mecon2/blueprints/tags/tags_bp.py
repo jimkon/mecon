@@ -59,7 +59,8 @@ def render_tag_page(title='Tag page',
         tag = Tag.from_json_string(tag_name, tag_json_str)
         transactions = get_transactions().apply_rule(tag.rule)
         data_df = transactions.dataframe()
-        table_html = None if data_df is None else data_df.to_html()  # TODO add also the other untagged rows
+        tagged_table_html = data_df.to_html()  # TODO add also the other untagged rows
+        untagged_table_html = get_transactions().apply_negated_rule(tag.rule).dataframe().to_html()
         number_of_rows = 0 if data_df is None else len(data_df)
         tag_json_str = _reformat_json_str(tag_json_str)
     except json.decoder.JSONDecodeError as json_error:

@@ -26,7 +26,7 @@ class DataframeWrapper:
         return len(self.dataframe())
 
     @classmethod
-    def dataframe_wrapper_type(cls):
+    def dataframe_wrapper_type(cls):  # TODO get rid of this
         return cls
 
 
@@ -120,6 +120,13 @@ class TagsColumnMixin:
         new_df = self._df_wrapper_obj.dataframe().copy()
         new_df['tags'] = ''
         return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
+
+    def apply_tag(self, tag: tagging.Tag) -> DataframeWrapper:
+        tagger = tagging.Tagger()
+        new_df = self._df_wrapper_obj.dataframe().copy()
+        tagger.tag(tag, new_df)
+        return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
+
 
 
 

@@ -32,9 +32,83 @@
       {% endif %}
 {#      <a href={{ url_for('main.home') }} ><button>Back</button></a></a>#}
     </form>
-    {% if table_html is not none %}
+
+{#    tabs   #}
+    <br><br>
+    <style>
+    /* Style the tab buttons */
+    .tab {
+      overflow: hidden;
+      background-color: #f1f1f1;
+    }
+
+    /* Style the tab button container */
+    .tab button {
+      background-color: inherit;
+      float: left;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 10px 20px;
+      transition: 0.3s;
+    }
+
+    /* Change background color of the active tab button */
+    .tab button.active {
+      background-color: #ccc; /* Color for the active tab */
+    }
+
+    /* Style the tab content */
+    .tabcontent {
+      display: none;
+      padding: 20px;
+    }
+    </style>
+
+
+    <div class="tab">
+      <button class="tablinks" onclick="openTab(event, 'Tab1')">Tagged</button>
+      <button class="tablinks" onclick="openTab(event, 'Tab2')">Untagged</button>
+    </div>
+
+    <div id="Tab1" class="tabcontent">
+      {% if tagged_table_html is not none %}
         <h1>Table for "{{ tag_name }}" tag ({{ number_of_rows }} rows)</h1>
-        {{ table_html|safe }}
-    {% endif %}
+        {{ tagged_table_html | safe }}
+      {% endif %}
+    </div>
+
+    <div id="Tab2" class="tabcontent">
+      {% if untagged_table_html is not none %}
+        <h1>Untagged rows</h1>
+        {{ untagged_table_html | safe }}
+      {% endif %}
+    </div>
+
+    <script>
+    function openTab(evt, tabName) {
+      var i, tabcontent, tablinks;
+
+      // Hide all tab content
+      tabcontent = document.getElementsByClassName("tabcontent");
+      for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+      }
+
+      // Remove active class from tab buttons
+      tablinks = document.getElementsByClassName("tablinks");
+      for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+      }
+
+      // Show the selected tab content and mark the button as active
+      document.getElementById(tabName).style.display = "block";
+      evt.currentTarget.className += " active";
+    }
+
+    // Open the first tab by default
+    document.getElementById("Tab1").style.display = "block";
+    </script>
+
 
 {% endblock content %}
