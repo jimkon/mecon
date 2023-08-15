@@ -6,14 +6,12 @@
       <label for="tag_name">Tag name</label>
       <input type="text" id="tag_name" name="tag_name_input" value="{{ tag_name }}" {% if not rename_flag %} disabled {% endif %}>
 
-        {% if rename_button_flag %}
-          <input type="submit" name="rename" value="Rename">
-        {% endif %}
+{#        {% if rename_button_flag %}#}
+{#          <input type="submit" name="rename" value="Rename">#}
+{#        {% endif %}#}
     <br><br>
 
-    {% if not create_flag %}
-        <a href={{ url_for('reports.tag_info', tag_name=tag_name) }}>Report</a>
-    {% endif %}
+    <a href={{ url_for('reports.tag_info', tag_name=tag_name) }}>Report</a>
 
     <br><br>
 
@@ -23,13 +21,11 @@
       <input type="submit" name="reset" value="Reset">
       <input type="submit" name="save" value="Save">
       <input type="submit" name="save_and_close" value="Save & Back">
-      {% if delete_button %}
         {% if not confirm_delete %}
         <input type="submit" name="delete" value="Delete">
           {% else %}
             <input type="submit" name="confirm_delete" value="Are you sure?!">
           {% endif %}
-      {% endif %}
 {#      <a href={{ url_for('main.home') }} ><button>Back</button></a></a>#}
     </form>
 

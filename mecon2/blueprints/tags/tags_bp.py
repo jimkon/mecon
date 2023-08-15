@@ -48,12 +48,11 @@ def save_and_recalculate_tags(tag_name, tag_json_str):
 def render_tag_page(title='Tag page',
                     tag_name='',
                     tag_json_str='[{"description":{"contains":"something"}}]',
-                    create_flag=False,
-                    rename_flag=False,
-                    rename_button_flag=False,
+                    rename_flag=False,  # TODO implement rename or remove it
+                    rename_button_flag=False,  # TODO implement rename or remove it
                     message_text='',
-                    delete_button=False,
                     confirm_delete=False):
+    # TODO maybe add different tabs on the tagged/untagged data to display them in groups (date price etc)
     try:
         # _json_from_str(tag_json_str)
         tag = Tag.from_json_string(tag_name, tag_json_str)
@@ -71,8 +70,24 @@ def render_tag_page(title='Tag page',
     return render_template('tag_page.html', **locals(), **globals())
 
 
-@tags_bp.route('/')
+@tags_bp.route('/', methods=['POST', 'GET'])
 def tags_menu():
+    if request.method == 'POST':
+        if "recalculate_tags" in request.form:
+            recalculate_tags()
+        elif "reset_tags" in request.form:
+            reset_tags()
+        elif "create_tag_button" in request.form:
+            tag_name = request.form.get('tag_name_input')
+            tag_json_str = '[{"description":{"contains":"something"}}]'
+            if len(tag_name) == 0:
+                create_tag_error = f"Tag name cannot not be empty."
+            elif data_access.tags.get_tag(tag_name) is not None:
+                create_tag_error = f"Tag '{tag_name}' already exists. Please use another name."
+            else:
+                data_access.tags.set_tag(tag_name, _json_from_str(tag_json_str))
+                return redirect(url_for('tags.tag_edit', tag_name=tag_name))
+
     try:
         all_tags = sorted(data_access.tags.all_tags(), key=lambda x: x['name'])
     except Exception as e:
@@ -85,42 +100,8 @@ def tags_menu():
     return render_template('tags_menu.html', **locals(), **globals())
 
 
-@tags_bp.route('/new', methods=['POST', 'GET'])
-def tags_new():
-    rename_flag = True
-    if request.method == 'POST':
-        if "refresh" in request.form:
-            tag_name = request.form.get('tag_name_input')
-            tag_json_str = request.form.get('query_text_input')
-            tag_json_str = _reformat_json_str(tag_json_str)
-        elif "reset" in request.form:
-            tag_json_str = None
-
-        elif "save" in request.form or "save_and_close" in request.form:
-            tag_name = request.form.get('tag_name_input')
-            tag_json_str = request.form.get('query_text_input')
-
-            if data_access.tags.get_tag(tag_name) is not None:
-                message_text = f"Tag '{tag_name}' already exists. Please use another name"
-            else:
-                try:
-                    save_and_recalculate_tags(tag_name, tag_json_str)
-                except Exception as e:
-                    message_text = f"Error: {e}"
-                else:
-                    if "save_and_close" in request.form:
-                        return redirect(url_for('tags.tags_menu'))
-                    else:
-                        return redirect(url_for('tags.tag_edit', tag_name=tag_name))
-
-    return render_tag_page(title='Create a new tag', create_flag=True, **locals())
-
-
 @tags_bp.route('/edit/<tag_name>', methods=['POST', 'GET'])
 def tag_edit(tag_name):
-    rename_flag = False
-    delete_button = True
-    # rename_button_flag = True
     if request.method == 'POST':
         if "refresh" in request.form:
             tag_json_str = request.form.get('query_text_input')
@@ -153,23 +134,5 @@ def tag_edit(tag_name):
     else:
         tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
-
-
-@tags_bp.post('/edit/<tag_name>')
-def tag_edit_post(tag_name):
-    return f'tags_edit_post {tag_name=}'
-
-
-@tags_bp.post('/reset')
-def tags_reset():
-    reset_tags()
-    return redirect(url_for('tags.tags_menu'))
-
-
-@tags_bp.post('/recalculate')
-def tags_recalculate():
-    recalculate_tags()
-    return redirect(url_for('tags.tags_menu'))
-
 
 

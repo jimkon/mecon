@@ -2,7 +2,14 @@
 
 {% block content %}
     <h1>Tags</h1>
-    <a href={{url_for('tags.tags_new')}}>Create new tag</a>
+
+    <h3>Create new tag</h3>
+    <form method="POST">
+        <label for="tag_name">Tag name</label>
+        <input type="text" id="tag_name" name="tag_name_input">
+        <input type="submit" name="create_tag_button" value="Create">
+        <i style="color:Tomato;">{{ create_tag_error }}</i>
+    </form>
 
     <h3>Existing tags</h3>
     {% if all_tags is string %}
@@ -21,12 +28,12 @@
         {% endfor %}
         </ul>
     {% endif %}
-    <form method="POST" action="/tags/recalculate" enctype="multipart/form-data">
-        <input type="submit" id="recalculate_tags" value="Recalculate tags">
+    <form method="POST">
+        <input type="submit" name="recalculate_tags" value="Recalculate tags">
     </form>
     <br>
-    <form method="POST" action="/tags/reset" enctype="multipart/form-data">
-        <input type="submit" id="reset_tags" value="Reset tags" disabled>
+    <form method="POST">
+        <input type="submit" name="reset_tags" value="Reset tags" disabled>
         <h3 style="color:Tomato;"> (WARNING: it will delete all the saved tags)</h3>
     </form>
 
