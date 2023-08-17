@@ -2,32 +2,66 @@
 
 {% block content %}
     <h1>{{ title }}</h1>
+
     <form method="POST">
-      <label for="tag_name">Tag name</label>
-      <input type="text" id="tag_name" name="tag_name_input" value="{{ tag_name }}" {% if not rename_flag %} disabled {% endif %}>
+    <div style="display: flex;">
+        <div style="flex: 1;">
+              <label for="tag_name">Tag name</label>
+              <input type="text" id="tag_name" name="tag_name_input" value="{{ tag_name }}" {% if not rename_flag %} disabled {% endif %}>
 
-{#        {% if rename_button_flag %}#}
-{#          <input type="submit" name="rename" value="Rename">#}
-{#        {% endif %}#}
-    <br><br>
+        {#        {% if rename_button_flag %}#}
+        {#          <input type="submit" name="rename" value="Rename">#}
+        {#        {% endif %}#}
+            <br><br>
 
-    <a href={{ url_for('reports.tag_info', tag_name=tag_name) }}>Report</a>
+            <a href={{ url_for('reports.tag_info', tag_name=tag_name) }}>Report</a>
 
-    <br><br>
+            <br><br>
 
-        <label for="query_text">Tag JSON</label> <i style="color:Tomato;">{{ message_text }}</i> <br>
-      <textarea id="query_text" name="query_text_input" rows="10" cols="150">{{ tag_json_str }}</textarea><br><br>
-      <input type="submit" name="refresh" value="Refresh">
-      <input type="submit" name="reset" value="Reset">
-      <input type="submit" name="save" value="Save">
-      <input type="submit" name="save_and_close" value="Save & Back">
-        {% if not confirm_delete %}
-        <input type="submit" name="delete" value="Delete">
-          {% else %}
-            <input type="submit" name="confirm_delete" value="Are you sure?!">
-          {% endif %}
-{#      <a href={{ url_for('main.home') }} ><button>Back</button></a></a>#}
+                <label for="query_text">Tag JSON</label> <i style="color:Tomato;">{{ message_text }}</i> <br>
+              <textarea id="query_text" name="query_text_input" rows="10" cols="100">{{ tag_json_str }}</textarea><br><br>
+              <input type="submit" name="refresh" value="Refresh">
+              <input type="submit" name="reset" value="Reset">
+              <input type="submit" name="save" value="Save">
+              <input type="submit" name="save_and_close" value="Save & Back">
+                {% if not confirm_delete %}
+                <input type="submit" name="delete" value="Delete">
+                  {% else %}
+                    <input type="submit" name="confirm_delete" value="Are you sure?!">
+                  {% endif %}
+        {#      <a href={{ url_for('main.home') }} ><button>Back</button></a></a>#}
+        </div>
+        <div style="flex: 2; margin-left: 100px; margin-top: 120px;">
+              <!-- Input text field -->
+              <label for="field">Field:</label>
+              <input type="text" id="field" name="field" value="description" size="30"><br><br>
+
+              <!-- Dropdown menu for 'transform' -->
+              <label for="transform">Transform:</label>
+              <select id="transform" name="transform">
+                  {% for t in transformations_list %}
+                      <option value="{{ t }}" {% if t == "none" %} selected {% endif %}>{{ t }}</option>
+                  {% endfor %}
+              </select><br><br>
+
+              <!-- Dropdown menu for 'comparison' -->
+              <label for="comparison">Comparison:</label>
+              <select id="comparison" name="comparison">
+                  {% for c in comparisons_list %}
+                      <option value="{{ c }}" {% if c == "contains" %} selected {% endif %}>{{ c }}</option>
+                  {% endfor %}
+              </select><br><br>
+
+              <!-- Input text box -->
+              <label for="value">Value:</label>
+              <input type="text" id="value" name="value" size="30"><br><br>
+
+              <!-- Submit button -->
+              <input type="submit" name="add_condition" value="Add">
+        </div>
+    </div>
     </form>
+
 
 {#    tabs   #}
     <br><br>

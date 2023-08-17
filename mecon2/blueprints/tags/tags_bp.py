@@ -2,6 +2,8 @@ import json
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
+import tagging
+from mecon2 import comparisons, transformations
 from mecon2.data.db_controller import data_access, reset_tags
 from mecon2.tagging import Tag
 from mecon2.transactions import Transactions
@@ -62,6 +64,8 @@ def render_tag_page(title='Tag page',
         untagged_table_html = get_transactions().apply_negated_rule(tag.rule).dataframe().to_html()
         number_of_rows = 0 if data_df is None else len(data_df)
         tag_json_str = _reformat_json_str(tag_json_str)
+        transformations_list = [trans.name for trans in transformations.TransformationFunction.all_transformations()]
+        comparisons_list = [comp.name for comp in comparisons.CompareOperator.all_comparisons()]
     except json.decoder.JSONDecodeError as json_error:
         message_text = f"JSON Syntax error: {json_error}"
     except Exception as e:
@@ -121,7 +125,6 @@ def tag_edit(tag_name):
                     return redirect(url_for('tags.tags_menu'))
                 else:
                     return redirect(url_for('tags.tag_edit', tag_name=tag_name))
-
         elif "delete" in request.form:
             confirm_delete = True
             tag_json_str = request.form.get('query_text_input')
@@ -130,7 +133,19 @@ def tag_edit(tag_name):
         elif "confirm_delete" in request.form:
             data_access.tags.delete_tag(tag_name)
             return redirect(url_for('tags.tags_menu'))
+        elif "add_condition" in request.form:
+            disjunction = tagging.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
 
+            condition = tagging.Condition.from_string_values(
+                field=request.form['field'],
+                transformation_op_key=request.form['transform'],
+                compare_op_key=request.form['comparison'],
+                value=request.form['value'],
+            )
+
+            new_tag_json = disjunction.append(condition).to_json()
+            tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
+            del condition, disjunction, new_tag_json  # otherwise **locals() will break render_tag_page
     else:
         tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
