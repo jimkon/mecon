@@ -125,7 +125,7 @@ class Disjunction(AbstractRule):
     def compute(self, element):
         return any([rule.compute(element) for rule in self._rules])
 
-    def to_dict(self):
+    def to_json(self):
         return [rule.to_dict() for rule in self._rules]
 
     @staticmethod

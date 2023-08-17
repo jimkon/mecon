@@ -203,7 +203,7 @@ class TestDisjunction(unittest.TestCase):
             tagging.Conjunction([cond2, cond3]),
             cond4
         ])
-        result_dict = disjunction.to_dict()
+        result_dict = disjunction.to_json()
         self.assertListEqual(result_dict, [
             {
                 "field1.str": {"greater": "1"}
