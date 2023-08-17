@@ -15,7 +15,7 @@ class NotACallableException(Exception):
     pass
 
 
-class NotAnRuleException(Exception):
+class NotARuleException(Exception):
     pass
 
 
@@ -71,7 +71,7 @@ class Conjunction(AbstractRule):
     def __init__(self, rule_list):
         for rule in rule_list:
             if not issubclass(rule.__class__, AbstractRule):
-                raise NotAnRuleException
+                raise NotARuleException
         self._rules = rule_list
 
     def compute(self, element):
@@ -119,7 +119,7 @@ class Disjunction(AbstractRule):
     def __init__(self, rule_list):
         for rule in rule_list:
             if not issubclass(rule.__class__, AbstractRule):
-                raise NotAnRuleException
+                raise NotARuleException
         self._rules = rule_list
 
     def compute(self, element):
@@ -127,6 +127,11 @@ class Disjunction(AbstractRule):
 
     def to_json(self):
         return [rule.to_dict() for rule in self._rules]
+
+    def append(self, rule):
+        new_rule_list = self._rules.copy()
+        new_rule_list.insert(0, rule)
+        return Disjunction(new_rule_list)
 
     @staticmethod
     def from_json(_json):

@@ -80,7 +80,7 @@ class ConjunctionTestCase(unittest.TestCase):
         self.assertTrue(True)
 
     def test_init_validation_fail(self):
-        with self.assertRaises(tagging.NotAnRuleException):
+        with self.assertRaises(tagging.NotARuleException):
             tagging.Conjunction([
                 tagging.Condition(
                     field='field',
@@ -133,7 +133,7 @@ class DisjunctionTestCase(unittest.TestCase):
         self.assertTrue(True)
 
     def test_init_validation_fail(self):
-        with self.assertRaises(tagging.NotAnRuleException):
+        with self.assertRaises(tagging.NotARuleException):
             tagging.Disjunction([
                 tagging.Condition(
                     field='field',

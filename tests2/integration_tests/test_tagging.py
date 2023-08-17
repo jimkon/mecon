@@ -216,6 +216,34 @@ class TestDisjunction(unittest.TestCase):
             }
         ])
 
+    def test_append(self):
+        cond1 = tagging.Condition.from_string_values(
+            field='field1',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='1'
+        )
+        cond2 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key=None,
+            compare_op_key='less',
+            value='4'
+        )
+        disjunction = tagging.Disjunction([
+            cond1
+        ]).append(cond2)
+        result_dict = disjunction.to_json()
+        self.assertListEqual(result_dict, [
+            {
+                "field2": {"less": "4"},
+            },
+            {
+                "field1.str": {"greater": "1"}
+            }
+        ])
+
+
+
 
 class TestTagging(unittest.TestCase):
     def test_tagger_in_dfs(self):
