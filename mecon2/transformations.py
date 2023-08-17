@@ -32,14 +32,18 @@ class TransformationFunction:
     def validate(self):
         pass
 
+    def __repr__(self):
+        return f"TransformationFunction({self.name})"
+
     @classmethod
     def from_key(cls, key):
         if key not in cls._instances:
             raise TransformationFunctionDoesNotExistError(f"Transformation function '{key=}' does not exist.")
         return cls._instances[key]
 
-    def __repr__(self):
-        return f"TransformationFunction({self.name})"
+    @classmethod
+    def all_transformations(cls):
+        return cls._instances.values()
 
 
 NO_TRANSFORMATION = TransformationFunction('none', None)

@@ -32,15 +32,18 @@ class CompareOperator:
     def validate(self):
         pass
 
+    def __repr__(self):
+        return f"CompareOp({self.name})"
+
     @classmethod
     def from_key(cls, key):
         if key not in cls._instances:
             raise ComparisonFunctionDoesNotExistError
         return cls._instances[key]
 
-    def __repr__(self):
-        return f"CompareOp({self.name})"
-
+    @classmethod
+    def all_comparisons(cls):
+        return cls._instances.values()
 
 
 GREATER = CompareOperator('greater', lambda a, b: a > b)

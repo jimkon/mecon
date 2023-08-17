@@ -33,7 +33,7 @@ class Condition(AbstractRule):
 
         if transformation_op is not None and not hasattr(transformation_op, '__call__'):
             raise NotACallableException('Transformation operator has to be a callable object.')
-        self._transformation_op = transformation_op if transformation_op is not None else lambda x: x
+        self._transformation_op = transformation_op if transformation_op is not None else transformations.NO_TRANSFORMATION
 
         if not hasattr(compare_op, '__call__'):
             raise NotACallableException('Compare operator has to be a callable object.')
@@ -43,6 +43,19 @@ class Condition(AbstractRule):
 
     def compute(self, element):
         return self._compare_op(self._transformation_op(element[self._field]), self._value)
+
+    def to_dict(self):
+        if not hasattr(self._transformation_op, 'name') or not hasattr(self._compare_op, 'name'):
+            raise NotImplementedError(f"Condition.to_dict only works with transformations.TransformationFunction"
+                                      f" and comparisons.CompareOperator objects for now."
+                                      f"Got these instead: {self._transformation_op=}, {self._compare_op=}")
+
+        if hasattr(self._transformation_op, 'name') and self._transformation_op.name is not 'none':
+            field_and_transformations_key = f"{self._field}.{self._transformation_op.name}"
+        else:
+            field_and_transformations_key = self._field
+        comparison_key = f"{self._compare_op.name}"
+        return {field_and_transformations_key: {comparison_key: self._value}}
 
     @staticmethod
     def from_string_values(field, transformation_op_key, compare_op_key, value):
@@ -63,6 +76,29 @@ class Conjunction(AbstractRule):
 
     def compute(self, element):
         return all([rule.compute(element) for rule in self._rules])
+
+    def to_dict(self):
+        dicts_list = [rule.to_dict() for rule in self._rules]
+        merged_dict = {}
+
+        for d in dicts_list:
+            for key, value in d.items():
+                if key in merged_dict:
+                    for merge_key, merge_value in value.items():
+                        if isinstance(merged_dict[key].get(merge_key), list):
+                            if isinstance(merge_value, list):
+                                merged_dict[key][merge_key].extend(merge_value)
+                            else:
+                                merged_dict[key][merge_key].append(merge_value)
+                        else:
+                            if isinstance(merge_value, list):
+                                merged_dict[key][merge_key] = [merged_dict[key][merge_key]] + merge_value
+                            else:
+                                merged_dict[key][merge_key] = [merged_dict[key][merge_key], merge_value]
+                else:
+                    merged_dict[key] = value
+
+        return merged_dict
 
     @staticmethod
     def from_dict(_dict):
@@ -88,6 +124,9 @@ class Disjunction(AbstractRule):
 
     def compute(self, element):
         return any([rule.compute(element) for rule in self._rules])
+
+    def to_dict(self):
+        return [rule.to_dict() for rule in self._rules]
 
     @staticmethod
     def from_json(_json):

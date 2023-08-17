@@ -22,6 +22,35 @@ class TestCondition(unittest.TestCase):
         self.assertEqual(condition.compute({'field': '1'}), False)
         self.assertEqual(condition.compute({'field': 2}), True)
 
+    def test_to_dict(self):
+        dict1 = tagging.Condition.from_string_values(
+            field='field',
+            transformation_op_key=None,
+            compare_op_key='greater',
+            value='1'
+        ).to_dict()
+        self.assertDictEqual(dict1, {
+            "field": {"greater": "1"}
+        })
+
+        dict1 = tagging.Condition.from_string_values(
+            field='field',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='1'
+        ).to_dict()
+        self.assertDictEqual(dict1, {
+            "field.str": {"greater": "1"}
+        })
+
+        with self.assertRaises(NotImplementedError):
+            tagging.Condition(
+                field='field',
+                transformation_op=lambda x: x,
+                compare_op=lambda x: x,
+                value='1'
+            ).to_dict()
+
 
 class TestConjunction(unittest.TestCase):
     def test_init_conjunction_from_dict(self):
@@ -69,6 +98,40 @@ class TestConjunction(unittest.TestCase):
         self.assertEqual(conjunction.compute({'col1': 100, 'col2': 20}), False)
         self.assertEqual(conjunction.compute({'col1': 90, 'col2': 19}), False)
 
+    def test_to_dict(self):
+        cond1 = tagging.Condition.from_string_values(
+            field='field1',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='1'
+        )
+        cond2 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='2'
+        )
+        cond3 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='3'
+        )
+        cond4 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key=None,
+            compare_op_key='less',
+            value='4'
+        )
+        conjunction = tagging.Conjunction([cond1, cond2, cond3, cond4])
+        result_dict = conjunction.to_dict()
+        self.assertDictEqual(result_dict,
+                             {
+                                 "field1.str": {"greater": "1"},
+                                 "field2.str": {"greater": ["2", "3"]},
+                                 "field2": {"less": "4"},
+                             })
+
 
 class TestDisjunction(unittest.TestCase):
     def test_init_disjunction_from_json(self):
@@ -109,6 +172,49 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(disjunction.compute({'col1': 0}), False)
         self.assertEqual(disjunction.compute({'col1': 1}), False)
         self.assertEqual(disjunction.compute({'col1': 2}), True)
+
+    def test_to_dict(self):
+        cond1 = tagging.Condition.from_string_values(
+            field='field1',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='1'
+        )
+        cond2 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='2'
+        )
+        cond3 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key="str",
+            compare_op_key='greater',
+            value='3'
+        )
+        cond4 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key=None,
+            compare_op_key='less',
+            value='4'
+        )
+        disjunction = tagging.Disjunction([
+            cond1,
+            tagging.Conjunction([cond2, cond3]),
+            cond4
+        ])
+        result_dict = disjunction.to_dict()
+        self.assertListEqual(result_dict, [
+            {
+                "field1.str": {"greater": "1"}
+            },
+            {
+                "field2.str": {"greater": ["2", "3"]}
+            },
+            {
+                "field2": {"less": "4"},
+            }
+        ])
 
 
 class TestTagging(unittest.TestCase):
