@@ -243,8 +243,6 @@ class TestDisjunction(unittest.TestCase):
         ])
 
 
-
-
 class TestTagging(unittest.TestCase):
     def test_tagger_in_dfs(self):
         test_json = [
