@@ -4,6 +4,8 @@ import pandas as pd
 
 from mecon2 import datafields
 
+# TODO merge with test_dataframe_wrappers maybe
+
 
 class ExampleDataframeWrapper(datafields.DataframeWrapper,
                               datafields.IdColumnMixin,

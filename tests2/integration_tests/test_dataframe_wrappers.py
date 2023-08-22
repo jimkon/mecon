@@ -1,0 +1,47 @@
+import unittest
+
+import pandas as pd
+
+from mecon2.datafields import DataframeWrapper
+
+
+class TestDataframeWrapper(unittest.TestCase):
+    def setUp(self):
+        data = {'A': [1, 2, 3],
+                'B': [4, 5, 6]}
+        self.df = pd.DataFrame(data)
+        self.wrapper = DataframeWrapper(self.df)
+
+    def test_dataframe(self):
+        self.assertEqual(self.wrapper.dataframe().equals(self.df), True)
+
+    def test_copy(self):
+        copy_wrapper = self.wrapper.copy()
+        self.assertIsNot(copy_wrapper, self.wrapper)
+        self.assertTrue(copy_wrapper.dataframe().equals(self.df))
+
+    def test_merge(self):
+        data2 = {'A': [3, 4],
+                 'B': [6, 7]}
+        df2 = pd.DataFrame(data2)
+        df2_wrapper = DataframeWrapper(df2)
+        merged_wrapper = self.wrapper.merge(df2_wrapper)
+        expected_data = {'A': [1, 2, 3, 4],
+                         'B': [4, 5, 6, 7]}
+        expected_df = pd.DataFrame(expected_data).reset_index(drop=True)
+        pd.testing.assert_frame_equal(merged_wrapper.dataframe().reset_index(drop=True), expected_df)
+
+    def test_size(self):
+        self.assertEqual(self.wrapper.size(), len(self.df))
+
+    def test_select_by_index(self):
+        index = [True, False, True]
+        selected_wrapper = self.wrapper.select_by_index(index)
+        expected_data = {'A': [1, 3],
+                         'B': [4, 6]}
+        expected_df = pd.DataFrame(expected_data)
+        pd.testing.assert_frame_equal(selected_wrapper.dataframe().reset_index(drop=True), expected_df)
+
+
+if __name__ == '__main__':
+    unittest.main()
