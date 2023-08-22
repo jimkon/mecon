@@ -1,7 +1,4 @@
 import matplotlib.pyplot as plt
-# TODO
-# https://stackoverflow.com/questions/52598031/display-mpld3-graph-offline
-# https://mpld3.github.io/faq.html#javascript
 import mpld3
 
 # plt.style.use('bmh')
