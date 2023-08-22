@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+# TODO
+# https://stackoverflow.com/questions/52598031/display-mpld3-graph-offline
+# https://mpld3.github.io/faq.html#javascript
 import mpld3
 
 # plt.style.use('bmh')
@@ -24,5 +27,5 @@ def general_cost_stats_html_img(x, y):
 
     fig.tight_layout()
     # Convert the figure to an HTML-encoded image using mpld3
-    html_image = mpld3.fig_to_html(fig)
+    html_image = mpld3.fig_to_html(fig)# , d3_url="https://mpld3.github.io/js/mpld3.v0.2.js", mpld3_url="https://mpld3.github.io/js/mpld3.v0.2.js")
     return html_image
