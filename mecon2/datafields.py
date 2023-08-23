@@ -2,6 +2,7 @@ from __future__ import annotations  # TODO upgrade to python 3.11
 
 import abc
 from itertools import chain
+from typing import List
 
 import pandas as pd
 
@@ -16,18 +17,25 @@ class DataframeWrapper:
         return self._df
 
     def copy(self) -> DataframeWrapper:
-        return DataframeWrapper(self.dataframe())
+        return self.factory(self.dataframe())
 
     def merge(self, df_wrapper) -> DataframeWrapper:
         df = pd.concat([self.dataframe(), df_wrapper.dataframe()]).drop_duplicates()
-        return DataframeWrapper(df)
+        return self.factory(df)
 
     def size(self):
         return len(self.dataframe())
 
     @classmethod
-    def dataframe_wrapper_type(cls):  # TODO get rid of this
-        return cls
+    def factory(cls, df: pd.DataFrame):
+        return cls(df)
+
+    def select_by_index(self, index: List[bool] | pd.Series):
+        return self.factory(self.dataframe()[index])
+
+    def groupagg(self, grouper, aggregator):
+        # TODO move this to the df wrapper
+        pass
 
 
 class IdColumnMixin:
@@ -114,19 +122,51 @@ class TagsColumnMixin:
         rule = tagging.Conjunction(tag_rules)
         tag_contained = self._df_wrapper_obj.dataframe().apply(rule.compute, axis=1)
         new_df = self._df_wrapper_obj.dataframe()[tag_contained]
-        return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
+        return self._df_wrapper_obj.factory(new_df)
 
     def reset_tags(self):
         new_df = self._df_wrapper_obj.dataframe().copy()
         new_df['tags'] = ''
-        return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
+        return self._df_wrapper_obj.factory(new_df)
 
     def apply_tag(self, tag: tagging.Tag) -> DataframeWrapper:
         tagger = tagging.Tagger()
         new_df = self._df_wrapper_obj.dataframe().copy()
         tagger.tag(tag, new_df)
-        return self._df_wrapper_obj.dataframe_wrapper_type()(new_df)
+        return self._df_wrapper_obj.factory(new_df)
 
+
+class Grouper(abc.ABC):  # TODO rename to grouping(??)
+    def group(self, df_wrapper: DataframeWrapper) -> List[DataframeWrapper]:
+        indexes = self.compute_group_indexes(df_wrapper)
+
+        df_wrapper_list = []
+        for index_group in indexes:
+            sub_df_wrapper = df_wrapper.select_by_index(index_group)
+            df_wrapper_list.append(sub_df_wrapper)
+
+        return df_wrapper_list
+
+    @abc.abstractmethod
+    def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
+        pass
+
+
+class Aggregator(abc.ABC):
+    def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
+        df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
+
+        res_df_wrapper = df_wrappers_list[0]
+
+        if len(df_wrappers_list) > 1:
+            for df_wrapper in lists_of_df_wrapper[1:]:
+                res_df_wrapper = res_df_wrapper.merge(df_wrapper)
+
+        return res_df_wrapper
+
+    @abc.abstractmethod
+    def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
+        pass
 
 
 

@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from mecon2.datafields import DataframeWrapper
+from mecon2.datafields import DataframeWrapper, Grouper, Aggregator
 
 
 class TestDataframeWrapper(unittest.TestCase):
@@ -41,6 +41,46 @@ class TestDataframeWrapper(unittest.TestCase):
                          'B': [4, 6]}
         expected_df = pd.DataFrame(expected_data)
         pd.testing.assert_frame_equal(selected_wrapper.dataframe().reset_index(drop=True), expected_df)
+
+
+class TestGrouper(unittest.TestCase):
+    def test_group(self):
+        class CustomGrouper(Grouper):
+
+            def compute_group_indexes(self, df_wrapper: DataframeWrapper):
+                return [pd.Series([False, True, False, True, False]), pd.Series([True, False, True, False, True])]
+
+        data = {'A': [1, 2, 3, 4, 5],
+                'B': [6, 7, 8, 9, 10]}
+        df = pd.DataFrame(data)
+        wrapper = DataframeWrapper(df)
+        grouper = CustomGrouper()
+
+        grouped_wrappers = grouper.group(wrapper)
+
+        self.assertEqual(len(grouped_wrappers), 2)
+        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True), pd.DataFrame({'A': [2, 4],
+                                                                                     'B': [7, 9]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True), pd.DataFrame({'A': [1, 3, 5],
+                                                                                     'B': [6, 8, 10]}))
+
+
+class TestAggregator(unittest.TestCase):
+    def test_group(self):
+        class CustomAggregator(Aggregator):
+            def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
+                return df_wrapper
+
+        df_wrapper1 = DataframeWrapper(pd.DataFrame({'A': [2, 4], 'B': [7, 9]}))
+        df_wrapper2 = DataframeWrapper(pd.DataFrame({'A': [1, 3, 5], 'B': [6, 8, 10]}))
+
+        aggregator = CustomAggregator()
+
+        result_df_wrapper = aggregator.aggregate([df_wrapper1, df_wrapper2])
+
+        self.assertEqual(result_df_wrapper.size(), df_wrapper1.size()+df_wrapper2.size())
+        pd.testing.assert_frame_equal(result_df_wrapper.dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [2, 4, 1, 3, 5], 'B': [7, 9, 6, 8, 10]}))
 
 
 if __name__ == '__main__':
