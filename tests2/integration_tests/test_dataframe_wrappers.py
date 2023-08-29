@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from mecon2.datafields import DataframeWrapper, Grouper, Aggregator
+from mecon2.datafields import DataframeWrapper, Grouping, Aggregator, LabelGrouping
 
 
 class TestDataframeWrapper(unittest.TestCase):
@@ -43,9 +43,9 @@ class TestDataframeWrapper(unittest.TestCase):
         pd.testing.assert_frame_equal(selected_wrapper.dataframe().reset_index(drop=True), expected_df)
 
 
-class TestGrouper(unittest.TestCase):
+class TestGrouping(unittest.TestCase):
     def test_group(self):
-        class CustomGrouper(Grouper):
+        class CustomGrouping(Grouping):
 
             def compute_group_indexes(self, df_wrapper: DataframeWrapper):
                 return [pd.Series([False, True, False, True, False]), pd.Series([True, False, True, False, True])]
@@ -54,15 +54,43 @@ class TestGrouper(unittest.TestCase):
                 'B': [6, 7, 8, 9, 10]}
         df = pd.DataFrame(data)
         wrapper = DataframeWrapper(df)
-        grouper = CustomGrouper()
+        grouper = CustomGrouping()
 
         grouped_wrappers = grouper.group(wrapper)
 
         self.assertEqual(len(grouped_wrappers), 2)
         pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True), pd.DataFrame({'A': [2, 4],
-                                                                                     'B': [7, 9]}))
-        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True), pd.DataFrame({'A': [1, 3, 5],
-                                                                                     'B': [6, 8, 10]}))
+                                                                                                            'B': [7,
+                                                                                                                  9]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [1, 3, 5],
+                                                    'B': [6, 8, 10]}))
+
+
+class TestLabelGrouping(unittest.TestCase):
+    def test_group(self):
+        class CustomGrouping(LabelGrouping):
+            def labels(self, df_wrapper: DataframeWrapper):
+                return pd.Series(['a', 'b', 'b', 'c', 'b'])
+
+        data = {'A': [1, 2, 3, 4, 5],
+                'B': [6, 7, 8, 9, 10]}
+        df = pd.DataFrame(data)
+        wrapper = DataframeWrapper(df)
+        grouper = CustomGrouping()
+
+        grouped_wrappers = grouper.group(wrapper)
+
+        self.assertEqual(len(grouped_wrappers), 3)
+        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [1],
+                                                    'B': [6]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [2, 3, 5],
+                                                    'B': [7, 8, 10]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [4],
+                                                    'B': [9]}))
 
 
 class TestAggregator(unittest.TestCase):
@@ -78,7 +106,7 @@ class TestAggregator(unittest.TestCase):
 
         result_df_wrapper = aggregator.aggregate([df_wrapper1, df_wrapper2])
 
-        self.assertEqual(result_df_wrapper.size(), df_wrapper1.size()+df_wrapper2.size())
+        self.assertEqual(result_df_wrapper.size(), df_wrapper1.size() + df_wrapper2.size())
         pd.testing.assert_frame_equal(result_df_wrapper.dataframe().reset_index(drop=True),
                                       pd.DataFrame({'A': [2, 4, 1, 3, 5], 'B': [7, 9, 6, 8, 10]}))
 

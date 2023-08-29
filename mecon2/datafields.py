@@ -137,7 +137,7 @@ class TagsColumnMixin:
         return self._df_wrapper_obj.factory(new_df)
 
 
-class Grouper(abc.ABC):  # TODO rename to grouping(??)
+class Grouping(abc.ABC):  # TODO rename to grouping(??)
     def group(self, df_wrapper: DataframeWrapper) -> List[DataframeWrapper]:
         indexes = self.compute_group_indexes(df_wrapper)
 
@@ -150,6 +150,23 @@ class Grouper(abc.ABC):  # TODO rename to grouping(??)
 
     @abc.abstractmethod
     def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
+        pass
+
+
+class LabelGrouping(Grouping, abc.ABC):
+    def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
+        labels = self.labels(df_wrapper)
+        unique_labels = labels.unique()
+
+        indexes = []
+        for label in unique_labels:
+            index = labels == label
+            indexes.append(index)
+
+        return indexes
+
+    @abc.abstractmethod
+    def labels(self, df_wrapper: DataframeWrapper) -> pd.Series:
         pass
 
 
@@ -168,6 +185,3 @@ class Aggregator(abc.ABC):
     @abc.abstractmethod
     def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
         pass
-
-
-
