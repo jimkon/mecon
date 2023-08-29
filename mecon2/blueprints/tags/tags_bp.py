@@ -23,7 +23,8 @@ def _reformat_json_str(json_str):
 
 
 def get_transactions() -> Transactions:
-    data_df = data_access.transactions.get_transactions().sort_values(by='datetime', ascending=False).reset_index(drop=True)
+    data_df = data_access.transactions.get_transactions().sort_values(by='datetime', ascending=False).reset_index(
+        drop=True)
     transactions = Transactions(data_df)
     return transactions
 
@@ -61,15 +62,18 @@ def render_tag_page(title='Tag page',
         transactions = get_transactions().apply_rule(tag.rule)
         data_df = transactions.dataframe()
         tagged_table_html = data_df.to_html()  # TODO add also the other untagged rows
-        untagged_table_html = get_transactions().apply_negated_rule(tag.rule).dataframe().to_html()
+        untagged_transactions = get_transactions().apply_negated_rule(tag.rule)
+        untagged_table_html = untagged_transactions.dataframe().to_html()
         number_of_rows = 0 if data_df is None else len(data_df)
         tag_json_str = _reformat_json_str(tag_json_str)
         transformations_list = [trans.name for trans in transformations.TransformationFunction.all_transformations()]
         comparisons_list = [comp.name for comp in comparisons.CompareOperator.all_comparisons()]
+
+        # del untagged_transactions
     except json.decoder.JSONDecodeError as json_error:
         message_text = f"JSON Syntax error: {json_error}"
-    except Exception as e:
-        message_text = f"General exception: {e}"
+    # except Exception as e:
+    #     message_text = f"General exception: {e}"
 
     return render_template('tag_page.html', **locals(), **globals())
 
@@ -146,8 +150,35 @@ def tag_edit(tag_name):
             new_tag_json = disjunction.append(condition).to_json()
             tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
             del condition, disjunction, new_tag_json  # otherwise **locals() will break render_tag_page
+        elif "add_id" in request.form:
+            id = int(request.form['input_id'])
+
+            disjunction = tagging.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
+
+            condition = tagging.Condition.from_string_values(
+                field='id',
+                transformation_op_key="none",
+                compare_op_key="equal",
+                value=id,
+            )
+            rows = get_transactions().apply_rule(condition).dataframe().to_dict('records')
+            if len(rows) > 1:
+                message_text = f"More than one ({len(rows)}) have the same id ({id})"
+                tag_json_str = request.form.get('query_text_input')
+            else:
+                row = rows[0]
+
+                conj = tagging.Conjunction([
+                    tagging.Condition.from_string_values('datetime', 'str', 'equal', str(row['datetime'])),
+                    tagging.Condition.from_string_values('amount', 'none', 'equal', row['amount']),
+                    tagging.Condition.from_string_values('currency', 'str', 'equal', row['currency']),
+                    tagging.Condition.from_string_values('description', 'none', 'equal', row['description']),
+                    # tagging.Condition.from_string_values(field, 'none', 'equal', value) for field, value in row.items()
+                ])
+                new_tag_json = disjunction.append(conj).to_json()
+                tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
+                del condition, disjunction, new_tag_json, id, rows, row, conj  # otherwise **locals() will break render_tag_page
+
     else:
         tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
-
-

@@ -4,140 +4,253 @@
     <h1>{{ title }}</h1>
 
     <form method="POST">
-    <div style="display: flex;">
-        <div style="flex: 1;">
-              <label for="tag_name">Tag name</label>
-              <input type="text" id="tag_name" name="tag_name_input" value="{{ tag_name }}" {% if not rename_flag %} disabled {% endif %}>
+        <div style="display: flex;">
+            <div style="flex: 1;">
+                <label for="tag_name">Tag name</label>
+                <input type="text" id="tag_name" name="tag_name_input" value="{{ tag_name }}" {% if not rename_flag %}
+                       disabled {% endif %}>
 
-        {#        {% if rename_button_flag %}#}
-        {#          <input type="submit" name="rename" value="Rename">#}
-        {#        {% endif %}#}
-            <br><br>
+                {#        {% if rename_button_flag %}#}
+                {#          <input type="submit" name="rename" value="Rename">#}
+                {#        {% endif %}#}
+                <br><br>
 
-            <a href={{ url_for('reports.tag_info', tag_name=tag_name) }}>Report</a>
+                <a href={{ url_for('reports.tag_info', tag_name=tag_name) }}>Report</a>
 
-            <br><br>
-
+                <br><br>
+                <h2>Query</h2>
                 <label for="query_text">Tag JSON</label> <i style="color:Tomato;">{{ message_text }}</i> <br>
-              <textarea id="query_text" name="query_text_input" rows="10" cols="100">{{ tag_json_str }}</textarea><br><br>
-              <input type="submit" name="refresh" value="Refresh">
-              <input type="submit" name="reset" value="Reset">
-              <input type="submit" name="save" value="Save">
-              <input type="submit" name="save_and_close" value="Save & Back">
+                <textarea id="query_text" name="query_text_input" rows="10" cols="100">{{ tag_json_str }}</textarea><br><br>
+                <input type="submit" name="refresh" value="Refresh">
+                <input type="submit" name="reset" value="Reset">
+                <input type="submit" name="save" value="Save">
+                <input type="submit" name="save_and_close" value="Save & Back">
                 {% if not confirm_delete %}
-                <input type="submit" name="delete" value="Delete">
-                  {% else %}
+                    <input type="submit" name="delete" value="Delete">
+                {% else %}
                     <input type="submit" name="confirm_delete" value="Are you sure?!">
-                  {% endif %}
-        {#      <a href={{ url_for('main.home') }} ><button>Back</button></a></a>#}
+                {% endif %}
+                {#      <a href={{ url_for('main.home') }} ><button>Back</button></a></a>#}
+            </div>
+            <div style="flex: 2; margin-left: 80px; margin-top: 100px;">
+                <h2>Add Rule</h2>
+                <!-- Input text field -->
+                <label for="field">Field:</label>
+                <input type="text" id="field" name="field" value="description" size="30"><br><br>
+
+                <!-- Dropdown menu for 'transform' -->
+                <label for="transform">Transform:</label>
+                <select id="transform" name="transform">
+                    {% for t in transformations_list %}
+                        <option value="{{ t }}" {% if t == "none" %} selected {% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select><br><br>
+
+                <!-- Dropdown menu for 'comparison' -->
+                <label for="comparison">Comparison:</label>
+                <select id="comparison" name="comparison">
+                    {% for c in comparisons_list %}
+                        <option value="{{ c }}" {% if c == "contains" %} selected {% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select><br><br>
+
+                <!-- Input text box -->
+                <label for="value">Value:</label>
+                <input type="text" id="value" name="value" size="30"><br><br>
+
+                <!-- Submit button -->
+                <input type="submit" name="add_condition" value="Add">
+            </div>
+            <div style="flex: 3; margin-left: 80px; margin-top: 100px;">
+                <h2>Add from Id</h2>
+                <style>
+                    /* Add some basic styling for better appearance */
+                    body {
+                        font-family: Arial, sans-serif;
+                    }
+
+                    #container {
+                    {#width: 300px;#} margin: 0 auto;
+                    {#padding: 20px;#}{#border: 1px solid #ccc;#} border: none;
+                        outline: none;
+                    }
+
+                    .custom-dropdown {
+                        position: relative;
+                        display: inline-block;
+                        width: 100%;
+                    }
+
+                    .custom-dropdown-input {
+                        width: 70%;
+                        padding: 5px;
+                    }
+
+                    .custom-dropdown-list {
+                        position: absolute;
+                        top: 100%;
+                        left: 0;
+                        width: 100%;
+                        border: 1px solid #ccc;
+                        background-color: white;
+                        display: none;
+                        max-height: 150px; /* Set the maximum height for the dropdown */
+                        overflow-y: auto; /* Add a scrollbar when necessary */
+                    }
+
+                    .custom-dropdown-list-item {
+                        padding: 5px;
+                        cursor: pointer;
+                    }
+                </style>
+
+                <div id="container">
+                    {#                    <form id="myForm">#}
+                    <label for="input_id">Enter transaction id:</label>
+
+                    <div class="custom-dropdown">
+                        <input
+                                type="text"
+                                id="input_id"
+                                name="input_id"
+                                class="custom-dropdown-input"
+                                oninput="filterOptions()"
+                                onclick="toggleDropdown()"
+                        >
+                        <div class="custom-dropdown-list" id="dropdownList">
+                        {% if untagged_transactions %}
+                            {% for id in untagged_transactions.id %}
+                                <div class="custom-dropdown-list-item" onclick="selectOption(this)">{{ id }}</div>
+                            {% endfor %}
+                        {% endif %}
+                        </div>
+                    </div>
+                    <button type="submit" name="add_id" value="Add">Add</button>
+                    {#                    </form>#}
+                </div>
+
+                <script>
+                    function selectOption(item) {
+                        const input = document.getElementById('input_id');
+                        input.value = item.textContent.trim();
+                        toggleDropdown();
+                    }
+
+                    function filterOptions() {
+                        const input = document.getElementById('input_id').value.toLowerCase();
+                        const dropdownList = document.getElementById('dropdownList');
+                        const items = dropdownList.getElementsByClassName('custom-dropdown-list-item');
+
+                        for (const item of items) {
+                            const text = item.textContent || item.innerText;
+                            if (text.toLowerCase().includes(input)) {
+                                item.style.display = 'block';
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        }
+                    }
+
+                    function toggleDropdown() {
+                        const dropdownList = document.getElementById('dropdownList');
+                        dropdownList.style.display = dropdownList.style.display === 'block' ? 'none' : 'block';
+                    }
+
+                    document.addEventListener('click', function (event) {
+                        const dropdown = document.querySelector('.custom-dropdown');
+                        if (!dropdown.contains(event.target)) {
+                            const dropdownList = document.getElementById('dropdownList');
+                            dropdownList.style.display = 'none';
+                        }
+                    });
+
+                    document.getElementById('myForm').addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        const selectedInput = document.getElementById('input_id');
+                        alert(`Selected input: ${selectedInput.value}`);
+                    });
+                </script>
+
+            </div>
         </div>
-        <div style="flex: 2; margin-left: 100px; margin-top: 120px;">
-              <!-- Input text field -->
-              <label for="field">Field:</label>
-              <input type="text" id="field" name="field" value="description" size="30"><br><br>
-
-              <!-- Dropdown menu for 'transform' -->
-              <label for="transform">Transform:</label>
-              <select id="transform" name="transform">
-                  {% for t in transformations_list %}
-                      <option value="{{ t }}" {% if t == "none" %} selected {% endif %}>{{ t }}</option>
-                  {% endfor %}
-              </select><br><br>
-
-              <!-- Dropdown menu for 'comparison' -->
-              <label for="comparison">Comparison:</label>
-              <select id="comparison" name="comparison">
-                  {% for c in comparisons_list %}
-                      <option value="{{ c }}" {% if c == "contains" %} selected {% endif %}>{{ c }}</option>
-                  {% endfor %}
-              </select><br><br>
-
-              <!-- Input text box -->
-              <label for="value">Value:</label>
-              <input type="text" id="value" name="value" size="30"><br><br>
-
-              <!-- Submit button -->
-              <input type="submit" name="add_condition" value="Add">
-        </div>
-    </div>
     </form>
 
 
-{#    tabs   #}
+    {#    tabs   #}
     <br><br>
     <style>
-    /* Style the tab buttons */
-    .tab {
-      overflow: hidden;
-      background-color: #f1f1f1;
-    }
+        /* Style the tab buttons */
+        .tab {
+            overflow: hidden;
+            background-color: #f1f1f1;
+        }
 
-    /* Style the tab button container */
-    .tab button {
-      background-color: inherit;
-      float: left;
-      border: none;
-      outline: none;
-      cursor: pointer;
-      padding: 10px 20px;
-      transition: 0.3s;
-    }
+        /* Style the tab button container */
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: 0.3s;
+        }
 
-    /* Change background color of the active tab button */
-    .tab button.active {
-      background-color: #ccc; /* Color for the active tab */
-    }
+        /* Change background color of the active tab button */
+        .tab button.active {
+            background-color: #ccc; /* Color for the active tab */
+        }
 
-    /* Style the tab content */
-    .tabcontent {
-      display: none;
-      padding: 20px;
-    }
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            padding: 20px;
+        }
     </style>
 
 
     <div class="tab">
-      <button class="tablinks" onclick="openTab(event, 'Tab1')">Tagged</button>
-      <button class="tablinks" onclick="openTab(event, 'Tab2')">Untagged</button>
+        <button class="tablinks" onclick="openTab(event, 'Tab1')">Tagged</button>
+        <button class="tablinks" onclick="openTab(event, 'Tab2')">Untagged</button>
     </div>
 
     <div id="Tab1" class="tabcontent">
-      {% if tagged_table_html is not none %}
-        <h1>Table for "{{ tag_name }}" tag ({{ number_of_rows }} rows)</h1>
-        {{ tagged_table_html | safe }}
-      {% endif %}
+        {% if tagged_table_html is not none %}
+            <h1>Table for "{{ tag_name }}" tag ({{ number_of_rows }} rows)</h1>
+            {{ tagged_table_html | safe }}
+        {% endif %}
     </div>
 
     <div id="Tab2" class="tabcontent">
-      {% if untagged_table_html is not none %}
-        <h1>Untagged rows</h1>
-        {{ untagged_table_html | safe }}
-      {% endif %}
+        {% if untagged_table_html is not none %}
+            <h1>Untagged rows</h1>
+            {{ untagged_table_html | safe }}
+        {% endif %}
     </div>
 
     <script>
-    function openTab(evt, tabName) {
-      var i, tabcontent, tablinks;
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
 
-      // Hide all tab content
-      tabcontent = document.getElementsByClassName("tabcontent");
-      for (i = 0; i < tabcontent.length; i++) {
-        tabcontent[i].style.display = "none";
-      }
+            // Hide all tab content
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
 
-      // Remove active class from tab buttons
-      tablinks = document.getElementsByClassName("tablinks");
-      for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].className = tablinks[i].className.replace(" active", "");
-      }
+            // Remove active class from tab buttons
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
 
-      // Show the selected tab content and mark the button as active
-      document.getElementById(tabName).style.display = "block";
-      evt.currentTarget.className += " active";
-    }
+            // Show the selected tab content and mark the button as active
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
 
-    // Open the first tab by default
-    document.getElementById("Tab1").style.display = "block";
+        // Open the first tab by default
+        document.getElementById("Tab1").style.display = "block";
     </script>
 
 

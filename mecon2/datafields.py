@@ -40,10 +40,11 @@ class DataframeWrapper:
 
 class IdColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
-        pass
+        self._df_wrapper_obj = df_wrapper
 
+    @property
     def id(self):
-        pass
+        return self._df_wrapper_obj.dataframe()['id']
 
 
 class DateTimeColumnMixin:
