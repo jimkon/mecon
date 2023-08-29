@@ -16,16 +16,16 @@
         {{ all_tags }}
     {% else %}
         <ul>
-        {% for tag in all_tags %}
-            <li>
-                <a href={{ url_for('reports.tag_info', tag_name=tag['name']) }}>
-                    {{ tag['name'] }}
-                </a>
-                {% if 'n_rows' in tag %}
-                    [{{ tag['n_rows'] }}]
-                {% endif %}
-            </li>
-        {% endfor %}
+            {% for tag in all_tags %}
+                <li>
+                    <a href={{ url_for('reports.tag_info', tag_name=tag['name']) }}>
+                        {{ tag['name'] }}
+                    </a>
+                    {% if 'n_rows' in tag %}
+                        [{{ tag['n_rows'] }}]
+                    {% endif %}
+                </li>
+            {% endfor %}
         </ul>
     {% endif %}
     <form method="POST">
