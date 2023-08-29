@@ -1,28 +1,48 @@
-import matplotlib.pyplot as plt
-import mpld3
+import pandas as pd
+
+from mecon2.blueprints.reports import graph_utils
+from mecon2.utils.html_pages import TabsHTML
+
 
 # plt.style.use('bmh')
 
 
+def timeline(x, y, ax, **kwargs):
+    # ax.plot(x, y, '.')
+    ax.bar(x, y)
+    ax.invert_yaxis()
+    ax.set_title('Timeline')
+    # ax.set_xticklabels(x.to_list(), rotation=45)
+
+
+def balance(x, y, ax, **kwargs):
+    ax.plot(x, y.cumsum(), '-')
+    # ax.bar(x, y.cumsum())
+    # ax.invert_yaxis()
+    ax.set_title('Balance')
+
+
+def histogram(x, y, ax, **kwargs):
+    ax.hist(y, bins='auto')
+    ax.invert_xaxis()
+    ax.set_title('Histogram')
+
+
 def general_cost_stats_html_img(x, y):
     x, y = x[::-1], y[::-1]
-    fig, axes = plt.subplots(1, 3, figsize=(10, 4))
 
-    timeline_ax, balance_ax, hist_ax = axes
-    timeline_ax.plot(x, y, '.')
-    timeline_ax.invert_yaxis()
-    timeline_ax.set_title('Timeline')
-    # timeline_ax.set_xticklabels(x.to_list(), rotation=45)
+    results = graph_utils.async_multiplot([
+        (graph_utils.create_html_plot, (timeline, x, y), {}),
+        (graph_utils.create_html_plot, (balance, x, y), {}),
+        (graph_utils.create_html_plot, (histogram, x, y), {})
+    ])
 
-    balance_ax.plot(x, y.cumsum(), '-.')
-    # balance_ax.invert_yaxis()
-    balance_ax.set_title('Balance')
+    html = TabsHTML()\
+        .add_tab('Timeline', results[0])\
+        .add_tab('Balance', results[1])\
+        .add_tab('Histogram', results[2])\
+        .html()
 
-    hist_ax.hist(y, bins='auto')
-    hist_ax.invert_xaxis()
-    hist_ax.set_title('Histogram')
+    return html
 
-    fig.tight_layout()
-    # Convert the figure to an HTML-encoded image using mpld3
-    html_image = mpld3.fig_to_html(fig)# , d3_url="https://mpld3.github.io/js/mpld3.v0.2.js", mpld3_url="https://mpld3.github.io/js/mpld3.v0.2.js")
-    return html_image
+
