@@ -4,27 +4,6 @@ from datetime import datetime, date, time
 from mecon2 import transformations as trns
 
 
-class TestInstances(unittest.TestCase):
-    def test_instances(self):
-        trns.TransformationFunction('a', None)
-        trns.TransformationFunction('b', None)
-        trns.TransformationFunction('c', None)
-
-        with self.assertRaises(trns.TransformationFunctionAlreadyExistError):
-            trns.TransformationFunction('a', None)
-
-        self.assertIsNotNone(trns.TransformationFunction.from_key('a'))
-        self.assertIsNotNone(trns.TransformationFunction.from_key('b'))
-        self.assertIsNotNone(trns.TransformationFunction.from_key('c'))
-
-        with self.assertRaises(trns.TransformationFunctionDoesNotExistError):
-            trns.TransformationFunction.from_key('d')
-
-        del trns.TransformationFunction._instances['a']
-        del trns.TransformationFunction._instances['b']
-        del trns.TransformationFunction._instances['c']
-
-
 class TestTransformationFunctions(unittest.TestCase):
     def test_none(self):
         tf = trns.TransformationFunction.from_key('none')

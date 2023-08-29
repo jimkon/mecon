@@ -1,27 +1,16 @@
 import re
 
-
-class ComparisonFunctionDoesNotExistError(Exception):
-    pass
+from mecon2.utils import multiton
 
 
-class ComparisonFunctionAlreadyExistError(Exception):
-    pass
-
-
-class CompareOperator:
+class CompareOperator(multiton.Multiton):
     """
     Compare operators used by Condition.
     """
-    _instances = {}
-
     def __init__(self, name, function):
+        super().__init__(instance_name=name)
         self.name = name
         self.function = function
-
-        if name in self._instances:
-            raise ComparisonFunctionAlreadyExistError
-        self._instances[name] = self
 
     def __call__(self, value_1, value_2):
         return self.apply(value_1, value_2)
@@ -34,16 +23,6 @@ class CompareOperator:
 
     def __repr__(self):
         return f"CompareOp({self.name})"
-
-    @classmethod
-    def from_key(cls, key):
-        if key not in cls._instances:
-            raise ComparisonFunctionDoesNotExistError
-        return cls._instances[key]
-
-    @classmethod
-    def all_comparisons(cls):
-        return cls._instances.values()
 
 
 GREATER = CompareOperator('greater', lambda a, b: a > b)

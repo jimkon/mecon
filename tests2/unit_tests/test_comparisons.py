@@ -3,27 +3,6 @@ import unittest
 from mecon2 import comparisons as cmp
 
 
-class TestInstances(unittest.TestCase):
-    def test_instances(self):
-        cmp.CompareOperator('a', None)
-        cmp.CompareOperator('b', None)
-        cmp.CompareOperator('c', None)
-
-        with self.assertRaises(cmp.ComparisonFunctionAlreadyExistError):
-            cmp.CompareOperator('a', None)
-
-        self.assertIsNotNone(cmp.CompareOperator.from_key('a'))
-        self.assertIsNotNone(cmp.CompareOperator.from_key('b'))
-        self.assertIsNotNone(cmp.CompareOperator.from_key('c'))
-
-        with self.assertRaises(cmp.ComparisonFunctionDoesNotExistError):
-            cmp.CompareOperator.from_key('d')
-
-        del cmp.CompareOperator._instances['a']
-        del cmp.CompareOperator._instances['b']
-        del cmp.CompareOperator._instances['c']
-
-
 class TestCompareOperator(unittest.TestCase):
     def test_greater(self):
         co = cmp.CompareOperator.from_key('greater')
