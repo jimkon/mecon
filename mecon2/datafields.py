@@ -7,6 +7,7 @@ from typing import List
 import pandas as pd
 
 from mecon2 import tagging
+from mecon2.utils.multiton import Multiton
 
 
 class DataframeWrapper:
@@ -137,7 +138,7 @@ class TagsColumnMixin:
         return self._df_wrapper_obj.factory(new_df)
 
 
-class Grouping(abc.ABC):  # TODO rename to grouping(??)
+class Grouping(abc.ABC, Multiton):
     def group(self, df_wrapper: DataframeWrapper) -> List[DataframeWrapper]:
         indexes = self.compute_group_indexes(df_wrapper)
 
@@ -153,21 +154,7 @@ class Grouping(abc.ABC):  # TODO rename to grouping(??)
         pass
 
 
-class LabelGrouping(Grouping, abc.ABC):
-    def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
-        labels = self.labels(df_wrapper)
-        unique_labels = labels.unique()
 
-        indexes = []
-        for label in unique_labels:
-            index = labels == label
-            indexes.append(index)
-
-        return indexes
-
-    @abc.abstractmethod
-    def labels(self, df_wrapper: DataframeWrapper) -> pd.Series:
-        pass
 
 
 class Aggregator(abc.ABC):

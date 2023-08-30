@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from mecon2.datafields import DataframeWrapper, Grouping, Aggregator, LabelGrouping
+from mecon2.datafields import DataframeWrapper, Grouping, Aggregator
 
 
 class TestDataframeWrapper(unittest.TestCase):
@@ -54,7 +54,7 @@ class TestGrouping(unittest.TestCase):
                 'B': [6, 7, 8, 9, 10]}
         df = pd.DataFrame(data)
         wrapper = DataframeWrapper(df)
-        grouper = CustomGrouping()
+        grouper = CustomGrouping('temp_name')
 
         grouped_wrappers = grouper.group(wrapper)
 
@@ -65,32 +65,6 @@ class TestGrouping(unittest.TestCase):
         pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
                                       pd.DataFrame({'A': [1, 3, 5],
                                                     'B': [6, 8, 10]}))
-
-
-class TestLabelGrouping(unittest.TestCase):
-    def test_group(self):
-        class CustomGrouping(LabelGrouping):
-            def labels(self, df_wrapper: DataframeWrapper):
-                return pd.Series(['a', 'b', 'b', 'c', 'b'])
-
-        data = {'A': [1, 2, 3, 4, 5],
-                'B': [6, 7, 8, 9, 10]}
-        df = pd.DataFrame(data)
-        wrapper = DataframeWrapper(df)
-        grouper = CustomGrouping()
-
-        grouped_wrappers = grouper.group(wrapper)
-
-        self.assertEqual(len(grouped_wrappers), 3)
-        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
-                                      pd.DataFrame({'A': [1],
-                                                    'B': [6]}))
-        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
-                                      pd.DataFrame({'A': [2, 3, 5],
-                                                    'B': [7, 8, 10]}))
-        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
-                                      pd.DataFrame({'A': [4],
-                                                    'B': [9]}))
 
 
 class TestAggregator(unittest.TestCase):

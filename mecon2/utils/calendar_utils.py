@@ -29,6 +29,15 @@ def dayofweek(s):
     }[s.weekday()]
 
 
+def datetime_to_date_id(dt):
+    return dt.strftime("%Y%m%d")
+
+
+def datetime_to_date_id_str(dt):
+    return str(datetime_to_date_id(dt))
+
+
+
 def week_of_month(dt):
     """ Returns the week of the month for the specified date.
     https://stackoverflow.com/questions/3806473/week-number-of-the-month
