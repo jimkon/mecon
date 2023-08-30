@@ -66,8 +66,8 @@ def render_tag_page(title='Tag page',
         untagged_table_html = untagged_transactions.dataframe().to_html()
         number_of_rows = 0 if data_df is None else len(data_df)
         tag_json_str = _reformat_json_str(tag_json_str)
-        transformations_list = [trans.name for trans in transformations.TransformationFunction.all_transformations()]
-        comparisons_list = [comp.name for comp in comparisons.CompareOperator.all_comparisons()]
+        transformations_list = [trans.name for trans in transformations.TransformationFunction.all_instances()]
+        comparisons_list = [comp.name for comp in comparisons.CompareOperator.all_instances()]
 
         # del untagged_transactions
     except json.decoder.JSONDecodeError as json_error:
