@@ -31,20 +31,4 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
-    def apply_rule(self, rule: tagging.AbstractRule) -> Transactions:
-        tagger = tagging.Tagger()
-        df = self.dataframe().copy()
-        new_df = tagger.filter_df_with_rule(df, rule)
-        return Transactions(new_df)
-
-    def apply_negated_rule(self, rule: tagging.AbstractRule) -> Transactions:
-        tagger = tagging.Tagger()
-        df = self.dataframe().copy()
-        new_df = tagger.filter_df_with_negated_rule(df, rule)
-        return Transactions(new_df)
-
-    def filter_by(self, **kwargs) -> Transactions:
-        return self
-
-
 

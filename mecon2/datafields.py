@@ -27,16 +27,26 @@ class DataframeWrapper:
     def size(self):
         return len(self.dataframe())
 
-    @classmethod
-    def factory(cls, df: pd.DataFrame):
-        return cls(df)
-
     def select_by_index(self, index: List[bool] | pd.Series):
         return self.factory(self.dataframe()[index])
+
+    def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:  # TODO unittest
+        df = self.dataframe().copy()
+        new_df = tagging.Tagger.filter_df_with_rule(df, rule)
+        return self.factory(new_df)
+
+    def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:  # TODO unittest
+        df = self.dataframe().copy()
+        new_df = tagging.Tagger.filter_df_with_negated_rule(df, rule)
+        return self.factory(new_df)
 
     def groupagg(self, grouper, aggregator):
         # TODO move this to the df wrapper
         pass
+
+    @classmethod
+    def factory(cls, df: pd.DataFrame):
+        return cls(df)
 
 
 class IdColumnMixin:
@@ -66,6 +76,13 @@ class DateTimeColumnMixin:
 
     def date_range(self):
         return self.date.min(), self.date.max()
+
+    def select_date_range(self, start_date, end_date):  # TODO unittest
+        rule = tagging.Disjunction([
+            tagging.Condition.from_string_values('datetime', 'str', 'greater_equal', str(start_date)),
+            tagging.Condition.from_string_values('datetime', 'str', 'less_equal', str(end_date)),
+        ])
+        return self._df_wrapper_obj.apply_rule(rule)
 
 
 class AmountColumnMixin:
@@ -122,9 +139,7 @@ class TagsColumnMixin:
         tags = [tags] if isinstance(tags, str) else tags
         tag_rules = [tagging.Condition.from_string_values('tags', None, 'contains', tag) for tag in tags]
         rule = tagging.Conjunction(tag_rules)
-        tag_contained = self._df_wrapper_obj.dataframe().apply(rule.compute, axis=1)
-        new_df = self._df_wrapper_obj.dataframe()[tag_contained]
-        return self._df_wrapper_obj.factory(new_df)
+        return self._df_wrapper_obj.apply_rule(rule)
 
     def reset_tags(self):
         new_df = self._df_wrapper_obj.dataframe().copy()
@@ -132,9 +147,8 @@ class TagsColumnMixin:
         return self._df_wrapper_obj.factory(new_df)
 
     def apply_tag(self, tag: tagging.Tag) -> DataframeWrapper:
-        tagger = tagging.Tagger()
         new_df = self._df_wrapper_obj.dataframe().copy()
-        tagger.tag(tag, new_df)
+        tagging.Tagger.tag(tag, new_df)
         return self._df_wrapper_obj.factory(new_df)
 
 
@@ -154,10 +168,10 @@ class Grouping(abc.ABC, Multiton):
         pass
 
 
+class Aggregator:
+    def __init__(self, **aggregation_functions):
+        self._agg_functions = aggregation_functions
 
-
-
-class Aggregator(abc.ABC):
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
         df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
 
@@ -169,6 +183,10 @@ class Aggregator(abc.ABC):
 
         return res_df_wrapper
 
-    @abc.abstractmethod
     def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
-        pass
+        res_dict = {}
+        for col, agg_func in self._agg_functions.items():
+            res_dict[col] = agg_func(df_wrapper.dataframe()[col])
+
+        new_df_wrapper = df_wrapper.factory(pd.DataFrame(res_dict))
+        return new_df_wrapper
