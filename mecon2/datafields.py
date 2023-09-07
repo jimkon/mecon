@@ -77,8 +77,8 @@ class DateTimeColumnMixin:
     def date_range(self):
         return self.date.min(), self.date.max()
 
-    def select_date_range(self, start_date, end_date):  # TODO unittest
-        rule = tagging.Disjunction([
+    def select_date_range(self, start_date, end_date):
+        rule = tagging.Conjunction([
             tagging.Condition.from_string_values('datetime', 'str', 'greater_equal', str(start_date)),
             tagging.Condition.from_string_values('datetime', 'str', 'less_equal', str(end_date)),
         ])
@@ -121,8 +121,8 @@ class TagsColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
         df = self._df_wrapper_obj.dataframe()
-        if 'tags' not in df.columns:
-            raise TagsColumnDoesNotExistInDataframe
+        # if 'tags' not in df.columns:  # TODO only tags col is validated
+        #     raise TagsColumnDoesNotExistInDataframe
 
     @property
     def tags(self) -> pd.Series:

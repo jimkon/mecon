@@ -16,7 +16,8 @@ class CompareOperator(multiton.Multiton):
         return self.apply(value_1, value_2)
 
     def apply(self, value_1, value_2):
-        return self.function(value_1, value_2)
+        res = self.function(value_1, value_2)
+        return res
 
     def validate(self):
         pass
