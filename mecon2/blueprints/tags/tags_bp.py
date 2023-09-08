@@ -125,10 +125,6 @@ def tag_edit(tag_name):
             except Exception as e:
                 message_text = f"Error: {e}"
             else:
-                # if "save_and_close" in request.form:  # TODO remove save_and_back button
-                #     return redirect(url_for('tags.tags_menu'))
-                # else:
-                #     return redirect(url_for('tags.tag_edit', tag_name=tag_name))
                 return redirect(url_for('tags.tag_edit', tag_name=tag_name))
         elif "delete" in request.form:
             confirm_delete = True
@@ -137,7 +133,12 @@ def tag_edit(tag_name):
 
         elif "confirm_delete" in request.form:
             data_access.tags.delete_tag(tag_name)
-            return redirect(url_for('tags.tags_menu'))
+            try:
+                recalculate_tags()
+            except Exception as e:
+                message_text = f"Error: {e}"
+            else:
+                return redirect(url_for('tags.tags_menu'))
         elif "add_condition" in request.form:
             disjunction = tagging.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
 
