@@ -4,7 +4,11 @@ from mecon2 import transactions
 def transactions_stats(trans: transactions.Transactions):
     df = trans.dataframe()
     return {
-        '#': trans.size(),
+        'General': {
+            '#': trans.size(),
+            'avg Amount': trans.amount.mean(),
+            'avg Frequency': trans.datetime.diff().mean()
+        },
         'Amount': {
             'Total': df['amount'].sum(),
             'Pos': df[df['amount'] > 0]['amount'].sum(),
@@ -25,5 +29,5 @@ def plot(transactions,
          grouping=None,
          fill_values=None,
          cumsum=False,
-         tags=None,):
+         tags=None, ):
     pass
