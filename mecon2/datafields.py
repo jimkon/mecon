@@ -169,7 +169,7 @@ class Grouping(abc.ABC, Multiton):
 
 
 class Aggregator:
-    def __init__(self, **aggregation_functions):
+    def __init__(self, aggregation_functions):
         self._agg_functions = aggregation_functions
 
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
@@ -185,8 +185,9 @@ class Aggregator:
 
     def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
         res_dict = {}
-        for col, agg_func in self._agg_functions.items():
-            res_dict[col] = agg_func(df_wrapper.dataframe()[col])
+        for col_name, agg_func in self._agg_functions.items():
+            res_dict[col_name] = [agg_func(df_wrapper.dataframe()[col_name])]
 
-        new_df_wrapper = df_wrapper.factory(pd.DataFrame(res_dict))
+        new_df = pd.DataFrame(res_dict)
+        new_df_wrapper = df_wrapper.factory(new_df)
         return new_df_wrapper
