@@ -70,6 +70,9 @@ class TestGrouping(unittest.TestCase):
 class TestAggregator(unittest.TestCase):
     def test_aggregate(self):
         class CustomAggregator(Aggregator):
+            def __init__(self):
+                pass
+
             def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
                 return df_wrapper
 
