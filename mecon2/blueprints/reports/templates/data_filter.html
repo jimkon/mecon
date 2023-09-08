@@ -12,6 +12,9 @@
     }
 </style>
 <form method="POST">
+        <!-- Submit button -->
+    <input type="submit" name="filter" value="Filter">
+
     <!-- Custom start date input -->
     <label for="start_date">From:</label>
     <input type="date" id="start_date" name="start_date" value={{ start_date }}>
@@ -20,26 +23,48 @@
     <label for="end_date">To:</label>
     <input type="date" id="end_date" name="end_date" value={{ end_date }}>
 
-
-    <!-- Dropdown with values: sample, day, week, month, year -->
-    {#        <label for="interval">Interval:</label>#}
-    {#        <select id="interval" name="interval">#}
-    {#            <option value="sample">Sample</option>#}
-    {#            <option value="day">Day</option>#}
-    {#            <option value="week">Week</option>#}
-    {#            <option value="month">Month</option>#}
-    {#            <option value="year">Year</option>#}
-    {#        </select>#}
-    {##}
-    {#        <!-- Checkbox -->#}
-    {#        <label for="cumsum_checkbox">Cumsum:</label>#}
-    {#        <input type="checkbox" id="cumsum_checkbox" name="cumsum_checkbox">#}
-
     <!-- Text box -->
     <label for="tags_text_box">Tags:</label>
-    <input type="text" id="tags_text_box" name="tags_text_box" value="{{ tags | e }}" size="40">
+    <input type="text" id="tags_text_box" name="tags_text_box" value="{{ tags_str | e }}" size="30">
 
-    <!-- Submit button -->
-    <input type="submit" name="filter" value="Filter">
+    <!-- Dropdown with values: sample, day, week, month, year -->
+    {#    <label for="groups_text_box">Groupings:</label>#}
+    {#    <input type="text" id="groups_text_box" name="groups_text_box" value="{{ groups | e }}" size="30">#}
+    <label for="groups">Groupings:</label>
+    <select id="groups" name="groups">
+        <option value="none" selected>None</option> <!-- Add a "None" option -->
+        {% for group in ['day', 'week', 'month', 'year', 'location'] %}
+            <option value="{{ group }}">{{ group }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="aggregations">Aggregations:</label>
+    <select id="aggregations" name="aggregations" disabled>
+        {% for agg in ['sum', 'avg', 'min', 'max'] %}
+            <option value="{{ agg }}">{{ agg }}</option>
+        {% endfor %}
+    </select>
+
+    <script>
+        // Get references to the dropdowns
+        var groupsDropdown = document.getElementById("groups");
+        var aggregationsDropdown = document.getElementById("aggregations");
+
+        // Add an event listener to the "Groupings" dropdown
+        groupsDropdown.addEventListener("change", function () {
+            // Get the selected value
+            var selectedValue = groupsDropdown.value;
+
+            // Check if "None" is selected
+            if (selectedValue === "none") {
+                // Disable the "Aggregations" dropdown
+                aggregationsDropdown.disabled = true;
+            } else {
+                // Enable the "Aggregations" dropdown
+                aggregationsDropdown.disabled = false;
+            }
+        });
+    </script>
+
 </form>
-{#{% endblock data_filter %}#}
+{#    {% endblock data_filter %}#}

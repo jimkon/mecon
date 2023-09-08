@@ -2,9 +2,9 @@
 
 {% block content %}
     <!-- Include the locally saved d3 library -->
-    <script src="/mecon/d3.v3.min.js"></script>
+{#    <script src="C:\Users\dimitris\miniconda3\envs\mecon\Lib\site-packages\mpld3\js\d3.v5.min.js"></script>#}
     <!-- Include mpld3 library from a CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/mpld3@0.5.5/dist/mpld3.min.js"></script>
+{#    <script src="C:\Users\dimitris\miniconda3\envs\mecon\Lib\site-packages\mpld3\js\mpld3.v0.5.9.js"></script>#}
 
     <br>
     <br>
@@ -23,7 +23,7 @@
     </div>
 
     {% if table_html is not none %}
-        <h1>Transactions</h1>
+        <h1>Transactions ({{ transactions.size() }} rows)</h1>
         {{ table_html | safe }}
     {% endif %}
 
