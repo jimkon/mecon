@@ -15,7 +15,7 @@ def transactions_stats(trans: transactions.Transactions):
             'max': trans.date.max(),
             '# unique': trans.date.nunique(),
         },
-        'All tags': list(trans.all_tags()),
+        'All tags': trans.all_tags(),
         'Currencies': trans.all_currencies()
     }
 

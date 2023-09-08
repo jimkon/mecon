@@ -3,6 +3,7 @@ from __future__ import annotations  # TODO upgrade to python 3.11
 import abc
 from itertools import chain
 from typing import List
+from collections import Counter
 
 import pandas as pd
 
@@ -129,10 +130,9 @@ class TagsColumnMixin:
         return self._df_wrapper_obj.dataframe()['tags']
 
     def all_tags(self):
-        tags = self.tags.apply(lambda s: s.split(',')).to_list()
-        tags_set = set(chain.from_iterable(tags))
-        if '' in tags_set:
-            tags_set.remove('')
+        tags_split = self.tags.apply(lambda s: s.split(',')).to_list()
+        tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
+        tags_set = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_set
 
     def contains_tag(self, tags):
