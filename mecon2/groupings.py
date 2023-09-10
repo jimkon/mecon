@@ -6,9 +6,10 @@ import pandas as pd
 
 from mecon2.datafields import DataframeWrapper, Grouping
 from mecon2.utils import calendar_utils
+from mecon2.utils.multiton import Multiton
 
 
-class LabelGroupingABC(Grouping, abc.ABC):
+class LabelGroupingABC(Grouping, Multiton, abc.ABC):
     def __init__(self, instance_name):
         super().__init__(instance_name=instance_name)
 

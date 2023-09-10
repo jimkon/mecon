@@ -54,7 +54,7 @@ class TestGrouping(unittest.TestCase):
                 'B': [6, 7, 8, 9, 10]}
         df = pd.DataFrame(data)
         wrapper = DataframeWrapper(df)
-        grouper = CustomGrouping('temp_name')
+        grouper = CustomGrouping()
 
         grouped_wrappers = grouper.group(wrapper)
 
