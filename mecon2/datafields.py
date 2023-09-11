@@ -8,7 +8,6 @@ from collections import Counter
 import pandas as pd
 
 from mecon2 import tagging
-from mecon2.utils.multiton import Multiton
 
 
 class DataframeWrapper:
@@ -130,7 +129,7 @@ class TagsColumnMixin:
         return self._df_wrapper_obj.dataframe()['tags']
 
     def all_tags(self):
-        tags_split = self.tags.apply(lambda s: s.split(',')).to_list()
+        tags_split = self.tags.apply(lambda s: s.split(',')).to_list()  # TODO duplicated code in aggregators aggregate_tags_set
         tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
         tags_set = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_set
@@ -152,7 +151,7 @@ class TagsColumnMixin:
         return self._df_wrapper_obj.factory(new_df)
 
 
-class Grouping(abc.ABC, Multiton):
+class Grouping(abc.ABC):
     def group(self, df_wrapper: DataframeWrapper) -> List[DataframeWrapper]:
         indexes = self.compute_group_indexes(df_wrapper)
 
