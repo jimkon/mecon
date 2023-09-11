@@ -29,6 +29,12 @@ def dayofweek(s):
     }[s.weekday()]
 
 
+def get_closest_past_monday(dt):
+    days_until_monday = (dt.weekday() - 0) % 7  # Calculate the number of days until Monday (0 represents Monday)
+    closest_monday = dt - timedelta(days=days_until_monday)
+    return closest_monday
+
+
 def datetime_to_date_id(dt):
     return dt.strftime("%Y%m%d")
 
