@@ -1,4 +1,4 @@
-from datetime import time, timedelta
+from datetime import time, timedelta, datetime
 from enum import Enum
 from math import ceil
 
@@ -35,13 +35,28 @@ def get_closest_past_monday(dt):
     return closest_monday
 
 
+def date_floor(dt: datetime, group_by_key: str):
+    valid_values = ['day', 'week', 'month', 'year']
+    if group_by_key not in valid_values:
+        raise ValueError(f"Date grouping key must be one of {valid_values}. {group_by_key} was given instead.")
+
+    if group_by_key == 'day':
+        return datetime(dt.year, dt.month, dt.day, 0, 0, 0)
+    elif group_by_key == 'week':
+        past_monday = get_closest_past_monday(dt)
+        return datetime(past_monday.year, past_monday.month, past_monday.day, 0, 0, 0)
+    elif group_by_key == 'month':
+        return datetime(dt.year, dt.month, 1, 0, 0, 0)
+    elif group_by_key == 'year':
+        return datetime(dt.year, 1, 1, 0, 0, 0)
+
+
 def datetime_to_date_id(dt):
     return dt.strftime("%Y%m%d")
 
 
 def datetime_to_date_id_str(dt):
     return str(datetime_to_date_id(dt))
-
 
 
 def week_of_month(dt):
@@ -62,7 +77,7 @@ def date_to_month_date(date_series):
 
 
 def days_in_between(start_date, end_date):
-    return [start_date+timedelta(days=i) for i in range((end_date-start_date).days+1)]
+    return [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
 
 
 def part_of_day(hour):
@@ -124,6 +139,7 @@ def fill_days(df_in):
     if len(dates_to_fill) == 0:
         return df_in
 
-    logs.log_calculation(f"Filling {len(dates_to_fill)} days. Unique dates:{len(existing_dates)}, Time period in days: {len(all_dates)}, min day: {df_in['date'].min()}, max day: {df_in['date'].max()}")
+    logs.log_calculation(
+        f"Filling {len(dates_to_fill)} days. Unique dates:{len(existing_dates)}, Time period in days: {len(all_dates)}, min day: {df_in['date'].min()}, max day: {df_in['date'].max()}")
     df_to_append = _get_fill_dates(dates_to_fill)
     return pd.concat([df_in.copy(), df_to_append]).sort_values(by=['date', 'time']).reset_index(drop=True)
