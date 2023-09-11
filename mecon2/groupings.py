@@ -1,5 +1,4 @@
 import abc
-import math
 from typing import List
 
 import pandas as pd
@@ -45,7 +44,7 @@ class DayGrouping(LabelGroupingABC):
 
     def labels(self, df_wrapper: DataframeWrapper) -> pd.Series:
         assert hasattr(df_wrapper, 'date')
-        # if not isinstance(df_wrapper, DateTimeColumnMixin):
+        # if not isinstance(df_wrapper, DateTimeColumnMixin):  # TODO validation doesn't work properly
         #     raise ValueError(f"To group in 'days' the input df_wrapper has to implement DateTimeColumnMixin.")
         date = df_wrapper.date.astype(str)
         return date

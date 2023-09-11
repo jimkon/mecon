@@ -3,7 +3,6 @@ from __future__ import annotations  # TODO upgrade to python 3.11
 import pandas as pd
 
 import mecon2.datafields as fields
-from mecon2 import tagging
 
 
 class ZeroSizeTransactionsError(Exception):

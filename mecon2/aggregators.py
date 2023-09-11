@@ -1,6 +1,5 @@
 import json
 from collections import Counter
-from datetime import datetime
 from itertools import chain
 
 import pandas as pd
@@ -61,9 +60,24 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
         )
 
 
+# class CustomisedAmountTransactionAggregator(CustomisedDefaultTransactionAggregator, Multiton):
+#     def __init__(self, instance_name, amount_agg_f, date_group_unit):
+#         super().__init__(
+#             datetime_agg=lambda dt_series: min(dt_series.apply(lambda dt: calendar_utils.date_floor(dt, date_group_unit))),
+#             amount_agg=amount_agg_f
+#         )
+#         Multiton.__init__(instance_name=f"{instance_name}_{date_group_unit}")
+#
+# MIN_DAY = CustomisedAmountTransactionAggregator('min', min, 'day')
+# MIN_DAY = CustomisedAmountTransactionAggregator('max', min, 'day')
+# MIN_DAY = CustomisedAmountTransactionAggregator('sum', min, 'day')
+# MIN_DAY = CustomisedAmountTransactionAggregator('avg', min, 'day')
+# MIN_DAY = CustomisedAmountTransactionAggregator('count', min, 'day')
+# MIN_DAY = CustomisedAmountTransactionAggregator('min', min, 'day')
+
 class CustomisedAmountTransactionAggregator(CustomisedDefaultTransactionAggregator):
     def __init__(self, amount_agg_key, date_group_unit):
-        if amount_agg_key == 'min':  # TODO can be implemented with multiton
+        if amount_agg_key == 'min':  # TODO can be implemented with multiton?
             amount_agg_f = min
         elif amount_agg_key == 'max':
             amount_agg_f = max
