@@ -45,7 +45,7 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
                  tags_agg=None):
 
         # TODO make all agg_functions as separate to increase readability and testability
-        id_agg = (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg
+        id_agg = min#(lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO if id becomes a string, then just concat
         datetime_agg = min if datetime_agg is None else datetime_agg
         amount_agg = sum if amount_agg is None else amount_agg
         currency_agg = count_dict if currency_agg is None else currency_agg  # TODO do we really want that? maybe currency should have only currency values [GBP, EUR, etc]
