@@ -1,12 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for
-from json2html import json2html
 import re
-import requests
 
-from mecon2.blueprints.reports import graphs
-from mecon2.transactions import Transactions
-from mecon2.data.db_controller import data_access, reset_tags
+import requests
+from flask import Blueprint, render_template, request, url_for
+from json2html import json2html
+
+from aggregators import CustomisedAmountTransactionAggregator
+from mecon2.groupings import LabelGrouping
 from mecon2 import reports
+from mecon2.blueprints.reports import graphs
+from mecon2.data.db_controller import data_access
+from mecon2.transactions import Transactions
 from mecon2.utils import html_pages
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')
@@ -35,11 +38,20 @@ def get_transactions() -> Transactions:
     return transactions
 
 
-def get_filtered_transactions(start_date, end_date, tags_str, grouping, aggregation):
+def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key):
     tags = _split_tags(tags_str)
     transactions = get_transactions() \
         .contains_tag(tags) \
         .select_date_range(start_date, end_date)
+
+    if grouping_key != 'none':
+        transactions = transactions.groupagg(
+            LabelGrouping.from_key(grouping_key),
+            CustomisedAmountTransactionAggregator(aggregation_key, grouping_key)
+        )
+    # TODO week agg doesn't work properly
+    # TODO filling days/weeks/etc after grouping
+    # TODO add count plot
     return transactions
 
 
@@ -58,8 +70,8 @@ def get_filter_values(tag_name):
         tags = {tag_name}
         transactions = get_transactions().contains_tag(tag_name)
         start_date, end_date = transactions.date_range()
-        grouping = 'none'
-        aggregation = 'none'
+        grouping = 'month'
+        aggregation = 'sum'
 
     tags_str = ', '.join(sorted(_filter_tags(tags)))
 
