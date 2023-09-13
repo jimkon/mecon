@@ -43,10 +43,12 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
                  currency_agg=None,
                  description_agg=None,
                  tags_agg=None):
+
+        # TODO make all agg_functions as separate to increase readability and testability
         id_agg = (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg
         datetime_agg = min if datetime_agg is None else datetime_agg
         amount_agg = sum if amount_agg is None else amount_agg
-        currency_agg = count_dict if currency_agg is None else currency_agg
+        currency_agg = count_dict if currency_agg is None else currency_agg  # TODO do we really want that? maybe currency should have only currency values [GBP, EUR, etc]
         description_agg = concat_strings if description_agg is None else description_agg
         tags_agg = (lambda tags_set: ','.join(sorted(aggregate_tags_set(tags_set)))) if tags_agg is None else tags_agg
 
@@ -77,6 +79,9 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
 
 class CustomisedAmountTransactionAggregator(CustomisedDefaultTransactionAggregator):
     def __init__(self, amount_agg_key, date_group_unit):
+        self._amount_agg_key = amount_agg_key
+        self._date_group_unit = date_group_unit
+
         if amount_agg_key == 'min':  # TODO can be implemented with multiton?
             amount_agg_f = min
         elif amount_agg_key == 'max':
@@ -91,6 +96,11 @@ class CustomisedAmountTransactionAggregator(CustomisedDefaultTransactionAggregat
             raise ValueError(f"Invalid amount aggregation function key '{amount_agg_key}'")
 
         super().__init__(
-            datetime_agg=lambda dt_series: min(dt_series.apply(lambda dt: calendar_utils.date_floor(dt, date_group_unit))),
+            datetime_agg=self._round_dates,
             amount_agg=amount_agg_f
         )
+
+    def _round_dates(self, dt_series: pd.Series):
+        date_floors = dt_series.apply(lambda dt: calendar_utils.date_floor(dt, self._date_group_unit))
+        min_date_floors = min(date_floors)
+        return min_date_floors

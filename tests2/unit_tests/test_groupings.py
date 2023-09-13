@@ -9,7 +9,7 @@ from mecon2 import groupings as gp
 from mecon2 import datafields
 
 
-# class TestUtilFunctions(unittest.TestCase):
+# class TestUtilFunctions(unittest.TestCase):  TODO clean
 #     def test_series_date_to_str(self):
 #         test_series = pd.DataFrame({'datetime': [datetime(2021, 3, 1, 0, 0, 0),
 #                                                  datetime(2021, 2, 2, 0, 0, 0),
@@ -50,8 +50,8 @@ class TestLabelGrouping(unittest.TestCase):
                                                     'B': [9]}))
 
 
-class TestDayGrouping(unittest.TestCase):
-    def test_grouping(self):
+class TestGrouping(unittest.TestCase):
+    def test_day_grouping(self):
         class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
             def __init__(self, df):
                 super().__init__(df=df)
@@ -86,9 +86,7 @@ class TestDayGrouping(unittest.TestCase):
                                       pd.DataFrame({'datetime': [datetime(2021, 1, 3, 0, 0, 0)],
                                                     'B': [10]}))
 
-
-class TestWeekGrouping(unittest.TestCase):
-    def test_grouping(self):
+    def test_week_grouping(self):
         class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
             def __init__(self, df):
                 super().__init__(df=df)
@@ -120,9 +118,7 @@ class TestWeekGrouping(unittest.TestCase):
                                       pd.DataFrame({'datetime': [datetime(2021, 1, 15, 0, 0, 0)],
                                                     'B': [9]}))
 
-
-class TestMonthGrouping(unittest.TestCase):
-    def test_grouping(self):
+    def test_month_grouping(self):
         class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
             def __init__(self, df):
                 super().__init__(df=df)
@@ -154,9 +150,7 @@ class TestMonthGrouping(unittest.TestCase):
                                       pd.DataFrame({'datetime': [datetime(2021, 3, 15, 0, 0, 0)],
                                                     'B': [9]}))
 
-
-class TestYearGrouping(unittest.TestCase):
-    def test_grouping(self):
+    def test_year_grouping(self):
         class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
             def __init__(self, df):
                 super().__init__(df=df)

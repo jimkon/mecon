@@ -5,6 +5,7 @@ import pandas as pd
 
 from mecon2.transactions import Transactions
 from mecon2.aggregators import CustomisedDefaultTransactionAggregator, CustomisedAmountTransactionAggregator
+from mecon2 import groupings
 
 
 class TestTransactionAggregator(unittest.TestCase):
@@ -551,6 +552,38 @@ class TestTransactionAggregator(unittest.TestCase):
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
         })
+        pd.testing.assert_frame_equal(result_trans_df.reset_index(drop=True),
+                                      expected_trans_df.reset_index(drop=True))
+
+
+class TestGroupAgg(unittest.TestCase):
+    def test_group_agg(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': [11, 12, 13],
+            'datetime': [datetime(2021, 2, 3, 4, 5, 6), datetime(2021, 2, 1, 4, 5, 6),
+                         datetime(2021, 12, 31, 23, 59, 59)],
+            'amount': [100.0, 200.0, 300.0],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        }))
+
+        expected_trans_df = pd.DataFrame({
+            'id': [1112, 13],
+            'datetime': [datetime(2021, 2, 1, 0, 0, 0), datetime(2021, 12, 27, 0, 0, 0)],
+            'amount': [300.0, 300.0],
+            'currency': ['{"GBP": 2}', '{"GBP": 1}'],
+            'amount_cur': [300.0, 300.0],
+            'description': ['Transaction 1,Transaction 2', 'Transaction 3'],
+            'tags': ['tag1', 'tag1,tag2']
+        })
+
+        grouper = groupings.WEEK
+        agg = CustomisedAmountTransactionAggregator('sum', 'week')
+        new_transactions = transactions.groupagg(grouper=grouper, aggregator=agg)
+        result_trans_df = new_transactions.dataframe()
+
         pd.testing.assert_frame_equal(result_trans_df.reset_index(drop=True),
                                       expected_trans_df.reset_index(drop=True))
 
