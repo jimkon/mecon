@@ -74,7 +74,8 @@ class TestAggregator(unittest.TestCase):
                 pass
 
             def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
-                return df_wrapper
+                new_data = {'A': [df_wrapper.dataframe()['A'].min()], 'B': [df_wrapper.dataframe()['B'].min()]}
+                return df_wrapper.factory(pd.DataFrame(new_data))
 
         df_wrapper1 = DataframeWrapper(pd.DataFrame({'A': [2, 4], 'B': [7, 9]}))
         df_wrapper2 = DataframeWrapper(pd.DataFrame({'A': [1, 3, 5], 'B': [6, 8, 10]}))
@@ -83,9 +84,9 @@ class TestAggregator(unittest.TestCase):
 
         result_df_wrapper = aggregator.aggregate([df_wrapper1, df_wrapper2])
 
-        self.assertEqual(result_df_wrapper.size(), df_wrapper1.size() + df_wrapper2.size())
+        self.assertEqual(result_df_wrapper.size(), 2)
         pd.testing.assert_frame_equal(result_df_wrapper.dataframe().reset_index(drop=True),
-                                      pd.DataFrame({'A': [2, 4, 1, 3, 5], 'B': [7, 9, 6, 8, 10]}))
+                                      pd.DataFrame({'A': [2, 1], 'B': [7, 6]}))
 
     def test_aggregation(self):
         aggregator = Aggregator({'A': max, 'B': min})

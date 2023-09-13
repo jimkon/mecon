@@ -40,9 +40,10 @@ class DataframeWrapper:
         new_df = tagging.Tagger.filter_df_with_negated_rule(df, rule)
         return self.factory(new_df)
 
-    def groupagg(self, grouper, aggregator):
-        # TODO move this to the df wrapper
-        pass
+    def groupagg(self, grouper: Grouping, aggregator: Aggregator) -> DataframeWrapper:
+        groups = grouper.group(self)
+        aggregated_groups = aggregator.aggregate(groups)
+        return aggregated_groups
 
     @classmethod
     def factory(cls, df: pd.DataFrame):
@@ -129,7 +130,8 @@ class TagsColumnMixin:
         return self._df_wrapper_obj.dataframe()['tags']
 
     def all_tags(self):
-        tags_split = self.tags.apply(lambda s: s.split(',')).to_list()  # TODO duplicated code in aggregators aggregate_tags_set
+        tags_split = self.tags.apply(
+            lambda s: s.split(',')).to_list()  # TODO duplicated code in aggregators aggregate_tags_set
         tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
         tags_set = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_set
@@ -172,13 +174,17 @@ class Aggregator:
         self._agg_functions = aggregation_functions
 
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
-        df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
+        aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
 
-        res_df_wrapper = df_wrappers_list[0]
+        # shorter but not uses df_wrapper.merge
+        new_df = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list])
+        res_df_wrapper = aggregated_df_wrappers_list[0].factory(new_df)
 
-        if len(df_wrappers_list) > 1:
-            for df_wrapper in lists_of_df_wrapper[1:]:
-                res_df_wrapper = res_df_wrapper.merge(df_wrapper)
+        # longer but not uses df_wrapper.merge
+        # res_df_wrapper = aggregated_df_wrappers_list[0]
+        # if len(aggregated_df_wrappers_list) > 1:
+        #     for df_wrapper in aggregated_df_wrappers_list[1:]:
+        #         res_df_wrapper = res_df_wrapper.merge(df_wrapper)
 
         return res_df_wrapper
 
