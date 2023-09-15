@@ -24,7 +24,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedDefaultTransactionAggregator()
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [600.0],
             'currency': ['{"GBP": 3}'],
@@ -50,7 +50,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('min', 'day')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [100.0],
             'currency': ['{"GBP": 3}'],
@@ -76,7 +76,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('max', 'day')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [300.0],
             'currency': ['{"GBP": 3}'],
@@ -102,7 +102,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('sum', 'day')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [600.0],
             'currency': ['{"GBP": 3}'],
@@ -128,7 +128,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('avg', 'day')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [200.0],
             'currency': ['{"GBP": 3}'],
@@ -154,7 +154,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('count', 'day')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [3],
             'currency': ['{"GBP": 3}'],
@@ -180,7 +180,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('min', 'week')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [100.0],
             'currency': ['{"GBP": 3}'],
@@ -206,7 +206,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('max', 'week')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [300.0],
             'currency': ['{"GBP": 3}'],
@@ -232,7 +232,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('sum', 'week')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [600.0],
             'currency': ['{"GBP": 3}'],
@@ -258,7 +258,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('avg', 'week')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [200.0],
             'currency': ['{"GBP": 3}'],
@@ -284,7 +284,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('count', 'week')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [3],
             'currency': ['{"GBP": 3}'],
@@ -310,7 +310,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('min', 'month')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [100.0],
             'currency': ['{"GBP": 3}'],
@@ -336,7 +336,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('max', 'month')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [300.0],
             'currency': ['{"GBP": 3}'],
@@ -362,7 +362,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('sum', 'month')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [600.0],
             'currency': ['{"GBP": 3}'],
@@ -388,7 +388,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('avg', 'month')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [200.0],
             'currency': ['{"GBP": 3}'],
@@ -414,7 +414,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('count', 'month')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [3],
             'currency': ['{"GBP": 3}'],
@@ -440,7 +440,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('min', 'year')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [100.0],
             'currency': ['{"GBP": 3}'],
@@ -466,7 +466,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('max', 'year')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [300.0],
             'currency': ['{"GBP": 3}'],
@@ -492,7 +492,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('sum', 'year')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [600.0],
             'currency': ['{"GBP": 3}'],
@@ -518,7 +518,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('avg', 'year')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [200.0],
             'currency': ['{"GBP": 3}'],
@@ -544,7 +544,7 @@ class TestTransactionAggregator(unittest.TestCase):
         agg = CustomisedAmountTransactionAggregator('count', 'year')
         result_trans_df = agg.aggregation(transactions).dataframe()
         expected_trans_df = pd.DataFrame({
-            'id': [111213],
+            'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [3],
             'currency': ['{"GBP": 3}'],
