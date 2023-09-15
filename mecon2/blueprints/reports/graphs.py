@@ -32,7 +32,6 @@ def balance_graph_html(time, amount: pd.Series):
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='£'),
-        yaxis2=dict(title='#', overlaying='y', side='right'),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
@@ -47,8 +46,7 @@ def histogram_graph_html(amount: pd.Series):
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
-        yaxis=dict(title='£'),
-        yaxis2=dict(title='#', overlaying='y', side='right'),
+        yaxis=dict(title='#'),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
