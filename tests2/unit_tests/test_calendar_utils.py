@@ -5,6 +5,19 @@ from mecon2.utils import calendar_utils as cu
 
 
 class TestCalendarUtils(unittest.TestCase):
+    def test_datetime_to_date_id(self):
+        self.assertEqual(cu.datetime_to_date_id(datetime(2023, 9, 11, 12, 23, 34)), 20230911)
+        self.assertEqual(cu.datetime_to_date_id(datetime(2023, 1, 1, 0, 23, 1)), 20230101)
+        self.assertEqual(cu.datetime_to_date_id(datetime(2023, 10, 31, 12, 23, 34)), 20231031)
+        self.assertEqual(cu.datetime_to_date_id(datetime(2023, 12, 31, 12, 23, 34)), 20231231)
+
+    def test_datetime_to_date_id_str(self):
+        self.assertEqual(cu.datetime_to_date_id_str(datetime(2023, 9, 11, 12, 23, 34)), "20230911")
+        self.assertEqual(cu.datetime_to_date_id_str(datetime(2023, 1, 1, 0, 23, 1)), "20230101")
+        self.assertEqual(cu.datetime_to_date_id_str(datetime(2023, 10, 31, 12, 23, 34)), "20231031")
+        self.assertEqual(cu.datetime_to_date_id_str(datetime(2023, 12, 31, 12, 23, 34)), "20231231")
+
+
     def test_get_closest_past_monday(self):
         self.assertEqual(
             cu.get_closest_past_monday(datetime(2023, 9, 11, 12, 23, 34)),
