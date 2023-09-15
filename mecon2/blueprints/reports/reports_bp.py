@@ -1,3 +1,4 @@
+import io
 import re
 
 import requests
@@ -38,7 +39,7 @@ def get_transactions() -> Transactions:
     return transactions
 
 
-def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key):
+def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key) -> Transactions:
     tags = _split_tags(tags_str)
     transactions = get_transactions() \
         .contains_tag(tags) \
@@ -51,7 +52,6 @@ def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggr
         )
     # TODO week agg doesn't work properly
     # TODO filling days/weeks/etc after grouping
-    # TODO add count plot
     return transactions
 
 
@@ -61,19 +61,20 @@ def get_filter_values(tag_name):
         end_date = request.form['end_date']
         tags_str = request.form['tags_text_box']
         tags = _split_tags(tags_str).union({tag_name})
-        tags_str = ','.join(tags)
+        # tags_str = ','.join(tags)
+        tags_str = ', '.join(sorted(_filter_tags(tags)))
         grouping = request.form['groups']
         aggregation = request.form['aggregations'] if grouping != 'none' else 'none'
 
         transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, aggregation)
     else:  # if request.method == 'GET':
         tags = {tag_name}
-        transactions = get_transactions().contains_tag(tag_name)
-        start_date, end_date = transactions.date_range()
+        tags_str = ', '.join(sorted(_filter_tags(tags)))
         grouping = 'month'
         aggregation = 'sum'
-
-    tags_str = ', '.join(sorted(_filter_tags(tags)))
+        transactions = get_transactions().contains_tag(tag_name)
+        start_date, end_date = transactions.date_range()
+        transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, aggregation)
 
     return transactions, start_date, end_date, tags_str, grouping, aggregation
 
@@ -83,71 +84,105 @@ def reports_menu():
     return 'reports menu'
 
 
-@reports_bp.route('/graph/<plot_type>/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>,agg:<aggregation>')
-def graph(plot_type, start_date, end_date, tags_str, grouping, aggregation):
+@reports_bp.route('/graph/amount_freq/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
+def amount_freq_timeline_graph(start_date, end_date, tags_str, grouping):
+    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
 
-    transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, aggregation)
-
-    if plot_type == 'timeline':
-        graph_html = graphs.timeline_fig(transactions, figsize=(10, 4))
-    elif plot_type == 'balance':
-        graph_html = graphs.balance_fig(transactions, figsize=(10, 4))
-    elif plot_type == 'histogram':
-        graph_html = graphs.histogram_fig(transactions, figsize=(10, 4))
+    if grouping != 'none':
+        freq_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'count')
     else:
-        graph_html = graphs.timeline_fig(transactions, figsize=(10, 4))
+        freq_transactions = None
+
+    graph_html = graphs.amount_and_freq_timeline_html(
+        total_amount_transactions.datetime,
+        total_amount_transactions.amount,
+        freq_transactions.amount if freq_transactions is not None else None
+    )
+
     return graph_html
 
 
-@reports_bp.route('/custom_graph/<plot_type>', methods=['POST', 'GET'])
-def custom_graph(plot_type):
-    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('Tap')
+@reports_bp.route('/graph/balance/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
+def balance_graph(start_date, end_date, tags_str, grouping):
+    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
 
-    if plot_type == 'timeline':
-        graph_html = graphs.timeline_fig(transactions)
-    elif plot_type == 'balance':
-        graph_html = graphs.balance_fig(transactions)
-    elif plot_type == 'histogram':
-        graph_html = graphs.histogram_fig(transactions)
-    else:
-        graph_html = graphs.timeline_fig(transactions)
-    return render_template('custom_graph.html', **locals(), **globals())
+    graph_html = graphs.balance_graph_html(
+        total_amount_transactions.datetime,
+        total_amount_transactions.amount,
+    )
+
+    return graph_html
+
+
+@reports_bp.route('/graph/histogram/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
+def histogram_graph(start_date, end_date, tags_str, grouping):
+    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
+
+    graph_html = graphs.histogram_graph_html(
+        total_amount_transactions.amount,
+    )
+
+    return graph_html
+
+
+# TODO redo
+# @reports_bp.route('/custom_graph/<plot_type>', methods=['POST', 'GET'])
+# def custom_graph(plot_type):
+#     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('Tap')
+#
+#     if plot_type == 'timeline':
+#         graph_html = graphs.timeline_fig(transactions)
+#     elif plot_type == 'balance':
+#         graph_html = graphs.balance_fig(transactions)
+#     elif plot_type == 'histogram':
+#         graph_html = graphs.histogram_fig(transactions)
+#     elif plot_type == 'frequency':
+#         graph_html = amount_freq_timeline_graph(start_date, end_date, tags_str, grouping)
+#     else:
+#         raise ValueError(f"Unknown plot type ({plot_type}) requested.")
+#     return render_template('custom_graph.html', **locals(), **globals())
 
 
 @reports_bp.route('/tag_info/<tag_name>', methods=['POST', 'GET'])
 def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
 
-    def custom_graph_url_and_html(plot_type):  # TODO asyncio
-        title = plot_type.capitalize()
-        rel_graph_url = url_for('reports.graph',
-                                plot_type=plot_type,
-                                start_date=start_date,
-                                end_date=end_date,
-                                tags_str=tags_str,
-                                grouping=grouping,
-                                aggregation=aggregation)
-
+    def fetch_rel_graph_html(graph_url):
         try:
-            graph_url = f"http://127.0.0.1:5000{rel_graph_url}"
+            graph_url = f"http://127.0.0.1:5000{graph_url}"
             response = requests.get(graph_url)
             response.raise_for_status()  # Raise an exception if there's an HTTP error
             graph_html_result = response.text
-            custom_graph_url = f"http://127.0.0.1:5000{url_for('reports.custom_graph', plot_type=plot_type)}"
-            href = f"<a href={custom_graph_url}>{title}</a>"
-            return href, graph_html_result
+            return '#not implemented', graph_html_result
         except requests.exceptions.RequestException as e:
             # Handle request-related exceptions, e.g., connection errors, timeout, etc.
-            return title, f"Failed to fetch URL: {str(e)}"
+            return 'ERROR', f"Failed to fetch URL: {str(e)}"
 
     data_df = transactions.dataframe()
     table_html = data_df.to_html()
     transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
 
     html_tabs = html_pages.TabsHTML()
-    for plot_type in ['timeline', 'balance', 'histogram']:
-        _href, _graph = custom_graph_url_and_html(plot_type)
-        html_tabs.add_tab(_href, _graph)
+    _href, _graph = fetch_rel_graph_html(url_for('reports.amount_freq_timeline_graph',
+                                                 start_date=start_date,
+                                                 end_date=end_date,
+                                                 tags_str=tags_str,
+                                                 grouping=grouping))
+    html_tabs.add_tab('Amount-Freq', _graph)
+
+    _href, _graph = fetch_rel_graph_html(url_for('reports.balance_graph',
+                                                 start_date=start_date,
+                                                 end_date=end_date,
+                                                 tags_str=tags_str,
+                                                 grouping=grouping))
+    html_tabs.add_tab('Balance', _graph)
+
+    _href, _graph = fetch_rel_graph_html(url_for('reports.histogram_graph',
+                                                 start_date=start_date,
+                                                 end_date=end_date,
+                                                 tags_str=tags_str,
+                                                 grouping=grouping))
+    html_tabs.add_tab('Histogram', _graph)
 
     graph_html = html_tabs.html()
     return render_template('tag_info.html', **locals(), **globals())
