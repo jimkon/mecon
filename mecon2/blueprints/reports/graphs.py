@@ -8,14 +8,14 @@ from plotly.offline import plot
 def amount_and_freq_timeline_html(time, amount, freq):
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1)))
+    fig.add_trace(go.Scatter(x=time, y=-amount, name="amount", line=dict(width=1)))
     if freq is not None:
         fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1), yaxis='y2'))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
-        yaxis=dict(title='£'),
+        yaxis=dict(title='Cost[£]'),
         yaxis2=dict(title='#', overlaying='y', side='right'),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
