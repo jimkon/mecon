@@ -63,7 +63,6 @@ def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggr
             LabelGrouping.from_key(grouping_key),
             CustomisedAmountTransactionAggregator(aggregation_key, grouping_key)
         )
-    # TODO week agg doesn't work properly
     # TODO filling days/weeks/etc after grouping
     return transactions
 
@@ -159,7 +158,6 @@ def histogram_graph(start_date, end_date, tags_str, grouping):
 @reports_bp.route('/tag_info/<tag_name>', methods=['POST', 'GET'])
 def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
-
 
     data_df = transactions.dataframe()
     table_html = data_df.to_html()

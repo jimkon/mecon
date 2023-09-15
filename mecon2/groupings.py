@@ -38,22 +38,19 @@ class LabelGrouping(LabelGroupingABC, abc.ABC):
         return res
 
 
-class DayGrouping(LabelGroupingABC):
-    def __init__(self):
-        super().__init__(instance_name='day')
-
-    def labels(self, df_wrapper: DataframeWrapper) -> pd.Series:
-        assert hasattr(df_wrapper, 'date')
-        # if not isinstance(df_wrapper, DateTimeColumnMixin):  # TODO validation doesn't work properly
-        #     raise ValueError(f"To group in 'days' the input df_wrapper has to implement DateTimeColumnMixin.")
-        date = df_wrapper.date.astype(str)
-        return date
-
-
+# class DayGrouping(LabelGroupingABC):
+#     def __init__(self):
+#         super().__init__(instance_name='day')
+#
+#     def labels(self, df_wrapper: DataframeWrapper) -> pd.Series:
+#         assert hasattr(df_wrapper, 'date')
+#         # if not isinstance(df_wrapper, DateTimeColumnMixin):  # TODO validation doesn't work properly
+#         #     raise ValueError(f"To group in 'days' the input df_wrapper has to implement DateTimeColumnMixin.")
+#         date = df_wrapper.date.astype(str)
+#         return date
 # _DAY = DayGrouping()  # TODO investigate why _DAY and DAY multitons don't have a conflict
+
 DAY = LabelGrouping('day', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.datetime_to_date_id_str))
-WEEK = LabelGrouping('week', lambda df_wrapper: df_wrapper.datetime.apply(lambda dt: str(dt.year))
-                                                + df_wrapper.datetime.apply(calendar_utils.week_of_month).astype(str))
-MONTH = LabelGrouping('month', lambda df_wrapper: df_wrapper.datetime.apply(
-    lambda dt: calendar_utils.datetime_to_date_id_str(dt)[:6]))
+WEEK = LabelGrouping('week', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.get_closest_past_monday).dt.date.astype(str))
+MONTH = LabelGrouping('month', lambda df_wrapper: df_wrapper.datetime.apply(lambda dt: calendar_utils.datetime_to_date_id_str(dt)[:6]))
 YEAR = LabelGrouping('year', lambda df_wrapper: df_wrapper.datetime.apply(lambda dt: str(dt.year)))

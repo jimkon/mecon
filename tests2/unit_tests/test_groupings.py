@@ -97,8 +97,9 @@ class TestGrouping(unittest.TestCase):
                          datetime(2021, 1, 2, 12, 30, 30),
                          datetime(2021, 1, 8, 23, 59, 59),
                          datetime(2021, 1, 15, 0, 0, 0),
+                         datetime(2021, 10, 15, 0, 0, 0),
                          ],
-            'B': [6, 7, 8, 9]
+            'B': [6, 7, 8, 9, 10]
         }
         df = pd.DataFrame(data)
         wrapper = CustomDataframeWrapper(df)
@@ -106,7 +107,7 @@ class TestGrouping(unittest.TestCase):
 
         grouped_wrappers = grouper.group(wrapper)
 
-        self.assertEqual(len(grouped_wrappers), 3)
+        self.assertEqual(len(grouped_wrappers), 4)
         pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
                                       pd.DataFrame({'datetime': [datetime(2021, 1, 1, 0, 0, 0),
                                                                  datetime(2021, 1, 2, 12, 30, 30)],
@@ -117,6 +118,10 @@ class TestGrouping(unittest.TestCase):
         pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
                                       pd.DataFrame({'datetime': [datetime(2021, 1, 15, 0, 0, 0)],
                                                     'B': [9]}))
+
+        pd.testing.assert_frame_equal(grouped_wrappers[3].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 10, 15, 0, 0, 0)],
+                                                    'B': [10]}))
 
     def test_month_grouping(self):
         class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
