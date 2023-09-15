@@ -52,7 +52,7 @@ def date_floor(dt: datetime, group_by_key: str):
 
 
 def datetime_to_date_id(dt):
-    return dt.strftime("%Y%m%d")
+    return int(dt.strftime("%Y%m%d"))
 
 
 def datetime_to_date_id_str(dt):
