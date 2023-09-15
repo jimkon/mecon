@@ -32,6 +32,19 @@ def _filter_tags(tags_set):
     return tags_set
 
 
+def fetch_graph_html(graph_url):
+    try:
+        graph_url = f"http://127.0.0.1:5000{graph_url}"
+        response = requests.get(graph_url)
+        response.raise_for_status()  # Raise an exception if there's an HTTP error
+        graph_html_result = response.text
+        return '#not implemented', graph_html_result
+    except requests.exceptions.RequestException as e:
+        # Handle request-related exceptions, e.g., connection errors, timeout, etc.
+        return 'ERROR', f"Failed to fetch URL: {str(e)}"
+
+
+
 def get_transactions() -> Transactions:
     data_df = data_access.transactions.get_transactions().sort_values(by='datetime', ascending=False).reset_index(
         drop=True)
@@ -147,41 +160,31 @@ def histogram_graph(start_date, end_date, tags_str, grouping):
 def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
 
-    def fetch_rel_graph_html(graph_url):
-        try:
-            graph_url = f"http://127.0.0.1:5000{graph_url}"
-            response = requests.get(graph_url)
-            response.raise_for_status()  # Raise an exception if there's an HTTP error
-            graph_html_result = response.text
-            return '#not implemented', graph_html_result
-        except requests.exceptions.RequestException as e:
-            # Handle request-related exceptions, e.g., connection errors, timeout, etc.
-            return 'ERROR', f"Failed to fetch URL: {str(e)}"
 
     data_df = transactions.dataframe()
     table_html = data_df.to_html()
     transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
 
     html_tabs = html_pages.TabsHTML()
-    _href, _graph = fetch_rel_graph_html(url_for('reports.amount_freq_timeline_graph',
-                                                 start_date=start_date,
-                                                 end_date=end_date,
-                                                 tags_str=tags_str,
-                                                 grouping=grouping))
+    _href, _graph = fetch_graph_html(url_for('reports.amount_freq_timeline_graph',
+                                             start_date=start_date,
+                                             end_date=end_date,
+                                             tags_str=tags_str,
+                                             grouping=grouping))
     html_tabs.add_tab('Amount-Freq', _graph)
 
-    _href, _graph = fetch_rel_graph_html(url_for('reports.balance_graph',
-                                                 start_date=start_date,
-                                                 end_date=end_date,
-                                                 tags_str=tags_str,
-                                                 grouping=grouping))
+    _href, _graph = fetch_graph_html(url_for('reports.balance_graph',
+                                             start_date=start_date,
+                                             end_date=end_date,
+                                             tags_str=tags_str,
+                                             grouping=grouping))
     html_tabs.add_tab('Balance', _graph)
 
-    _href, _graph = fetch_rel_graph_html(url_for('reports.histogram_graph',
-                                                 start_date=start_date,
-                                                 end_date=end_date,
-                                                 tags_str=tags_str,
-                                                 grouping=grouping))
+    _href, _graph = fetch_graph_html(url_for('reports.histogram_graph',
+                                             start_date=start_date,
+                                             end_date=end_date,
+                                             tags_str=tags_str,
+                                             grouping=grouping))
     html_tabs.add_tab('Histogram', _graph)
 
     graph_html = html_tabs.html()
