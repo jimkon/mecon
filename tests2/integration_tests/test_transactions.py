@@ -570,7 +570,7 @@ class TestGroupAgg(unittest.TestCase):
         }))
 
         expected_trans_df = pd.DataFrame({
-            'id': [1112, 13],
+            'id': [11, 13],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0), datetime(2021, 12, 27, 0, 0, 0)],
             'amount': [300.0, 300.0],
             'currency': ['{"GBP": 2}', '{"GBP": 1}'],
