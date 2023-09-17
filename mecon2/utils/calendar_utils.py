@@ -1,4 +1,4 @@
-from datetime import time, timedelta, datetime
+from datetime import time, timedelta, datetime, date
 from enum import Enum
 from math import ceil
 
@@ -85,8 +85,13 @@ def date_range(start_date: datetime, end_date: datetime, step: str):
     return result_date_range
 
 
-def date_range_group_beginning(start_date: datetime, end_date: datetime, step: str):
-    start_date = start_date.replace(hour=0, minute=0, second=0)
+def date_range_group_beginning(start_date: datetime | date, end_date: datetime | date, step: str):
+    if isinstance(start_date, date):
+        start_date = datetime(start_date.year, start_date.month, start_date.day, hour=0, minute=0, second=0)
+    if isinstance(end_date, date):
+        end_date = datetime(end_date.year, end_date.month, end_date.day, hour=0, minute=0, second=0)
+
+
     if step == 'day':
         start_date = start_date
     elif step == 'week':

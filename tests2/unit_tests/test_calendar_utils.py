@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime
+from datetime import datetime, date
 
 from pandas import Timestamp
 
@@ -175,6 +175,46 @@ class TestDateRange(unittest.TestCase):
 
 
 class TestDateRangeGroupBeginning(unittest.TestCase):
+    def test_date_range_group_beginning_start_date_is_date_obj(self):
+        self.assertEqual(
+            cu.date_range_group_beginning(
+                date(2023, 9, 1),
+                date(2023, 9, 18),
+                step='week').tolist(),
+            [
+                Timestamp('2023-08-28 00:00:00'),
+                Timestamp('2023-09-04 00:00:00'),
+                Timestamp('2023-09-11 00:00:00'),
+                Timestamp('2023-09-18 00:00:00'),
+            ]
+        )
+
+        self.assertEqual(
+            cu.date_range_group_beginning(
+                datetime(2023, 9, 1, 12, 23, 34),
+                date(2023, 9, 18),
+                step='week').tolist(),
+            [
+                Timestamp('2023-08-28 00:00:00'),
+                Timestamp('2023-09-04 00:00:00'),
+                Timestamp('2023-09-11 00:00:00'),
+                Timestamp('2023-09-18 00:00:00'),
+            ]
+        )
+
+        self.assertEqual(
+            cu.date_range_group_beginning(
+                date(2023, 9, 1),
+                datetime(2023, 9, 18, 12, 23, 34),
+                step='week').tolist(),
+            [
+                Timestamp('2023-08-28 00:00:00'),
+                Timestamp('2023-09-04 00:00:00'),
+                Timestamp('2023-09-11 00:00:00'),
+                Timestamp('2023-09-18 00:00:00'),
+            ]
+        )
+
     def test_date_range_group_beginning_day(self):
         self.assertEqual(
             cu.date_range_group_beginning(
