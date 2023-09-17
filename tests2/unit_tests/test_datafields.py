@@ -23,7 +23,7 @@ class ExampleDataframeWrapper(datafields.DataframeWrapper,
         datafields.DescriptionColumnMixin.__init__(self, df_wrapper=self)
         datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
         datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
-        # super(datafields.DataframeWrapper, self).__init__(df)  why it didn't work?
+        # super(datafields.DataframeWrapper, self).__init__(df)  why it doesn't work?
         # super(datafields.IdColumnMixin, self).__init__(self)
         # super(datafields.DateTimeColumnMixin, self).__init__(self)
         # super(datafields.AmountColumnMixin, self).__init__(self)

@@ -1,8 +1,9 @@
 import unittest
+from datetime import datetime, date
 
 import pandas as pd
 
-from mecon2.datafields import DataframeWrapper, Grouping, Aggregator
+from mecon2.datafields import DataframeWrapper, Grouping, Aggregator, DateFiller
 
 
 class TestDataframeWrapper(unittest.TestCase):
@@ -100,6 +101,41 @@ class TestAggregator(unittest.TestCase):
         result_df_wrapper2 = aggregator.aggregation(df_wrapper2)
         pd.testing.assert_frame_equal(result_df_wrapper2.dataframe().reset_index(drop=True),
                                       pd.DataFrame({'A': [5], 'B': [6]}))
+
+
+class TestDateFiller(unittest.TestCase):
+    def test_produce_fill_df_rows(self):
+        filler = DateFiller('day', fill_values_dict={'a': 'alpha', 'b': 'beta'})
+
+        result_df = filler.produce_fill_df_rows(
+            datetime(2023, 9, 1, 12, 23, 34),
+            datetime(2023, 9, 5, 12, 23, 34)
+        )
+        expected_df = pd.DataFrame({
+            'datetime': [datetime(2023, 9, 1, 0, 0, 0), datetime(2023, 9, 2, 0, 0, 0),
+                         datetime(2023, 9, 3, 0, 0, 0), datetime(2023, 9, 4, 0, 0, 0),
+                         datetime(2023, 9, 5, 0, 0, 0)],
+            'a': ['alpha', 'alpha', 'alpha', 'alpha', 'alpha'],
+            'b': ['beta', 'beta', 'beta', 'beta', 'beta']
+        })
+        pd.testing.assert_frame_equal(result_df, expected_df)
+
+    def test_produce_fill_df_rows_remove_dates(self):
+        filler = DateFiller('day', fill_values_dict={'a': 'alpha', 'b': 'beta'})
+
+        result_df = filler.produce_fill_df_rows(
+            datetime(2023, 9, 1, 12, 23, 34),
+            datetime(2023, 9, 5, 12, 23, 34),
+            remove_dates=[date(2023, 9, 2), date(2023, 9, 4)]
+        )
+        expected_df = pd.DataFrame({
+            'datetime': [datetime(2023, 9, 1, 0, 0, 0),
+                         datetime(2023, 9, 3, 0, 0, 0),
+                         datetime(2023, 9, 5, 0, 0, 0)],
+            'a': ['alpha', 'alpha', 'alpha'],
+            'b': ['beta', 'beta', 'beta']
+        })
+        pd.testing.assert_frame_equal(result_df, expected_df)
 
 
 if __name__ == '__main__':

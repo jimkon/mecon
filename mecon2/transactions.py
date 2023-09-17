@@ -9,7 +9,8 @@ class ZeroSizeTransactionsError(Exception):
     pass
 
 
-class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTimeColumnMixin, fields.AmountColumnMixin, fields.DescriptionColumnMixin, fields.TagsColumnMixin):
+class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTimeColumnMixin, fields.AmountColumnMixin,
+                   fields.DescriptionColumnMixin, fields.TagsColumnMixin):
     """
     Responsible for holding the transactions dataframe and controlling the access to it, like a DataFrame Facade.
     Columns are specified and only accessed and modifies by the corresponding mixins. Key goal of this object
@@ -30,4 +31,29 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
+    @classmethod
+    def factory(cls, df: pd.DataFrame):
+        # TODO check if sorted
+        return super().factory(df)
 
+
+class TransactionDateFiller(
+    fields.DateFiller):  # TODO move other Transaction related classes here like TransactionAggregators
+    def __init__(self,
+                 fill_unit,
+                 id_fill='',
+                 amount_fill=0.0,
+                 currency_fill='',
+                 amount_curr=0.0,
+                 description_fill='',
+                 tags_fills=''):
+
+        fill_values_dict = {
+            'id': id_fill,
+            'amount': amount_fill,
+            'currency': currency_fill,
+            'amount_cur': amount_curr,
+            'description': description_fill,
+            'tags': tags_fills
+        }
+        super().__init__(fill_unit, fill_values_dict)

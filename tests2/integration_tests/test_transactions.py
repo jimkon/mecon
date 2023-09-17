@@ -1,9 +1,10 @@
 import unittest
+from unittest.mock import MagicMock
 from datetime import datetime
 
 import pandas as pd
 
-from mecon2.transactions import Transactions
+from mecon2.transactions import Transactions, TransactionDateFiller
 from mecon2.aggregators import CustomisedDefaultTransactionAggregator, CustomisedAmountTransactionAggregator
 from mecon2 import groupings
 
@@ -554,6 +555,47 @@ class TestTransactionAggregator(unittest.TestCase):
         })
         pd.testing.assert_frame_equal(result_trans_df.reset_index(drop=True),
                                       expected_trans_df.reset_index(drop=True))
+
+
+class TestFillTransactions(unittest.TestCase):
+    def test_fill(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': [11, 13, 15],
+            'datetime': [datetime(2023, 9, 1, 12, 23, 34),
+                         datetime(2023, 9, 3, 12, 23, 34),
+                         datetime(2023, 9, 5, 12, 23, 34)],
+            'amount': [100.0, 200.0, 300.0, ],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        }))
+
+        filler = TransactionDateFiller(
+            fill_unit='day',
+            id_fill=-1,
+            amount_fill=1.0,
+            currency_fill='currency_fill',
+            amount_curr=1.0,
+            description_fill='description_fill',
+            tags_fills='tags_fills'
+        )
+        result_df = filler.fill(transactions).dataframe().reset_index(drop=True)
+        expected_df = Transactions(pd.DataFrame({
+            'id': [11, -1, 13, -1, 15],
+            'datetime': [datetime(2023, 9, 1, 12, 23, 34),
+                         datetime(2023, 9, 2, 0, 0, 0),
+                         datetime(2023, 9, 3, 12, 23, 34),
+                         datetime(2023, 9, 4, 0, 0, 0),
+                         datetime(2023, 9, 5, 12, 23, 34)],
+            'amount': [100.0, 1.0, 200.0, 1.0, 300.0],
+            'currency': ['GBP', 'currency_fill', 'GBP', 'currency_fill', 'GBP'],
+            'amount_cur': [100.0, 1.0, 200.0, 1.0, 300.0],
+            'description': ['Transaction 1', 'description_fill', 'Transaction 2', 'description_fill', 'Transaction 3'],
+            'tags': ['', 'tags_fills', 'tag1', 'tags_fills', 'tag1,tag2']
+        })).dataframe().reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(result_df, expected_df)
 
 
 class TestGroupAgg(unittest.TestCase):

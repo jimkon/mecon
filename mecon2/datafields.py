@@ -1,13 +1,14 @@
 from __future__ import annotations  # TODO upgrade to python 3.11
 
 import abc
+from collections import Counter
 from itertools import chain
 from typing import List
-from collections import Counter
 
 import pandas as pd
 
 from mecon2 import tagging
+from mecon2.utils import calendar_utils
 
 
 class DataframeWrapper:
@@ -20,8 +21,10 @@ class DataframeWrapper:
     def copy(self) -> DataframeWrapper:
         return self.factory(self.dataframe())
 
-    def merge(self, df_wrapper) -> DataframeWrapper:
+    def merge(self, df_wrapper) -> DataframeWrapper:  # TODO sort before merging, and test
         df = pd.concat([self.dataframe(), df_wrapper.dataframe()]).drop_duplicates()
+        if 'datetime' in df.columns:  # TODO datetime is not a always present
+            df = df.sort_values(by='datetime')
         return self.factory(df)
 
     def size(self):
@@ -196,3 +199,30 @@ class Aggregator:
         new_df = pd.DataFrame(res_dict)
         new_df_wrapper = df_wrapper.factory(new_df)
         return new_df_wrapper
+
+
+class DateFiller:
+    def __init__(self, fill_unit, fill_values_dict):
+        self._fill_unit = fill_unit
+        self._fill_values = fill_values_dict
+
+    def fill(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
+        start_date, end_date = df_wrapper.date_range()  # TODO if has datetime column
+        fill_df = self.produce_fill_df_rows(start_date, end_date, df_wrapper.date)
+        fill_df_wrapper = df_wrapper.factory(fill_df)
+        merged_df_wrapper = df_wrapper.merge(fill_df_wrapper)
+        return merged_df_wrapper
+
+    def produce_fill_df_rows(self, start_date, end_date, remove_dates=None):
+        date_range = calendar_utils.date_range_group_beginning(start_date, end_date, step=self._fill_unit)
+        date_range.name = 'datetime'
+
+        if remove_dates is not None:
+            remove_dates = pd.to_datetime(remove_dates).to_list()
+            date_range = [date for date in date_range if date not in remove_dates]
+
+        fill_df = pd.DataFrame({'datetime': date_range})
+        for column, default_value in self._fill_values.items():
+            fill_df[column] = default_value
+
+        return fill_df
