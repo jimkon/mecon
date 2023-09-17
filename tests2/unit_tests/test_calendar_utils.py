@@ -182,13 +182,13 @@ class TestDateRangeGroupBeginning(unittest.TestCase):
                 datetime(2023, 9, 7, 12, 23, 34),
                 step='day').tolist(),
             [
-                Timestamp('2023-09-01 12:23:34'),
-                Timestamp('2023-09-02 12:23:34'),
-                Timestamp('2023-09-03 12:23:34'),
-                Timestamp('2023-09-04 12:23:34'),
-                Timestamp('2023-09-05 12:23:34'),
-                Timestamp('2023-09-06 12:23:34'),
-                Timestamp('2023-09-07 12:23:34')
+                Timestamp('2023-09-01 00:00:00'),
+                Timestamp('2023-09-02 00:00:00'),
+                Timestamp('2023-09-03 00:00:00'),
+                Timestamp('2023-09-04 00:00:00'),
+                Timestamp('2023-09-05 00:00:00'),
+                Timestamp('2023-09-06 00:00:00'),
+                Timestamp('2023-09-07 00:00:00')
             ]
         )
 
@@ -199,10 +199,10 @@ class TestDateRangeGroupBeginning(unittest.TestCase):
                 datetime(2023, 9, 18, 12, 23, 34),
                 step='week').tolist(),
             [
-                Timestamp('2023-08-28 12:23:34'),
-                Timestamp('2023-09-04 12:23:34'),
-                Timestamp('2023-09-11 12:23:34'),
-                Timestamp('2023-09-18 12:23:34'),
+                Timestamp('2023-08-28 00:00:00'),
+                Timestamp('2023-09-04 00:00:00'),
+                Timestamp('2023-09-11 00:00:00'),
+                Timestamp('2023-09-18 00:00:00'),
             ]
         )
 
@@ -213,12 +213,12 @@ class TestDateRangeGroupBeginning(unittest.TestCase):
                 datetime(2024, 2, 17, 12, 23, 34),
                 step='month').tolist(),
             [
-                Timestamp('2023-09-01 12:23:34'),
-                Timestamp('2023-10-01 12:23:34'),
-                Timestamp('2023-11-01 12:23:34'),
-                Timestamp('2023-12-01 12:23:34'),
-                Timestamp('2024-01-01 12:23:34'),
-                Timestamp('2024-02-01 12:23:34'),
+                Timestamp('2023-09-01 00:00:00'),
+                Timestamp('2023-10-01 00:00:00'),
+                Timestamp('2023-11-01 00:00:00'),
+                Timestamp('2023-12-01 00:00:00'),
+                Timestamp('2024-01-01 00:00:00'),
+                Timestamp('2024-02-01 00:00:00'),
             ]
         )
 
@@ -229,9 +229,9 @@ class TestDateRangeGroupBeginning(unittest.TestCase):
                 datetime(2024, 2, 17, 12, 23, 34),
                 step='year').tolist(),
             [
-                Timestamp('2022-01-01 12:23:34'),
-                Timestamp('2023-01-01 12:23:34'),
-                Timestamp('2024-01-01 12:23:34'),
+                Timestamp('2022-01-01 00:00:00'),
+                Timestamp('2023-01-01 00:00:00'),
+                Timestamp('2024-01-01 00:00:00'),
             ]
         )
 

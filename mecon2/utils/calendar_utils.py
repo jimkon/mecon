@@ -86,6 +86,7 @@ def date_range(start_date: datetime, end_date: datetime, step: str):
 
 
 def date_range_group_beginning(start_date: datetime, end_date: datetime, step: str):
+    start_date = start_date.replace(hour=0, minute=0, second=0)
     if step == 'day':
         start_date = start_date
     elif step == 'week':
