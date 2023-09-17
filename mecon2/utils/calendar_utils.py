@@ -59,6 +59,48 @@ def datetime_to_date_id_str(dt):
     return str(datetime_to_date_id(dt))
 
 
+def date_range(start_date: datetime, end_date: datetime, step: str):
+    #  https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#period-aliases
+    #  https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
+    start_date, end_date = min(start_date, end_date), max(start_date, end_date)
+
+    if step == 'day':
+        result_date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+    elif step == 'week':
+        result_date_range = pd.date_range(start=start_date, end=end_date, freq='7D')
+    elif step == 'month':
+        offset = pd.Timedelta(days=start_date.day - 1)
+        month_start_date = start_date.replace(day=1)
+        _date_range = pd.date_range(start=month_start_date, end=end_date, freq='MS')
+        result_date_range = pd.Series([date.replace(day=start_date.day) for date in _date_range])
+    elif step == 'year':
+        year_start_date = start_date.replace(month=1, day=1)
+        _date_range = pd.date_range(start=year_start_date, end=end_date, freq='YS')
+        result_date_range = pd.Series(
+            [date.replace(month=start_date.month, day=start_date.day) for date in _date_range])
+    else:
+        raise ValueError(
+            f"Unknown step argument for date range ({step}). Acceptable values are {'day', 'week', 'month', 'year'}")
+
+    return result_date_range
+
+
+def date_range_group_beginning(start_date: datetime, end_date: datetime, step: str):
+    if step == 'day':
+        start_date = start_date
+    elif step == 'week':
+        start_date = get_closest_past_monday(start_date)
+    elif step == 'month':
+        start_date = start_date.replace(day=1)
+    elif step == 'year':
+        start_date = start_date.replace(month=1, day=1)
+    else:
+        raise ValueError(
+            f"Unknown step argument for date range ({step}). Acceptable values are {'day', 'week', 'month', 'year'}")
+
+    return date_range(start_date, end_date, step)
+
+
 def week_of_month(dt):
     """ Returns the week of the month for the specified date.
     https://stackoverflow.com/questions/3806473/week-number-of-the-month
