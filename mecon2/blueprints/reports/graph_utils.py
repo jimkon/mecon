@@ -1,57 +1,19 @@
-from concurrent.futures import ThreadPoolExecutor
-
-import matplotlib.pyplot as plt
-import mpld3
-
-from mecon2.utils import html_pages
-
-# plt.style.use('bmh')
-# plt.style.use('Solarize_Light2')
-# plt.style.use('seaborn-v0_8-whitegrid')
+import numpy as np
+import pandas as pd
 
 
-def create_plot(func, x, y, ax):
-    return func(x, y, ax)
+def calculated_histogram_and_contributions(amount):
+    bin_counts, bin_edges = np.histogram(amount, bins='auto')
 
+    bin_midpoints = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-def create_html_plot(func, transactions, fig_size=(10, 4)):
-    fig, ax = plt.subplots(1, 1, figsize=fig_size)
-    func(transactions, ax)
+    bin_edges_t = list(bin_edges)
+    bin_edges_t[-1] = bin_edges_t[-1] + 1  # move it a bit to the right
+    bin_indices = np.digitize(amount, bin_edges_t)
+    df_bin_amounts = pd.DataFrame({'ind': bin_indices, 'amount': amount})
+    fill_df = pd.DataFrame({'ind': range(min(bin_indices), max(bin_indices))})
+    fill_df['amount'] = 0
 
-    fig.tight_layout()
-    # Convert the figure to an HTML-encoded image using mpld3
-    # html_image = mpld3.fig_to_html(fig)
-    html_image = html_pages.ImageHTML.from_matplotlib()
-    return html_image
+    df_bin_totals = pd.concat([df_bin_amounts, fill_df], keys='ind').groupby('ind').agg('sum').reset_index()
 
-
-class ThreadPoolExecutorWrapper:
-    def __init__(self):
-        self._tasks = []
-
-    def append_task(self, func, args):
-        self._tasks.append((func, args))
-
-    def run(self):
-        futures, results = [], []
-        with ThreadPoolExecutor(max_workers=len(self._tasks)) as executor:
-            for func, args in self._tasks:
-                future = executor.submit(func, *args)
-                futures.append(future)
-
-            for future in futures:
-                results.append(future.result())
-
-        return results
-
-
-def async_multiplot(tasks):
-    executor = ThreadPoolExecutorWrapper()
-    for func, args in tasks:
-        executor.append_task(func, args)
-    results = executor.run()
-    return results
-
-
-
-
+    return bin_midpoints, bin_counts, df_bin_totals['amount']
