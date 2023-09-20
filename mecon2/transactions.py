@@ -31,6 +31,11 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
+    def fill_values(self, fill_unit):
+        return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit))
+        # filler =
+        # return filler.fill(self)
+
     @classmethod
     def factory(cls, df: pd.DataFrame):
         # TODO check if sorted
@@ -47,7 +52,6 @@ class TransactionDateFiller(
                  amount_curr=0.0,
                  description_fill='',
                  tags_fills=''):
-
         fill_values_dict = {
             'id': id_fill,
             'amount': amount_fill,

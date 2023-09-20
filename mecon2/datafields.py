@@ -48,11 +48,15 @@ class DataframeWrapper:
         aggregated_groups = aggregator.aggregate(groups)
         return aggregated_groups
 
+    # def fill_values(self, filler: DateFiller = None):  # TODO untested
+    #     return filler.fill(self)
+
     @classmethod
     def factory(cls, df: pd.DataFrame):
         return cls(df)
 
 
+# TODO CulumnMixin subclass with getter for df_wrapper, and factory
 class IdColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
@@ -87,6 +91,9 @@ class DateTimeColumnMixin:
             tagging.Condition.from_string_values('datetime', 'str', 'less_equal', str(end_date)),
         ])
         return self._df_wrapper_obj.apply_rule(rule)
+
+    def fill_dates(self, filler: DateFiller):
+        return filler.fill(self._df_wrapper_obj)
 
 
 class AmountColumnMixin:
