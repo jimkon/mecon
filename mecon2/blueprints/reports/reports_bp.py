@@ -66,7 +66,8 @@ def get_transactions() -> Transactions:
 
 
 def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key,
-                              fill_dates_before_groupagg=False, fill_dates_after_groupagg=True) -> Transactions:  # TODO fill dates?
+                              fill_dates_before_groupagg=False,
+                              fill_dates_after_groupagg=True) -> Transactions:  # TODO fill dates?
     tags = _split_tags(tags_str)
     transactions = get_transactions() \
         .contains_tag(tags) \
