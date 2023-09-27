@@ -1,8 +1,9 @@
+import io
 import logging
-import os
-import sys
-from logging.handlers import TimedRotatingFileHandler
 import pathlib
+import sys
+from functools import wraps
+from logging.handlers import TimedRotatingFileHandler
 
 import pandas as pd
 
@@ -41,39 +42,63 @@ def setup_logging(logger=None):
     console_handler = logging.StreamHandler(sys.stdout)
 
     # Define a format for log messages
-    formatter = logging.Formatter('%(asctime)s,%(msecs)d,%(name)s,%(levelname)s,%(module)s,%(funcName)s,"%(message)s"')
+    file_formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(module)s,%(funcName)s,#"%(message)s"#')
+    console_formatter = logging.Formatter('[%(levelname)s]\t%(asctime)s - %(name)s:"%(message)s"')
 
     # Set the format for the file handler
-    file_handler.setFormatter(formatter)
+    file_handler.setFormatter(file_formatter)
 
     # Set the format for the console handler
-    console_handler.setFormatter(formatter)
+    console_handler.setFormatter(console_formatter)
 
     # Add the handlers to the logger
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    logging.info('Test log message.')
+    print_logs_info()
 
 
 def print_logs_info():
     logging.info(f"Logs are stored in {LOGS_DIRECTORY} (filenames {LOG_FILENAME})")
 
 
-def read_logs_as_df(historic_logs=False):
+def read_logs_string_as_df(logs_string: str):
     col_names = ['datetime', 'msecs', 'logger', 'level', 'module', 'funcName', 'message']
+    logs_string_io = io.StringIO(logs_string)
+    df_logs = pd.read_csv(logs_string_io, sep=",", header=None, names=col_names, index_col=False)
+    return df_logs
 
-    df_logs = pd.read_csv(LOGS_DIRECTORY / LOG_FILENAME,
-                          names=col_names,
-                          index_col=False)
+
+def read_logs_as_df(historic_logs=False):
+    log_file = LOGS_DIRECTORY / LOG_FILENAME
+    df_logs = read_logs_string_as_df(log_file.read_text())
 
     if historic_logs:
         for log_file in LOGS_DIRECTORY.glob('*.csv'):
-            df_hist_logs = pd.read_csv(log_file, names=col_names, index_col=False)
+            df_hist_logs = read_logs_string_as_df(log_file.read_text())
             df_logs = pd.concat([df_logs, df_hist_logs])
 
-        df_logs = df_logs.sort_values('msecs')
+        df_logs = df_logs.sort_values('datetime')
 
     return df_logs
 
-setup_logging()
+
+def codeflow_log_wrapper(tags=''):
+    def decorator(_func):
+        # https://flask.palletsprojects.com/en/2.3.x/patterns/viewdecorators/
+        @wraps(_func)
+        def wrapper(*args, **kwargs):
+            _funct_name = f"{_func.__module__}.{_func.__qualname__}"
+            logging.info(f"{_funct_name} started... #codeflow#start{tags}")
+            try:
+                res = _func(*args, **kwargs)
+            except Exception as e:
+                logging.info(f"{_funct_name} raised {e}! #codeflow#error{tags}")
+                raise
+            else:
+                logging.info(f"{_funct_name} finished... #codeflow#end{tags}")
+                return res
+
+        return wrapper
+
+    return decorator
