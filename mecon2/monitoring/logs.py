@@ -66,6 +66,8 @@ def read_logs_string_as_df(logs_string: str):
     col_names = ['datetime', 'msecs', 'logger', 'level', 'module', 'funcName', 'message']
     logs_string_io = io.StringIO(logs_string)
     df_logs = pd.read_csv(logs_string_io, sep=",", header=None, names=col_names, index_col=False)
+    df_logs.dropna(inplace=True)
+    df_logs['msecs'] = df_logs['msecs'].astype('int64')
     return df_logs
 
 

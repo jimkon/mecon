@@ -13,6 +13,7 @@ class TestLogs(unittest.TestCase):
         csv_string = """2023-09-26 00:08:27,592,root,INFO,logs,print_logs_info,"#""Logs are stored in logs (filenames logs_raw.csv)""#"
 2023-09-26 00:08:27,598,root,INFO,file_system,__init__,"#""New datasets directory in path PycharmProjects\mecon\datasets #info#filesystem""#"
 2023-09-26 00:08:27,599,root,INFO,file_system,__init__,"#""New dataset in path PycharmProjects\mecon\datasets\mydata #info#filesystem""#"
+ * Running on http://127.0.0.1:5000"
 """
 
         expected_df = pd.DataFrame({'datetime': ['2023-09-26 00:08:27', '2023-09-26 00:08:27', '2023-09-26 00:08:27'],
