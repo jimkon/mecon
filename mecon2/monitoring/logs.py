@@ -4,6 +4,7 @@ import pathlib
 import sys
 from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
+from typing import List
 
 import pandas as pd
 
@@ -42,7 +43,7 @@ def setup_logging(logger=None):
     console_handler = logging.StreamHandler(sys.stdout)
 
     # Define a format for log messages
-    file_formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(module)s,%(funcName)s,#"%(message)s"#')
+    file_formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(module)s,%(funcName)s,"%(message)s"')
     console_formatter = logging.Formatter('[%(levelname)s]\t%(asctime)s - %(name)s:"%(message)s"')
 
     # Set the format for the file handler
@@ -59,28 +60,38 @@ def setup_logging(logger=None):
 
 
 def print_logs_info():
-    logging.info(f"Logs are stored in {LOGS_DIRECTORY} (filenames {LOG_FILENAME})")
+    logging.info(f"Logs are stored in {LOGS_DIRECTORY} (filename: {LOG_FILENAME}, historic: {get_log_files(True)})")
 
 
 def read_logs_string_as_df(logs_string: str):
-    col_names = ['datetime', 'msecs', 'logger', 'level', 'module', 'funcName', 'message']
     logs_string_io = io.StringIO(logs_string)
-    df_logs = pd.read_csv(logs_string_io, sep=",", header=None, names=col_names, index_col=False)
+
+    col_names = ['datetime', 'msecs', 'logger', 'level', 'module', 'funcName', 'message']
+    df_logs = pd.read_csv(logs_string_io, sep=",", header=None, names=col_names, index_col=False, quotechar='"')
     df_logs.dropna(inplace=True)
     df_logs['msecs'] = df_logs['msecs'].astype('int64')
+    df_logs.reset_index(drop=True, inplace=True)
     return df_logs
 
 
-def read_logs_as_df(historic_logs=False):
-    log_file = LOGS_DIRECTORY / LOG_FILENAME
-    df_logs = read_logs_string_as_df(log_file.read_text())
-
+def get_log_files(historic_logs=False):
     if historic_logs:
-        for log_file in LOGS_DIRECTORY.glob('*.csv'):
-            df_hist_logs = read_logs_string_as_df(log_file.read_text())
-            df_logs = pd.concat([df_logs, df_hist_logs])
+        log_files = list(LOGS_DIRECTORY.glob('*'))
+    else:
+        log_files = [LOGS_DIRECTORY / LOG_FILENAME]
+    return log_files
 
-        df_logs = df_logs.sort_values('datetime')
+
+def read_logs_as_df(log_files: List[pathlib.Path]):  # TODO use get_log_files
+    df_logs = None
+    for log_file in log_files:
+        if df_logs is None:
+            df_logs = read_logs_string_as_df(log_file.read_text())
+        else:
+            df_logs_temp = read_logs_string_as_df(log_file.read_text())
+            df_logs = pd.concat([df_logs, df_logs_temp])
+
+    df_logs = df_logs.sort_values(['datetime', 'msecs'])
 
     return df_logs
 

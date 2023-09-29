@@ -10,19 +10,23 @@ from mecon2.monitoring import logs
 
 class TestLogs(unittest.TestCase):
     def test_read_logs_string_as_df(self):
-        csv_string = """2023-09-26 00:08:27,592,root,INFO,logs,print_logs_info,"#""Logs are stored in logs (filenames logs_raw.csv)""#"
-2023-09-26 00:08:27,598,root,INFO,file_system,__init__,"#""New datasets directory in path PycharmProjects\mecon\datasets #info#filesystem""#"
-2023-09-26 00:08:27,599,root,INFO,file_system,__init__,"#""New dataset in path PycharmProjects\mecon\datasets\mydata #info#filesystem""#"
+        csv_string = """2023-09-26 00:08:27,592,root,INFO,logs,print_logs_info,"Logs are stored in logs (filenames logs_raw.csv)"
+2023-09-26 00:08:27,598,root,INFO,file_system,__init__,"New datasets directory in path PycharmProjects\mecon\datasets #info#filesystem"
+2023-09-26 00:08:27,599,root,INFO,file_system,__init__,"New dataset in path PycharmProjects\mecon\datasets\mydata #info#filesystem"
  * Running on http://127.0.0.1:5000"
+2023-09-28 16:42:08,583,werkzeug,INFO,_internal,_log," * Detected change in 'mecon2\\monitoring\\log_data.py', reloading"
 """
 
-        expected_df = pd.DataFrame({'datetime': ['2023-09-26 00:08:27', '2023-09-26 00:08:27', '2023-09-26 00:08:27'],
-                                    'msecs': [592, 598, 599], 'logger': ['root', 'root', 'root'],
-                                    'level': ['INFO', 'INFO', 'INFO'], 'module': ['logs', 'file_system', 'file_system'],
-                                    'funcName': ['print_logs_info', '__init__', '__init__'],
-                                    'message': ['#"Logs are stored in logs (filenames logs_raw.csv)"#',
-                                                '#"New datasets directory in path PycharmProjects\\mecon\\datasets #info#filesystem"#',
-                                                '#"New dataset in path PycharmProjects\\mecon\\datasets\\mydata #info#filesystem"#']})
+        expected_df = pd.DataFrame({'datetime': ['2023-09-26 00:08:27', '2023-09-26 00:08:27', '2023-09-26 00:08:27', '2023-09-28 16:42:08'],
+                                    'msecs': [592, 598, 599, 583],
+                                    'logger': ['root', 'root', 'root', 'werkzeug'],
+                                    'level': ['INFO', 'INFO', 'INFO', 'INFO'],
+                                    'module': ['logs', 'file_system', 'file_system', '_internal'],
+                                    'funcName': ['print_logs_info', '__init__', '__init__', '_log'],
+                                    'message': ['Logs are stored in logs (filenames logs_raw.csv)',
+                                                'New datasets directory in path PycharmProjects\\mecon\\datasets #info#filesystem',
+                                                'New dataset in path PycharmProjects\\mecon\\datasets\\mydata #info#filesystem',
+                                                " * Detected change in 'mecon2\\monitoring\\log_data.py', reloading"]})
 
         result_df = logs.read_logs_string_as_df(csv_string)
         pd.testing.assert_frame_equal(result_df, expected_df)
@@ -40,7 +44,7 @@ class TestLogs(unittest.TestCase):
         mock_read_str_logs.return_value = expected_df
         with patch('pathlib.Path.__new__') as mock_new_path:
             with patch('pathlib.Path.read_text') as mock_path_read_text:
-                result_df = logs.read_logs_as_df()
+                result_df = logs.read_logs_as_df([pathlib.Path('mocked')])
                 pd.testing.assert_frame_equal(result_df, expected_df)
 
     @patch("mecon2.monitoring.logs.read_logs_string_as_df")
@@ -65,14 +69,15 @@ class TestLogs(unittest.TestCase):
 
         with patch('pathlib.Path.__new__') as mock_new_path:
             with patch('pathlib.Path.read_text') as mock_path_read_text:
-                with patch('pathlib.Path.glob') as mock_path_glob:
-                    mock_path_glob.return_value = [pathlib.Path('file1')]
-                    result_df = logs.read_logs_as_df(historic_logs=True)
-                    pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
-                                                  expected_df.reset_index(drop=True))
+                result_df = logs.read_logs_as_df([pathlib.Path('mocked_1'), pathlib.Path('mocked_2')])
+                pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
+                                              expected_df.reset_index(drop=True))
 
 
 class TestLogData(unittest.TestCase):
+    def test_extract_description(self):
+        self.assertEqual(log_data._extract_description('#"test test"#'), 'test test')
+
     def test_extract_tags(self):
         self.assertEqual(log_data._extract_tags('example test #tag1'), 'tag1')
         self.assertEqual(log_data._extract_tags('example test #tag1#tag2'), 'tag1,tag2')

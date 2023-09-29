@@ -5,6 +5,11 @@ import pandas as pd
 from mecon2 import datafields
 
 
+def _extract_description(string):
+    match = re.search(r'#"(.*?)"#', string)
+    return match.group(1)
+
+
 def _extract_tags(string):
     if len(string) == 0 or '#' not in string:
         return ''
@@ -21,7 +26,7 @@ def transform_raw_dataframe(df_logs_raw: pd.DataFrame) -> pd.DataFrame:
     df_transformed['level'] = df_logs_raw['level']
     df_transformed['module'] = df_logs_raw['module']
     df_transformed['funcName'] = df_logs_raw['funcName']
-    df_transformed['description'] = df_logs_raw['message'].apply(lambda text: re.search(r'#"(.*?)"#', text).group(1))
+    df_transformed['description'] = df_logs_raw['message'].apply(lambda text: text) #_extract_description(text))
     df_transformed['tags'] = df_transformed['description'].apply(lambda text: _extract_tags(text))
     return df_transformed
 

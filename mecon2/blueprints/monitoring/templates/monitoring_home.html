@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <br>
+    <br>
+    {% include "log_file_selection.html" %}
+    <h1>Monitoring</h1>
+    <h1>Console</h1>
+    {% if table_html is not none %}
+        <h1>Logs ({{ logs.size() }} rows)</h1>
+        {{ table_html | safe }}
+    {% endif %}
+
+{% endblock content %}
