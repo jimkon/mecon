@@ -91,7 +91,7 @@ def read_logs_as_df(log_files: List[pathlib.Path]):  # TODO use get_log_files
             df_logs_temp = read_logs_string_as_df(log_file.read_text())
             df_logs = pd.concat([df_logs, df_logs_temp])
 
-    df_logs = df_logs.sort_values(['datetime', 'msecs'])
+    df_logs = df_logs.sort_values(['datetime', 'msecs']).reset_index(drop=True)
 
     return df_logs
 

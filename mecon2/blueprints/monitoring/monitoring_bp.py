@@ -9,7 +9,7 @@ from mecon2.monitoring.log_data import LogData
 monitoring_bp = Blueprint('monitoring', __name__, template_folder='templates')
 
 
-def get_logs(selected_log_file=None, start_date=None, end_date=None, tags_str=None, grouping=None, aggregation=None):
+def get_logs(selected_log_file=None):
     if request.method == 'POST':
         selected_log_file = request.form['log_files']
     else:  # if request.method == 'GET':
@@ -23,7 +23,7 @@ def get_logs(selected_log_file=None, start_date=None, end_date=None, tags_str=No
     return logs, selected_log_file
 
 
-@monitoring_bp.route('/')
+@monitoring_bp.route('/', methods=['POST', 'GET'])
 def home():
     all_log_filenames = [str(file) for file in get_log_files(historic_logs=True)]
     logs, selected_log_file = get_logs()
