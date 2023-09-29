@@ -1,5 +1,6 @@
+import logging
 import pathlib
-from typing import List, Dict
+from typing import Dict
 
 
 def _subfolder_csvs(path):
@@ -11,9 +12,12 @@ def _subfolder_csvs(path):
 
     return result
 
+
 class Dataset:
     def __init__(self, path: str | pathlib.Path):
         self._path = pathlib.Path(path)
+        logging.info(f"New dataset in path {self._path} #info#filesystem")
+
         self._data = self._path / 'data'
 
         self._sqlite = self._data / 'db'
@@ -33,7 +37,7 @@ class Dataset:
     def statement_files(self) -> Dict:
         return _subfolder_csvs(self.statements)
 
-    def add_statement(self, bank_name: str, statement_path: str|pathlib.Path):
+    def add_statement(self, bank_name: str, statement_path: str | pathlib.Path):
         statement_path = pathlib.Path(statement_path)
         filename = statement_path.name
         new_statement_path = self.statements / bank_name / filename
@@ -41,9 +45,11 @@ class Dataset:
         new_statement_path.write_bytes(statement_path.read_bytes())
 
 
+# TODO maybe add a singleton subclass of this class as a global variable
 class DatasetDir:
     def __init__(self, path: str | pathlib.Path):
         self._path = pathlib.Path(path)
+        logging.info(f"New datasets directory in path {self._path} #info#filesystem")
         self._path.mkdir(parents=True, exist_ok=True)
 
         self._datasets = []
@@ -64,4 +70,3 @@ class DatasetDir:
     def get_dataset(self, dataset_name) -> Dataset:
         dataset_path = self.path / dataset_name
         return Dataset(dataset_path) if dataset_path.exists() else None
-

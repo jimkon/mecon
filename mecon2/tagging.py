@@ -5,7 +5,7 @@ import pandas as pd
 
 from mecon2 import comparisons
 from mecon2 import transformations
-
+from mecon2.monitoring import logs
 
 class FieldIsNotStringException(Exception):
     pass
@@ -183,6 +183,7 @@ class Tag:
 
 class Tagger(abc.ABC):
     @staticmethod
+    @logs.codeflow_log_wrapper('#data#tags#process')
     def tag(tag: Tag, df: pd.DataFrame, remove_old_tags=False):
         tag_name = tag.name
         if remove_old_tags:

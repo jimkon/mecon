@@ -7,6 +7,7 @@ from mecon2 import comparisons, transformations
 from mecon2.data.db_controller import data_access, reset_tags
 from mecon2.tagging import Tag
 from mecon2.transactions import Transactions
+from mecon2.monitoring import logs
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
@@ -22,6 +23,7 @@ def _reformat_json_str(json_str):
     return json_str
 
 
+@logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
     data_df = data_access.transactions.get_transactions().sort_values(by='datetime', ascending=False).reset_index(
         drop=True)
@@ -29,6 +31,7 @@ def get_transactions() -> Transactions:
     return transactions
 
 
+@logs.codeflow_log_wrapper('#data#tags#process')
 def recalculate_tags():
     transactions = get_transactions().reset_tags()
 
@@ -43,6 +46,7 @@ def recalculate_tags():
     data_access.transactions.update_tags(data_df)
 
 
+@logs.codeflow_log_wrapper('#data#tags#store')
 def save_and_recalculate_tags(tag_name, tag_json_str):
     data_access.tags.set_tag(tag_name, _json_from_str(tag_json_str))
     recalculate_tags()
@@ -79,6 +83,7 @@ def render_tag_page(title='Tag page',
 
 
 @tags_bp.route('/', methods=['POST', 'GET'])
+@logs.codeflow_log_wrapper('#api')
 def tags_menu():
     if request.method == 'POST':
         if "recalculate_tags" in request.form:
@@ -109,6 +114,7 @@ def tags_menu():
 
 
 @tags_bp.route('/edit/<tag_name>', methods=['POST', 'GET'])
+@logs.codeflow_log_wrapper('#api')
 def tag_edit(tag_name):
     if request.method == 'POST':
         if "refresh" in request.form:

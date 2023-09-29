@@ -3,10 +3,7 @@ from __future__ import annotations  # TODO upgrade to python 3.11
 import pandas as pd
 
 import mecon2.datafields as fields
-
-
-class ZeroSizeTransactionsError(Exception):
-    pass
+from mecon2.monitoring import logs
 
 
 class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTimeColumnMixin, fields.AmountColumnMixin,
@@ -20,9 +17,8 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
     Not responsible for any IO operations.
     """
 
+    @logs.codeflow_log_wrapper('#data#transactions#process')
     def __init__(self, df: pd.DataFrame):
-        if df is None:
-            raise ZeroSizeTransactionsError
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)
         fields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
@@ -32,6 +28,7 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     def fill_values(self, fill_unit):
+
         return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit))
         # filler =
         # return filler.fill(self)

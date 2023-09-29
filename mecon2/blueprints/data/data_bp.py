@@ -8,7 +8,9 @@ from json2html import json2html
 from mecon2.app.datasets import current_dataset
 from mecon2.data.db_controller import reset_transactions, import_data_access, data_access
 from mecon2.data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
-from mecon2.transactions import Transactions, ZeroSizeTransactionsError
+from mecon2.transactions import Transactions
+from mecon2.datafields import ZeroSizeTransactionsError
+from mecon2.monitoring import logs
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 
@@ -79,6 +81,7 @@ def _db_transactions_info():
 
 
 @data_bp.route('/menu')
+@logs.codeflow_log_wrapper('#api')
 def data_menu():
     db_transactions_info = _db_transactions_info()
     db_statements_info = json2html.convert(json=_db_statements_info())
@@ -87,6 +90,7 @@ def data_menu():
 
 
 @data_bp.post('/reload')
+@logs.codeflow_log_wrapper('#api')
 def data_reload():
     reset_transactions()
     statements_info = _statement_files_info()
@@ -107,16 +111,19 @@ def data_reload():
 
 
 @data_bp.post('/import')
+@logs.codeflow_log_wrapper('#api')
 def data_import():
     return redirect(url_for('data.data_menu'))
 
 
 @data_bp.route('/view/file/<path>')
+@logs.codeflow_log_wrapper('#api')
 def datafile_view(path):
     return pd.read_csv(path).to_html()
 
 
 @data_bp.route('/view/<item>')
+@logs.codeflow_log_wrapper('#api')
 def data_view(item):
     # TODO get the df (either statement or the transactions) and return to_html
     return f"data view {item}"
