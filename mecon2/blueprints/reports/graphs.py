@@ -84,6 +84,7 @@ def histogram_and_contributions(amounts: pd.Series):
     ))
 
     fig.update_layout(
+        bargap=0,
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='#'),
