@@ -43,7 +43,7 @@ def setup_logging(logger=None):
     console_handler = logging.StreamHandler(sys.stdout)
 
     # Define a format for log messages
-    file_formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(module)s,%(funcName)s,"%(message)s"')
+    file_formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(module)s,%(funcName)s,~%(message)s~')
     console_formatter = logging.Formatter('[%(levelname)s]\t%(asctime)s - %(name)s:"%(message)s"')
 
     # Set the format for the file handler
@@ -67,7 +67,7 @@ def read_logs_string_as_df(logs_string: str):
     logs_string_io = io.StringIO(logs_string)
 
     col_names = ['datetime', 'msecs', 'logger', 'level', 'module', 'funcName', 'message']
-    df_logs = pd.read_csv(logs_string_io, sep=",", header=None, names=col_names, index_col=False, quotechar='"')
+    df_logs = pd.read_csv(logs_string_io, sep=",", header=None, names=col_names, index_col=False, quotechar='~')
     df_logs.dropna(inplace=True)
     df_logs['msecs'] = df_logs['msecs'].astype('int64')
     df_logs.reset_index(drop=True, inplace=True)
@@ -91,7 +91,7 @@ def read_logs_as_df(log_files: List[pathlib.Path]):  # TODO use get_log_files
             df_logs_temp = read_logs_string_as_df(log_file.read_text())
             df_logs = pd.concat([df_logs, df_logs_temp])
 
-    df_logs = df_logs.sort_values(['datetime', 'msecs'], ascending=False).reset_index(drop=True)
+    df_logs = df_logs.sort_values(['datetime', 'msecs']).reset_index(drop=True)
 
     return df_logs
 
