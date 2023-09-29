@@ -27,5 +27,5 @@ def get_logs(selected_log_file=None):
 def home():
     all_log_filenames = [str(file) for file in get_log_files(historic_logs=True)]
     logs, selected_log_file = get_logs()
-    table_html = logs.dataframe().to_html()
+    table_html = logs.dataframe().sort_values(['datetime', 'msecs'], ascending=False).to_html()
     return render_template('monitoring_home.html', **locals(), **globals())
