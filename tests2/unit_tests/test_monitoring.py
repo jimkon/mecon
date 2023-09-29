@@ -94,8 +94,8 @@ class TestLogData(unittest.TestCase):
                                     'module': ['logs', 'file_system', ],
                                     'funcName': ['print_logs_info', '__init__'],
                                     'message': [
-                                        '#"Logs are stored in logs (filenames logs_raw.csv)"#',
-                                        '#"New datasets directory in path PycharmProjects\\mecon\\datasets #info#filesystem"#']})
+                                        'Logs are stored in logs (filenames logs_raw.csv)',
+                                        'New datasets directory in path PycharmProjects\\mecon\\datasets #info#filesystem']})
 
         expected_df_transformed = pd.DataFrame({
             'datetime': [pd.Timestamp('2023-09-26 00:08:27.592000'), pd.Timestamp('2023-09-26 00:08:28.598000')],
