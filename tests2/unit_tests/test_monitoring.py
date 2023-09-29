@@ -49,13 +49,14 @@ class TestLogs(unittest.TestCase):
 
     @patch("mecon2.monitoring.logs.read_logs_string_as_df")
     def test_read_logs_as_df_historic_logs(self, mock_read_str_logs):
-        mock_read_str_logs.return_value = pd.DataFrame({'datetime': ['2023-09-26 00:08:27', '2023-09-26 00:08:28'],
+        example_df = pd.DataFrame({'datetime': ['2023-09-26 00:08:27', '2023-09-26 00:08:28'],
                                                         'msecs': [592, 598], 'logger': ['root', 'root'],
                                                         'level': ['INFO', 'INFO'], 'module': ['logs', 'file_system', ],
                                                         'funcName': ['print_logs_info', '__init__'],
                                                         'message': [
                                                             '#"Logs are stored in logs (filenames logs_raw.csv)"#',
                                                             '#"New datasets directory in path PycharmProjects\\mecon\\datasets #info#filesystem"#']})
+        mock_read_str_logs.return_value = example_df
 
         expected_df = pd.DataFrame(
             {'datetime': ['2023-09-26 00:08:27', '2023-09-26 00:08:27', '2023-09-26 00:08:28', '2023-09-26 00:08:28'],
@@ -70,6 +71,7 @@ class TestLogs(unittest.TestCase):
         with patch('pathlib.Path.__new__') as mock_new_path:
             with patch('pathlib.Path.read_text') as mock_path_read_text:
                 result_df = logs.read_logs_as_df([pathlib.Path('mocked_1'), pathlib.Path('mocked_2')])
+                self.assertEqual(len(result_df), 2*len(example_df))
                 pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
                                               expected_df.reset_index(drop=True))
 
