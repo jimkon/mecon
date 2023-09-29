@@ -21,7 +21,7 @@ def _extract_tags(string):
 
 
 def transform_raw_dataframe(df_logs_raw: pd.DataFrame) -> pd.DataFrame:
-    dt_col = pd.to_datetime(df_logs_raw['datetime'] + ',' + df_logs_raw['msecs'].astype(str))
+    dt_col = pd.to_datetime(df_logs_raw['datetime'] + ',' + df_logs_raw['msecs'].astype(str), format="%Y-%m-%d %H:%M:%S,%f")
     df_transformed = pd.DataFrame({'datetime': dt_col})
     df_transformed['level'] = df_logs_raw['level']
     df_transformed['module'] = df_logs_raw['module']
