@@ -102,14 +102,14 @@ def codeflow_log_wrapper(tags=''):
         @wraps(_func)
         def wrapper(*args, **kwargs):
             _funct_name = f"{_func.__module__}.{_func.__qualname__}"
-            logging.info(f"{_funct_name} started... #codeflow#start{tags}")
+            logging.info(f"{_funct_name} started... #codeflow#start#{_func.__qualname__}{tags}")
             try:
                 res = _func(*args, **kwargs)
             except Exception as e:
-                logging.info(f"{_funct_name} raised {e}! #codeflow#error{tags}")
+                logging.info(f"{_funct_name} raised {e}! #codeflow#error#{_func.__qualname__}{tags}")
                 raise
             else:
-                logging.info(f"{_funct_name} finished... #codeflow#end{tags}")
+                logging.info(f"{_funct_name} finished... #codeflow#end#{_func.__qualname__}{tags}")
                 return res
 
         return wrapper
