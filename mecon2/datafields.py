@@ -153,8 +153,8 @@ class TagsColumnMixin:
         tags_split = self.tags.apply(
             lambda s: s.split(',')).to_list()  # TODO duplicated code in aggregators aggregate_tags_set
         tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
-        tags_set = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
-        return tags_set
+        tags_dict = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
+        return tags_dict
 
     def contains_tag(self, tags):
         tags = [tags] if isinstance(tags, str) else tags

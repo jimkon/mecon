@@ -6,6 +6,25 @@ import pandas as pd
 from mecon2.datafields import DataframeWrapper, Grouping
 from mecon2.utils import calendar_utils
 from mecon2.utils.multiton import Multiton
+from mecon2.tagging import Tagger, Condition
+
+
+class TagGrouping(Grouping):
+    def __init__(self, tags_list=None):
+        self._tags_list = tags_list
+
+    def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
+        # TODO check df_wrapper is TagColumMixin
+        res_indexes = []
+        tags_list = self._tags_list if self._tags_list is not None else df_wrapper.all_tags().keys()
+
+        for tag in tags_list:
+            rule = Condition.from_string_values('tags', None, 'contains', tag)
+            index_col = Tagger.get_index_for_rule(df_wrapper.dataframe(), rule)
+            res_indexes.append(index_col)
+
+        return res_indexes
+
 
 
 class LabelGroupingABC(Grouping, Multiton, abc.ABC):

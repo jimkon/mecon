@@ -4,25 +4,68 @@ from datetime import datetime
 import pandas as pd
 
 from datafields import DataframeWrapper
-from groupings import LabelGroupingABC
+from groupings import LabelGroupingABC, TagGrouping
 from mecon2 import groupings as gp
 from mecon2 import datafields
 
 
-# class TestUtilFunctions(unittest.TestCase):  TODO clean
-#     def test_series_date_to_str(self):
-#         test_series = pd.DataFrame({'datetime': [datetime(2021, 3, 1, 0, 0, 0),
-#                                                  datetime(2021, 2, 2, 0, 0, 0),
-#                                                  datetime(2021, 1, 3, 0, 0, 0),
-#                                                  ]})
-#         expected_date_str = pd.Series([
-#             '20210301',
-#             '20210202',
-#             '20210103',
-#         ])
-#         self.assertEqual(gp._series_date_to_str(test_series).to_list(),
-#                          expected_date_str.to_list())
+class TestGrouping(unittest.TestCase):
+    def test_tag_grouping(self):
+        class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.TagsColumnMixin):
+            def __init__(self, df):
+                super().__init__(df=df)
+                datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
+            def all_tags(self):  # mock all_tags to ensure order
+                return {'a': None, 'b': None, 'c': None}
+
+        data = {'A': [1, 2, 3, 4, 5],
+                'B': [6, 7, 8, 9, 10],
+                'tags': ['a', 'a,b', 'a,b,c', 'b,c', 'c']}
+        df = pd.DataFrame(data)
+        wrapper = CustomDataframeWrapper(df)
+
+        grouper = TagGrouping(tags_set=None)
+        grouped_wrappers = grouper.group(wrapper)
+
+        self.assertEqual(len(grouped_wrappers), 3)
+        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [1, 2, 3],
+                                                    'B': [6, 7, 8],
+                                                    'tags': ['a', 'a,b', 'a,b,c']}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [2, 3, 4],
+                                                    'B': [7, 8, 9],
+                                                    'tags': ['a,b', 'a,b,c', 'b,c']}))
+        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [3, 4, 5],
+                                                    'B': [8, 9, 10],
+                                                    'tags': ['a,b,c', 'b,c', 'c']}))
+
+    def test_tag_grouping_specified_tags_set(self):
+        class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.TagsColumnMixin):
+            def __init__(self, df):
+                super().__init__(df=df)
+                datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
+
+        data = {'A': [1, 2, 3, 4, 5],
+                'B': [6, 7, 8, 9, 10],
+                'tags': ['a', 'a,b', 'a,b,c', 'b,c', 'c']}
+        df = pd.DataFrame(data)
+        wrapper = CustomDataframeWrapper(df)
+
+        grouper = TagGrouping(tags_list=['c', 'b'])
+        grouped_wrappers = grouper.group(wrapper)
+
+        self.assertEqual(len(grouped_wrappers), 2)
+        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [3, 4, 5],
+                                                    'B': [8, 9, 10],
+                                                    'tags': ['a,b,c', 'b,c', 'c']}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'A': [2, 3, 4],
+                                                    'B': [7, 8, 9],
+                                                    'tags': ['a,b', 'a,b,c', 'b,c']}))
 
 class TestLabelGrouping(unittest.TestCase):
     def test_group(self):
@@ -50,7 +93,7 @@ class TestLabelGrouping(unittest.TestCase):
                                                     'B': [9]}))
 
 
-class TestGrouping(unittest.TestCase):
+class TestDatetimeGrouping(unittest.TestCase):
     def test_day_grouping(self):
         class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
             def __init__(self, df):
