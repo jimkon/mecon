@@ -50,7 +50,7 @@ class Condition(AbstractRule):
                                       f" and comparisons.CompareOperator objects for now."
                                       f"Got these instead: {self._transformation_op=}, {self._compare_op=}")
 
-        if hasattr(self._transformation_op, 'name') and self._transformation_op.name is not 'none':
+        if hasattr(self._transformation_op, 'name') and self._transformation_op.name != 'none':
             field_and_transformations_key = f"{self._field}.{self._transformation_op.name}"
         else:
             field_and_transformations_key = self._field
