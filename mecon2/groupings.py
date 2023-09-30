@@ -26,7 +26,6 @@ class TagGrouping(Grouping):
         return res_indexes
 
 
-
 class LabelGroupingABC(Grouping, Multiton, abc.ABC):
     def __init__(self, instance_name):
         super().__init__(instance_name=instance_name)
@@ -70,6 +69,8 @@ class LabelGrouping(LabelGroupingABC, abc.ABC):
 # _DAY = DayGrouping()  # TODO investigate why _DAY and DAY multitons don't have a conflict
 
 DAY = LabelGrouping('day', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.datetime_to_date_id_str))
-WEEK = LabelGrouping('week', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.get_closest_past_monday).dt.date.astype(str))
-MONTH = LabelGrouping('month', lambda df_wrapper: df_wrapper.datetime.apply(lambda dt: calendar_utils.datetime_to_date_id_str(dt)[:6]))
+WEEK = LabelGrouping('week', lambda df_wrapper: df_wrapper.datetime.apply(
+    calendar_utils.get_closest_past_monday).dt.date.astype(str))
+MONTH = LabelGrouping('month', lambda df_wrapper: df_wrapper.datetime.apply(
+    lambda dt: calendar_utils.datetime_to_date_id_str(dt)[:6]))
 YEAR = LabelGrouping('year', lambda df_wrapper: df_wrapper.datetime.apply(lambda dt: str(dt.year)))
