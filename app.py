@@ -69,13 +69,13 @@ def overview():
 @app.route('/tags/')
 def tags():
     tags_dict = data_object.tags
-    return render_template('tags_menu.html', **globals(), **locals())
+    return render_template('tags_menu_old.html', **globals(), **locals())
 
 
 @app.route('/tags/<tag_name>')
 def tag_page(tag_name):
     is_json_tag = 'json' in data_object.tags[tag_name].keys()
-    return render_template('tag_page.html', **globals(), **locals())
+    return render_template('tag_page_old.html', **globals(), **locals())
 
 
 @app.route('/tags/report/<tag_name>')

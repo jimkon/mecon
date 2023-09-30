@@ -1,0 +1,121 @@
+@startuml
+
+title Tagging system\n \n Everything around how we tag data
+'left to right direction
+
+rectangle RuleTree {
+    class AbstractBooleanFunction {
+        + compute(element)
+    }
+    note right of AbstractBooleanFunction
+     "Tree node"
+    end note
+
+    class Condition {
+        "A simple rule or boolean operation applied to a field."
+
+        - field
+        - transformation_function
+        - compare_function
+        - compare_value
+
+        + compute(element) -> compare_function(transformation_function(element[field]), compare_value)
+    }
+    note top of Condition
+     "Leaf node"
+    end note
+
+    class Conjunction {
+        "A set of BooleanFunction that work in conjunction. Represented as dict"
+        - functions: list[BooleanFunction]
+
+        + compute(element) -> all([f(element) for f in functions])
+    }
+    class Disjunction {
+        "A set of BooleanFunction that work in disjunction. Represented as list of dicts"
+        - functions: list[BooleanFunction]
+
+        + compute(element) -> any([f(element) for f in functions])
+    }
+    note top of Disjunction
+     "head node"
+    end note
+}
+
+class Tag {
+    "Tag is a name/Condition combination. Every element satisfying the 'condition' can be tagged as 'name'"
+    - tag_name: str
+    - condition: Condition
+}
+
+rectangle Tageers {
+    class AbstractTagger {
+        "Responsible for tagging data"
+        + tag()
+    }
+
+    class DataframeTagger {
+        "Goes through all the rows of a DataFrame and tags them"
+    }
+
+    class JSONTagger {
+        "Goes through all the elements of a JSON object and tags them"
+    }
+
+    class GroupTagger {
+        "Goes through all the elements of a Group object and tags them"
+    }
+}
+
+
+class TransactionCondition {
+    "Fields will be among the transaction fields"
+}
+
+class TransactionGroupCondition {
+    "Fields will be among the transaction group fields"
+}
+
+
+rectangle static {
+    class TransformationFunction {
+        "transformation functions, value checking, etc"
+        - name
+        - function
+        + apply()
+        + validate()
+        + factory method ()
+    }
+    TransformationFunction o-- Condition
+
+    class CompareOperator {
+        "comparison operator, value checking, etc"
+        - name
+        - function
+        + apply()
+        + validate()
+        + factory method ()
+    }
+    CompareOperator o-- Condition
+}
+
+
+AbstractTagger <|-- DataframeTagger
+AbstractTagger <|-- JSONTagger
+AbstractTagger <|-- GroupTagger
+
+Tag --o AbstractBooleanFunction
+AbstractTagger --o Tag
+
+
+Condition <|-- TransactionCondition
+Condition <|-- TransactionGroupCondition
+
+AbstractBooleanFunction <|-- Condition
+AbstractBooleanFunction <|-- Conjunction
+AbstractBooleanFunction <|-- Disjunction
+
+Conjunction --* AbstractBooleanFunction
+Disjunction --* AbstractBooleanFunction
+
+@enduml

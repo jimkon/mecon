@@ -1,0 +1,62 @@
+@startuml
+allowmixing
+set separator None
+
+title Data Flow
+
+file hsbc_statement.csv
+file revo_statement.csv
+file monzo_statement.csv
+
+rectangle DBController {
+    database DB {
+
+        frame tags
+        rectangle transactions
+        rectangle hsbc_statement
+        rectangle revo_statement
+        rectangle monzo_statement
+    }
+
+    class TagsModel
+    class TransactionsModel
+    class HSBCStatementModel
+    class RevoStatementModel
+    class MonzoStatementModel
+}
+
+
+' relations
+
+DBController <..> DB : connects
+
+hsbc_statement.csv --> DBController: imported
+DBController --> HSBCStatementModel
+HSBCStatementModel --> hsbc_statement
+
+revo_statement.csv --> DBController: imported
+DBController --> RevoStatementModel
+RevoStatementModel --> revo_statement
+
+monzo_statement.csv --> DBController: imported
+DBController --> MonzoStatementModel
+MonzoStatementModel --> monzo_statement
+
+DBController --> TagsModel
+TagsModel --> tags
+
+DBController --> TransactionsModel
+TransactionsModel --> transactions
+
+class Tag
+TagsModel --> Tag
+
+
+
+'rectangle App
+'hsbc_statement --> App
+'revo_statement --> App
+'monzo_statement --> App
+
+
+@enduml

@@ -1,0 +1,31 @@
+{#{% block data_filter %}#}
+<style>
+    /* CSS to display form elements horizontally */
+    form {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    label, input, select {
+        margin: 5px;
+    }
+</style>
+<form method="POST">
+        <!-- Submit button -->
+    <input type="submit" name="apply" value="Apply">
+
+    <!-- Dropdown with values: log files -->
+    <label for="log_files">Log files:</label>
+    <select id="log_files" name="log_files">
+{#        <option value='logs_raw.csv' >logs_raw.csv</option>  <!-- default option -->#}
+        <option value="All">All</option>  <!-- default option -->#}
+        {% for log_file in all_log_filenames %}
+            <option value="{{ log_file }}" {% if log_file == selected_log_file %}selected{% endif %}>{{ log_file }}</option>  <!-- default option -->#}
+        {% endfor %}
+
+    </select>
+
+
+</form>
+{#    {% endblock data_filter %}#}

@@ -1,0 +1,25 @@
+@startuml
+allowmixing
+
+title Transactions
+
+class Transactions {
+    - datetime
+    - date
+    - time
+    - amount
+    - currency
+    - amount_cur
+    - description
+    - tags
+}
+
+class Grouper
+
+class DayGrouper
+class MonthGrouper
+class YearGrouper
+class SpendingDayGrouper
+class NightOutGrouper
+
+@enduml

@@ -1,0 +1,85 @@
+@startuml
+
+title Ingestion/ETL\n \n The processed and the pipelines between the data, the sources and the storage. In other words it is the cables and adapters between data objects and data sources
+
+rectangle Storage {
+    database sqlite3 [
+    SQLite3
+    ]
+
+    folder FileSystem {
+    }
+}
+
+class FileSystemController
+FileSystemController -- FileSystem: access
+
+class SQLiteController {
+    "SQLAlchemy"
+    - connection
+    - cursor
+    + query()
+}
+note bottom of SQLiteController
+https://www.youtube.com/watch?v=cYWiDiIUxQc&ab_channel=CoreySchafer
+end note
+
+
+rectangle Models {
+    class TagModel
+    TagModel --|> Model
+    class TransactionsModel
+    TransactionsModel --|> Model
+    class MonzoTransactionsModel
+    MonzoTransactionsModel --|> Model
+    class HSBCTransactionsModel
+    HSBCTransactionsModel --|> Model
+    class RevoTransactionsModel
+    RevoTransactionsModel --|> Model
+}
+
+rectangle App {
+    class StorageAppControllerABC {
+        "Singleton"
+        + tags() # all tags
+        + get_tag(tag_name)
+        + update_tag(tag_name, json)
+        + delete_tag((tag_name)
+        + transactions(tags, amounts, dates, )
+    }
+    class StorageAppControllerSQLite
+    StorageAppControllerSQLite --|> StorageAppControllerABC
+    StorageAppControllerSQLite --o SQLiteController
+
+    class StorageAppControllerLocalFileSystem
+    StorageAppControllerLocalFileSystem --|> StorageAppControllerABC
+    StorageAppControllerLocalFileSystem --o FileSystemController
+}
+
+object tags
+StorageAppControllerABC -- tags: instantiates
+tags -- TagModel: objects
+object transactions
+StorageAppControllerABC -- transactions: instantiates
+transactions -- TransactionsModel: objects
+
+rectangle ETL {
+    class StorageETLControllerABC {
+        "Singleton"
+        + import_raw_transactions(bank)
+        + create_tagged_transactions()
+    }
+    class StorageETLControllerSQLite
+    StorageETLControllerSQLite --|> StorageETLControllerABC
+    StorageETLControllerSQLite --o SQLiteController
+
+    class StorageETLControllerLocalFileSystem
+    StorageETLControllerLocalFileSystem --|> StorageETLControllerABC
+    StorageETLControllerLocalFileSystem --o FileSystemController
+}
+
+sqlite3 -- SQLiteController: connects
+
+
+
+@enduml
