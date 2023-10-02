@@ -203,8 +203,7 @@ class Grouping(abc.ABC):
 class AggregatorABC(abc.ABC):  # TODO tested only through InTypeAggregator
     def aggregate_result_df(self, lists_of_df_wrapper: List[DataframeWrapper]) -> pd.DataFrame:
         aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
-        df_agg = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list]).sort_values(
-            'datetime').reset_index(drop=True)
+        df_agg = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list])
         return df_agg
 
     @abc.abstractmethod

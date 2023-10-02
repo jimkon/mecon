@@ -140,6 +140,6 @@ class PerformanceData(datafields.DataframeWrapper,
         groups = grouper.group(codeflow_logs)
 
         aggregator = PerformanceDataAggregator()
-        performance_df = aggregator.aggregate_result_df(groups).reset_index(drop=True)
+        performance_df = aggregator.aggregate_result_df(groups).sort_values('datetime').reset_index(drop=True)
 
         return PerformanceData(performance_df)

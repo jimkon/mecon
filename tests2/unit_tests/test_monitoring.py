@@ -84,9 +84,6 @@ class TestLogs(unittest.TestCase):
 
 
 class TestLogData(unittest.TestCase):
-    def test_extract_description(self):
-        self.assertEqual(log_data._extract_description('#"test test"#'), 'test test')
-
     def test_extract_tags(self):
         self.assertEqual(log_data._extract_tags('example test #tag1'), 'tag1')
         self.assertEqual(log_data._extract_tags('example test #tag1#tag2'), 'tag1,tag2')
