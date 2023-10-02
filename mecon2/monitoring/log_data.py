@@ -1,13 +1,10 @@
-import re
+from collections import OrderedDict
 
 import pandas as pd
 
+import tagging
 from mecon2 import datafields
-
-
-def _extract_description(string):
-    match = re.search(r'#"(.*?)"#', string)
-    return match.group(1)
+from mecon2 import groupings
 
 
 def _extract_tags(string):
@@ -21,28 +18,128 @@ def _extract_tags(string):
 
 
 def transform_raw_dataframe(df_logs_raw: pd.DataFrame) -> pd.DataFrame:
-    dt_col = pd.to_datetime(df_logs_raw['datetime'] + ',' + df_logs_raw['msecs'].astype(str), format="%Y-%m-%d %H:%M:%S,%f")
+    dt_col = pd.to_datetime(df_logs_raw['datetime'] + ',' + df_logs_raw['msecs'].astype(str),
+                            format="%Y-%m-%d %H:%M:%S,%f")
     df_transformed = pd.DataFrame({'datetime': dt_col})
     df_transformed['level'] = df_logs_raw['level']
     df_transformed['module'] = df_logs_raw['module']
     df_transformed['funcName'] = df_logs_raw['funcName']
-    df_transformed['description'] = df_logs_raw['message'].apply(lambda text: text) #_extract_description(text))
+    df_transformed['description'] = df_logs_raw['message'].apply(lambda text: text)
     df_transformed['tags'] = df_transformed['description'].apply(lambda text: _extract_tags(text))
     return df_transformed
 
 
+class LogInfoMixin:
+    def __init__(self, df_wrapper: datafields.DataframeWrapper):
+        self._df_wrapper_obj = df_wrapper
+
+    @property
+    def level(self) -> pd.Series:
+        return self._df_wrapper_obj.dataframe()['level']
+
+    @property
+    def module(self) -> pd.Series:
+        return self._df_wrapper_obj.dataframe()['module']
+
+    @property
+    def funcName(self) -> pd.Series:
+        return self._df_wrapper_obj.dataframe()['funcName']
+
+
 class LogData(datafields.DataframeWrapper,
               datafields.DateTimeColumnMixin,
+              LogInfoMixin,
               datafields.DescriptionColumnMixin,
               datafields.TagsColumnMixin):
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
         datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+        LogInfoMixin.__init__(self, df_wrapper=self)
         datafields.DescriptionColumnMixin.__init__(self, df_wrapper=self)
-        datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
         datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     @classmethod
     def from_raw_logs(cls, df_logs_raw: pd.DataFrame):  # -> LogData: TODO upgrade to python 3.11
         df_transformed = transform_raw_dataframe(df_logs_raw)
         return LogData(df_transformed)
+
+
+class ExecutionTimeMixin:
+    def __init__(self, df_wrapper: datafields.DataframeWrapper):
+        self._df_wrapper_obj = df_wrapper
+
+    @property
+    def execution_time(self) -> pd.Series:
+        return self._df_wrapper_obj.dataframe()['execution_time']
+
+    @property
+    def end_datetime(self) -> pd.Series:
+        raise NotImplementedError
+
+    @property
+    def finished(self) -> pd.Series:
+        return self.end_datetime.isna()
+
+
+class PerformanceDataAggregator(datafields.AggregatorABC):
+    def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO upgrade to python 3.11
+        # will not work for recursive calls
+        df_logs = df_wrapper.dataframe().copy()
+        df_logs.sort_values('datetime', inplace=True)
+
+        df_logs['datetime_ms'] = pd.to_datetime(df_logs['datetime'], unit='ms')
+        df_logs['execution_time'] = -df_logs['datetime_ms'].diff(periods=-1).dt.total_seconds() * 1000
+        df_logs['started'] = df_wrapper.contains_tag('start')
+        df_logs['finished'] = df_wrapper.contains_tag('end').shift(periods=-1, fill_value=False)
+
+        df_started_finished = df_logs[(df_logs['started']) & (df_logs['finished'])]
+        df_started_not_finished = df_logs[(df_logs['started']) & (~df_logs['finished'])]
+        df_started_not_finished['execution_time'] = None
+
+        perf_df = pd.concat([df_started_finished, df_started_not_finished])
+        perf_df = perf_df[['datetime', 'execution_time', 'tags']]
+        perf_df = perf_df.sort_values(by='datetime').reset_index(drop=True)
+
+        for tag in ['codeflow', 'start', 'end']:
+            tagging.Tagger.remove_tag(tag, perf_df)
+
+        perf_logs = PerformanceData(perf_df)
+        return perf_logs
+
+
+def _isolate_function_tags(tags_column):  # TODO unittest
+    """We assume that the first tag after codeflow, and start or end, is the function name tag"""
+    tags_df = pd.DataFrame(tags_column)
+
+    tagging.Tagger.remove_tag('codeflow', tags_df)
+    tagging.Tagger.remove_tag('start', tags_df)
+    tagging.Tagger.remove_tag('end', tags_df)
+
+    function_tags = list(OrderedDict.fromkeys(tags.split(',')[0] for tags in tags_df['tags']))
+    return function_tags
+
+
+class PerformanceData(datafields.DataframeWrapper,
+                      datafields.DateTimeColumnMixin,
+                      ExecutionTimeMixin,
+                      datafields.TagsColumnMixin):
+    def __init__(self, df: pd.DataFrame):
+        super().__init__(df=df)
+        datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+        ExecutionTimeMixin.__init__(self, df_wrapper=self)
+        datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
+
+    @classmethod
+    def from_log_data(cls, log_data: LogData):  # -> PerformanceData: TODO upgrade to python 3.11
+        codeflow_logs = log_data.containing_tag('codeflow')
+        # maybe add tags for level, module, funcName
+        # tags_list = sorted(list(set(codeflow_logs.all_tags().keys()) - {'codeflow', 'start', 'end'}))
+        tags_list = _isolate_function_tags(codeflow_logs.tags)
+
+        grouper = groupings.TagGrouping(tags_list=tags_list)
+        groups = grouper.group(codeflow_logs)
+
+        aggregator = PerformanceDataAggregator()
+        performance_df = aggregator.aggregate_result_df(groups).reset_index(drop=True)
+
+        return PerformanceData(performance_df)

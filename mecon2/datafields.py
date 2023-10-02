@@ -53,13 +53,15 @@ class DataframeWrapper:
         return self.factory(new_df)
 
     @logs.codeflow_log_wrapper('#data#transactions#groupagg')
-    def groupagg(self, grouper: Grouping, aggregator: Aggregator) -> DataframeWrapper:
+    def groupagg(self, grouper: Grouping, aggregator: InTypeAggregator) -> DataframeWrapper:
         groups = grouper.group(self)
         aggregated_groups = aggregator.aggregate(groups)
         return aggregated_groups
 
     # def fill_values(self, filler: DateFiller = None):  # TODO untested
     #     return filler.fill(self)
+    # def __eq__(self, other):  # TODO add and test maybe
+    #     return self.dataframe().equals(other.dataframe())
 
     @classmethod
     def factory(cls, df: pd.DataFrame):
@@ -158,7 +160,15 @@ class TagsColumnMixin:
 
     def contains_tag(self, tags):
         tags = [tags] if isinstance(tags, str) else tags
-        tag_rules = [tagging.Condition.from_string_values('tags', None, 'contains', tag) for tag in tags]
+        tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
+        rule = tagging.Conjunction(tag_rules)
+        index_col = tagging.Tagger.get_index_for_rule(self._df_wrapper_obj.dataframe(), rule)
+
+        return index_col
+
+    def containing_tag(self, tags):
+        tags = [tags] if isinstance(tags, str) else tags
+        tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
         rule = tagging.Conjunction(tag_rules)
         return self._df_wrapper_obj.apply_rule(rule)
 
@@ -190,24 +200,26 @@ class Grouping(abc.ABC):
         pass
 
 
-class Aggregator:
+class AggregatorABC(abc.ABC):  # TODO tested only through InTypeAggregator
+    def aggregate_result_df(self, lists_of_df_wrapper: List[DataframeWrapper]) -> pd.DataFrame:
+        aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
+        df_agg = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list]).sort_values(
+            'datetime').reset_index(drop=True)
+        return df_agg
+
+    @abc.abstractmethod
+    def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
+        pass
+
+
+class InTypeAggregator(AggregatorABC):
     def __init__(self, aggregation_functions):
         self._agg_functions = aggregation_functions
 
     @logs.codeflow_log_wrapper('#data#transactions#process')
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
-        aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
-
-        # shorter but not uses df_wrapper.merge
-        new_df = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list])
-        res_df_wrapper = aggregated_df_wrappers_list[0].factory(new_df)
-
-        # longer but not uses df_wrapper.merge
-        # res_df_wrapper = aggregated_df_wrappers_list[0]
-        # if len(aggregated_df_wrappers_list) > 1:
-        #     for df_wrapper in aggregated_df_wrappers_list[1:]:
-        #         res_df_wrapper = res_df_wrapper.merge(df_wrapper)
-
+        df_agg = self.aggregate_result_df(lists_of_df_wrapper)
+        res_df_wrapper = lists_of_df_wrapper[0].factory(df_agg)
         return res_df_wrapper
 
     def aggregation(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:

@@ -4,7 +4,7 @@ from itertools import chain
 
 import pandas as pd
 
-from mecon2.datafields import Aggregator
+from mecon2.datafields import InTypeAggregator
 from mecon2.utils import calendar_utils
 
 
@@ -22,7 +22,7 @@ def aggregate_tags_set(tags):
     return set(tags_list)
 
 
-class TransactionAggregator(Aggregator):
+class TransactionAggregator(InTypeAggregator):
     def __init__(self, id_agg, datetime_agg, amount_agg, currency_agg, description_agg, tags_agg):
         super().__init__({
             'id': id_agg,

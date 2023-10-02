@@ -25,7 +25,7 @@ class TestGrouping(unittest.TestCase):
         df = pd.DataFrame(data)
         wrapper = CustomDataframeWrapper(df)
 
-        grouper = TagGrouping(tags_set=None)
+        grouper = TagGrouping(tags_list=None)
         grouped_wrappers = grouper.group(wrapper)
 
         self.assertEqual(len(grouped_wrappers), 3)
