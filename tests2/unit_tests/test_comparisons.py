@@ -105,6 +105,7 @@ class TestCompareOperator(unittest.TestCase):
 
         self.assertEqual(co('[0-9]+', 'abc123xyz'), True)
         self.assertEqual(co('[0-9]+', 'abcxyz'), False)
+        self.assertEqual(co('[0-9]+', ''), False)
 
 
 if __name__ == '__main__':

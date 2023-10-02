@@ -172,6 +172,7 @@ class TestTagger(unittest.TestCase):
         class TestRule:
             def compute(self, x):
                 return x['field'] == 2
+
         rule = TestRule()
         df = pd.DataFrame({'field': [0, 1, 2, 3, 4]})
 
@@ -184,6 +185,7 @@ class TestTagger(unittest.TestCase):
         class TestRule:
             def compute(self, x):
                 return x['a'] == 2 or x['b'] == '4'
+
         rule = TestRule()
         df = pd.DataFrame({'a': [0, 1, 2, 3, 4], 'b': ['0', '1', '2', '3', '4']})
 
@@ -197,6 +199,7 @@ class TestTagger(unittest.TestCase):
         class TestRule:
             def compute(self, x):
                 return x['a'] == 2 or x['b'] == '4'
+
         rule = TestRule()
         df = pd.DataFrame({'a': [0, 1, 2, 3, 4], 'b': ['0', '1', '2', '3', '4']})
 
@@ -236,7 +239,7 @@ class TestTagger(unittest.TestCase):
 
         tagger = tagging.Tagger()
 
-        tagger._remove_tag(tag_name, df)
+        tagger.remove_tag(tag_name, df)
         pd.testing.assert_series_equal(
             df['tags'],
             pd.Series(['',
@@ -268,26 +271,27 @@ class TestTagger(unittest.TestCase):
 
         tagger = tagging.Tagger()
         df1 = df.copy()
-        tagger._add_tag(tag_name, df1, [False, True, False, True, True, True, True, True, True, True])
+        tagger.add_tag(tag_name, df1, [False, True, False, True, True, True, True, True, True, True])
         pd.testing.assert_series_equal(
             df1['tags'],
             pd.Series([
-                        'not_to_be_tagged',
-                        'test_tag',
-                        'not_to_be_tagged',
-                        'test_tag',
-                        'another_tag,test_tag',
-                        'test_tag,another_tag',
-                        'another_tag,test_tag',
-                        'test_tag,another_tag,another_tag',
-                        'another_tag,test_tag,another_tag',
-                        'another_tag,another_tag,test_tag'
-                     ], name='tags'))
+                'not_to_be_tagged',
+                'test_tag',
+                'not_to_be_tagged',
+                'test_tag',
+                'another_tag,test_tag',
+                'test_tag,another_tag',
+                'another_tag,test_tag',
+                'test_tag,another_tag,another_tag',
+                'another_tag,test_tag,another_tag',
+                'another_tag,another_tag,test_tag'
+            ], name='tags'))
 
     def test_tag_without_removing_old_tags(self):
         class TestRule:
             def compute(self, x):
                 return x['field'] == 2 or x['field'] == 3
+
         rule = TestRule()
         tag = tagging.Tag('test_tag', rule)
         df = pd.DataFrame({'field': [0, 1, 2, 3, 4],
@@ -299,7 +303,6 @@ class TestTagger(unittest.TestCase):
         expected_df = pd.DataFrame({'field': [0, 1, 2, 3, 4],
                                     'tags': ['', 'test_tag', 'another_tag,test_tag', 'test_tag', 'another_tag']})
         pd.testing.assert_frame_equal(df, expected_df)
-
 
     def test_tag_with_removing_old_tags(self):
         class TestRule:
@@ -317,6 +320,23 @@ class TestTagger(unittest.TestCase):
         expected_df = pd.DataFrame({'field': [0, 1, 2, 3, 4],
                                     'tags': ['', '', 'another_tag,test_tag', 'test_tag', 'another_tag']})
         pd.testing.assert_frame_equal(df, expected_df)
+
+
+class TestTagMatchCondition(unittest.TestCase):
+    def test_match(self):
+        match_condition = tagging.TagMatchCondition('test_tag')
+
+        self.assertEqual(match_condition.compute({'tags': 'test_tag'}), True)
+        self.assertEqual(match_condition.compute({'tags': ''}), False)
+        self.assertEqual(match_condition.compute({'tags': 'another_tag'}), False)
+        self.assertEqual(match_condition.compute({'tags': 'another_tag,test_tag'}), True)
+        self.assertEqual(match_condition.compute({'tags': 'test_tag,another_tag'}), True)
+        self.assertEqual(match_condition.compute({'tags': 'another_tag,test_tag'}), True)
+        self.assertEqual(match_condition.compute({'tags': 'test_tag,another_tag,another_tag'}), True)
+        self.assertEqual(match_condition.compute({'tags': 'another_tag,test_tag,another_tag'}), True)
+        self.assertEqual(match_condition.compute({'tags': 'another_tag,another_tag,test_tag'}), True)
+        self.assertEqual(match_condition.compute({'tags': 'not_test_tag'}), False)
+
 
 
 if __name__ == '__main__':
