@@ -6,7 +6,7 @@ import pandas as pd
 from mecon2.datafields import DataframeWrapper, Grouping
 from mecon2.utils import calendar_utils
 from mecon2.utils.multiton import Multiton
-from mecon2.tagging import Tagger, Condition
+from mecon2.tagging import Tagger, TagMatchCondition
 
 
 class TagGrouping(Grouping):
@@ -19,7 +19,7 @@ class TagGrouping(Grouping):
         tags_list = self._tags_list if self._tags_list is not None else df_wrapper.all_tags().keys()
 
         for tag in tags_list:
-            rule = Condition.from_string_values('tags', None, 'contains', tag)
+            rule = TagMatchCondition(tag)
             index_col = Tagger.get_index_for_rule(df_wrapper.dataframe(), rule)
             res_indexes.append(index_col)
 
