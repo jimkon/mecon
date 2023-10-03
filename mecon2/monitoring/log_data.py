@@ -118,6 +118,12 @@ class ExecutionInfoMixin:
         groups = grouper.group(self._df_wrapper_obj)
         return groups
 
+    def group_by_tags(self):  # TODO unittest
+        tags_list = self._df_wrapper_obj.all_tags().keys()
+        grouper = groupings.TagGrouping(tags_list=tags_list)
+        groups = grouper.group(self._df_wrapper_obj)
+        return groups
+
 
 class PerformanceDataAggregator(datafields.AggregatorABC):
     def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO upgrade to python 3.11
