@@ -103,18 +103,18 @@ def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
 
     non_zero_data = [(f, s, e) for f, s, e in data if s != e]
     # Convert data to a DataFrame
-    df = pd.DataFrame(non_zero_data, columns=['Task_ID', 'Start', 'Finish'])
+    df = pd.DataFrame(non_zero_data, columns=['Task', 'Start', 'Finish'])
 
     # Convert 'Start' and 'Finish' columns to datetime
     df['Start'] = pd.to_datetime(df['Start'])
     df['Finish'] = pd.to_datetime(df['Finish'])
 
     # Create a Gantt chart
-    fig = px.timeline(df, x_start='Start', x_end='Finish', y='Task_ID', color='Task_ID')
+    fig = px.timeline(df, x_start='Start', x_end='Finish', y='Task', color='Task')
 
     # Update axis labels
     fig.update_xaxes(title_text='Timeline')
-    fig.update_yaxes(title_text='Task_ID')
+    fig.update_yaxes(title_text='Task')
 
     # Set chart title
     fig.update_layout(title='Task Execution Timeline',
@@ -215,5 +215,5 @@ def performance_stats_graph_html(perf_data_stats: dict):
                           ),
                       ])
 
-    graph_html = plot(fig, output_type='div', include_plotlyjs = 'cdn')  # , config={'autosizable': True, 'responsive': True})
+    graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')  # , config={'autosizable': True, 'responsive': True})
     return graph_html

@@ -64,6 +64,14 @@ def performance_stats_page(perf_data: PerformanceData):
     return res_html
 
 
+def codeflow_timeline_graph_html(perf_data: PerformanceData):
+    graph_html = graphs.codeflow_timeline_graph_html(perf_data.functions, perf_data.start_datetime,
+                                        perf_data.end_datetime)
+    table_html = perf_data.dataframe().sort_values('datetime', ascending=False).to_html()
+    res_html = f"""{graph_html}<br><br>{table_html}"""
+    return res_html
+
+
 @monitoring_bp.route('/', methods=['POST', 'GET'])
 def home():
     all_log_filenames = [str(file) for file in get_log_files(historic_logs=True)]
@@ -73,7 +81,6 @@ def home():
 
     tabs = html_pages.TabsHTML() \
         .add_tab('Performance', performance_stats_page(perf_data)) \
-        .add_tab('Timeline', graphs.codeflow_timeline_graph_html(perf_data.functions, perf_data.start_datetime,
-                                                                 perf_data.end_datetime)) \
+        .add_tab('Timeline', codeflow_timeline_graph_html(perf_data)) \
         .add_tab('Console', table_html).html()
     return render_template('monitoring_home.html', **locals(), **globals())
