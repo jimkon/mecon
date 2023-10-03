@@ -64,7 +64,24 @@ class LogData(datafields.DataframeWrapper,
         return LogData(df_transformed)
 
 
-class ExecutionTimeMixin:
+def _isolate_function_tags(tags_column):  # TODO unittest
+    tags_df = pd.DataFrame(tags_column)
+
+    tagging.Tagger.remove_tag('codeflow', tags_df)
+    tagging.Tagger.remove_tag('start', tags_df)
+    tagging.Tagger.remove_tag('end', tags_df)
+
+    functions = [tags.split(',')[0] for tags in tags_df['tags'].to_list()]
+    return functions
+
+
+def _distinct_function_tags(tags_column):  # TODO unittest
+    """We assume that the first tag after codeflow, and start or end, is the function name tag"""
+    function_tags = list(OrderedDict.fromkeys(_isolate_function_tags(tags_column)))
+    return function_tags
+
+
+class ExecutionInfoMixin:
     def __init__(self, df_wrapper: datafields.DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
 
@@ -73,12 +90,33 @@ class ExecutionTimeMixin:
         return self._df_wrapper_obj.dataframe()['execution_time']
 
     @property
-    def end_datetime(self) -> pd.Series:
-        raise NotImplementedError
+    def start_datetime(self) -> pd.Series:
+        return self._df_wrapper_obj.dataframe()['datetime']
 
     @property
-    def finished(self) -> pd.Series:
-        return self.end_datetime.isna()
+    def end_datetime(self) -> pd.Series:
+        return self.start_datetime + pd.to_timedelta(self.execution_time, unit='ms')
+
+    @property
+    def is_finished(self) -> pd.Series:
+        return self.execution_time >= 0
+
+    def finished(self):  # TODO -> PerformanceData:
+        return self._df_wrapper_obj.factory(self._df_wrapper_obj.dataframe()[self.is_finished])
+
+    @property
+    def functions(self):
+        return pd.Series(_isolate_function_tags(self._df_wrapper_obj.dataframe()['tags']))
+
+    def logged_functions(self):
+        tags_list = _distinct_function_tags(self._df_wrapper_obj.dataframe()['tags'])
+        return tags_list
+
+    def group_by_function(self):  # TODO unittest
+        tags_list = _distinct_function_tags(self._df_wrapper_obj.dataframe()['tags'])
+        grouper = groupings.TagGrouping(tags_list=tags_list)
+        groups = grouper.group(self._df_wrapper_obj)
+        return groups
 
 
 class PerformanceDataAggregator(datafields.AggregatorABC):
@@ -94,7 +132,7 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
 
         df_started_finished = df_logs[(df_logs['started']) & (df_logs['finished'])]
         df_started_not_finished = df_logs[(df_logs['started']) & (~df_logs['finished'])]
-        df_started_not_finished['execution_time'] = None
+        df_started_not_finished['execution_time'] = -1
 
         perf_df = pd.concat([df_started_finished, df_started_not_finished])
         perf_df = perf_df[['datetime', 'execution_time', 'tags']]
@@ -103,30 +141,20 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
         for tag in ['codeflow', 'start', 'end']:
             tagging.Tagger.remove_tag(tag, perf_df)
 
+        perf_df['execution_time'] = perf_df['execution_time'].astype('int64')
+
         perf_logs = PerformanceData(perf_df)
         return perf_logs
 
 
-def _isolate_function_tags(tags_column):  # TODO unittest
-    """We assume that the first tag after codeflow, and start or end, is the function name tag"""
-    tags_df = pd.DataFrame(tags_column)
-
-    tagging.Tagger.remove_tag('codeflow', tags_df)
-    tagging.Tagger.remove_tag('start', tags_df)
-    tagging.Tagger.remove_tag('end', tags_df)
-
-    function_tags = list(OrderedDict.fromkeys(tags.split(',')[0] for tags in tags_df['tags']))
-    return function_tags
-
-
 class PerformanceData(datafields.DataframeWrapper,
                       datafields.DateTimeColumnMixin,
-                      ExecutionTimeMixin,
+                      ExecutionInfoMixin,
                       datafields.TagsColumnMixin):
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
         datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
-        ExecutionTimeMixin.__init__(self, df_wrapper=self)
+        ExecutionInfoMixin.__init__(self, df_wrapper=self)
         datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     @classmethod
@@ -134,7 +162,7 @@ class PerformanceData(datafields.DataframeWrapper,
         codeflow_logs = log_data.containing_tag('codeflow')
         # maybe add tags for level, module, funcName
         # tags_list = sorted(list(set(codeflow_logs.all_tags().keys()) - {'codeflow', 'start', 'end'}))
-        tags_list = _isolate_function_tags(codeflow_logs.tags)
+        tags_list = _distinct_function_tags(codeflow_logs.tags)
 
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(codeflow_logs)

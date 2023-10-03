@@ -2,6 +2,7 @@ import pathlib
 import unittest
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 from pandas import Timestamp
 
@@ -172,8 +173,7 @@ class TestPerformanceDataAggregator(unittest.TestCase):
                                                  Timestamp('2023-09-29 18:11:58.433000'),
                                                  Timestamp('2023-09-29 18:11:58.438000'),
                                                  Timestamp('2023-09-29 18:11:58.439000')],
-                                    'execution_time': [-0.0, 1.0, 100.0, None, 1.0, None, None,
-                                                       100.0],
+                                    'execution_time': [0, 1, 100, -1, 1, -1, -1, 100],
                                     'tags': ['Transactions.__init__,data,transactions,process',
                                              'Transactions.__init__,data,transactions,process',
                                              'Transactions.__init__,data,transactions,process',
@@ -187,6 +187,59 @@ class TestPerformanceDataAggregator(unittest.TestCase):
 
 
 class TestPerformanceData(unittest.TestCase):
+    def setUp(self) -> None:
+        self.example_perf_data = log_data.PerformanceData(pd.DataFrame.from_dict({
+            1: {'datetime': Timestamp('2023-09-29 18:11:58.00200000'),
+                'execution_time': 30,
+                'tags': 'balance_graph,api'},
+            2: {'datetime': Timestamp('2023-09-29 18:11:58.00300000'),
+                'execution_time': 28,
+                'tags': 'get_filtered_transactions,data,transactions,process'},
+            3: {'datetime': Timestamp('2023-09-29 18:11:58.00400000'),
+                'execution_time': 3,
+                'tags': 'get_transactions,data,transactions,load'},
+            4: {'datetime': Timestamp('2023-09-29 18:11:58.00500000'),
+                'execution_time': 1,
+                'tags': 'Transactions.__init__,data,transactions,process'},
+            7: {'datetime': Timestamp('2023-09-29 18:11:58.00800000'),
+                'execution_time': 4,
+                'tags': 'DataframeWrapper.apply_rule,data,transactions,tags'},
+            8: {'datetime': Timestamp('2023-09-29 18:11:58.00900000'),
+                'execution_time': 2,
+                'tags': 'Transactions.__init__,data,transactions,process'},
+            12: {'datetime': Timestamp('2023-09-29 18:11:58.0130000'),
+                 'execution_time': 3,
+                 'tags': 'DataframeWrapper.apply_rule,data,transactions,tags'},
+            13: {'datetime': Timestamp('2023-09-29 18:11:58.0140000'),
+                 'execution_time': 1,
+                 'tags': 'Transactions.__init__,data,transactions,process'},
+            16: {'datetime': Timestamp('2023-09-29 18:11:58.0170000'),
+                 'execution_time': 13,
+                 'tags': 'DataframeWrapper.groupagg,data,transactions,groupagg'},
+            18: {'datetime': Timestamp('2023-09-29 18:11:58.0190000'),
+                 'execution_time': -1,
+                 'tags': 'Grouping.group,data,transactions,process'},
+            20: {'datetime': Timestamp('2023-09-29 18:11:58.0210000'),
+                 'execution_time': -1,
+                 'tags': 'Transactions.__init__,data,transactions,process'},
+            21: {'datetime': Timestamp('2023-09-29 18:11:58.0220000'),
+                 'execution_time': 1,
+                 'tags': 'Transactions.__init__,data,transactions,process'},
+            23: {'datetime': Timestamp('2023-09-29 18:11:58.0240000'),
+                 'execution_time': 5,
+                 'tags': 'Aggregator.aggregate,data,transactions,process'},
+            24: {'datetime': Timestamp('2023-09-29 18:11:58.0250000'),
+                 'execution_time': -1,
+                 'tags': 'Transactions.__init__,data,transactions,process'},
+            25: {'datetime': Timestamp('2023-09-29 18:11:58.0260000'),
+                 'execution_time': -1,
+                 'tags': 'Transactions.__init__,data,transactions,process'},
+            26: {'datetime': Timestamp('2023-09-29 18:11:58.0270000'),
+                 'execution_time': 1,
+                 'tags': 'Transactions.__init__,data,transactions,process'},
+        }, orient='index')
+        )
+
     def test_from_log_data(self):
         #         csv_string = """
         # 2023-09-29 18:11:58,001,root,INFO,logs,wrapper,~a random log #notcodeflow#start#balance_graph#api~
@@ -351,7 +404,46 @@ class TestPerformanceData(unittest.TestCase):
         }, orient='index')
         log_data_obj = log_data.LogData(log_data_df)
 
-        expected_performance_df = pd.DataFrame.from_dict({
+        expected_performance_df = self.example_perf_data.dataframe()
+
+        result_performance_df = log_data.PerformanceData.from_log_data(log_data_obj).dataframe()
+
+        pd.testing.assert_frame_equal(result_performance_df.reset_index(drop=True),
+                                      expected_performance_df.reset_index(drop=True))
+
+    def test_execution_time(self):
+        self.assertListEqual(self.example_perf_data.execution_time.to_list(),
+                             [30, 28, 3, 1, 4, 2, 3, 1, 13, -1, -1, 1, 5, -1, -1, 1])
+
+    def test_start_datetime(self):
+        self.assertListEqual(self.example_perf_data.start_datetime.to_list(),
+                             [Timestamp('2023-09-29 18:11:58.002000'), Timestamp('2023-09-29 18:11:58.003000'),
+                              Timestamp('2023-09-29 18:11:58.004000'), Timestamp('2023-09-29 18:11:58.005000'),
+                              Timestamp('2023-09-29 18:11:58.008000'), Timestamp('2023-09-29 18:11:58.009000'),
+                              Timestamp('2023-09-29 18:11:58.013000'), Timestamp('2023-09-29 18:11:58.014000'),
+                              Timestamp('2023-09-29 18:11:58.017000'), Timestamp('2023-09-29 18:11:58.019000'),
+                              Timestamp('2023-09-29 18:11:58.021000'), Timestamp('2023-09-29 18:11:58.022000'),
+                              Timestamp('2023-09-29 18:11:58.024000'), Timestamp('2023-09-29 18:11:58.025000'),
+                              Timestamp('2023-09-29 18:11:58.026000'), Timestamp('2023-09-29 18:11:58.027000')])
+
+    def test_end_datetime(self):
+        self.assertListEqual(self.example_perf_data.end_datetime.to_list(),
+                             [Timestamp('2023-09-29 18:11:58.032000'), Timestamp('2023-09-29 18:11:58.031000'),
+                              Timestamp('2023-09-29 18:11:58.007000'), Timestamp('2023-09-29 18:11:58.006000'),
+                              Timestamp('2023-09-29 18:11:58.012000'), Timestamp('2023-09-29 18:11:58.011000'),
+                              Timestamp('2023-09-29 18:11:58.016000'), Timestamp('2023-09-29 18:11:58.015000'),
+                              Timestamp('2023-09-29 18:11:58.030000'), Timestamp('2023-09-29 18:11:58.018000'),
+                              Timestamp('2023-09-29 18:11:58.020000'), Timestamp('2023-09-29 18:11:58.023000'),
+                              Timestamp('2023-09-29 18:11:58.029000'), Timestamp('2023-09-29 18:11:58.024000'),
+                              Timestamp('2023-09-29 18:11:58.025000'), Timestamp('2023-09-29 18:11:58.028000')])
+
+    def test_is_finished(self):
+        self.assertListEqual(self.example_perf_data.is_finished.to_list(),
+                             [True, True, True, True, True, True, True, True, True, False, False, True, True, False,
+                              False, True])
+
+    def test_finished(self):
+        expected_df = pd.DataFrame.from_dict({
             1: {'datetime': Timestamp('2023-09-29 18:11:58.00200000'),
                 'execution_time': 30,
                 'tags': 'balance_graph,api'},
@@ -379,33 +471,55 @@ class TestPerformanceData(unittest.TestCase):
             16: {'datetime': Timestamp('2023-09-29 18:11:58.0170000'),
                  'execution_time': 13,
                  'tags': 'DataframeWrapper.groupagg,data,transactions,groupagg'},
-            18: {'datetime': Timestamp('2023-09-29 18:11:58.0190000'),
-                 'execution_time': None,
-                 'tags': 'Grouping.group,data,transactions,process'},
-            20: {'datetime': Timestamp('2023-09-29 18:11:58.0210000'),
-                 'execution_time': None,
-                 'tags': 'Transactions.__init__,data,transactions,process'},
             21: {'datetime': Timestamp('2023-09-29 18:11:58.0220000'),
                  'execution_time': 1,
                  'tags': 'Transactions.__init__,data,transactions,process'},
             23: {'datetime': Timestamp('2023-09-29 18:11:58.0240000'),
                  'execution_time': 5,
                  'tags': 'Aggregator.aggregate,data,transactions,process'},
-            24: {'datetime': Timestamp('2023-09-29 18:11:58.0250000'),
-                 'execution_time': None,
-                 'tags': 'Transactions.__init__,data,transactions,process'},
-            25: {'datetime': Timestamp('2023-09-29 18:11:58.0260000'),
-                 'execution_time': None,
-                 'tags': 'Transactions.__init__,data,transactions,process'},
             26: {'datetime': Timestamp('2023-09-29 18:11:58.0270000'),
                  'execution_time': 1,
                  'tags': 'Transactions.__init__,data,transactions,process'},
         }, orient='index')
 
-        result_performance_df = log_data.PerformanceData.from_log_data(log_data_obj).dataframe()
+        pd.testing.assert_frame_equal(self.example_perf_data.finished().dataframe().reset_index(drop=True),
+                                      expected_df.reset_index(drop=True))
 
-        pd.testing.assert_frame_equal(result_performance_df.reset_index(drop=True),
-                                      expected_performance_df.reset_index(drop=True))
+    def test_isolate_function_tags(self):
+        self.assertListEqual(log_data._isolate_function_tags(pd.Series(['a', '', 'a,b', 'b,c'], name='tags')),
+                             ['a', '', 'a', 'b'])
+
+    def test_functions(self):
+        self.assertListEqual(self.example_perf_data.functions.to_list(),
+                             ['balance_graph', 'get_filtered_transactions',
+                              'get_transactions',
+                              'Transactions.__init__',
+                              'DataframeWrapper.apply_rule',
+                              'Transactions.__init__',
+                              'DataframeWrapper.apply_rule',
+                              'Transactions.__init__',
+                              'DataframeWrapper.groupagg',
+                              'Grouping.group',
+                              'Transactions.__init__',
+                              'Transactions.__init__',
+                              'Aggregator.aggregate',
+                              'Transactions.__init__',
+                              'Transactions.__init__',
+                              'Transactions.__init__'])
+
+    def test_distinct_function_tags(self):
+        self.assertListEqual(log_data._distinct_function_tags(pd.Series(['a', '', 'a,b', 'b,c'], name='tags')),
+                             ['a', '', 'b'])
+
+    def test_logged_functions(self):
+        self.assertListEqual(self.example_perf_data.logged_functions(),
+                             ['balance_graph', 'get_filtered_transactions',
+                              'get_transactions',
+                              'Transactions.__init__',
+                              'DataframeWrapper.apply_rule',
+                              'DataframeWrapper.groupagg',
+                              'Grouping.group',
+                              'Aggregator.aggregate'])
 
 
 if __name__ == '__main__':
