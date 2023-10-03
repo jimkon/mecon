@@ -195,9 +195,25 @@ def performance_stats_graph_html(perf_data_stats: dict):
     }
 
     # Update layout
-    fig.update_layout(layout)
+    fig.update_layout(layout,
+                      updatemenus=[
+                          dict(
+                              type="buttons",
+                              direction="left",
+                              buttons=list([
+                                  dict(
+                                      args=[{'yaxis': {'type': 'linear'}}],
+                                      label="Linear Scale",
+                                      method="relayout"
+                                  ),
+                                  dict(
+                                      args=[{'yaxis': {'type': 'log'}}],
+                                      label="Log Scale",
+                                      method="relayout"
+                                  )
+                              ])
+                          ),
+                      ])
 
-    graph_html = plot(fig, output_type='div',
-                      include_plotlyjs='cdn')  # , config={'autosizable': True, 'responsive': True})
+    graph_html = plot(fig, output_type='div', include_plotlyjs = 'cdn')  # , config={'autosizable': True, 'responsive': True})
     return graph_html
-    # return f'<div data-plotly="{graph_html}"></div>'
