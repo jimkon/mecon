@@ -7,6 +7,7 @@ from mecon2 import comparisons
 from mecon2 import transformations
 from mecon2.monitoring import logs
 
+
 class FieldIsNotStringException(Exception):
     pass
 
@@ -42,7 +43,8 @@ class Condition(AbstractRule):
         self._value = value
 
     def compute(self, element):
-        return self._compare_op(self._transformation_op(element[self._field]), self._value)
+        res = self._compare_op(self._transformation_op(element[self._field]), self._value)
+        return res
 
     def to_dict(self):
         if not hasattr(self._transformation_op, 'name') or not hasattr(self._compare_op, 'name'):
@@ -50,7 +52,7 @@ class Condition(AbstractRule):
                                       f" and comparisons.CompareOperator objects for now."
                                       f"Got these instead: {self._transformation_op=}, {self._compare_op=}")
 
-        if hasattr(self._transformation_op, 'name') and self._transformation_op.name is not 'none':
+        if hasattr(self._transformation_op, 'name') and self._transformation_op.name != 'none':
             field_and_transformations_key = f"{self._field}.{self._transformation_op.name}"
         else:
             field_and_transformations_key = self._field
@@ -59,7 +61,8 @@ class Condition(AbstractRule):
 
     @staticmethod
     def from_string_values(field, transformation_op_key, compare_op_key, value):
-        transformation_op = transformations.TransformationFunction.from_key(transformation_op_key if transformation_op_key else 'none')
+        transformation_op = transformations.TransformationFunction.from_key(
+            transformation_op_key if transformation_op_key else 'none')
         compare_op = comparisons.CompareOperator.from_key(compare_op_key)
         return Condition(field, transformation_op, compare_op, value)
 
@@ -187,10 +190,10 @@ class Tagger(abc.ABC):
     def tag(tag: Tag, df: pd.DataFrame, remove_old_tags=False):
         tag_name = tag.name
         if remove_old_tags:
-            Tagger._remove_tag(tag_name, df)
+            Tagger.remove_tag(tag_name, df)
 
         rows_to_tag = Tagger.get_index_for_rule(df, tag.rule)
-        Tagger._add_tag(tag_name, df, rows_to_tag)
+        Tagger.add_tag(tag_name, df, rows_to_tag)
 
     @staticmethod
     def get_index_for_rule(df, rule):
@@ -215,7 +218,7 @@ class Tagger(abc.ABC):
         return already_tagged_rows
 
     @staticmethod
-    def _remove_tag(tag_name, df):
+    def remove_tag(tag_name, df):
         def _remove_tag_from_row(row):
             row_elements = row.split(',')
             filtered_element = [element for element in row_elements if element != tag_name]
@@ -225,7 +228,7 @@ class Tagger(abc.ABC):
         df['tags'] = df['tags'].apply(_remove_tag_from_row)
 
     @staticmethod
-    def _add_tag(tag_name, df, to_rows):
+    def add_tag(tag_name, df, to_rows):
         def _add_tag_to_row(row):
             row_elements = row.split(',')
             if tag_name not in row_elements:
@@ -236,3 +239,12 @@ class Tagger(abc.ABC):
             return result_row
 
         df.loc[to_rows, 'tags'] = df.loc[to_rows, 'tags'].apply(_add_tag_to_row)
+
+
+class TagMatchCondition(Condition):  # TODO use in all tag match cases
+    def __init__(self, tag_name):
+        field = 'tags'
+        transformation_op = None
+        compare_op = comparisons.REGEX
+        regex_value = r"\b"+tag_name+r"\b"
+        super().__init__(field, transformation_op, compare_op, regex_value)

@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 import pandas as pd
 
-from mecon2.datafields import DataframeWrapper, Grouping, Aggregator, DateFiller
+from mecon2.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller
 
 
 class TestDataframeWrapper(unittest.TestCase):
@@ -70,7 +70,7 @@ class TestGrouping(unittest.TestCase):
 
 class TestAggregator(unittest.TestCase):
     def test_aggregate(self):
-        class CustomAggregator(Aggregator):
+        class CustomInTypeAggregator(InTypeAggregator):
             def __init__(self):
                 pass
 
@@ -81,7 +81,7 @@ class TestAggregator(unittest.TestCase):
         df_wrapper1 = DataframeWrapper(pd.DataFrame({'A': [2, 4], 'B': [7, 9]}))
         df_wrapper2 = DataframeWrapper(pd.DataFrame({'A': [1, 3, 5], 'B': [6, 8, 10]}))
 
-        aggregator = CustomAggregator()
+        aggregator = CustomInTypeAggregator()
 
         result_df_wrapper = aggregator.aggregate([df_wrapper1, df_wrapper2])
 
@@ -90,7 +90,7 @@ class TestAggregator(unittest.TestCase):
                                       pd.DataFrame({'A': [2, 1], 'B': [7, 6]}))
 
     def test_aggregation(self):
-        aggregator = Aggregator({'A': max, 'B': min})
+        aggregator = InTypeAggregator({'A': max, 'B': min})
 
         df_wrapper1 = DataframeWrapper(pd.DataFrame({'A': [2, 4], 'B': [7, 9]}))
         result_df_wrapper1 = aggregator.aggregation(df_wrapper1)

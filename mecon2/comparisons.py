@@ -7,6 +7,7 @@ class CompareOperator(multiton.Multiton):
     """
     Compare operators used by Condition.
     """
+
     def __init__(self, name, function):
         super().__init__(instance_name=name)
         self.name = name
@@ -34,4 +35,5 @@ EQUAL = CompareOperator('equal', lambda a, b: a == b)
 
 CONTAINS = CompareOperator('contains', lambda a, b: b in a)
 NOT_CONTAINS = CompareOperator('not_contains', lambda a, b: b not in a)
-REGEX = CompareOperator('regex', lambda a, b: bool(re.search(a, b)))
+REGEX = CompareOperator('regex',
+                        lambda a, b: bool(re.search(pattern=b, string=a)) if (a is not None and len(a) > 0) else False)

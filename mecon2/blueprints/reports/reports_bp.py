@@ -73,7 +73,7 @@ def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggr
                               fill_dates_after_groupagg=True) -> Transactions:  # TODO fill dates?
     tags = _split_tags(tags_str)
     transactions = get_transactions() \
-        .contains_tag(tags) \
+        .containing_tag(tags) \
         .select_date_range(start_date, end_date)
 
     if grouping_key != 'none':
@@ -107,7 +107,7 @@ def get_filter_values(tag_name, start_date=None, end_date=None, tags_str=None, g
         tags_str = ', '.join(sorted(_filter_tags(tags))) if tags_str is None else tags_str
         grouping = 'month' if grouping is None else grouping
         aggregation = 'sum' if aggregation is None else aggregation
-        transactions = get_transactions().contains_tag(tag_name)
+        transactions = get_transactions().containing_tag(tag_name)
         transactions_start_date, transactions_end_date = transactions.date_range()
         start_date = transactions_start_date if start_date is None else start_date
         end_date = transactions_end_date if end_date is None else end_date

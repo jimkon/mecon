@@ -103,8 +103,9 @@ class TestCompareOperator(unittest.TestCase):
     def test_regex(self):
         co = cmp.CompareOperator.from_key('regex')
 
-        self.assertEqual(co('[0-9]+', 'abc123xyz'), True)
-        self.assertEqual(co('[0-9]+', 'abcxyz'), False)
+        self.assertEqual(co('abc123xyz', '[0-9]+'), True)
+        self.assertEqual(co('abcxyz', '[0-9]+'), False)
+        self.assertEqual(co('', '[0-9]+'), False)
 
 
 if __name__ == '__main__':

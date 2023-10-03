@@ -25,7 +25,6 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
         fields.AmountColumnMixin.__init__(self, df_wrapper=self)
         fields.DescriptionColumnMixin.__init__(self, df_wrapper=self)
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
-        fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     def fill_values(self, fill_unit):
 
