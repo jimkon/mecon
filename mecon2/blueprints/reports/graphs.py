@@ -12,14 +12,14 @@ from mecon2.blueprints.reports import graph_utils
 def amount_and_freq_timeline_html(time, amount, freq):
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(x=time, y=-amount, name="amount", line=dict(width=1)))
+    fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1)))
     if freq is not None:
         fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1), yaxis='y2'))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
-        yaxis=dict(title='Amount paid [£]'),
+        yaxis=dict(title='[£]'),
         yaxis2=dict(title='Freq [#/time]', overlaying='y', side='right'),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
@@ -51,13 +51,13 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
     amount_sorted = amount.sort_values()
     amount_cumsum = amount_sorted.cumsum()
 
-    fig.add_trace(go.Scatter(x=amount_sorted, y=-amount_cumsum, name="cumsum", yaxis='y2'))
+    fig.add_trace(go.Scatter(x=amount_sorted, y=-amount_cumsum, name="total", yaxis='y2'))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='#'),
-        yaxis2=dict(title='cumsum [£]', overlaying='y', side='right'),
+        yaxis2=dict(title='total [£]', overlaying='y', side='right'),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
