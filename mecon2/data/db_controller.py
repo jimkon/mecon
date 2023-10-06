@@ -53,10 +53,11 @@ class HSBCTransactionsDBAccessor(io.HSBCTransactionsIOABC):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
         merged_df.to_sql(models.HSBCTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
 
-    def get_transactions(self) -> pd.DataFrame:  # TODO get and delete transactions is the same for all tables. deal with duplicated code
+    def get_transactions(
+            self) -> pd.DataFrame:  # TODO get and delete transactions is the same for all tables. deal with duplicated code
         transactions = models.HSBCTransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
-        return transactions_df if len(transactions_df)>0 else None
+        return transactions_df if len(transactions_df) > 0 else None
 
     def delete_all(self) -> None:
         db.session.query(models.HSBCTransactionsDBTable).delete()
@@ -146,9 +147,11 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         if not pd.api.types.is_string_dtype(df['currency']):
             invalid_types.append(f"invalid type for column 'currency'. expected: string, got: {df['currency'].dtype}")
         if not pd.api.types.is_numeric_dtype(df['amount_cur']):
-            invalid_types.append(f"invalid type for column 'amount_cur'. expected: number, got: {df['amount_cur'].dtype}")
+            invalid_types.append(
+                f"invalid type for column 'amount_cur'. expected: number, got: {df['amount_cur'].dtype}")
         if not pd.api.types.is_string_dtype(df['description']):
-            invalid_types.append(f"invalid type for column 'description'. expected: string, got: {df['description'].dtype}")
+            invalid_types.append(
+                f"invalid type for column 'description'. expected: string, got: {df['description'].dtype}")
 
         if len(invalid_types) > 0:
             raise InvalidTransactionsDataframeDataTypesException(invalid_types)
@@ -156,12 +159,11 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
     @staticmethod
     def _transaction_df_values_validation(df):
         value_errors = []
-        if df['amount'].isna().sum()>0:
+        if df['amount'].isna().sum() > 0:
             value_errors.append(f"Amount column contains NaN values: {df['amount'].isna().sum()}")
 
         if len(value_errors):
             raise InvalidTransactionsDataframeDataValueException(value_errors)
-
 
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
