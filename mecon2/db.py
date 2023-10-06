@@ -1,9 +1,11 @@
+import abc
+
 import pandas as pd
 
 from mecon2.data import io_framework as io, db_controller
 
 
-class TagsDBAccessor(io.TagsIOABC):
+class TagsDBAccessor(io.TagsIOABC, abc.ABC):
     def get_tag(self, name) -> dict:
         tag = db_controller.TagsDBTable.query.filter_by(name=name).first()
         return tag
@@ -24,7 +26,7 @@ class TagsDBAccessor(io.TagsIOABC):
         return tags
 
 
-class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
+class TransactionsDBAccessor(io.CombinedTransactionsIOABC, abc.ABC):
     def get_transactions(self) -> pd.DataFrame:
         pass
 
@@ -32,16 +34,16 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         pass
 
 
-class HSBCTransactionsDBAccessor(io.HSBCTransactionsIOABC):
+class HSBCTransactionsDBAccessor(io.HSBCTransactionsIOABC, abc.ABC):
     def import_statement(self, df):
         pass
 
 
-class MonzoTransactionsDBAccessor(io.MonzoTransactionsIOABC):
+class MonzoTransactionsDBAccessor(io.MonzoTransactionsIOABC, abc.ABC):
     def import_statement(self, df):
         pass
 
 
-class RevoTransactionsDBAccessor(io.RevoTransactionsIOABC):
+class RevoTransactionsDBAccessor(io.RevoTransactionsIOABC, abc.ABC):
     def import_statement(self, df):
         pass
