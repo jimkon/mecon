@@ -1,6 +1,28 @@
 import unittest
 
-from mecon2.utils.multiton import Multiton, InstanceDoesNotExistError, InstanceAlreadyExistError
+from mecon2.utils.instance_management import Singleton, Multiton, InstanceDoesNotExistError, InstanceAlreadyExistError
+
+
+class TestSingleton(unittest.TestCase):
+    def test_singleton_instance(self):
+        # Ensure that multiple instances are the same
+        singleton1 = Singleton.get_instance()
+        singleton2 = Singleton.get_instance()
+        self.assertIs(singleton1, singleton2)
+
+    def test_set_instance(self):
+        # Create a new instance and set it using set_instance
+        new_singleton = Singleton()
+        Singleton.set_instance(new_singleton)
+        singleton = Singleton.get_instance()
+        self.assertIs(new_singleton, singleton)
+
+    def test_reset_instance(self):
+        # Create a new instance, set it, and then reset it
+        new_singleton = Singleton()
+        Singleton.set_instance(new_singleton)
+        Singleton.reset_instance()
+        self.assertIsNone(Singleton._instance)
 
 
 class TestMultiton(unittest.TestCase):

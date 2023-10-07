@@ -1,3 +1,28 @@
+
+
+class Singleton:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Singleton, cls).__new__(cls)
+        return cls._instance
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def set_instance(cls, instance):
+        cls._instance = instance
+
+    @classmethod
+    def reset_instance(cls):
+        cls._instance = None
+
+
 class InstanceAlreadyExistError(Exception):
     pass
 
