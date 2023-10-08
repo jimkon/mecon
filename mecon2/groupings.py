@@ -5,7 +5,7 @@ import pandas as pd
 
 from mecon2.datafields import DataframeWrapper, Grouping
 from mecon2.utils import calendar_utils
-from mecon2.utils.multiton import Multiton
+from mecon2.utils.instance_management import Multiton
 from mecon2.tagging import Tagger, TagMatchCondition
 
 
