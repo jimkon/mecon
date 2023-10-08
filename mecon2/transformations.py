@@ -1,7 +1,7 @@
-from mecon2.utils import calendar_utils, multiton
+from mecon2.utils import calendar_utils, instance_management
 
 
-class TransformationFunction(multiton.Multiton):
+class TransformationFunction(instance_management.Multiton):
     """
     Transformation operation used by Condition
     """

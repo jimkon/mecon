@@ -1,9 +1,9 @@
 import re
 
-from mecon2.utils import multiton
+from mecon2.utils import instance_management
 
 
-class CompareOperator(multiton.Multiton):
+class CompareOperator(instance_management.Multiton):
     """
     Compare operators used by Condition.
     """
