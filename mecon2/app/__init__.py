@@ -6,7 +6,7 @@ from flask import Flask
 from mecon2.monitoring import logs  # DO NOT DELETE:important to initialise the logger
 logs.setup_logging()
 
-from mecon2.app.datasets import current_dataset
+from mecon2.app.datasets import WorkingDatasetDir
 from mecon2.app.db_extension import db
 from mecon2.app.views import main_bp
 from mecon2.blueprints.data import data_bp
@@ -16,6 +16,8 @@ from mecon2.blueprints.monitoring import monitoring_bp
 
 logs.print_logs_info()
 logging.info('Starting app...')
+
+current_dataset = WorkingDatasetDir().get_dataset('v2')
 
 app = Flask(__name__)
 app.debug = True

@@ -5,7 +5,7 @@ import pandas as pd
 from flask import Blueprint, redirect, url_for, render_template
 from json2html import json2html
 
-from mecon2.app.datasets import current_dataset
+from mecon2.app.datasets import WorkingDatasetDir
 from mecon2.data.db_controller import reset_transactions, import_data_access, data_access
 from mecon2.data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from mecon2.transactions import Transactions
@@ -16,6 +16,7 @@ data_bp = Blueprint('data', __name__, template_folder='templates')
 
 
 def _statement_files_info() -> Dict:
+    current_dataset = WorkingDatasetDir().get_dataset('v2')
     dirs_path = current_dataset.statements
     transformed_dict = current_dataset.statement_files().copy()
 
