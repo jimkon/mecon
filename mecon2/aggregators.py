@@ -1,5 +1,3 @@
-import json
-from collections import Counter
 from itertools import chain
 
 import pandas as pd

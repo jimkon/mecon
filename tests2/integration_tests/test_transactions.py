@@ -1,12 +1,11 @@
 import unittest
-from unittest.mock import MagicMock
 from datetime import datetime
 
 import pandas as pd
 
-from mecon2.transactions import Transactions, TransactionDateFiller
-from mecon2.aggregators import CustomisedDefaultTransactionAggregator, CustomisedAmountTransactionAggregator
 from mecon2 import groupings
+from mecon2.aggregators import CustomisedDefaultTransactionAggregator, CustomisedAmountTransactionAggregator
+from mecon2.transactions import Transactions, TransactionDateFiller
 
 
 class TestTransactionAggregator(unittest.TestCase):
