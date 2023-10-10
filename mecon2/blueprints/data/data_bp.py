@@ -26,10 +26,11 @@ def _statement_files_info() -> Dict:
             statement_filepath = pathlib.Path(dirs_path) / dir_name / filename
             try:
                 df = pd.read_csv(statement_filepath)
-                size = len(df)
-            except FileNotFoundError:
-                size = 'error while reading file'
-            files_info.append((statement_filepath, filename, size))
+                stats = len(df)
+            except FileNotFoundError | ValueError:
+                stats = 'error while reading file'
+
+            files_info.append((statement_filepath, filename, stats))  # TODO add more stats, maybe df.info()
         transformed_dict[dir_name] = files_info
 
     return transformed_dict
@@ -120,7 +121,15 @@ def data_import():
 @data_bp.route('/view/file/<path>')
 @logs.codeflow_log_wrapper('#api')
 def datafile_view(path):
-    return pd.read_csv(path).to_html()
+    df = pd.read_csv(path)
+    tables_stats_html = df.describe(include='all').to_html()  #
+    table_html = df.to_html()
+    return f"""
+    <h1>Stats</h1>
+    {tables_stats_html}
+    <h1>Table, shape: {df.shape}</h1>
+    {table_html}
+    """
 
 
 @data_bp.route('/view/<item>')

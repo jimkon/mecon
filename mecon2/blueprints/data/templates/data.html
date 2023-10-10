@@ -38,10 +38,11 @@
     <br>
     {% for bank_key in files_info_dict %}
         <li>{{ bank_key }}</li>
-        {% for statement_filepath, statement_filename, size in files_info_dict[bank_key] %}
+        {% for statement_filepath, statement_filename, stats in files_info_dict[bank_key] %}
             <ul>
-                <li><a href={{ url_for('data.datafile_view', path=statement_filepath) }}>{{ statement_filename }}
-                    ({{ size }} transactions)</a></li>
+                <li><a href={{ url_for('data.datafile_view', path=statement_filepath) }}>{{ statement_filename }}</a>
+                ({{ stats | safe }} rows)
+                </li>
             </ul>
         {% endfor %}
     {% endfor %}
