@@ -256,4 +256,5 @@ class DateFiller:
         for column, default_value in self._fill_values.items():
             fill_df[column] = default_value
 
+        fill_df.sort_values(by=['datetime'], inplace=True)
         return fill_df
