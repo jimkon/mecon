@@ -70,7 +70,7 @@ def get_transactions() -> Transactions:
 @logs.codeflow_log_wrapper('#data#transactions#process')
 def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key,
                               fill_dates_before_groupagg=False,
-                              fill_dates_after_groupagg=False) -> Transactions:  # TODO fill dates?
+                              fill_dates_after_groupagg=False) -> Transactions:
     tags = _split_tags(tags_str)
     transactions = get_transactions() \
         .containing_tag(tags) \
@@ -128,12 +128,12 @@ def reports_menu():
 @logs.codeflow_log_wrapper('#api')
 def amount_freq_timeline_graph(start_date, end_date, tags_str, grouping):
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
-                                                          fill_dates_before_groupagg=False,  # TODO fill dates?
+                                                          fill_dates_before_groupagg=False,
                                                           fill_dates_after_groupagg=True)
 
     if grouping != 'none':
         freq_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'count',
-                                                          fill_dates_before_groupagg=False,  # TODO fill dates?
+                                                          fill_dates_before_groupagg=False,
                                                           fill_dates_after_groupagg=True)
     else:
         freq_transactions = None
@@ -150,9 +150,7 @@ def amount_freq_timeline_graph(start_date, end_date, tags_str, grouping):
 @reports_bp.route('/graph/balance/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
 @logs.codeflow_log_wrapper('#api')
 def balance_graph(start_date, end_date, tags_str, grouping):
-    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
-                                                          fill_dates_before_groupagg=False,  # TODO fill dates?
-                                                          fill_dates_after_groupagg=False)
+    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
 
     graph_html = graphs.balance_graph_html(
         total_amount_transactions.datetime,
@@ -165,10 +163,7 @@ def balance_graph(start_date, end_date, tags_str, grouping):
 @reports_bp.route('/graph/histogram/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
 @logs.codeflow_log_wrapper('#api')
 def histogram_graph(start_date, end_date, tags_str, grouping):
-    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
-                                                          fill_dates_before_groupagg=False,  # TODO fill dates?
-                                                          fill_dates_after_groupagg=False
-                                                          )
+    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
 
     graph_html = graphs.histogram_and_contributions(
         total_amount_transactions.amount,
