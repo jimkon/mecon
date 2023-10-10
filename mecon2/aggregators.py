@@ -12,14 +12,15 @@ def concat_strings(items):
     return ','.join([str(item) for item in items])
 
 
-def count_dict(items):
-    return json.dumps(dict(sorted(Counter(items).items(), reverse=True)))
-
-
 def aggregate_tags_set(tags):
     tags_split = [tags_row.split(',') for tags_row in tags if len(tags_row) > 0]
     tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
     return set(tags_list)
+
+
+def aggregate_currencies(currencies):
+    # return json.dumps(dict(sorted(Counter(currencies).items(), reverse=True)))
+    return ','.join(currencies.to_list())
 
 
 class TransactionAggregator(InTypeAggregator):
@@ -43,12 +44,11 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
                  currency_agg=None,
                  description_agg=None,
                  tags_agg=None):
-
         # TODO make all agg_functions as separate to increase readability and testability
-        id_agg = min#(lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO if id becomes a string, then just concat
+        id_agg = min if id_agg is None else id_agg  # (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO if id becomes a string, then just concat
         datetime_agg = min if datetime_agg is None else datetime_agg
         amount_agg = sum if amount_agg is None else amount_agg
-        currency_agg = count_dict if currency_agg is None else currency_agg  # TODO do we really want that? maybe currency should have only currency values [GBP, EUR, etc]
+        currency_agg = aggregate_currencies if currency_agg is None else currency_agg  # TODO do we really want that? maybe currency should have only currency values [GBP, EUR, etc]
         description_agg = concat_strings if description_agg is None else description_agg
         tags_agg = (lambda tags_set: ','.join(sorted(aggregate_tags_set(tags_set)))) if tags_agg is None else tags_agg
 

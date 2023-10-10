@@ -1,6 +1,8 @@
 from __future__ import annotations  # TODO upgrade to python 3.11
 
 import abc
+import itertools
+import json
 from collections import Counter
 from itertools import chain
 from typing import List
@@ -121,11 +123,16 @@ class AmountColumnMixin:
         return self._df_wrapper_obj.dataframe()['currency']
 
     @property
+    def currency_list(self) -> pd.Series:
+        return self.currency.apply(lambda s: s.split(','))
+
+    @property
     def amount_cur(self):
         return self._df_wrapper_obj.dataframe()['amount_cur']
 
     def all_currencies(self):
-        return self.currency.unique().tolist()
+        flattened = list(itertools.chain(*self.currency_list))
+        return json.dumps(dict(sorted(Counter(flattened).items(), reverse=True)))
 
 
 class DescriptionColumnMixin:
