@@ -174,7 +174,7 @@ def performance_stats_graph_html(perf_data_stats: dict):
 
     # Define layout
     layout = {
-        'autosize': True,
+        'autosize': True,  # TODO it does not autosize
         'title': 'Function Execution Statistics',
         'xaxis': {
             'title': 'Functions',
