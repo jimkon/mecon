@@ -48,7 +48,7 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
         id_agg = min if id_agg is None else id_agg  # (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO if id becomes a string, then just concat
         datetime_agg = min if datetime_agg is None else datetime_agg
         amount_agg = sum if amount_agg is None else amount_agg
-        currency_agg = aggregate_currencies if currency_agg is None else currency_agg  # TODO do we really want that? maybe currency should have only currency values [GBP, EUR, etc]
+        currency_agg = aggregate_currencies if currency_agg is None else currency_agg
         description_agg = concat_strings if description_agg is None else description_agg
         tags_agg = (lambda tags_set: ','.join(sorted(aggregate_tags_set(tags_set)))) if tags_agg is None else tags_agg
 
