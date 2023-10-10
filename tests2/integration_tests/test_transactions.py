@@ -28,7 +28,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [600.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [600.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -54,7 +54,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [100.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [100.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -80,7 +80,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [300.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [300.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -106,7 +106,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [600.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [600.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -132,7 +132,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [200.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [200.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -158,7 +158,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 3, 0, 0, 0)],
             'amount': [3],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [3],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -184,7 +184,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [100.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [100.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -210,7 +210,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [300.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [300.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -236,7 +236,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [600.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [600.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -262,7 +262,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [200.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [200.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -288,7 +288,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 8, 0, 0, 0)],
             'amount': [3],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [3],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -314,7 +314,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [100.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [100.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -340,7 +340,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [300.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [300.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -366,7 +366,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [600.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [600.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -392,7 +392,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [200.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [200.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -418,7 +418,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0)],
             'amount': [3],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [3],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -444,7 +444,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [100.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [100.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -470,7 +470,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [300.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [300.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -496,7 +496,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [600.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [600.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -522,7 +522,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [200.0],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [200.0],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -548,7 +548,7 @@ class TestTransactionAggregator(unittest.TestCase):
             'id': [11],
             'datetime': [datetime(2021, 1, 1, 0, 0, 0)],
             'amount': [3],
-            'currency': ['{"GBP": 3}'],
+            'currency': ['GBP,GBP,GBP'],
             'amount_cur': [3],
             'description': ['Transaction 1,Transaction 2,Transaction 3'],
             'tags': ['tag1,tag2']
@@ -615,7 +615,7 @@ class TestGroupAgg(unittest.TestCase):
             'id': [11, 13],
             'datetime': [datetime(2021, 2, 1, 0, 0, 0), datetime(2021, 12, 27, 0, 0, 0)],
             'amount': [300.0, 300.0],
-            'currency': ['{"GBP": 2}', '{"GBP": 1}'],
+            'currency': ['GBP,GBP', 'GBP'],
             'amount_cur': [300.0, 300.0],
             'description': ['Transaction 1,Transaction 2', 'Transaction 3'],
             'tags': ['tag1', 'tag1,tag2']
