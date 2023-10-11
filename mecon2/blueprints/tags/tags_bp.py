@@ -25,7 +25,7 @@ def _reformat_json_str(json_str):
 
 @logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
-    data_df = data_access.transactions.get_transactions()#.sort_values(by='datetime', ascending=False).reset_index(drop=True)
+    data_df = data_access.transactions.get_transactions()
     transactions = Transactions(data_df)
     return transactions
 
