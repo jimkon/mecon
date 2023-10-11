@@ -30,7 +30,7 @@ def _statement_files_info() -> Dict:
             except FileNotFoundError | ValueError:
                 stats = 'error while reading file'
 
-            files_info.append((statement_filepath, filename, stats))  # TODO add more stats, maybe df.info()
+            files_info.append((statement_filepath, filename, stats))
         transformed_dict[dir_name] = files_info
 
     return transformed_dict
