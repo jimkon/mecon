@@ -61,8 +61,7 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
 
 @logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
-    data_df = data_access.transactions.get_transactions().sort_values(by='datetime', ascending=False).reset_index(
-        drop=True)
+    data_df = data_access.transactions.get_transactions()#.sort_values(by='datetime', ascending=False).reset_index(drop=True)
     transactions = Transactions(data_df)
     return transactions
 
