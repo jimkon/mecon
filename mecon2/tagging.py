@@ -231,11 +231,11 @@ class Tagger(abc.ABC):
         res_df = df[~rows_to_tag].reset_index(drop=True)
         return res_df
 
-    # @staticmethod
-    # @logs.codeflow_log_wrapper('#data#tags')
-    # def _already_tagged_rows(tag_name, df):  # TODO not used
-    #     already_tagged_rows = df['tags'].apply(lambda tags_row: tag_name in tags_row.split(','))
-    #     return already_tagged_rows
+    @staticmethod
+    @logs.codeflow_log_wrapper('#data#tags')
+    def _already_tagged_rows(tag_name, df):
+        already_tagged_rows = df['tags'].apply(lambda tags_row: tag_name in tags_row.split(','))
+        return already_tagged_rows
 
     @staticmethod
     @logs.codeflow_log_wrapper('#data#tags')
