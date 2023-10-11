@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from mecon2.utils.currency import currency_rate_function
+from mecon2.utils import currencies
 
 
 class HSBCTransformer:
@@ -31,33 +31,41 @@ class HSBCTransformer:
 class MonzoTransformer:
     def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO make it more readable
         df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
-        df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(df_monzo['time'].astype(str))
+        df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(
+            df_monzo['time'].astype(str))
         df_monzo['currency'] = df_monzo['local_currency']
         df_monzo['amount_cur'] = df_monzo['local_amount']
 
         # Concatenate columns to create description
-        cols_to_concat = ['transaction_type', 'name', 'emoji', 'category', 'notes_tags', 'address', 'receipt', 'description',
+        cols_to_concat = ['transaction_type', 'name', 'emoji', 'category', 'notes_tags', 'address', 'receipt',
+                          'description',
                           'category_split', 'money_out', 'money_in']
 
         df_transformed = df_monzo[['id', 'datetime', 'amount', 'currency', 'amount_cur']]
 
         df_transformed['description'] = df_monzo[cols_to_concat].apply(
-            lambda x: ', '.join([col+": "+(str(x[col]) if pd.notnull(x[col]) else 'none') for col in cols_to_concat]),
+            lambda x: ', '.join(
+                [col + ": " + (str(x[col]) if pd.notnull(x[col]) else 'none') for col in cols_to_concat]),
             axis=1
         )
         df_transformed['description'] = 'bank:Monzo, ' + df_transformed['description']
 
-        df_transformed = df_transformed.reindex(columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
+        df_transformed = df_transformed.reindex(
+            columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
         return df_transformed
 
 
 class RevoTransformer:
+    def __init__(self, currency_converter=None):
+        self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
+
     def transform(self, df_revo: pd.DataFrame) -> pd.DataFrame:
         df_transformed = pd.DataFrame({'id': ('3' + df_revo['id'].astype(str)).astype(np.int64)})
         df_transformed['datetime'] = pd.to_datetime(df_revo['start_date'], format="%Y-%m-%d %H:%M:%S")
-        currency_rates = df_revo['currency'].apply(lambda curr: currency_rate_function(curr)) # TODO find why it doesn't work without the lambda
-        df_transformed['amount'] = df_revo['amount'] / currency_rates  # TODO take care of inf values
+        df_transformed['amount'] = [self._currency_converter.amount_to_gbp(amount, currency, date)
+                                    for amount, currency, date
+                                    in zip(df_revo['amount'], df_revo['currency'], df_transformed['datetime'])]
         df_transformed['currency'] = df_revo['currency']
         df_transformed['amount_cur'] = df_revo['amount']
 
@@ -69,8 +77,5 @@ class RevoTransformer:
         )
         df_transformed['description'] = 'bank:Revolut, ' + df_transformed['description']
 
-        # df_transformed = df_revo[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
-        # df_transformed = df_transformed.reindex(
-        #     columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
         return df_transformed

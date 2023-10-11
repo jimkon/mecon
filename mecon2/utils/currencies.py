@@ -1,5 +1,26 @@
+import abc
 
-class FixedRateCurrencyConverter:
+
+class PotentiallyInvalidCurrencyRate(Exception):
+    pass
+
+
+class CurrencyConverterABC(abc.ABC):
+    def amount_to_gbp(self, amount, currency, date=None):
+        rate = self.curr_to_GBP(currency, date)
+
+        if rate <= 0 or rate >= 1000:
+            raise PotentiallyInvalidCurrencyRate(f"Rate: {rate} for {currency} on {date}")
+
+        result = amount / rate
+        return result
+
+    @abc.abstractmethod
+    def curr_to_GBP(self, curr, date=None):
+        pass
+
+
+class FixedRateCurrencyConverter(CurrencyConverterABC):
     currency_rates = {
         'USD': 1.3,
         'EUR': 1.2,
@@ -7,21 +28,13 @@ class FixedRateCurrencyConverter:
     }
 
     def __init__(self, **currency_rates):
-        self._rates = currency_rates if len(currency_rates) else FixedRateCurrencyConverter.currency_rates
+        self._rates = currency_rates if len(currency_rates) > 0 else FixedRateCurrencyConverter.currency_rates
+        t = 0
 
-    def curr_to_GBP(self, curr):
+    def curr_to_GBP(self, curr, date=None):
         if curr not in self._rates:
             return 1
         return self._rates[curr]
-
-
-CURRENCY_CONVERTER = FixedRateCurrencyConverter()
-
-
-def currency_rate_function(curr):
-    # raise NotImplemented()
-    return CURRENCY_CONVERTER.curr_to_GBP(curr)
-
 
 # pip install forex-python
 #
