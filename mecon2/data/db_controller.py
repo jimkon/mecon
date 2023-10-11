@@ -7,9 +7,11 @@ from mecon2.app.db_extension import db
 from mecon2.data import etl
 from mecon2.data import io_framework as io
 from mecon2.data.io_framework import ImportDataAccess, DataAccess
+from mecon2.monitoring import logs
 
 
 class TagsDBAccessor(io.TagsIOABC):
+    @logs.codeflow_log_wrapper('#db#tags')
     def get_tag(self, name) -> list[str, Any] | None:
         tag = models.TagsDBTable.query.filter_by(name=name).first()
 
@@ -18,6 +20,7 @@ class TagsDBAccessor(io.TagsIOABC):
 
         return tag.to_dict()
 
+    @logs.codeflow_log_wrapper('#db#tags')
     def set_tag(self, name: str, conditions_json: list | dict) -> None:
         if len(conditions_json) > 2000:  # TODO make this a constant config
             raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
@@ -35,6 +38,7 @@ class TagsDBAccessor(io.TagsIOABC):
             tag.conditions_json = str(conditions_json)
             db.session.commit()
 
+    @logs.codeflow_log_wrapper('#db#tags')
     def delete_tag(self, name: str) -> bool:
         tag = db.session.query(models.TagsDBTable).filter_by(name=name).first()
         if tag:
@@ -43,6 +47,7 @@ class TagsDBAccessor(io.TagsIOABC):
             return True
         return False
 
+    @logs.codeflow_log_wrapper('#db#tags')
     def all_tags(self) -> list[dict]:
         tags = [tag.to_dict() for tag in models.TagsDBTable.query.all()]
         return tags
@@ -165,14 +170,17 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         if len(value_errors):
             raise InvalidTransactionsDataframeDataValueException(value_errors)
 
+    @logs.codeflow_log_wrapper('#db#data#io')
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df) > 0 else None
 
+    @logs.codeflow_log_wrapper('#db#data#io')
     def delete_all(self):
         db.session.query(models.TransactionsDBTable).delete()
 
+    @logs.codeflow_log_wrapper('#db#data#io')
     def load_transactions(self):
         df_hsbc = HSBCTransactionsDBAccessor().get_transactions()
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
@@ -201,6 +209,7 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
 
         df_merged.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
 
+    @logs.codeflow_log_wrapper('#db#tags')
     def update_tags(self, df_tags):
         # transaction_ids = df_tags['id'].to_list()
         update_values = df_tags.set_index('id')['tags'].to_dict()

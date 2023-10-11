@@ -7,8 +7,10 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 from mecon2.blueprints.reports import graph_utils
+from mecon2.monitoring import logs
 
 
+@logs.codeflow_log_wrapper('#graphs')
 def amount_and_freq_timeline_html(time, amount, freq):
     fig = go.Figure()
 
@@ -27,6 +29,7 @@ def amount_and_freq_timeline_html(time, amount, freq):
     return graph_html
 
 
+@logs.codeflow_log_wrapper('#graphs')
 def balance_graph_html(time, amount: pd.Series):
     fig = go.Figure()
 
@@ -42,6 +45,7 @@ def balance_graph_html(time, amount: pd.Series):
     return graph_html
 
 
+@logs.codeflow_log_wrapper('#graphs')
 def histogram_and_cumsum_graph_html(amount: pd.Series):
     fig = go.Figure()
 
@@ -64,6 +68,7 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
     return graph_html
 
 
+@logs.codeflow_log_wrapper('#graphs')
 def histogram_and_contributions(amounts: pd.Series):
     bin_centers, counts, contributions = graph_utils.calculated_histogram_and_contributions(amounts)
 
@@ -98,6 +103,7 @@ def histogram_and_contributions(amounts: pd.Series):
     return graph_html
 
 
+@logs.codeflow_log_wrapper('#graphs')
 def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
     data = list(zip(functions, start_datetime, end_datetime))
 
@@ -126,6 +132,7 @@ def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
     return graph_html
 
 
+@logs.codeflow_log_wrapper('#graphs')
 def performance_stats_graph_html(perf_data_stats: dict):
     stats = perf_data_stats
 
@@ -215,5 +222,6 @@ def performance_stats_graph_html(perf_data_stats: dict):
                           ),
                       ])
 
-    graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')  # , config={'autosizable': True, 'responsive': True})
+    graph_html = plot(fig, output_type='div',
+                      include_plotlyjs='cdn')  # , config={'autosizable': True, 'responsive': True})
     return graph_html
