@@ -1,5 +1,7 @@
 from __future__ import annotations  # TODO upgrade to python 3.11
 
+from collections import Counter
+
 import pandas as pd
 
 import mecon2.datafields as fields
@@ -32,9 +34,24 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def factory(cls, df: pd.DataFrame):
         return super().factory(df)
 
+    def to_html(self):
+        def counts(curr_string):
+            value_counts = Counter(curr_string.split(','))
 
-class TransactionDateFiller(
-    fields.DateFiller):  # TODO move other Transaction related classes here like TransactionAggregators
+            res_str = ''
+            for curr, count in value_counts.items():
+                res_str += f"{curr}:{count} "
+            return res_str
+
+        df = self.dataframe().iloc[::-1]
+        df['currency'] = df['currency'].apply(counts)
+        html_table = df.to_html()
+        res_html = f"<h1>Transactions table ({len(df)} rows)</h1>\n{html_table}"
+        return res_html
+
+
+# TODO move other Transaction related classes here like TransactionAggregators
+class TransactionDateFiller(fields.DateFiller):
     def __init__(self,
                  fill_unit,
                  id_fill='',

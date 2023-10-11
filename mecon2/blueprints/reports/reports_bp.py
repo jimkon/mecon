@@ -208,7 +208,7 @@ def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
 
     data_df = transactions.dataframe()
-    table_html = data_df.to_html()
+    table_html = transactions.to_html()
     transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
 
     html_tabs = html_pages.TabsHTML()

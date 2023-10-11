@@ -33,7 +33,7 @@
                 <!-- Input text field -->
                 <label for="field">Field:</label>
                 <select id="field" name="field">
-                    {% for field in data_df.columns.to_list() %}
+                    {% for field in transactions.dataframe().columns.to_list() %}
                         <option value="{{ field }}" {% if field == "description" %} selected {% endif %}>{{ field }}</option>
                     {% endfor %}
                 </select><br><br>
@@ -214,17 +214,11 @@
     </div>
 
     <div id="Tab1" class="tabcontent">
-        {% if tagged_table_html is not none %}
-            <h1>Table for "{{ tag_name }}" tag ({{ number_of_rows }} rows)</h1>
-            {{ tagged_table_html | safe }}
-        {% endif %}
+        {{ tagged_table_html | safe }}
     </div>
 
     <div id="Tab2" class="tabcontent">
-        {% if untagged_table_html is not none %}
-            <h1>Untagged rows</h1>
-            {{ untagged_table_html | safe }}
-        {% endif %}
+        {{ untagged_table_html | safe }}
     </div>
 
     <script>

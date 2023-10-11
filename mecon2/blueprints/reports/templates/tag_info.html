@@ -22,9 +22,6 @@
         </div>
     </div>
 
-    {% if table_html is not none %}
-        <h1>Transactions ({{ transactions.size() }} rows)</h1>
-        {{ table_html | safe }}
-    {% endif %}
+    {{ table_html | safe }}
 
 {% endblock content %}

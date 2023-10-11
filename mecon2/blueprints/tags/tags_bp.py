@@ -61,14 +61,11 @@ def render_tag_page(title='Tag page',
                     confirm_delete=False):
     # TODO maybe add different tabs on the tagged/untagged data to display them in groups (date price etc)
     try:
-        # _json_from_str(tag_json_str)
         tag = Tag.from_json_string(tag_name, tag_json_str)
         transactions = get_transactions().apply_rule(tag.rule)
-        data_df = transactions.dataframe()
-        tagged_table_html = data_df.to_html()  # TODO add also the other untagged rows
+        tagged_table_html = transactions.to_html()
         untagged_transactions = get_transactions().apply_negated_rule(tag.rule)
-        untagged_table_html = untagged_transactions.dataframe().to_html()
-        number_of_rows = 0 if data_df is None else len(data_df)
+        untagged_table_html = untagged_transactions.to_html()
         tag_json_str = _reformat_json_str(tag_json_str)
         transformations_list = [trans.name for trans in transformations.TransformationFunction.all_instances()]
         comparisons_list = [comp.name for comp in comparisons.CompareOperator.all_instances()]
