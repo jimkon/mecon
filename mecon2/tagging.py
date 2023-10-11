@@ -42,8 +42,16 @@ class Condition(AbstractRule):
 
         self._value = value
 
+    @property
+    def field(self):
+        return self._field
+
+    @property
+    def value(self):
+        return self._value
+
     def compute(self, element):
-        res = self._compare_op(self._transformation_op(element[self._field]), self._value)
+        res = self._compare_op(self._transformation_op(element[self.field]), self.value)
         return res
 
     def to_dict(self):
@@ -53,11 +61,11 @@ class Condition(AbstractRule):
                                       f"Got these instead: {self._transformation_op=}, {self._compare_op=}")
 
         if hasattr(self._transformation_op, 'name') and self._transformation_op.name != 'none':
-            field_and_transformations_key = f"{self._field}.{self._transformation_op.name}"
+            field_and_transformations_key = f"{self.field}.{self._transformation_op.name}"
         else:
-            field_and_transformations_key = self._field
+            field_and_transformations_key = self.field
         comparison_key = f"{self._compare_op.name}"
-        return {field_and_transformations_key: {comparison_key: self._value}}
+        return {field_and_transformations_key: {comparison_key: self.value}}
 
     @staticmethod
     def from_string_values(field, transformation_op_key, compare_op_key, value):
@@ -76,6 +84,10 @@ class Conjunction(AbstractRule):
             if not issubclass(rule.__class__, AbstractRule):
                 raise NotARuleException
         self._rules = rule_list
+
+    @property
+    def rules(self):
+        return self._rules
 
     def compute(self, element):
         return all([rule.compute(element) for rule in self._rules])
@@ -125,6 +137,10 @@ class Disjunction(AbstractRule):
                 raise NotARuleException
         self._rules = rule_list
 
+    @property
+    def rules(self):
+        return self._rules
+
     def compute(self, element):
         return any([rule.compute(element) for rule in self._rules])
 
@@ -149,7 +165,7 @@ class Disjunction(AbstractRule):
 
 
 class Tag:
-    def __init__(self, name, rule):
+    def __init__(self, name: str, rule: AbstractRule):
         self._name = name
         self._rule = rule
 
@@ -161,18 +177,18 @@ class Tag:
     def rule(self):
         return self._rule
 
-    @property
-    def affected_columns(self):  # TODO unused and untested
-        def _get_fields_rec(rule):
-            if isinstance(rule, Condition):
-                return [rule._field]  # TODO create and access property instead
-            elif isinstance(rule, Conjunction) or isinstance(rule, Disjunction):
-                rules = []
-                for rule in rule._rules:  # TODO create and access property instead
-                    rules.extend(_get_fields_rec(rule._rules))
-                return rules
-
-        return {field for field in _get_fields_rec(self._rule)}
+    # @property
+    # def affected_columns(self):  # TODO it may be needed later
+    #     def _get_fields_rec(rule):
+    #         if isinstance(rule, Condition):
+    #             return [rule.field]
+    #         elif isinstance(rule, Conjunction) or isinstance(rule, Disjunction):
+    #             rules = []
+    #             for rule in rule.rules:
+    #                 rules.extend(_get_fields_rec(rule.rules))
+    #             return rules
+    #
+    #     return {field for field in _get_fields_rec(self._rule)}
 
     @staticmethod
     def from_json(name, _json):
@@ -246,5 +262,5 @@ class TagMatchCondition(Condition):  # TODO use in all tag match cases
         field = 'tags'
         transformation_op = None
         compare_op = comparisons.REGEX
-        regex_value = r"\b"+tag_name+r"\b"
+        regex_value = r"\b" + tag_name + r"\b"
         super().__init__(field, transformation_op, compare_op, regex_value)
