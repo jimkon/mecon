@@ -601,7 +601,7 @@ class TestGroupAgg(unittest.TestCase):
     def test_group_agg(self):
         transactions = Transactions(pd.DataFrame({
             'id': [11, 12, 13],
-            'datetime': [datetime(2021, 2, 3, 4, 5, 6), datetime(2021, 2, 1, 4, 5, 6),
+            'datetime': [datetime(2021, 2, 1, 4, 5, 6), datetime(2021, 2, 3, 4, 5, 6),
                          datetime(2021, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],

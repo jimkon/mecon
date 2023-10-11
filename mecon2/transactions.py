@@ -6,7 +6,7 @@ import mecon2.datafields as fields
 from mecon2.monitoring import logs
 
 
-class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTimeColumnMixin, fields.AmountColumnMixin,
+class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.AmountColumnMixin,
                    fields.DescriptionColumnMixin, fields.TagsColumnMixin):
     """
     Responsible for holding the transactions dataframe and controlling the access to it, like a DataFrame Facade.
@@ -21,19 +21,15 @@ class Transactions(fields.DataframeWrapper, fields.IdColumnMixin, fields.DateTim
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)
-        fields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
         fields.AmountColumnMixin.__init__(self, df_wrapper=self)
         fields.DescriptionColumnMixin.__init__(self, df_wrapper=self)
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     def fill_values(self, fill_unit):
         return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit))
-        # filler =
-        # return filler.fill(self)
 
     @classmethod
     def factory(cls, df: pd.DataFrame):
-        # TODO check if sorted
         return super().factory(df)
 
 

@@ -30,10 +30,8 @@ class DataframeWrapper:
     def copy(self) -> DataframeWrapper:
         return self.factory(self.dataframe())
 
-    def merge(self, df_wrapper) -> DataframeWrapper:  # TODO sort before merging, and test
+    def merge(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
         df = pd.concat([self.dataframe(), df_wrapper.dataframe()]).drop_duplicates()
-        if 'datetime' in df.columns:  # TODO datetime is not a always present
-            df = df.sort_values(by='datetime')
         return self.factory(df)
 
     def size(self):
@@ -59,11 +57,6 @@ class DataframeWrapper:
         groups = grouper.group(self)
         aggregated_groups = aggregator.aggregate(groups)
         return aggregated_groups
-
-    # def fill_values(self, filler: DateFiller = None):  # TODO untested
-    #     return filler.fill(self)
-    # def __eq__(self, other):  # TODO add and test maybe
-    #     return self.dataframe().equals(other.dataframe())
 
     @classmethod
     def factory(cls, df: pd.DataFrame):
@@ -105,9 +98,6 @@ class DateTimeColumnMixin:
             tagging.Condition.from_string_values('datetime', 'str', 'less_equal', str(end_date)),
         ])
         return self._df_wrapper_obj.apply_rule(rule)
-
-    def fill_dates(self, filler: DateFiller):
-        return filler.fill(self._df_wrapper_obj)
 
 
 class AmountColumnMixin:
@@ -238,14 +228,37 @@ class InTypeAggregator(AggregatorABC):
         return new_df_wrapper
 
 
+class UnorderedDatedDataframeWrapper(Exception):
+    pass
+
+
+class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
+    def __init__(self, df: pd.DataFrame):
+        super().__init__(df=df)
+        DateTimeColumnMixin.__init__(self, df_wrapper=self)
+        self._validate_datetime_order()
+
+    def _validate_datetime_order(self):
+        if not self.dataframe().datetime.is_monotonic_increasing:
+            raise UnorderedDatedDataframeWrapper
+
+    def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:
+        df = pd.concat([self.dataframe(), df_wrapper.dataframe()]).drop_duplicates()
+        df.sort_values(by='datetime', inplace=True)
+        return self.factory(df)
+
+    def fill_dates(self, filler: DateFiller = None):
+        return filler.fill(self)
+
+
 class DateFiller:
     def __init__(self, fill_unit, fill_values_dict):
         self._fill_unit = fill_unit
         self._fill_values = fill_values_dict
 
     @logs.codeflow_log_wrapper('#data#transactions#process')
-    def fill(self, df_wrapper: DataframeWrapper) -> DataframeWrapper:
-        start_date, end_date = df_wrapper.date_range()  # TODO if has datetime column
+    def fill(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:
+        start_date, end_date = df_wrapper.date_range()
         fill_df = self.produce_fill_df_rows(start_date, end_date, df_wrapper.date)
         fill_df_wrapper = df_wrapper.factory(fill_df)
         merged_df_wrapper = df_wrapper.merge(fill_df_wrapper)

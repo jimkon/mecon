@@ -3,7 +3,8 @@ from datetime import datetime, date
 
 import pandas as pd
 
-from mecon2.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller
+from mecon2.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller, DatedDataframeWrapper, \
+    UnorderedDatedDataframeWrapper
 
 
 class TestDataframeWrapper(unittest.TestCase):
@@ -101,6 +102,24 @@ class TestAggregator(unittest.TestCase):
         result_df_wrapper2 = aggregator.aggregation(df_wrapper2)
         pd.testing.assert_frame_equal(result_df_wrapper2.dataframe().reset_index(drop=True),
                                       pd.DataFrame({'A': [5], 'B': [6]}))
+
+
+class TestDatedDataframeWrapper(unittest.TestCase):
+    def test_validation(self):
+        # should work
+        DatedDataframeWrapper(pd.DataFrame({
+            'datetime': [datetime(2023, 9, 1, 0, 0, 0),
+                         datetime(2023, 9, 3, 0, 0, 0),
+                         datetime(2023, 9, 5, 0, 0, 0)],
+        }))
+
+        with self.assertRaises(UnorderedDatedDataframeWrapper):
+            # should throw UnorderedDatedDataframeWrapper
+            DatedDataframeWrapper(pd.DataFrame({
+                'datetime': [datetime(2023, 9, 3, 0, 0, 0),
+                             datetime(2023, 9, 1, 0, 0, 0),
+                             datetime(2023, 9, 5, 0, 0, 0)],
+            }))
 
 
 class TestDateFiller(unittest.TestCase):

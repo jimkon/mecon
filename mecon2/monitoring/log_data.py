@@ -46,8 +46,7 @@ class LogInfoMixin:
         return self._df_wrapper_obj.dataframe()['funcName']
 
 
-class LogData(datafields.DataframeWrapper,
-              datafields.DateTimeColumnMixin,
+class LogData(datafields.DatedDataframeWrapper,
               LogInfoMixin,
               datafields.DescriptionColumnMixin,
               datafields.TagsColumnMixin):
@@ -154,8 +153,7 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
         return perf_logs
 
 
-class PerformanceData(datafields.DataframeWrapper,
-                      datafields.DateTimeColumnMixin,
+class PerformanceData(datafields.DatedDataframeWrapper,
                       ExecutionInfoMixin,
                       datafields.TagsColumnMixin):
     def __init__(self, df: pd.DataFrame):
