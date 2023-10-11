@@ -60,6 +60,7 @@ class LogData(datafields.DatedDataframeWrapper,
     @classmethod
     def from_raw_logs(cls, df_logs_raw: pd.DataFrame):  # -> LogData: TODO upgrade to python 3.11
         df_transformed = transform_raw_dataframe(df_logs_raw)
+        df_transformed.sort_values(by='datetime', inplace=True)
         return LogData(df_transformed)
 
 
