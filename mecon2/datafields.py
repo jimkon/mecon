@@ -41,13 +41,13 @@ class DataframeWrapper:
         return self.factory(self.dataframe()[index])
 
     @logs.codeflow_log_wrapper('#data#transactions#tags')
-    def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:  # TODO unittest
+    def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_rule(df, rule)
         return self.factory(new_df)
 
     @logs.codeflow_log_wrapper('#data#transactions#tags')
-    def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:  # TODO unittest
+    def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_negated_rule(df, rule)
         return self.factory(new_df)

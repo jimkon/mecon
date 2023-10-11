@@ -3,6 +3,7 @@ from datetime import datetime, date
 
 import pandas as pd
 
+import tagging
 from mecon2.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller, DatedDataframeWrapper, \
     UnorderedDatedDataframeWrapper
 
@@ -43,6 +44,25 @@ class TestDataframeWrapper(unittest.TestCase):
                          'B': [4, 6]}
         expected_df = pd.DataFrame(expected_data)
         pd.testing.assert_frame_equal(selected_wrapper.dataframe().reset_index(drop=True), expected_df)
+
+    def test_apply_rule(self):
+        rule = tagging.Condition.from_string_values('A', None, 'greater_equal', 2)
+        res_wrapper = self.wrapper.apply_rule(rule)
+
+        expected_df = pd.DataFrame({'A': [2, 3],
+                                    'B': [5, 6]})
+        pd.testing.assert_frame_equal(res_wrapper.dataframe().reset_index(drop=True),
+                                      expected_df)
+
+    def test_apply_negated_rule(self):
+        rule = tagging.Condition.from_string_values('A', None, 'greater_equal', 2)
+        res_wrapper = self.wrapper.apply_negated_rule(rule)
+
+        expected_df = pd.DataFrame({'A': [1],
+                                    'B': [4]})
+        pd.testing.assert_frame_equal(res_wrapper.dataframe().reset_index(drop=True),
+                                      expected_df)
+
 
 
 class TestGrouping(unittest.TestCase):
