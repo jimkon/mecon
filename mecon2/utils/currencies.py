@@ -1,4 +1,8 @@
 import abc
+from datetime import datetime
+from functools import lru_cache
+
+from forex_python.converter import CurrencyRates
 
 
 class PotentiallyInvalidCurrencyRate(Exception):
@@ -36,22 +40,18 @@ class FixedRateCurrencyConverter(CurrencyConverterABC):
             return 1
         return self._rates[curr]
 
-# pip install forex-python
-#
-# from forex_python.converter import CurrencyRates
-#
-# def amount_to_gbp(amount, currency, date):
-#     # Create a CurrencyRates object to access exchange rate data
-#     c = CurrencyRates()
-#
-#     # Convert the amount to GBP using historical exchange rate data
-#     gbp_amount = c.convert(currency, 'GBP', amount, date)
-#
-#     return gbp_amount
-#
-# amount = 100  # Original amount
-# currency = 'EUR'  # Original currency (Euro)
-# date = '2023-07-15'  # Date for historical exchange rate
-#
-# converted_amount = amount_to_gbp(amount, currency, date)
-# print(f"{amount} {currency} is equivalent to {converted_amount:.2f} GBP on {date}")
+
+class ForexLookupCurrencyConverter(CurrencyConverterABC):
+    @lru_cache(4096)
+    def curr_to_GBP(self, curr, date=None):
+        assert date is not None, f"Did not expect date=None when converting {curr}"
+
+        c = CurrencyRates()
+        gbp_amount = c.convert('GBP', curr, 1, date)
+
+        return gbp_amount
+
+
+class CachedForexLookupCurrencyConverter(ForexLookupCurrencyConverter):
+    #  TODO implement the cached version where each look up is stored in a file in order to enable offline exec
+    pass

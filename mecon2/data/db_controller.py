@@ -8,6 +8,7 @@ from mecon2.data import etl
 from mecon2.data import io_framework as io
 from mecon2.data.io_framework import ImportDataAccess, DataAccess
 from mecon2.monitoring import logs
+from mecon2.utils import currencies
 
 
 class TagsDBAccessor(io.TagsIOABC):
@@ -186,9 +187,11 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
         df_revo = RevoTransactionsDBAccessor().get_transactions()
 
+        currency_converted = currencies.ForexLookupCurrencyConverter()
+
         df_hsbc_transformed = etl.HSBCTransformer().transform(df_hsbc.copy())
         df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo.copy())
-        df_revo_transformed = etl.RevoTransformer().transform(df_revo.copy())
+        df_revo_transformed = etl.RevoTransformer(currency_converted).transform(df_revo.copy())
 
         dup_cols = ['datetime', 'amount', 'currency', 'amount_cur']  # , 'description']
         print(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} "
