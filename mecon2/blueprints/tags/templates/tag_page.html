@@ -32,8 +32,11 @@
                 <h2>Add Rule</h2>
                 <!-- Input text field -->
                 <label for="field">Field:</label>
-                <input type="text" id="field" name="field" value="description" size="30"><br><br>
-
+                <select id="field" name="field">
+                    {% for field in data_df.columns.to_list() %}
+                        <option value="{{ field }}" {% if field == "description" %} selected {% endif %}>{{ field }}</option>
+                    {% endfor %}
+                </select><br><br>
                 <!-- Dropdown menu for 'transform' -->
                 <label for="transform">Transform:</label>
                 <select id="transform" name="transform">
