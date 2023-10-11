@@ -22,9 +22,9 @@ class TagsDBAccessor(io.TagsIOABC):
 
     @logs.codeflow_log_wrapper('#db#tags')
     def set_tag(self, name: str, conditions_json: list | dict) -> None:
-        if len(conditions_json) > 2000:  # TODO make this a constant config
-            raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
-                             f" Consider increasing the upper limit.")
+        # if len(conditions_json) > 2000:  # TODO do we need this?
+        #     raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
+        #                      f" Consider increasing the upper limit.")
 
         tag = db.session.query(models.TagsDBTable).filter_by(name=name).first()
         if tag is None:
