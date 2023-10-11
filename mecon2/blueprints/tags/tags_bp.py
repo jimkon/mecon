@@ -1,4 +1,5 @@
 import json
+import logging
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
@@ -37,11 +38,11 @@ def recalculate_tags():
     for tag_dict in data_access.tags.all_tags():
         curr_tag_name, curr_tag_json = tag_dict['name'], tag_dict['conditions_json']
         tag = Tag.from_json_string(curr_tag_name, curr_tag_json)
-        print(f"Applying {curr_tag_name} tag to transaction.") # TODO logs
+        logging.info(f"Applying {curr_tag_name} tag to transaction.")
         transactions = transactions.apply_tag(tag)
 
     data_df = transactions.dataframe()
-    print(f"Updating transactions in DB.")# TODO logs
+    logging.info(f"Updating transactions in DB.")# TODO logs
     data_access.transactions.update_tags(data_df)
 
 

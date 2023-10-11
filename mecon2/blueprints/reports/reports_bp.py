@@ -1,3 +1,4 @@
+import logging
 import re
 
 import requests
@@ -113,7 +114,8 @@ def get_filter_values(tag_name, start_date=None, end_date=None, tags_str=None, g
 
         transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, aggregation)
 
-    # print(transactions.size(), start_date, end_date, tags_str, grouping, aggregation) # TODO logs
+    logging.info(
+        f"get_filter_values -> {transactions.size()=} {start_date=}, {end_date=}, {tags_str=}, {grouping=}, {aggregation=}")
     return transactions, start_date, end_date, tags_str, grouping, aggregation
 
 
@@ -127,13 +129,11 @@ def reports_menu():
 @logs.codeflow_log_wrapper('#api')
 def amount_freq_timeline_graph(start_date, end_date, tags_str, grouping):
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
-                                                          fill_dates_before_groupagg=False,
                                                           fill_dates_after_groupagg=True)
 
     if grouping != 'none':
         freq_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'count',
-                                                          fill_dates_before_groupagg=False,
-                                                          fill_dates_after_groupagg=True)
+                                                      fill_dates_after_groupagg=True)
     else:
         freq_transactions = None
 
@@ -169,6 +169,7 @@ def histogram_graph(start_date, end_date, tags_str, grouping):
     )
 
     return graph_html
+
 
 @reports_bp.route(
     '/custom_graph/<plot_type>,dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>,agg:<aggregation>',
