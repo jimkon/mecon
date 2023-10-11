@@ -33,7 +33,9 @@ def amount_and_freq_timeline_html(time, amount, freq):
 def balance_graph_html(time, amount: pd.Series):
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(x=time[::-1], y=amount[::-1].cumsum(), name="balance", line=dict(width=3)))
+    balance = amount.cumsum()
+
+    fig.add_trace(go.Scatter(x=time, y=balance, name="balance", line=dict(width=3)))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
