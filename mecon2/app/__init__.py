@@ -37,28 +37,3 @@ app.register_blueprint(monitoring_bp.monitoring_bp, url_prefix='/monitoring')
 logging.info('App initialised!')
 
 
-# def create_app(config_file='settings.py'):
-#     settings.py ->
-#         import os
-#
-#         SECRET_KEY = os.getenv('SECRET_KEY')
-#         SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'
-#         FLASK_DEBUG = True
-#         DEBUG = True
-#
-#     app = Flask(__name__, instance_relative_config=False)
-#
-#     app.config.from_pyfile(config_file)
-#
-#     db.init_app(app)
-#     app.app_context().push()
-#
-#     db.create_all()
-#
-#     app.register_blueprint(views.main)
-#
-#     return app
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
