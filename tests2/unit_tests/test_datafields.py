@@ -5,7 +5,7 @@ import pandas as pd
 from mecon2 import datafields
 
 
-# TODO merge with test_dataframe_wrappers maybe
+# TODO:v3 merge with test_dataframe_wrappers maybe
 
 
 class ExampleDataframeWrapper(datafields.DataframeWrapper,
@@ -31,15 +31,6 @@ class ExampleDataframeWrapper(datafields.DataframeWrapper,
 
 
 class TestTagsColumnMixin(unittest.TestCase):
-    # def test_init_validation(self):  # TODO uncomment when validation is back in place
-    #     ExampleDataframeWrapper(pd.DataFrame({
-    #         'tags': []
-    #     }))  # should work
-    #     with self.assertRaises(datafields.TagsColumnDoesNotExistInDataframe):
-    #         ExampleDataframeWrapper(pd.DataFrame({
-    #             'no_tags': []
-    #         }))  # should NOT work
-
     def test_tags_set(self):
         result_set = ExampleDataframeWrapper(pd.DataFrame({
             'tags': ['', 'tag1', 'tag1,tag2', 'tag1,tag2,tag3']

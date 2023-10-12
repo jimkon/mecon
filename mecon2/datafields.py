@@ -1,4 +1,4 @@
-from __future__ import annotations  # TODO upgrade to python 3.11
+from __future__ import annotations  # TODO:v2 upgrade to python 3.11
 
 import abc
 import itertools
@@ -63,7 +63,16 @@ class DataframeWrapper:
         return cls(df)
 
 
-# TODO CulumnMixin subclass with getter for df_wrapper, and factory
+# TODO:v2 add as superclass to other column mixins
+class ColumnMixin:
+    def __init__(self, df_wrapper: DataframeWrapper):
+        self._df_wrapper_obj = df_wrapper
+
+    @property
+    def dataframe_wrapper_obj(self):
+        return self._df_wrapper_obj
+
+
 class IdColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
@@ -127,10 +136,10 @@ class AmountColumnMixin:
 
 class DescriptionColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
-        pass
+        self._df_wrapper_obj = df_wrapper
 
-    # def description(self):
-    #     pass
+    def description(self):
+        return self._df_wrapper_obj.dataframe()['description']
 
 
 class TagsColumnDoesNotExistInDataframe(Exception):
@@ -141,7 +150,7 @@ class TagsColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
         df = self._df_wrapper_obj.dataframe()
-        # if 'tags' not in df.columns:  # TODO only tags col is validated
+        # if 'tags' not in df.columns:  # TODO:v3 only tags col is validated
         #     raise TagsColumnDoesNotExistInDataframe
 
     @property
@@ -150,7 +159,7 @@ class TagsColumnMixin:
 
     def all_tags(self):
         tags_split = self.tags.apply(
-            lambda s: s.split(',')).to_list()  # TODO duplicated code in aggregators aggregate_tags_set
+            lambda s: s.split(',')).to_list()  # TODO:v2 duplicated code in aggregators aggregate_tags_set
         tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
         tags_dict = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_dict
@@ -197,7 +206,7 @@ class Grouping(abc.ABC):
         pass
 
 
-class AggregatorABC(abc.ABC):  # TODO tested only through InTypeAggregator
+class AggregatorABC(abc.ABC):  # TODO:v2 tested only through InTypeAggregator
     def aggregate_result_df(self, lists_of_df_wrapper: List[DataframeWrapper]) -> pd.DataFrame:
         aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
         df_agg = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list])

@@ -24,7 +24,7 @@ class HSBCTransformerTest(unittest.TestCase):
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 2000.0, -300.0],
             'description': ['bank:HSBC, Transaction 1', 'bank:HSBC, Transaction 2', 'bank:HSBC, Transaction 3']
-        })  # TODO check results
+        })
 
         transformer = etl.HSBCTransformer()
         transformed_df = transformer.transform(df_hsbc)
@@ -67,7 +67,7 @@ class MonzoTransformerTest(unittest.TestCase):
                 'bank:Monzo, transaction_type: Payment, name: John Doe, emoji: 💳, category: Shopping, notes_tags: Note 1, address: 123 Main St, receipt: https://example.com/receipt1, description: Description 1, category_split: none, money_out: none, money_in: 100.0',
                 'bank:Monzo, transaction_type: Expense, name: Groceries, emoji: 🛒, category: Food, notes_tags: none, address: none, receipt: none, description: Description 2, category_split: Food/Groceries, money_out: 50.0, money_in: none',
                 'bank:Monzo, transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0']
-        })  # TODO check results
+        })
 
         transformer = etl.MonzoTransformer()
         transformed_df = transformer.transform(df_monzo)

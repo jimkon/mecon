@@ -5,7 +5,7 @@ from mecon2.utils import currencies
 
 
 class HSBCTransformer:
-    def transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO make it more readable
+    def transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v2 make it more readable
         # Add prefix to id
         df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
 
@@ -29,7 +29,7 @@ class HSBCTransformer:
 
 
 class MonzoTransformer:
-    def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO make it more readable
+    def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v2 make it more readable
         df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
         df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(
             df_monzo['time'].astype(str))
@@ -48,7 +48,7 @@ class MonzoTransformer:
                 [col + ": " + (str(x[col]) if pd.notnull(x[col]) else 'none') for col in cols_to_concat]),
             axis=1
         )
-        df_transformed['description'] = 'bank:Monzo, ' + df_transformed['description']
+        df_transformed['description'] = 'bank:Monzo, ' + df_transformed['description'] # TODO:v2 SettingWithCopyWarning: Try using .loc[row_indexer,col_indexer] = value instead
 
         df_transformed = df_transformed.reindex(
             columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])

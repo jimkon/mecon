@@ -58,13 +58,13 @@ class LogData(datafields.DatedDataframeWrapper,
         datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     @classmethod
-    def from_raw_logs(cls, df_logs_raw: pd.DataFrame):  # -> LogData: TODO upgrade to python 3.11
+    def from_raw_logs(cls, df_logs_raw: pd.DataFrame):  # -> LogData: TODO:v2 upgrade to python 3.11
         df_transformed = transform_raw_dataframe(df_logs_raw)
         df_transformed.sort_values(by='datetime', inplace=True)
         return LogData(df_transformed)
 
 
-def _isolate_function_tags(tags_column):  # TODO unittest
+def _isolate_function_tags(tags_column):
     tags_df = pd.DataFrame(tags_column)
 
     tagging.Tagger.remove_tag('codeflow', tags_df)
@@ -75,7 +75,7 @@ def _isolate_function_tags(tags_column):  # TODO unittest
     return functions
 
 
-def _distinct_function_tags(tags_column):  # TODO unittest
+def _distinct_function_tags(tags_column):
     """We assume that the first tag after codeflow, and start or end, is the function name tag"""
     function_tags = list(OrderedDict.fromkeys(_isolate_function_tags(tags_column)))
     return function_tags
@@ -101,7 +101,7 @@ class ExecutionInfoMixin:
     def is_finished(self) -> pd.Series:
         return self.execution_time >= 0
 
-    def finished(self):  # TODO -> PerformanceData:
+    def finished(self):  # TODO:v2 -> PerformanceData:
         return self._df_wrapper_obj.factory(self._df_wrapper_obj.dataframe()[self.is_finished])
 
     @property
@@ -112,21 +112,21 @@ class ExecutionInfoMixin:
         tags_list = _distinct_function_tags(self._df_wrapper_obj.dataframe()['tags'])
         return tags_list
 
-    def group_by_function(self):  # TODO unittest
+    def group_by_function(self):
         tags_list = _distinct_function_tags(self._df_wrapper_obj.dataframe()['tags'])
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(self._df_wrapper_obj)
         return groups
 
-    def group_by_tags(self):  # TODO unittest
-        tags_list = self._df_wrapper_obj.all_tags().keys()
+    def group_by_tags(self):
+        tags_list = self._df_wrapper_obj.all_tags().keys()  # TODO:v2 resolve all_tags for df_wrapper
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(self._df_wrapper_obj)
         return groups
 
 
 class PerformanceDataAggregator(datafields.AggregatorABC):
-    def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO upgrade to python 3.11
+    def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
         # will not work for recursive calls
         df_logs = df_wrapper.dataframe().copy()
         df_logs.sort_values('datetime', inplace=True)
@@ -147,7 +147,7 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
         for tag in ['codeflow', 'start', 'end']:
             tagging.Tagger.remove_tag(tag, perf_df)
 
-        perf_df.dropna(subset=['execution_time'], inplace=True)  # TODO added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
+        perf_df.dropna(subset=['execution_time'], inplace=True)  # TODO:v2 added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
         perf_df['execution_time'] = perf_df['execution_time'].astype('int64')
 
         perf_logs = PerformanceData(perf_df)
@@ -164,7 +164,7 @@ class PerformanceData(datafields.DatedDataframeWrapper,
         datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     @classmethod
-    def from_log_data(cls, log_data: LogData):  # -> PerformanceData: TODO upgrade to python 3.11
+    def from_log_data(cls, log_data: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
         codeflow_logs = log_data.containing_tag('codeflow')
         # maybe add tags for level, module, funcName
         # tags_list = sorted(list(set(codeflow_logs.all_tags().keys()) - {'codeflow', 'start', 'end'}))

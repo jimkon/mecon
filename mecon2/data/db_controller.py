@@ -23,7 +23,7 @@ class TagsDBAccessor(io.TagsIOABC):
 
     @logs.codeflow_log_wrapper('#db#tags')
     def set_tag(self, name: str, conditions_json: list | dict) -> None:
-        # if len(conditions_json) > 2000:  # TODO do we need this?
+        # if len(conditions_json) > 2000:  # TODO:v3 do we need this?
         #     raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
         #                      f" Consider increasing the upper limit.")
 
@@ -60,7 +60,7 @@ class HSBCTransactionsDBAccessor(io.HSBCTransactionsIOABC):
         merged_df.to_sql(models.HSBCTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
 
     def get_transactions(
-            self) -> pd.DataFrame:  # TODO get and delete transactions is the same for all tables. deal with duplicated code
+            self) -> pd.DataFrame:  # TODO:v2 get and delete transactions is the same for all tables. deal with duplicated code
         transactions = models.HSBCTransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df) > 0 else None
@@ -187,7 +187,7 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
         df_revo = RevoTransactionsDBAccessor().get_transactions()
 
-        currency_converted = currencies.ForexLookupCurrencyConverter()
+        currency_converted = currencies.HybridLookupCurrencyConverter()
 
         df_hsbc_transformed = etl.HSBCTransformer().transform(df_hsbc.copy())
         df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo.copy())
@@ -197,7 +197,9 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         print(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} "
               f"Monzo->{df_monzo_transformed.duplicated(subset=dup_cols).sum()} "
               f"Revolut->{df_revo_transformed.duplicated(subset=dup_cols).sum()}")
-        # TODO test drop_duplicates
+
+        # TODO:v2 test drop_duplicates
+
         df_hsbc_transformed = df_hsbc_transformed.drop_duplicates(subset=dup_cols)
         df_monzo_transformed = df_monzo_transformed.drop_duplicates(subset=dup_cols)
         df_revo_transformed = df_revo_transformed.drop_duplicates(subset=dup_cols)

@@ -1,4 +1,4 @@
-from __future__ import annotations  # TODO upgrade to python 3.11
+from __future__ import annotations  # TODO:v2 upgrade to python 3.11
 
 from collections import Counter
 
@@ -50,7 +50,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         return res_html
 
 
-# TODO move other Transaction related classes here like TransactionAggregators
+# TODO:v2 move other Transaction related classes here like TransactionAggregators
 class TransactionDateFiller(fields.DateFiller):
     def __init__(self,
                  fill_unit,

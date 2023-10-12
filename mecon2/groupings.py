@@ -14,7 +14,7 @@ class TagGrouping(Grouping):
         self._tags_list = tags_list
 
     def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
-        # TODO check df_wrapper is TagColumMixin
+        # TODO:v2 check df_wrapper is TagColumMixin
         res_indexes = []
         tags_list = self._tags_list if self._tags_list is not None else df_wrapper.all_tags().keys()
 
@@ -55,18 +55,6 @@ class LabelGrouping(LabelGroupingABC, abc.ABC):
         res = self._label_function(df_wrapper)
         return res
 
-
-# class DayGrouping(LabelGroupingABC):
-#     def __init__(self):
-#         super().__init__(instance_name='day')
-#
-#     def labels(self, df_wrapper: DataframeWrapper) -> pd.Series:
-#         assert hasattr(df_wrapper, 'date')
-#         # if not isinstance(df_wrapper, DateTimeColumnMixin):  # TODO validation doesn't work properly
-#         #     raise ValueError(f"To group in 'days' the input df_wrapper has to implement DateTimeColumnMixin.")
-#         date = df_wrapper.date.astype(str)
-#         return date
-# _DAY = DayGrouping()  # TODO investigate why _DAY and DAY multitons don't have a conflict
 
 DAY = LabelGrouping('day', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.datetime_to_date_id_str))
 WEEK = LabelGrouping('week', lambda df_wrapper: df_wrapper.datetime.apply(

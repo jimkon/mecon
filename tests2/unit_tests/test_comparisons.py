@@ -14,7 +14,7 @@ class TestCompareOperator(unittest.TestCase):
         self.assertEqual(co('1', '1'), False)
         self.assertEqual(co('0', '1'), False)
         self.assertEqual(co('1', '05'), True)
-        self.assertEqual(co('15', '1'), True)  # TODO it was false in mecon1
+        self.assertEqual(co('15', '1'), True)
         self.assertEqual(co('05', '1'), False)
         self.assertEqual(co('2020-01-02', '2020-01-01'), True)
         self.assertEqual(co('2020-01-02', '2020-01-02'), False)
@@ -46,7 +46,7 @@ class TestCompareOperator(unittest.TestCase):
         self.assertEqual(co('1', '1'), True)
         self.assertEqual(co('0', '1'), False)
         self.assertEqual(co('1', '05'), False)
-        self.assertEqual(co('15', '1'), False)  # TODO it was True in mecon1
+        self.assertEqual(co('15', '1'), False)
         self.assertEqual(co('05', '1'), False)
         self.assertEqual(co('2020-01-02', '2020-01-01'), False)
         self.assertEqual(co('2020-01-02', '2020-01-02'), True)
@@ -62,7 +62,7 @@ class TestCompareOperator(unittest.TestCase):
         self.assertEqual(co('1', '1'), True)
         self.assertEqual(co('0', '1'), True)
         self.assertEqual(co('1', '05'), False)
-        self.assertEqual(co('15', '1'), False)  # TODO it was True in mecon1
+        self.assertEqual(co('15', '1'), False)
         self.assertEqual(co('05', '1'), True)
         self.assertEqual(co('2020-01-02', '2020-01-01'), False)
         self.assertEqual(co('2020-01-02', '2020-01-02'), True)

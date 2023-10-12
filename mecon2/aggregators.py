@@ -42,8 +42,8 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
                  currency_agg=None,
                  description_agg=None,
                  tags_agg=None):
-        # TODO make all agg_functions as separate to increase readability and testability
-        id_agg = min if id_agg is None else id_agg  # (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO if id becomes a string, then just concat
+        # TODO:v2 make all agg_functions as separate to increase readability and testability
+        id_agg = min if id_agg is None else id_agg  # (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO:v3 if id becomes a string, then just concat
         datetime_agg = min if datetime_agg is None else datetime_agg
         amount_agg = sum if amount_agg is None else amount_agg
         currency_agg = aggregate_currencies if currency_agg is None else currency_agg
@@ -80,7 +80,7 @@ class CustomisedAmountTransactionAggregator(CustomisedDefaultTransactionAggregat
         self._amount_agg_key = amount_agg_key
         self._date_group_unit = date_group_unit
 
-        if amount_agg_key == 'min':  # TODO can be implemented with multiton?
+        if amount_agg_key == 'min':  # TODO:v2 can be implemented with multiton?, there is a similar TODO in an html file
             amount_agg_f = min
         elif amount_agg_key == 'max':
             amount_agg_f = max

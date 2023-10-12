@@ -82,7 +82,7 @@ def get_log_files(historic_logs=False):
     return log_files
 
 
-def read_logs_as_df(log_files: List[pathlib.Path]):  # TODO use get_log_files
+def read_logs_as_df(log_files: List[pathlib.Path]):
     df_logs = None
     for log_file in log_files:
         if df_logs is None:

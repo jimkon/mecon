@@ -178,7 +178,7 @@ class Tag:
         return self._rule
 
     # @property
-    # def affected_columns(self):  # TODO it may be needed later
+    # def affected_columns(self):  # TODO:v3 it may be needed later
     #     def _get_fields_rec(rule):
     #         if isinstance(rule, Condition):
     #             return [rule.field]
@@ -263,7 +263,7 @@ class Tagger(abc.ABC):
         df.loc[to_rows, 'tags'] = df.loc[to_rows, 'tags'].apply(_add_tag_to_row)
 
 
-class TagMatchCondition(Condition):  # TODO use in all tag match cases
+class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
     def __init__(self, tag_name):
         field = 'tags'
         transformation_op = None
