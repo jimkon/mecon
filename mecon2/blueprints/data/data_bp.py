@@ -97,13 +97,13 @@ def data_reload():
     reset_transactions()
     statements_info = _statement_files_info()
     for bank_name in statements_info:
-        if bank_name == 'HSBC':  # TODO maybe use enums instead of literals
+        if bank_name == 'HSBC':  # TODO:v2 maybe use enums instead of literals
             dfs = [HSBCStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
             import_data_access.hsbc_statements.import_statement(dfs)
-        elif bank_name == 'Monzo':  # TODO maybe use enums instead of literals
+        elif bank_name == 'Monzo':  # TODO:v2 maybe use enums instead of literals
             dfs = [MonzoStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
             import_data_access.monzo_statements.import_statement(dfs)
-        elif bank_name == 'Revolut':  # TODO maybe use enums instead of literals
+        elif bank_name == 'Revolut':  # TODO:v2 maybe use enums instead of literals
             dfs = [RevoStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
             import_data_access.revo_statements.import_statement(dfs)
 
@@ -131,9 +131,3 @@ def datafile_view(path):
     {table_html}
     """
 
-
-@data_bp.route('/view/<item>')
-@logs.codeflow_log_wrapper('#api')
-def data_view(item):
-    # TODO get the df (either statement or the transactions) and return to_html
-    return f"data view {item}"
