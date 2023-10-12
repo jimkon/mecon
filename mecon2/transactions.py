@@ -43,7 +43,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
                 res_str += f"{curr}:{count} "
             return res_str
 
-        df = self.dataframe().iloc[::-1]
+        df = self.dataframe().iloc[::-1].reset_index(drop=True)
         df['currency'] = df['currency'].apply(counts)
         html_table = df.to_html()
         res_html = f"<h1>Transactions table ({len(df)} rows)</h1>\n{html_table}"
