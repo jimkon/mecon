@@ -42,7 +42,7 @@ def recalculate_tags():
         transactions = transactions.apply_tag(tag)
 
     data_df = transactions.dataframe()
-    logging.info(f"Updating transactions in DB.")# TODO logs
+    logging.info(f"Updating transactions in DB.")
     data_access.transactions.update_tags(data_df)
 
 
@@ -59,7 +59,8 @@ def render_tag_page(title='Tag page',
                     rename_button_flag=False,  # TODO implement rename or remove it
                     message_text='',
                     confirm_delete=False):
-    # TODO maybe add different tabs on the tagged/untagged data to display them in groups (date price etc)
+    # TODO:v3 maybe add rename function
+
     try:
         tag = Tag.from_json_string(tag_name, tag_json_str)
         transactions = get_transactions().apply_rule(tag.rule)
