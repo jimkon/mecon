@@ -2,10 +2,6 @@ from mecon2.data.file_system import DatasetDir
 from mecon2.utils.instance_management import Singleton
 from mecon2 import config
 
-# # TODO Initialises every time the module is imported
-# datasets_dir = DatasetDir()
-# current_dataset = datasets_dir.get_dataset('v2')
-
 
 class WorkingDatasetDir(DatasetDir, Singleton):
     def __init__(self, path=None):
