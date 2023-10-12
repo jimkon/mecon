@@ -55,8 +55,6 @@ def save_and_recalculate_tags(tag_name, tag_json_str):
 def render_tag_page(title='Tag page',
                     tag_name='',
                     tag_json_str='[{"description":{"contains":"something"}}]',
-                    rename_flag=False,  # TODO implement rename or remove it
-                    rename_button_flag=False,  # TODO implement rename or remove it
                     message_text='',
                     confirm_delete=False):
     # TODO:v3 maybe add rename function
