@@ -45,7 +45,6 @@ class Dataset:
         new_statement_path.write_bytes(statement_path.read_bytes())
 
 
-# TODO maybe add a singleton subclass of this class as a global variable
 class DatasetDir:
     def __init__(self, path: str | pathlib.Path):
         self._path = pathlib.Path(path)
