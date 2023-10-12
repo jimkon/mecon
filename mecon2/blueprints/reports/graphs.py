@@ -23,6 +23,7 @@ def amount_and_freq_timeline_html(time, amount, freq):
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='[£]'),
         yaxis2=dict(title='Freq [#/time]', overlaying='y', side='right'),
+        xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
@@ -41,6 +42,7 @@ def balance_graph_html(time, amount: pd.Series):
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='£'),
+        xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
@@ -72,6 +74,7 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
 
 @logs.codeflow_log_wrapper('#graphs')
 def histogram_and_contributions(amounts: pd.Series):
+    # TODO maybe add x_ticks of bar left and right limits
     bin_centers, counts, contributions = graph_utils.calculated_histogram_and_contributions(amounts)
 
     # Create a custom histogram using Plotly
