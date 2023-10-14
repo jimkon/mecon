@@ -63,7 +63,7 @@ class DataframeWrapper:
         return cls(df)
 
 
-# TODO:v2 add as superclass to other column mixins
+# TODO:v3 add validation maybe
 class ColumnMixin:
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
@@ -73,19 +73,13 @@ class ColumnMixin:
         return self._df_wrapper_obj
 
 
-class IdColumnMixin:
-    def __init__(self, df_wrapper: DataframeWrapper):
-        self._df_wrapper_obj = df_wrapper
-
+class IdColumnMixin(ColumnMixin):
     @property
     def id(self):
         return self._df_wrapper_obj.dataframe()['id']
 
 
-class DateTimeColumnMixin:
-    def __init__(self, df_wrapper: DataframeWrapper):
-        self._df_wrapper_obj = df_wrapper
-
+class DateTimeColumnMixin(ColumnMixin):
     @property
     def datetime(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['datetime']
@@ -109,10 +103,7 @@ class DateTimeColumnMixin:
         return self._df_wrapper_obj.apply_rule(rule)
 
 
-class AmountColumnMixin:
-    def __init__(self, df_wrapper: DataframeWrapper):
-        self._df_wrapper_obj = df_wrapper
-
+class AmountColumnMixin(ColumnMixin):
     @property
     def amount(self):
         return self._df_wrapper_obj.dataframe()['amount']
@@ -134,10 +125,7 @@ class AmountColumnMixin:
         return json.dumps(dict(sorted(Counter(flattened).items(), reverse=True)))
 
 
-class DescriptionColumnMixin:
-    def __init__(self, df_wrapper: DataframeWrapper):
-        self._df_wrapper_obj = df_wrapper
-
+class DescriptionColumnMixin(ColumnMixin):
     def description(self):
         return self._df_wrapper_obj.dataframe()['description']
 
@@ -146,13 +134,7 @@ class TagsColumnDoesNotExistInDataframe(Exception):
     pass
 
 
-class TagsColumnMixin:
-    def __init__(self, df_wrapper: DataframeWrapper):
-        self._df_wrapper_obj = df_wrapper
-        df = self._df_wrapper_obj.dataframe()
-        # if 'tags' not in df.columns:  # TODO:v3 only tags col is validated
-        #     raise TagsColumnDoesNotExistInDataframe
-
+class TagsColumnMixin(ColumnMixin):
     @property
     def tags(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['tags']

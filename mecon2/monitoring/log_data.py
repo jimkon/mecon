@@ -81,10 +81,7 @@ def _distinct_function_tags(tags_column):
     return function_tags
 
 
-class ExecutionInfoMixin:
-    def __init__(self, df_wrapper: datafields.DataframeWrapper):
-        self._df_wrapper_obj = df_wrapper
-
+class ExecutionInfoMixin(datafields.ColumnMixin):
     @property
     def execution_time(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['execution_time']
