@@ -3,8 +3,11 @@ import logging
 
 from flask import Flask
 
-from mecon2.monitoring import logs  # DO NOT DELETE:important to initialise the logger
-logs.setup_logging()
+from mecon2.monitoring import logs
+try:
+    logs.setup_logging()
+except Exception as e:
+    print('WARNING: Logs setup failed.')
 
 from mecon2.app.datasets import WorkingDatasetDir
 from mecon2.app.db_extension import db
