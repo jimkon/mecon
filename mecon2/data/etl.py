@@ -60,7 +60,6 @@ class MonzoTransformer:
 class RevoTransformer:
     def __init__(self, currency_converter=None):
         self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
-        # self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
 
     def convert_amounts(self, amount_ser, currency_ser, datetime_ser):
         return [self._currency_converter.amount_to_gbp(amount, currency, date)

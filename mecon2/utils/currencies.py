@@ -90,6 +90,9 @@ class CachedForexLookupCurrencyConverter(CurrencyConverterABC):
         return None
 
     def curr_to_GBP(self, curr, date=None):
+        if curr == 'GBP':
+            return 1.0
+
         assert date is not None, f"Did not expect date=None when converting {curr}"
 
         lookup_value = self.cache_lookup(curr, date)
