@@ -6,7 +6,7 @@ from flask import Flask
 from mecon2.monitoring import logs
 try:
     logs.setup_logging()
-except Exception as e:
+except FileNotFoundError as e:
     print('WARNING: Logs setup failed.')
 
 from mecon2.app.datasets import WorkingDatasetDir
