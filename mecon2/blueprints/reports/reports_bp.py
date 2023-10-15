@@ -176,7 +176,7 @@ def histogram_graph(start_date, end_date, tags_str, grouping):
     methods=['POST', 'GET'])
 @logs.codeflow_log_wrapper('#api')
 def custom_graph(plot_type, start_date, end_date, tags_str, grouping, aggregation):
-    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('Tap',
+    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('',
                                                                                             start_date=start_date,
                                                                                             end_date=end_date,
                                                                                             tags_str=tags_str,
