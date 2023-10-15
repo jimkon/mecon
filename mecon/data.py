@@ -26,7 +26,6 @@ class DataObject:
     @property
     def statements(self):
         raise NotImplementedError
-        # return self._statements
 
     @property
     def transactions(self):
@@ -55,20 +54,3 @@ class DataObject:
     def set_tag(self, tag_name, _json):
         self._data_strategy.set_tag(tag_name, _json)
         self.load_data()
-
-
-if __name__ == "__main__":
-    do = DataObject.local_data()
-
-    _ = do.calculated_tagged_transactions.get_rows_tagged_as('Revolut').dataframe()
-    print(len(do.calculated_tagged_transactions.get_rows_tagged_as('Revolut').dataframe()), do.tags['Revolut'])
-    do.set_tag("Revolut", [{"description": {"contains": "Bank:HSBC"}}])
-    _ = do.calculated_tagged_transactions.get_rows_tagged_as('Revolut').dataframe()
-    print(len(do.calculated_tagged_transactions.get_rows_tagged_as('Revolut').dataframe()), do.tags['Revolut'])
-
-    do.set_tag("Revolut", [{"description": {"contains": "Bank:Revolut"}}])
-
-    do = DataObject.local_data()
-    print(len(do.calculated_tagged_transactions.get_rows_tagged_as('Revolut').dataframe()), do.tags['Revolut'])
-
-    t = 0
