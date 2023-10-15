@@ -48,7 +48,8 @@ class MonzoTransformer:
                 [col + ": " + (str(x[col]) if pd.notnull(x[col]) else 'none') for col in cols_to_concat]),
             axis=1
         )
-        df_transformed['description'] = 'bank:Monzo, ' + df_transformed['description'] # TODO:v2 SettingWithCopyWarning: Try using .loc[row_indexer,col_indexer] = value instead
+        df_transformed['description'] = 'bank:Monzo, ' + df_transformed[
+            'description']  # TODO:v2 SettingWithCopyWarning: Try using .loc[row_indexer,col_indexer] = value instead
 
         df_transformed = df_transformed.reindex(
             columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
@@ -59,13 +60,17 @@ class MonzoTransformer:
 class RevoTransformer:
     def __init__(self, currency_converter=None):
         self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
+        # self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
+
+    def convert_amounts(self, amount_ser, currency_ser, datetime_ser):
+        return [self._currency_converter.amount_to_gbp(amount, currency, date)
+                for amount, currency, date
+                in zip(amount_ser, currency_ser, datetime_ser)]
 
     def transform(self, df_revo: pd.DataFrame) -> pd.DataFrame:
         df_transformed = pd.DataFrame({'id': ('3' + df_revo['id'].astype(str)).astype(np.int64)})
         df_transformed['datetime'] = pd.to_datetime(df_revo['start_date'], format="%Y-%m-%d %H:%M:%S")
-        df_transformed['amount'] = [self._currency_converter.amount_to_gbp(amount, currency, date)
-                                    for amount, currency, date
-                                    in zip(df_revo['amount'], df_revo['currency'], df_transformed['datetime'])]
+        df_transformed['amount'] = self.convert_amounts(df_revo['amount'], df_revo['currency'], df_transformed['datetime'])
         df_transformed['currency'] = df_revo['currency']
         df_transformed['amount_cur'] = df_revo['amount']
 
@@ -76,6 +81,5 @@ class RevoTransformer:
             axis=1
         )
         df_transformed['description'] = 'bank:Revolut, ' + df_transformed['description']
-
 
         return df_transformed

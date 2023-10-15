@@ -187,14 +187,14 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
         df_revo = RevoTransactionsDBAccessor().get_transactions()
 
-        currency_converted = currencies.HybridLookupCurrencyConverter()
+        currency_converter = currencies.HybridLookupCurrencyConverter()
 
         df_hsbc_transformed = etl.HSBCTransformer().transform(df_hsbc.copy())
         df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo.copy())
-        df_revo_transformed = etl.RevoTransformer(currency_converted).transform(df_revo.copy())
+        df_revo_transformed = etl.RevoTransformer(currency_converter).transform(df_revo.copy())
 
         dup_cols = ['datetime', 'amount', 'currency', 'amount_cur']  # , 'description']
-        print(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} "
+        print(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} " # TODO logs
               f"Monzo->{df_monzo_transformed.duplicated(subset=dup_cols).sum()} "
               f"Revolut->{df_revo_transformed.duplicated(subset=dup_cols).sum()}")
 

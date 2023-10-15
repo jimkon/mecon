@@ -1,6 +1,6 @@
 import unittest
+from datetime import datetime
 from unittest import mock
-from datetime import datetime, date, time
 
 import pandas as pd
 from flask import Flask
@@ -111,7 +111,6 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
 
-
     def test_import_statement_multiple_dataframes(self):
         # Create sample DataFrames
         data1 = {
@@ -214,7 +213,6 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
-
 
     def test_import_statement_multiple_dataframes(self):
         # Create sample DataFrames
@@ -367,7 +365,6 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
-
 
     def test_import_statement_multiple_dataframes(self):
         # Create sample DataFrames
@@ -529,19 +526,24 @@ class TransactionsDBAccessorssorTestCase(TestCase):
         expected_df = pd.DataFrame(
             {
                 'id': [31, 32, 33, 21, 22, 23, 11, 12, 13],
-                'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59), datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30), datetime(2022, 12, 31, 23, 59, 59), datetime(2023, 1, 1, 0, 0, 0), datetime(2023, 6, 15, 0, 0, 0), datetime(2023, 12, 31, 0, 0, 0)],
-                'amount': [73.2646076114416, 172.3, 300.0, 100.0, 50.0, 200.0, 1000.0, 2000.0, 3000.0],
+                'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
+                             datetime(2021, 12, 31, 23, 59, 59), datetime(2022, 1, 1, 0, 0, 0),
+                             datetime(2022, 6, 15, 12, 30, 30), datetime(2022, 12, 31, 23, 59, 59),
+                             datetime(2023, 1, 1, 0, 0, 0), datetime(2023, 6, 15, 0, 0, 0),
+                             datetime(2023, 12, 31, 0, 0, 0)],
+                'amount': [130.0, 240.0, 300.0, 100.0, 50.0, 200.0, 1000.0, 2000.0, 3000.0],
                 'currency': ['USD', 'EUR', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP', 'GBP'],
                 'amount_cur': [100.0, 200.0, 300.0, 100.0, 50.0, 200.0, 1000.0, 2000.0, 3000.0],
-                'description': ['bank:Revolut, type: Type 1, product: Product A, completed_date: 2021-01-01 00:00:00, description: Description 1, fee: 10.0, state: State 1, balance: 1000.0',
-                                'bank:Revolut, type: Type 2, product: Product B, completed_date: 2021-06-15 12:30:30, description: Description 2, fee: 20.0, state: State 2, balance: 2000.0',
-                                'bank:Revolut, type: Type 3, product: Product C, completed_date: 2021-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0',
-                                'bank:Monzo, transaction_type: Payment, name: John Doe, emoji: 💳, category: Shopping, notes_tags: Note 1, address: 123 Main St, receipt: https://example.com/receipt1, description: Description 1, category_split: none, money_out: none, money_in: 100.0',
-                                'bank:Monzo, transaction_type: Expense, name: Groceries, emoji: 🛒, category: Food, notes_tags: none, address: none, receipt: none, description: Description 2, category_split: Food/Groceries, money_out: 50.0, money_in: none',
-                                'bank:Monzo, transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0',
-                                'bank:HSBC, Transaction 1',
-                                'bank:HSBC, Transaction 2',
-                                'bank:HSBC, Transaction 3'],
+                'description': [
+                    'bank:Revolut, type: Type 1, product: Product A, completed_date: 2021-01-01 00:00:00, description: Description 1, fee: 10.0, state: State 1, balance: 1000.0',
+                    'bank:Revolut, type: Type 2, product: Product B, completed_date: 2021-06-15 12:30:30, description: Description 2, fee: 20.0, state: State 2, balance: 2000.0',
+                    'bank:Revolut, type: Type 3, product: Product C, completed_date: 2021-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0',
+                    'bank:Monzo, transaction_type: Payment, name: John Doe, emoji: 💳, category: Shopping, notes_tags: Note 1, address: 123 Main St, receipt: https://example.com/receipt1, description: Description 1, category_split: none, money_out: none, money_in: 100.0',
+                    'bank:Monzo, transaction_type: Expense, name: Groceries, emoji: 🛒, category: Food, notes_tags: none, address: none, receipt: none, description: Description 2, category_split: Food/Groceries, money_out: 50.0, money_in: none',
+                    'bank:Monzo, transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0',
+                    'bank:HSBC, Transaction 1',
+                    'bank:HSBC, Transaction 2',
+                    'bank:HSBC, Transaction 3'],
                 'tags': ['', '', '', '', '', '', '', '', '']
             }
         )
@@ -557,13 +559,6 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             self.assertEqual(cols_error.extra_cols, {'extra_col'})
         else:
             self.fail(f"Expecting InvalidTransactionsDataframeColumnsException but not raised.")
-        # with self.assertRaises(db_controller.InvalidTransactionsDataframeColumnsException) as error:
-        #     df_mock = mock.MagicMock()
-        #     df_mock.columns = {'id', 'datetime', 'amount'}
-        #     db_controller.TransactionsDBAccessor._transaction_df_validation(df_mock)
-        #     cols_error = error.exception
-        #     self.assertEqual(cols_error.missing_cols, {'currency', 'amount_cur', 'description'})
-        #     self.assertEqual(cols_error.extra_cols, {'extra_col'})
 
     def test__transaction_df_validation_types_success(self):
         test_df = pd.DataFrame({
@@ -608,7 +603,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
         # expected_df = self._load_db()
         df = pd.DataFrame({
             'id': [11, 12, 13],
-            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59)],
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
+                         datetime(2021, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 200.0, 300.0],
@@ -624,7 +620,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
     def test_delete_transactions(self):
         df = pd.DataFrame({
             'id': [11, 12, 13],
-            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59)],
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
+                         datetime(2021, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 200.0, 300.0],
@@ -644,7 +641,16 @@ class TransactionsDBAccessorssorTestCase(TestCase):
         self.accessor.delete_all()
         expected_df = self._load_db()
 
-        self.accessor.load_transactions()
+        def convert_amounts(amount, currency, date):
+            return currency.map({
+                'USD': 1.3,
+                'EUR': 1.2,
+                'GBP': 1.0
+            }) * amount
+
+        with mock.patch.object(db_controller.etl.RevoTransformer, 'convert_amounts', side_effect=convert_amounts):
+            self.accessor.load_transactions()
+
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 9)
         pd.testing.assert_frame_equal(transactions, expected_df)
@@ -652,7 +658,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
     def test_update_tags(self):
         df = pd.DataFrame({
             'id': [11, 12, 13],
-            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30), datetime(2021, 12, 31, 23, 59, 59)],
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
+                         datetime(2021, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
             'currency': ['GBP', 'GBP', 'GBP'],
             'amount_cur': [100.0, 200.0, 300.0],
