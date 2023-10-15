@@ -1,4 +1,5 @@
 from typing import Any, List
+import logging
 
 import pandas as pd
 
@@ -194,9 +195,9 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_revo_transformed = etl.RevoTransformer(currency_converter).transform(df_revo.copy())
 
         dup_cols = ['datetime', 'amount', 'currency', 'amount_cur']  # , 'description']
-        print(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} " # TODO logs
-              f"Monzo->{df_monzo_transformed.duplicated(subset=dup_cols).sum()} "
-              f"Revolut->{df_revo_transformed.duplicated(subset=dup_cols).sum()}")
+        logging.info(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} "
+                     f"Monzo->{df_monzo_transformed.duplicated(subset=dup_cols).sum()} "
+                     f"Revolut->{df_revo_transformed.duplicated(subset=dup_cols).sum()}")
 
         # TODO:v2 test drop_duplicates
 

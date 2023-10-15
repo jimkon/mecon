@@ -218,7 +218,6 @@ def tag_info(tag_name):
         ('balance', 'reports.balance_graph'),
         ('histogram', 'reports.histogram_graph'),
     ]:
-        print(transactions.size(), start_date, end_date, tags_str, grouping, aggregation)
         _graph = fetch_graph_html(url_for(_route,
                                           start_date=start_date,
                                           end_date=end_date,
