@@ -50,7 +50,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         return res_html
 
 
-# TODO:v2 move other Transaction related classes here like TransactionAggregators
+# TODO:v3 move other Transaction related classes here like TransactionAggregators
 class TransactionDateFiller(fields.DateFiller):
     def __init__(self,
                  fill_unit,
