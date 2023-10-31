@@ -7,7 +7,7 @@ from mecon2.utils import currencies
 
 
 class HSBCTransformer:
-    def transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v2 make it more readable
+    def transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming HSBC raw transactions ({df_hsbc.shape} shape)")
         # Add prefix to id
         df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
@@ -32,7 +32,7 @@ class HSBCTransformer:
 
 
 class MonzoTransformer:
-    def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v2 make it more readable
+    def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
 
         df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
