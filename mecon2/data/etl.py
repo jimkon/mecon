@@ -53,8 +53,7 @@ class MonzoTransformer:
                 [col + ": " + (str(x[col]) if pd.notnull(x[col]) else 'none') for col in cols_to_concat]),
             axis=1
         )
-        df_transformed['description'] = 'bank:Monzo, ' + df_transformed[
-            'description']  # TODO:v2 SettingWithCopyWarning: Try using .loc[row_indexer,col_indexer] = value instead
+        df_transformed.loc[:, 'description'] = 'bank:Monzo, ' + df_transformed['description']
 
         df_transformed = df_transformed.reindex(
             columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
