@@ -141,7 +141,7 @@ class TagsColumnMixin(ColumnMixin):
 
     def all_tags(self):
         tags_split = self.tags.apply(
-            lambda s: s.split(',')).to_list()  # TODO:v2 duplicated code in aggregators aggregate_tags_set
+            lambda s: s.split(',')).to_list()
         tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
         tags_dict = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_dict
