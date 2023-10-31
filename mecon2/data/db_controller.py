@@ -199,11 +199,15 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
                      f"Monzo->{df_monzo_transformed.duplicated(subset=dup_cols).sum()} "
                      f"Revolut->{df_revo_transformed.duplicated(subset=dup_cols).sum()}")
 
-        # TODO:v2 test drop_duplicates
-
-        df_hsbc_transformed = df_hsbc_transformed.drop_duplicates(subset=dup_cols)
-        df_monzo_transformed = df_monzo_transformed.drop_duplicates(subset=dup_cols)
-        df_revo_transformed = df_revo_transformed.drop_duplicates(subset=dup_cols)
+        if df_hsbc_transformed.duplicated(subset=dup_cols).sum() > 0 or \
+                df_monzo_transformed.duplicated(subset=dup_cols).sum() or \
+                df_revo_transformed.duplicated(subset=dup_cols).sum():
+            raise NotImplementedError("Duplicates are not managed in v2.")
+            # TODO:v3 drop_duplicates reintroduce
+            # TODO:v3 test drop_duplicates
+            # df_hsbc_transformed = df_hsbc_transformed.drop_duplicates(subset=dup_cols)
+            # df_monzo_transformed = df_monzo_transformed.drop_duplicates(subset=dup_cols)
+            # df_revo_transformed = df_revo_transformed.drop_duplicates(subset=dup_cols)
 
         self._transaction_df_validation(df_hsbc_transformed)
         self._transaction_df_validation(df_monzo_transformed)
