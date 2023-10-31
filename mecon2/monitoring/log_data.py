@@ -144,7 +144,7 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
         for tag in ['codeflow', 'start', 'end']:
             tagging.Tagger.remove_tag(tag, perf_df)
 
-        perf_df.dropna(subset=['execution_time'], inplace=True)  # TODO:v2 added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
+        perf_df.dropna(subset=['execution_time'], inplace=True)  # TODO:v3 added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
         perf_df['execution_time'] = perf_df['execution_time'].astype('int64')
 
         perf_logs = PerformanceData(perf_df)
