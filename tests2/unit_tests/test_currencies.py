@@ -79,6 +79,13 @@ class TestFixedRateCurrencyConverter(unittest.TestCase):
 
 
 class TestForexLookupCurrencyConverter(unittest.TestCase):
+    def setUp(self) -> None:
+        self.prev_n_tries = curr.N_RETRIES_OF_FOREX_CURRENCY_LOOKUP
+        curr.N_RETRIES_OF_FOREX_CURRENCY_LOOKUP = 10
+
+    def tearDown(self) -> None:
+        curr.N_RETRIES_OF_FOREX_CURRENCY_LOOKUP = self.prev_n_tries
+
     @patch('mecon2.utils.currencies.CurrencyRates')
     def test_curr_to_GBP(self, MockCurrencyRates):
         # Mock the CurrencyRates class
