@@ -97,13 +97,13 @@ def data_reload():
     reset_transactions()
     statements_info = _statement_files_info()
     for bank_name in statements_info:
-        if bank_name == 'HSBC':  # TODO:v2 maybe use enums instead of literals
+        if bank_name == 'HSBC':
             dfs = [HSBCStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
             import_data_access.hsbc_statements.import_statement(dfs)
-        elif bank_name == 'Monzo':  # TODO:v2 maybe use enums instead of literals
+        elif bank_name == 'Monzo':
             dfs = [MonzoStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
             import_data_access.monzo_statements.import_statement(dfs)
-        elif bank_name == 'Revolut':  # TODO:v2 maybe use enums instead of literals
+        elif bank_name == 'Revolut':
             dfs = [RevoStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
             import_data_access.revo_statements.import_statement(dfs)
 
