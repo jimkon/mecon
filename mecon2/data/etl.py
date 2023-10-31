@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -6,6 +8,7 @@ from mecon2.utils import currencies
 
 class HSBCTransformer:
     def transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v2 make it more readable
+        logging.info(f"Transforming HSBC raw transactions ({df_hsbc.shape} shape)")
         # Add prefix to id
         df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
 
@@ -30,6 +33,8 @@ class HSBCTransformer:
 
 class MonzoTransformer:
     def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v2 make it more readable
+        logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
+
         df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
         df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(
             df_monzo['time'].astype(str))
@@ -67,9 +72,11 @@ class RevoTransformer:
                 in zip(amount_ser, currency_ser, datetime_ser)]
 
     def transform(self, df_revo: pd.DataFrame) -> pd.DataFrame:
+        logging.info(f"Transforming Revolut raw transactions ({df_revo.shape} shape)")
+
         df_transformed = pd.DataFrame({'id': ('3' + df_revo['id'].astype(str)).astype(np.int64)})
         df_transformed['datetime'] = pd.to_datetime(df_revo['start_date'], format="%Y-%m-%d %H:%M:%S")
-        df_transformed['amount'] = self.convert_amounts(df_revo['amount'], df_revo['currency'], df_transformed['datetime'])
+        df_transformed['amount'] = self.convert_amounts(df_revo['amount'], df_revo['currency'], df_transformed['datetime'].dt.date)
         df_transformed['currency'] = df_revo['currency']
         df_transformed['amount_cur'] = df_revo['amount']
 

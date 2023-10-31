@@ -10,6 +10,9 @@ from forex_python.converter import CurrencyRates
 
 from mecon2 import config
 
+N_RETRIES_OF_FOREX_CURRENCY_LOOKUP = 0
+N_RETRIES_OF_CACHE_CURRENCY_LOOKUP = 10
+
 
 class PotentiallyInvalidCurrencyRate(Exception):
     pass
@@ -53,14 +56,15 @@ class ForexLookupCurrencyConverter(CurrencyConverterABC):
         self._converter = CurrencyRates()
 
     def forex_lookup(self, curr, date):
-        for i in range(10):
+        for i in range(N_RETRIES_OF_FOREX_CURRENCY_LOOKUP):
             try:
-                lookup_date = date - timedelta(days=i)
-                gbp_rate = self._converter.convert('GBP', curr, 1, lookup_date)
-                logging.info(f"Forex currency rate lookup for currency {curr} and {date=} was successfull.")
+                gbp_rate = self._converter.convert('GBP', curr, 1, date)
+                logging.info(f"Forex currency rate lookup for currency {curr} and {date=} was successfully.")
                 return gbp_rate
             except forex_python.converter.RatesNotAvailableError:
                 logging.warning(f"Forex currency rate lookup for currency {curr} and {date=} failed.")
+                date -= timedelta(days=1)
+                logging.warning(f"Retrying({i+1}) for currency {curr} and {date=}...")
                 continue
             except requests.exceptions.ConnectionError:
                 logging.warning(f"Forex converter cannot connect to the internet.")
@@ -84,9 +88,13 @@ class CachedForexLookupCurrencyConverter(CurrencyConverterABC):
         self._load_lookup_dict()
 
     def cache_lookup(self, curr, date):
-        date_id = date.strftime("%Y%d%m")
-        if curr in self._lookup_dict and date_id in self._lookup_dict[curr]:
-            return self._lookup_dict[curr][date_id]
+        for i in range(N_RETRIES_OF_CACHE_CURRENCY_LOOKUP):
+            date_id = date.strftime("%Y%d%m")
+            if curr in self._lookup_dict and date_id in self._lookup_dict[curr]:
+                logging.info(f"Forex currency rate for currency {curr} and {date=} was found in cache.")
+                return self._lookup_dict[curr][date_id]
+            date -= timedelta(days=1)
+        logging.warning(f"Forex currency rate for currency {curr} and {date=} was NOT found in cache.")
         return None
 
     def curr_to_GBP(self, curr, date=None):

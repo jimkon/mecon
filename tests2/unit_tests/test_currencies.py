@@ -1,7 +1,6 @@
-import json
 import unittest
 from datetime import datetime
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, call
 
 import requests
 from forex_python.converter import RatesNotAvailableError
@@ -123,6 +122,11 @@ class TestForexLookupCurrencyConverter(unittest.TestCase):
         gbp_rate = converter.forex_lookup('USD', datetime(2023, 9, 30))
         self.assertEqual(gbp_rate, 1.3)
         self.assertEqual(mock_rates_instance.convert.call_count, 3)
+        mock_rates_instance.convert.assert_has_calls([
+            call('GBP', 'USD', 1, datetime(2023, 9, 30)),
+            call('GBP', 'USD', 1, datetime(2023, 9, 29)),
+            call('GBP', 'USD', 1, datetime(2023, 9, 28)),
+        ])
 
     @patch('mecon2.utils.currencies.CurrencyRates')
     def test_forex_lookup_connection_error(self, MockCurrencyRates):
@@ -137,6 +141,9 @@ class TestForexLookupCurrencyConverter(unittest.TestCase):
         with self.assertRaises(RatesNotAvailableError):
             converter.forex_lookup('USD', datetime(2023, 9, 30))
         self.assertEqual(mock_rates_instance.convert.call_count, 1)
+        mock_rates_instance.convert.assert_has_calls([
+            call('GBP', 'USD', 1, datetime(2023, 9, 30)),
+        ])
 
     @patch('mecon2.utils.currencies.CurrencyRates')
     def test_forex_lookup_rates_not_available(self, MockCurrencyRates):
