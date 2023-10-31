@@ -74,7 +74,6 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
 
 @logs.codeflow_log_wrapper('#graphs')
 def histogram_and_contributions(amounts: pd.Series):
-    # TODO:v2 maybe add x_ticks of bar left and right limits
     bin_centers, counts, contributions = graph_utils.calculated_histogram_and_contributions(amounts)
 
     # Create a custom histogram using Plotly
