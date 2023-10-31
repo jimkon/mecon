@@ -188,7 +188,7 @@ class Grouping(abc.ABC):
         pass
 
 
-class AggregatorABC(abc.ABC):  # TODO:v2 tested only through InTypeAggregator
+class AggregatorABC(abc.ABC):  # TODO:v3 tested only through InTypeAggregator
     def aggregate_result_df(self, lists_of_df_wrapper: List[DataframeWrapper]) -> pd.DataFrame:
         aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
         df_agg = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list])
