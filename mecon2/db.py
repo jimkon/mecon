@@ -3,7 +3,7 @@ import abc
 import pandas as pd
 
 from mecon2.data import io_framework as io, db_controller
-
+from mecon2 import config
 
 class TagsDBAccessor(io.TagsIOABC, abc.ABC):
     def get_tag(self, name) -> dict:
@@ -11,7 +11,7 @@ class TagsDBAccessor(io.TagsIOABC, abc.ABC):
         return tag
 
     def set_tag(self, name, conditions_json):
-        if len(conditions_json) > 2000:  # TODO:v2 make this a constant config, there is a similar todo
+        if len(conditions_json) > config.CONDITION_JSON_MAX_SIZE:
             raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
                              f" Consider increasing the upper limit.")
         tag = db_controller.TagsDBTable(
