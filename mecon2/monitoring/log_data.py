@@ -116,7 +116,7 @@ class ExecutionInfoMixin(datafields.ColumnMixin):
         return groups
 
     def group_by_tags(self):
-        tags_list = self._df_wrapper_obj.all_tags().keys()  # TODO:v2 resolve all_tags for df_wrapper
+        tags_list = self._df_wrapper_obj.all_tags().keys()  # TODO:v3 resolve all_tags for df_wrapper
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(self._df_wrapper_obj)
         return groups
