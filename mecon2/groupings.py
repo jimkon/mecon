@@ -14,7 +14,7 @@ class TagGrouping(Grouping):
         self._tags_list = tags_list
 
     def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
-        # TODO:v2 check df_wrapper is TagColumMixin
+        # TODO:v3 check df_wrapper is TagColumMixin
         res_indexes = []
         tags_list = self._tags_list if self._tags_list is not None else df_wrapper.all_tags().keys()
 
