@@ -32,14 +32,14 @@
     {#    <input type="text" id="groups_text_box" name="groups_text_box" value="{{ groups | e }}" size="30">#}
     <label for="groups">Groupings:</label>
     <select id="groups" name="groups">
-        {% for group in ['none', 'day', 'week', 'month', 'year'] %} <!-- TODO:v2 add 'location' TODO read from python -->
+        {% for group in ['none', 'day', 'week', 'month', 'year'] %} <!-- TODO:v3 add 'location' TODO read from python -->
             <option value="{{ group }}" {% if group == grouping %}selected{% endif %}>{{ group }}</option>  <!-- default option -->#}
         {% endfor %}
     </select>
 
     <label for="aggregations">Aggregations:</label>
     <select id="aggregations" name="aggregations">
-        {% for agg in ['sum', 'avg', 'min', 'max', 'count'] %} <!-- TODO:v2 read from python -->
+        {% for agg in ['sum', 'avg', 'min', 'max', 'count'] %} <!-- TODO:v3 read from python -->
             <option value="{{ agg }}" {% if agg == aggregation %}selected{% endif %}>{{ agg }}</option>
         {% endfor %}
     </select>
