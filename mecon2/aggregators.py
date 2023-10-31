@@ -80,7 +80,7 @@ class CustomisedAmountTransactionAggregator(CustomisedDefaultTransactionAggregat
         self._amount_agg_key = amount_agg_key
         self._date_group_unit = date_group_unit
 
-        if amount_agg_key == 'min':  # TODO:v2 can be implemented with multiton?, there is a similar TODO in an html file
+        if amount_agg_key == 'min':  # TODO:v3 can be implemented with multiton?, there is a similar TODO in an html file
             amount_agg_f = min
         elif amount_agg_key == 'max':
             amount_agg_f = max
