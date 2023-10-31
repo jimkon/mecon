@@ -98,7 +98,7 @@ class ExecutionInfoMixin(datafields.ColumnMixin):
     def is_finished(self) -> pd.Series:
         return self.execution_time >= 0
 
-    def finished(self):  # TODO:v2 -> PerformanceData:
+    def finished(self):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
         return self._df_wrapper_obj.factory(self._df_wrapper_obj.dataframe()[self.is_finished])
 
     @property
