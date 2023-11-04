@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Mecon App</title>
-    <link rel="stylesheet" href={{ url_for('static', filename='styles.css') }}>
+    <link rel="stylesheet" type= "text/css" href="{{ url_for('static', filename='styles.css') }}">  {# TODO:v2 not visible #}
+{#    <link rel="stylesheet" href={{ url_for('static', filename='styles.css') }}>#}
 </head>
 <body>
 <a href={{ url_for('main.home') }}>Home</a>
