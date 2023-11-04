@@ -2,7 +2,7 @@
 /statements/
 /notebooks/
 /clipboard.py
-/report.html
+/reports_history/report.html
 
-report*.html
+reports_history/report.html
 /datasets/

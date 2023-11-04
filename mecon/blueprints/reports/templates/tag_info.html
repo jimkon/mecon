@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <!-- Include the locally saved d3 library -->
+{#    <script src="C:\Users\dimitris\miniconda3\envs\mecon\Lib\site-packages\mpld3\js\d3.v5.min.js"></script>#}
+    <!-- Include mpld3 library from a CDN -->
+{#    <script src="C:\Users\dimitris\miniconda3\envs\mecon\Lib\site-packages\mpld3\js\mpld3.v0.5.9.js"></script>#}
+
+    <br>
+    <br>
+    {% include "data_filter.html" %}
+    <h1>Tag info: {{ tag_name }}</h1>
+    <a href={{ url_for('tags.tag_edit', tag_name=tag_name) }}>Edit</a>
+    <div style="display: flex;">
+        <div style="flex: 1;">
+            <h2>Stats</h2>
+            {{ transactions_stats_json | safe }}
+        </div>
+        <div style="flex: 2;">
+            <h2>Graphs</h2>
+            {{ graph_html | safe }}
+        </div>
+    </div>
+
+    {{ table_html | safe }}
+
+{% endblock content %}
