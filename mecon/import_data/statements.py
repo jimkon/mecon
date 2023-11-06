@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 
@@ -12,9 +11,6 @@ class StatementCSV:
 
     def validate(self):
         pass
-
-    def transform(self):
-        return self._df
 
     def dataframe(self) -> pd.DataFrame:
         self.validate()
