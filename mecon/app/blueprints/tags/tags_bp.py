@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 
 import tag_tools
 from tag_tools import comparisons, transformations
-from mecon.import_data.db_controller import data_access, reset_tags
+from app.db_controller import data_access, reset_tags
 from mecon.tag_tools.tagging import Tag
 from data.transactions import Transactions
 from mecon.monitoring import logs

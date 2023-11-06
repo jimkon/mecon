@@ -6,7 +6,7 @@ from flask import Blueprint, redirect, url_for, render_template
 from json2html import json2html
 
 from mecon.app.datasets import WorkingDatasetDir
-from mecon.import_data.db_controller import reset_transactions, import_data_access, data_access
+from app.db_controller import reset_transactions, import_data_access, data_access
 from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from data.transactions import Transactions
 from data.datafields import ZeroSizeTransactionsError
