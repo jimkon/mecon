@@ -182,8 +182,8 @@ class TestCachedForexLookupCurrencyConverter(unittest.TestCase):
         converter._forex_converter = mock_forex_converter
 
         # Test curr_to_GBP when the lookup_dict is empty
-        gbp_rate = converter.curr_to_GBP('USD', datetime(2023, 9, 30))
-        self.assertEqual(gbp_rate, 1.3)
+        self.assertEqual(converter.curr_to_GBP('USD', datetime(2023, 9, 30)), 1.3)
+        self.assertEqual(converter.curr_to_GBP('GBP', datetime(2023, 9, 30)), 1)
         mock_forex_converter.curr_to_GBP.assert_called_once_with('USD', datetime(2023, 9, 30))
 
     @patch('mecon.utils.currencies.pathlib.Path')
