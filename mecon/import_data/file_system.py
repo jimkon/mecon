@@ -54,10 +54,7 @@ class DatasetDir:
         self._datasets = []
         for subpath in self._path.iterdir():
             if subpath.is_dir():
-                try:
-                    self._datasets.append(Dataset(subpath))
-                except FileNotFoundError as e:
-                    print(f"Dataset {subpath} failed to initialize.")
+                self._datasets.append(Dataset(subpath))
 
     @property
     def path(self):
