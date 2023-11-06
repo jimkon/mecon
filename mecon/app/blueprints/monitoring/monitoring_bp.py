@@ -7,7 +7,7 @@ from mecon import tagging
 from mecon.monitoring.logs import get_log_files, read_logs_as_df
 from mecon.utils import html_pages
 from mecon.monitoring.log_data import LogData, PerformanceData
-from mecon.blueprints.reports import graphs
+from app.blueprints.reports import graphs
 
 monitoring_bp = Blueprint('monitoring', __name__, template_folder='templates')
 
@@ -66,7 +66,7 @@ def performance_stats_page(perf_data: PerformanceData):
 
 def codeflow_timeline_graph_html(perf_data: PerformanceData):
     graph_html = graphs.codeflow_timeline_graph_html(perf_data.functions, perf_data.start_datetime,
-                                        perf_data.end_datetime)
+                                                     perf_data.end_datetime)
     table_html = perf_data.dataframe().sort_values('datetime', ascending=False).to_html()
     res_html = f"""{graph_html}<br><br>{table_html}"""
     return res_html

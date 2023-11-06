@@ -6,7 +6,7 @@ from plotly.offline import plot
 from plotly.subplots import make_subplots
 import plotly.express as px
 
-from mecon.blueprints.reports import graph_utils
+from app.blueprints.reports import graph_utils
 from mecon.monitoring import logs
 
 

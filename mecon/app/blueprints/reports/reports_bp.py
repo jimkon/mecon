@@ -7,7 +7,7 @@ from json2html import json2html
 
 from data.aggregators import CustomisedAmountTransactionAggregator
 from data import reports
-from mecon.blueprints.reports import graphs
+from app.blueprints.reports import graphs
 from mecon.import_data.db_controller import data_access
 from data.groupings import LabelGrouping
 from data.transactions import Transactions
