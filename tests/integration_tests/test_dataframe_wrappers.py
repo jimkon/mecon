@@ -4,7 +4,7 @@ from datetime import datetime, date
 import pandas as pd
 
 from mecon.tagging import tagging
-from mecon.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller, DatedDataframeWrapper, \
+from data.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller, DatedDataframeWrapper, \
     UnorderedDatedDataframeWrapper
 
 

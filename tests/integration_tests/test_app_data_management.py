@@ -7,7 +7,7 @@ from flask import Flask
 from flask_testing import TestCase
 
 from mecon.app import db, models
-from mecon.data import db_controller
+from mecon.import_data import db_controller
 
 
 def _create_app():
@@ -106,7 +106,7 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         # Call the import_statement method
         self.accessor.import_statement(df)
 
-        # Check if the data is inserted into the database
+        # Check if the import_data is inserted into the database
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
@@ -132,7 +132,7 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         # Call the import_statement method
         self.accessor.import_statement([df1, df2])
 
-        # Check if the data is inserted into the database
+        # Check if the import_data is inserted into the database
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 6)
         pd.testing.assert_frame_equal(transactions, dfs)
@@ -209,7 +209,7 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         # Call the import_statement method
         self.accessor.import_statement(df)
 
-        # Check if the data is inserted into the database
+        # Check if the import_data is inserted into the database
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
@@ -263,7 +263,7 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         # Call the import_statement method
         self.accessor.import_statement([df1, df2])
 
-        # Check if the data is inserted into the database
+        # Check if the import_data is inserted into the database
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 6)
         pd.testing.assert_frame_equal(transactions, dfs)
@@ -361,7 +361,7 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
         # Call the import_statement method
         self.accessor.import_statement(df)
 
-        # Check if the data is inserted into the database
+        # Check if the import_data is inserted into the database
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
@@ -401,7 +401,7 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
         # Call the import_statement method
         self.accessor.import_statement([df1, df2])
 
-        # Check if the data is inserted into the database
+        # Check if the import_data is inserted into the database
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 6)
         pd.testing.assert_frame_equal(transactions, dfs)

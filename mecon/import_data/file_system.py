@@ -18,7 +18,7 @@ class Dataset:
         self._path = pathlib.Path(path)
         logging.info(f"New dataset in path {self._path} #info#filesystem")
 
-        self._data = self._path / 'data'
+        self._data = self._path / 'import_data'
 
         self._sqlite = self._data / 'db'
         self._sqlite.mkdir(parents=True, exist_ok=True)

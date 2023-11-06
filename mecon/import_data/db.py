@@ -2,7 +2,7 @@ import abc
 
 import pandas as pd
 
-from mecon.data import io_framework as io, db_controller
+from mecon.import_data import io_framework as io, db_controller
 from mecon import config
 
 

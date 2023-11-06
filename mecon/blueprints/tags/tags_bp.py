@@ -5,9 +5,9 @@ from flask import Blueprint, render_template, request, redirect, url_for
 
 import tagging
 from tagging import comparisons, transformations
-from mecon.data.db_controller import data_access, reset_tags
+from mecon.import_data.db_controller import data_access, reset_tags
 from mecon.tagging.tagging import Tag
-from mecon.transactions import Transactions
+from data.transactions import Transactions
 from mecon.monitoring import logs
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
@@ -24,14 +24,14 @@ def _reformat_json_str(json_str):
     return json_str
 
 
-@logs.codeflow_log_wrapper('#data#transactions#load')
+@logs.codeflow_log_wrapper('#import_data#transactions#load')
 def get_transactions() -> Transactions:
     data_df = data_access.transactions.get_transactions()
     transactions = Transactions(data_df)
     return transactions
 
 
-@logs.codeflow_log_wrapper('#data#tags#process')
+@logs.codeflow_log_wrapper('#import_data#tags#process')
 def recalculate_tags():
     transactions = get_transactions().reset_tags()
 
@@ -46,7 +46,7 @@ def recalculate_tags():
     data_access.transactions.update_tags(data_df)
 
 
-@logs.codeflow_log_wrapper('#data#tags#store')
+@logs.codeflow_log_wrapper('#import_data#tags#store')
 def save_and_recalculate_tags(tag_name, tag_json_str):
     data_access.tags.set_tag(tag_name, _json_from_str(tag_json_str))
     recalculate_tags()

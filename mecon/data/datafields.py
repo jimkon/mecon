@@ -40,19 +40,19 @@ class DataframeWrapper:
     def select_by_index(self, index: List[bool] | pd.Series):
         return self.factory(self.dataframe()[index])
 
-    @logs.codeflow_log_wrapper('#data#transactions#tags')
+    @logs.codeflow_log_wrapper('#import_data#transactions#tags')
     def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_rule(df, rule)
         return self.factory(new_df)
 
-    @logs.codeflow_log_wrapper('#data#transactions#tags')
+    @logs.codeflow_log_wrapper('#import_data#transactions#tags')
     def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_negated_rule(df, rule)
         return self.factory(new_df)
 
-    @logs.codeflow_log_wrapper('#data#transactions#groupagg')
+    @logs.codeflow_log_wrapper('#import_data#transactions#groupagg')
     def groupagg(self, grouper: Grouping, aggregator: InTypeAggregator) -> DataframeWrapper:
         groups = grouper.group(self)
         aggregated_groups = aggregator.aggregate(groups)
@@ -172,7 +172,7 @@ class TagsColumnMixin(ColumnMixin):
 
 
 class Grouping(abc.ABC):
-    @logs.codeflow_log_wrapper('#data#transactions#process')
+    @logs.codeflow_log_wrapper('#import_data#transactions#process')
     def group(self, df_wrapper: DataframeWrapper) -> List[DataframeWrapper]:
         indexes = self.compute_group_indexes(df_wrapper)
 
@@ -203,7 +203,7 @@ class InTypeAggregator(AggregatorABC):
     def __init__(self, aggregation_functions):
         self._agg_functions = aggregation_functions
 
-    @logs.codeflow_log_wrapper('#data#transactions#process')
+    @logs.codeflow_log_wrapper('#import_data#transactions#process')
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
         df_agg = self.aggregate_result_df(lists_of_df_wrapper)
         res_df_wrapper = lists_of_df_wrapper[0].factory(df_agg)
@@ -247,7 +247,7 @@ class DateFiller:
         self._fill_unit = fill_unit
         self._fill_values = fill_values_dict
 
-    @logs.codeflow_log_wrapper('#data#transactions#process')
+    @logs.codeflow_log_wrapper('#import_data#transactions#process')
     def fill(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:
         start_date, end_date = df_wrapper.date_range()
         fill_df = self.produce_fill_df_rows(start_date, end_date, df_wrapper.date)

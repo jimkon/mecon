@@ -5,12 +5,12 @@ import requests
 from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
-from aggregators import CustomisedAmountTransactionAggregator
-from mecon import reports
+from data.aggregators import CustomisedAmountTransactionAggregator
+from data import reports
 from mecon.blueprints.reports import graphs
-from mecon.data.db_controller import data_access
-from mecon.groupings import LabelGrouping
-from mecon.transactions import Transactions
+from mecon.import_data.db_controller import data_access
+from data.groupings import LabelGrouping
+from data.transactions import Transactions
 from mecon.utils import html_pages
 from mecon.monitoring import logs
 
@@ -60,14 +60,14 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
     return href
 
 
-@logs.codeflow_log_wrapper('#data#transactions#load')
+@logs.codeflow_log_wrapper('#import_data#transactions#load')
 def get_transactions() -> Transactions:
     data_df = data_access.transactions.get_transactions()
     transactions = Transactions(data_df)
     return transactions
 
 
-@logs.codeflow_log_wrapper('#data#transactions#process')
+@logs.codeflow_log_wrapper('#import_data#transactions#process')
 def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key,
                               fill_dates_before_groupagg=False,
                               fill_dates_after_groupagg=False) -> Transactions:

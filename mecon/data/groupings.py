@@ -3,7 +3,7 @@ from typing import List
 
 import pandas as pd
 
-from mecon.datafields import DataframeWrapper, Grouping
+from data.datafields import DataframeWrapper, Grouping
 from mecon.utils import calendar_utils
 from mecon.utils.instance_management import Multiton
 from mecon.tagging.tagging import Tagger, TagMatchCondition

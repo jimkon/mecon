@@ -141,13 +141,13 @@ def tag_edit_post(tag_name):
         return redirect(url_for('tag_edit_get', tag_name=tag_name))
 
 
-# @app.route('/data/query/table/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
+# @app.route('/import_data/query/table/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
 # def query_data(tag_name, tag_json_str):
 #     tag_json = json.loads(tag_json_str)
 #     tagger = JsonTag(tag_name, tag_json)
 #     tagged_data = data_object.calculated_tagged_transactions  # transactions['tagged']
-#     data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
-#     table_html = data.dataframe().to_html()
+#     import_data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
+#     table_html = import_data.dataframe().to_html()
 #     return render_template('table.html', **globals(), **locals())
 #
 #
@@ -159,8 +159,8 @@ def tag_edit_post(tag_name):
 #     tag_json = json.loads(tag_json_str)
 #     tagger = JsonTag(tag_name, tag_json)
 #     tagged_data = data_object.calculated_tagged_transactions  # transactions['tagged']
-#     data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
-#     df = data.dataframe()
+#     import_data = tagged_data.apply_taggers(tagger).get_rows_tagged_as(tag_name)
+#     df = import_data.dataframe()
 #     table_html = df.to_html()
 #     number_of_rows = len(df)
 #     return render_template('query_edit.html', **globals(), **locals())

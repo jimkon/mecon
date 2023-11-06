@@ -3,8 +3,7 @@ from collections import OrderedDict
 import pandas as pd
 
 from mecon.tagging import tagging
-from mecon import datafields
-from mecon import groupings
+from data import groupings, datafields
 
 
 def _extract_tags(string):

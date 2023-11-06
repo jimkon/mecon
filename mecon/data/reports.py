@@ -1,4 +1,4 @@
-from mecon import transactions
+from data import transactions
 
 
 def transactions_stats(trans: transactions.Transactions):

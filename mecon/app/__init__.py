@@ -32,7 +32,7 @@ db.create_all()
 
 
 app.register_blueprint(main_bp)
-app.register_blueprint(data_bp.data_bp, url_prefix='/data')
+app.register_blueprint(data_bp.data_bp, url_prefix='/import_data')
 app.register_blueprint(tags_bp.tags_bp, url_prefix='/tags')
 app.register_blueprint(reports_bp.reports_bp, url_prefix='/reports')
 app.register_blueprint(monitoring_bp.monitoring_bp, url_prefix='/monitoring')
