@@ -2,8 +2,7 @@ import unittest
 
 import pandas as pd
 
-from tagging import comparisons, transformations
-from mecon.tagging import tagging
+from mecon.tag_tools import comparisons, transformations, tagging
 
 
 class TestCondition(unittest.TestCase):
@@ -276,4 +275,3 @@ class TestTagging(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -3,10 +3,10 @@ import logging
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
-import tagging
-from tagging import comparisons, transformations
+import tag_tools
+from tag_tools import comparisons, transformations
 from mecon.import_data.db_controller import data_access, reset_tags
-from mecon.tagging.tagging import Tag
+from mecon.tag_tools.tagging import Tag
 from data.transactions import Transactions
 from mecon.monitoring import logs
 
@@ -142,9 +142,9 @@ def tag_edit(tag_name):
             else:
                 return redirect(url_for('tags.tags_menu'))
         elif "add_condition" in request.form:
-            disjunction = tagging.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
+            disjunction = tag_tools.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
 
-            condition = tagging.Condition.from_string_values(
+            condition = tag_tools.Condition.from_string_values(
                 field=request.form['field'],
                 transformation_op_key=request.form['transform'],
                 compare_op_key=request.form['comparison'],
@@ -157,9 +157,9 @@ def tag_edit(tag_name):
         elif "add_id" in request.form:
             id = int(request.form['input_id'])
 
-            disjunction = tagging.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
+            disjunction = tag_tools.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
 
-            condition = tagging.Condition.from_string_values(
+            condition = tag_tools.Condition.from_string_values(
                 field='id',
                 transformation_op_key="none",
                 compare_op_key="equal",
@@ -172,12 +172,12 @@ def tag_edit(tag_name):
             else:
                 row = rows[0]
 
-                conj = tagging.Conjunction([
-                    tagging.Condition.from_string_values('datetime', 'str', 'equal', str(row['datetime'])),
-                    tagging.Condition.from_string_values('amount', 'none', 'equal', row['amount']),
-                    tagging.Condition.from_string_values('currency', 'str', 'equal', row['currency']),
-                    tagging.Condition.from_string_values('description', 'none', 'equal', row['description']),
-                    # tagging.Condition.from_string_values(field, 'none', 'equal', value) for field, value in row.items()
+                conj = tag_tools.Conjunction([
+                    tag_tools.Condition.from_string_values('datetime', 'str', 'equal', str(row['datetime'])),
+                    tag_tools.Condition.from_string_values('amount', 'none', 'equal', row['amount']),
+                    tag_tools.Condition.from_string_values('currency', 'str', 'equal', row['currency']),
+                    tag_tools.Condition.from_string_values('description', 'none', 'equal', row['description']),
+                    # tag_tools.Condition.from_string_values(field, 'none', 'equal', value) for field, value in row.items()
                 ])
                 new_tag_json = disjunction.append(conj).to_json()
                 tag_json_str = _reformat_json_str(json.dumps(new_tag_json))

@@ -3,7 +3,7 @@ import pathlib
 import pandas as pd
 from flask import Blueprint, render_template, request
 
-from mecon import tagging
+from mecon import tag_tools
 from mecon.monitoring.logs import get_log_files, read_logs_as_df
 from mecon.utils import html_pages
 from mecon.monitoring.log_data import LogData, PerformanceData
@@ -30,7 +30,7 @@ def performance_stats_dict(perf_data: PerformanceData):
     tag_perf_stats = {}
 
     for tag in perf_data.all_tags().keys():
-        rule = tagging.TagMatchCondition(tag)
+        rule = tag_tools.TagMatchCondition(tag)
         tag_perf_data = perf_data.apply_rule(rule)
         non_zero_perf_data = tag_perf_data.finished()
         tag_perf_stats[tag] = non_zero_perf_data.execution_time

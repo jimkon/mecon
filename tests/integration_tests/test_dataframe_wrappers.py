@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 import pandas as pd
 
-from mecon.tagging import tagging
+from mecon.tag_tools import tagging
 from data.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller, DatedDataframeWrapper, \
     UnorderedDatedDataframeWrapper
 
@@ -62,7 +62,6 @@ class TestDataframeWrapper(unittest.TestCase):
                                     'B': [4]})
         pd.testing.assert_frame_equal(res_wrapper.dataframe().reset_index(drop=True),
                                       expected_df)
-
 
 
 class TestGrouping(unittest.TestCase):

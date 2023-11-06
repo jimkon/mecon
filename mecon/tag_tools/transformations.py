@@ -33,6 +33,8 @@ INT = TransformationFunction('int', lambda x: int(x))
 ABS = TransformationFunction('abs', lambda x: abs(int(x)))
 
 # TODO:v3 datetime transformations don't work
+# TODO: v3 add part of day, day of week
 DATE = TransformationFunction('date', lambda x: x.date())  # TODO:v3 extract date
 TIME = TransformationFunction('time', lambda x: x.time())  # TODO:v3 extract time
 DAY_OF_WEEK = TransformationFunction('day_of_week', calendar_utils.dayofweek)
+

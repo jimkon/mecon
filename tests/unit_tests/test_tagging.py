@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from mecon.tagging import tagging
+from mecon.tag_tools import tagging
 
 
 class ConditionTestCase(unittest.TestCase):

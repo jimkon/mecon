@@ -9,7 +9,7 @@ from typing import List
 
 import pandas as pd
 
-from mecon.tagging import tagging
+from mecon.tag_tools import tagging
 from mecon.utils import calendar_utils
 from mecon.monitoring import logs
 

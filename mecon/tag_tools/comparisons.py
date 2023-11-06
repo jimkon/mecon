@@ -3,6 +3,10 @@ import re
 from mecon.utils import instance_management
 
 
+class CompareOperatorMustReturnBooleanResults(Exception):
+    pass
+
+
 class CompareOperator(instance_management.Multiton):
     """
     Compare operators used by Condition.
@@ -17,11 +21,13 @@ class CompareOperator(instance_management.Multiton):
         return self.apply(value_1, value_2)
 
     def apply(self, value_1, value_2):
-        res = self.function(value_1, value_2)
-        return res
+        result = self.function(value_1, value_2)
+        self.validate(result)
+        return result
 
-    def validate(self):
-        pass
+    def validate(self, result):
+        if result != True and result != False:
+            raise CompareOperatorMustReturnBooleanResults(f"{self} return result of {type(result)=}: {result=}")
 
     def __repr__(self):
         return f"CompareOp({self.name})"

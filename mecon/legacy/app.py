@@ -154,7 +154,7 @@ def tag_edit_post(tag_name):
 # @app.get('/tag/edit/tag_name=<tag_name>:tag_json_str=<tag_json_str>')
 # def edit_query_get(tag_name, tag_json_str):
 #     import json
-#     from mecon.tagging.json_tags import JsonTag
+#     from mecon.tag_tools.json_tags import JsonTag
 #
 #     tag_json = json.loads(tag_json_str)
 #     tagger = JsonTag(tag_name, tag_json)
