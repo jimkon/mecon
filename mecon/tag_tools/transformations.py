@@ -16,9 +16,6 @@ class TransformationFunction(instance_management.Multiton):
     def apply(self, value):
         return self.function(value)
 
-    def validate(self):
-        pass
-
     def __repr__(self):
         return f"TransformationFunction({self.name})"
 
