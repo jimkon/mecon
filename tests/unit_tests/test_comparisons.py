@@ -1,6 +1,6 @@
 import unittest
 
-from mecon import comparisons as cmp
+from tagging import comparisons as cmp
 
 
 class TestCompareOperator(unittest.TestCase):

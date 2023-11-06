@@ -2,9 +2,8 @@ import unittest
 
 import pandas as pd
 
-from mecon import comparisons
-from mecon import transformations
-from mecon import tagging
+from tagging import comparisons, transformations
+from mecon.tagging import tagging
 
 
 class TestCondition(unittest.TestCase):

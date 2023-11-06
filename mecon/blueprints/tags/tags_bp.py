@@ -4,9 +4,9 @@ import logging
 from flask import Blueprint, render_template, request, redirect, url_for
 
 import tagging
-from mecon import comparisons, transformations
+from tagging import comparisons, transformations
 from mecon.data.db_controller import data_access, reset_tags
-from mecon.tagging import Tag
+from mecon.tagging.tagging import Tag
 from mecon.transactions import Transactions
 from mecon.monitoring import logs
 

@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-import tagging
+from mecon.tagging import tagging
 from mecon import datafields
 from mecon import groupings
 

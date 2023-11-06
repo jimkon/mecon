@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime, date, time
 
-from mecon import transformations as trns
+from tagging import transformations as trns
 
 
 class TestTransformationFunctions(unittest.TestCase):

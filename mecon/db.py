@@ -5,6 +5,7 @@ import pandas as pd
 from mecon.data import io_framework as io, db_controller
 from mecon import config
 
+
 class TagsDBAccessor(io.TagsIOABC, abc.ABC):
     def get_tag(self, name) -> dict:
         tag = db_controller.TagsDBTable.query.filter_by(name=name).first()
