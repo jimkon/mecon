@@ -32,11 +32,11 @@ class Condition(AbstractRule):
         self._field = field
 
         if transformation_op is not None and not hasattr(transformation_op, '__call__'):
-            raise NotACallableException('Transformation operator has to be a callable object.')
+            raise NotACallableException(f'Transformation operator has to be a callable object.')
         self._transformation_op = transformation_op if transformation_op is not None else transformations.NO_TRANSFORMATION
 
         if not hasattr(compare_op, '__call__'):
-            raise NotACallableException('Compare operator has to be a callable object.')
+            raise NotACallableException(f'Compare operator has to be a callable object.')
         self._compare_op = compare_op
 
         self._value = value
@@ -96,21 +96,21 @@ class Conjunction(AbstractRule):
         merged_dict = {}
 
         for d in dicts_list:
-            for key, value in d.items():
-                if key in merged_dict:
-                    for merge_key, merge_value in value.items():
-                        if isinstance(merged_dict[key].get(merge_key), list):
-                            if isinstance(merge_value, list):
-                                merged_dict[key][merge_key].extend(merge_value)
+            for trans_field, comp_dict in d.items():
+                if trans_field in merged_dict:
+                    for comp_op, comp_value in comp_dict.items():
+                        if isinstance(merged_dict[trans_field].get(comp_op), list):
+                            if isinstance(comp_value, list):
+                                merged_dict[trans_field][comp_op].extend(comp_value)
                             else:
-                                merged_dict[key][merge_key].append(merge_value)
+                                merged_dict[trans_field][comp_op].append(comp_value)
                         else:
-                            if isinstance(merge_value, list):
-                                merged_dict[key][merge_key] = [merged_dict[key][merge_key]] + merge_value
+                            if isinstance(comp_value, list):
+                                merged_dict[trans_field][comp_op] = [merged_dict[trans_field][comp_op]] + comp_value
                             else:
-                                merged_dict[key][merge_key] = [merged_dict[key][merge_key], merge_value]
+                                merged_dict[trans_field][comp_op] = [merged_dict[trans_field][comp_op], comp_value]
                 else:
-                    merged_dict[key] = value
+                    merged_dict[trans_field] = comp_dict
 
         return merged_dict
 
