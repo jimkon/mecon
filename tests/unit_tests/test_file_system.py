@@ -74,19 +74,19 @@ class DatasetTestCase(unittest.TestCase):
         shutil.rmtree(self.temp_path)
 
     def test_data_path(self):
-        self.assertEqual(self.dataset._data, self.temp_path / 'import_data')
+        self.assertEqual(self.dataset._data, self.temp_path / 'data')
 
     def test_db_path(self):
-        self.assertEqual(self.dataset.db, self.temp_path / 'import_data/db/sqlite3')
+        self.assertEqual(self.dataset.db, self.temp_path / 'data/db/sqlite3')
 
     def test_statements_path(self):
-        self.assertEqual(self.dataset.statements, self.temp_path / 'import_data/statements')
+        self.assertEqual(self.dataset.statements, self.temp_path / 'data/statements')
 
     def test_statement_files(self):
         self.assertEqual(self.dataset.statement_files(), {})
 
         temp_fp = tempfile.NamedTemporaryFile(suffix='.csv', delete=False)
-        temp_fp.write(b'import_data')
+        temp_fp.write(b'data')
         temp_fp.close()
 
         self.dataset.add_statement('test_bank', temp_fp.name)

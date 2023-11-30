@@ -112,7 +112,7 @@ def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
     data = list(zip(functions, start_datetime, end_datetime))
 
     non_zero_data = [(f, s, e) for f, s, e in data if s != e]
-    # Convert import_data to a DataFrame
+    # Convert data to a DataFrame
     df = pd.DataFrame(non_zero_data, columns=['Task', 'Start', 'Finish'])
 
     # Convert 'Start' and 'Finish' columns to datetime

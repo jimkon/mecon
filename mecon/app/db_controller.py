@@ -172,17 +172,17 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         if len(value_errors):
             raise InvalidTransactionsDataframeDataValueException(value_errors)
 
-    @logs.codeflow_log_wrapper('#db#import_data#io')
+    @logs.codeflow_log_wrapper('#db#data#io')
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df) > 0 else None
 
-    @logs.codeflow_log_wrapper('#db#import_data#io')
+    @logs.codeflow_log_wrapper('#db#data#io')
     def delete_all(self):
         db.session.query(models.TransactionsDBTable).delete()
 
-    @logs.codeflow_log_wrapper('#db#import_data#io')
+    @logs.codeflow_log_wrapper('#db#data#io')
     def load_transactions(self):
         df_hsbc = HSBCTransactionsDBAccessor().get_transactions()
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()

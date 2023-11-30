@@ -19,7 +19,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     Not responsible for any IO operations.
     """
 
-    @logs.codeflow_log_wrapper('#import_data#transactions#process')
+    @logs.codeflow_log_wrapper('#data#transactions#process')
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)

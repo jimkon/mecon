@@ -12,7 +12,7 @@ from data.transactions import Transactions
 from data.datafields import ZeroSizeTransactionsError
 from mecon.monitoring import logs
 
-data_bp = Blueprint('import_data', __name__, template_folder='templates')
+data_bp = Blueprint('data', __name__, template_folder='templates')
 
 
 def _statement_files_info() -> Dict:
@@ -78,7 +78,7 @@ def _db_transactions_info():
             'rows': transactions.size()
         }
     except ZeroSizeTransactionsError:
-        res = {'No transaction import_data'}
+        res = {'No transaction data'}
     return res
 
 
@@ -88,7 +88,7 @@ def data_menu():
     db_transactions_info = _db_transactions_info()
     db_statements_info = json2html.convert(json=_db_statements_info())
     files_info_dict = _statement_files_info()
-    return render_template('import_data.html', **locals(), **globals())
+    return render_template('data.html', **locals(), **globals())
 
 
 @data_bp.post('/reload')
@@ -109,13 +109,13 @@ def data_reload():
 
     data_access.transactions.load_transactions()
 
-    return redirect(url_for('import_data.data_menu'))
+    return redirect(url_for('data.data_menu'))
 
 
 @data_bp.post('/import')
 @logs.codeflow_log_wrapper('#api')
 def data_import():
-    return redirect(url_for('import_data.data_menu'))
+    return redirect(url_for('data.data_menu'))
 
 
 @data_bp.route('/view/file/<path>')

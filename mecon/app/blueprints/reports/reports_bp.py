@@ -60,14 +60,14 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
     return href
 
 
-@logs.codeflow_log_wrapper('#import_data#transactions#load')
+@logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
     data_df = data_access.transactions.get_transactions()
     transactions = Transactions(data_df)
     return transactions
 
 
-@logs.codeflow_log_wrapper('#import_data#transactions#process')
+@logs.codeflow_log_wrapper('#data#transactions#process')
 def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key,
                               fill_dates_before_groupagg=False,
                               fill_dates_after_groupagg=False) -> Transactions:
