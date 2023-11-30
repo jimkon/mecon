@@ -3,7 +3,8 @@
 {% block content %}
 
 
-    <h1>Data</h1>
+    <h1>Dataset: {{ dataset_name }}</h1>
+
     <h2>Transactions</h2>
     {{ db_transactions_info | safe }}
     <h2>Statements</h2>

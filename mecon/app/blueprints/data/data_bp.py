@@ -85,6 +85,7 @@ def _db_transactions_info():
 @data_bp.route('/menu')
 @logs.codeflow_log_wrapper('#api')
 def data_menu():
+    dataset_name = 'v2'  # TODO WorkingDatasetDir().current_dataset().name
     db_transactions_info = _db_transactions_info()
     db_statements_info = json2html.convert(json=_db_statements_info())
     files_info_dict = _statement_files_info()
@@ -130,4 +131,3 @@ def datafile_view(path):
     <h1>Table, shape: {df.shape}</h1>
     {table_html}
     """
-

@@ -57,6 +57,10 @@ class DatasetDir:
                 self._datasets.append(Dataset(subpath))
 
     @property
+    def name(self):
+        return self.path.name
+
+    @property
     def path(self):
         return self._path
 
@@ -66,3 +70,4 @@ class DatasetDir:
     def get_dataset(self, dataset_name) -> Dataset:
         dataset_path = self.path / dataset_name
         return Dataset(dataset_path) if dataset_path.exists() else None
+
