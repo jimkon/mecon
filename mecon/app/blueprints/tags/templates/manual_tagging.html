@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <style>
+
+        #checkboxContainer {
+            width: 500px; /* Set a fixed width or adjust as needed */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px; /* Adjust the gap between checkboxes */
+        }
+
+        label {
+            white-space: nowrap; /* Prevent checkbox labels from wrapping */
+            margin-right: 1px; /* Adjust margin as needed */
+            font-size: 12px; /* Adjust font size as needed */
+            border: 1px solid #000; /* Add a black border around each label */
+            padding: 1px; /* Add padding for better visual appearance */
+            display: flex;
+            align-items: center;
+        }
+        input[type="checkbox"] {
+            transform: scale(0.8); /* Adjust the scale to make the checkboxes smaller */
+            margin-right: 1px; /* Adjust margin between checkbox and label */
+        }
+
+    </style>
+
+
+    <h1>Manual tagging</h1>
+    <form id="checkboxForm" method="POST">
+        <button type="submit" name="save_changes">Save Changes</button>
+
+        {{ table_html | safe }}
+
+    </form>
+
+{% endblock content %}

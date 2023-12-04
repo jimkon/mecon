@@ -9,6 +9,7 @@ from app.db_controller import data_access, reset_tags
 from mecon.tag_tools.tagging import Tag
 from data.transactions import Transactions
 from mecon.monitoring import logs
+from mecon.utils import html_pages
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
@@ -186,3 +187,33 @@ def tag_edit(tag_name):
     else:
         tag_json_str = data_access.tags.get_tag(tag_name)['conditions_json']
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
+
+
+@tags_bp.route("/manual_tagging/", methods=['POST', 'GET'])
+def manual_tagging():
+    def tags_form(row):
+        id = row[0]
+        tags = row[6]
+        tag_checkboxes = """<div id="checkboxContainer">"""
+        for tag in all_tags:
+            checkbox = f"""<label><input type="checkbox" name="{tag}_for_{id}" {'checked disabled' if tag in tags else ''}>{tag}</label><br>"""
+            tag_checkboxes += checkbox
+        return tag_checkboxes + "</div>"
+
+    if request.method == 'POST':
+        if "save_changes" in request.form:
+            tag_events = [{'tag': name.split('_for_')[0], 'id': name.split('_for_')[1]}
+                          for name, action
+                          in request.form.to_dict().items()
+                          if action == 'on']
+            # TODO Send new tag events to data manager
+
+    transactions = get_transactions()
+    all_tags = list(transactions.all_tags().keys())
+    df = transactions.dataframe()[:10]
+    df = df.sort_values('datetime')
+    df['Edit'] = df.apply(tags_form, axis=1)
+    df = df[[df.columns[-1]] + list(df.columns[:-1])]
+    table_html = df.to_html(render_links=True, escape=False)
+
+    return render_template('manual_tagging.html', **locals())
