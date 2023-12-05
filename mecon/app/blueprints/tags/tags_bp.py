@@ -189,8 +189,8 @@ def tag_edit(tag_name):
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
 
 
-@tags_bp.route("/manual_tagging/", methods=['POST', 'GET'])
-def manual_tagging():
+@tags_bp.route("/manual_tagging/order=<order_by>", methods=['POST', 'GET'])
+def manual_tagging(order_by):
     def tags_form(row):
         id = row[0]
         tags = row[6]
@@ -207,11 +207,20 @@ def manual_tagging():
                           in request.form.to_dict().items()
                           if action == 'on']
             # TODO Send new tag events to data manager
+        elif "reset" in request.form:
+            pass
 
     transactions = get_transactions()
     all_tags = list(transactions.all_tags().keys())
-    df = transactions.dataframe()[:10]
-    df = df.sort_values('datetime')
+    df = transactions.dataframe()#[:10]
+
+    if order_by == 'newest':
+        df = df.sort_values(['datetime'], ascending=False)
+    elif order_by == 'least tagged':
+        df['n_tags'] = df['tags'].apply(lambda s: len(s.split(',')))
+        df = df.sort_values(['n_tags'], ascending=True)
+        del df['n_tags']
+
     df['Edit'] = df.apply(tags_form, axis=1)
     df = df[[df.columns[-1]] + list(df.columns[:-1])]
     table_html = df.to_html(render_links=True, escape=False)
