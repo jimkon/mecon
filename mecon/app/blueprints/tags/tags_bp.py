@@ -193,12 +193,27 @@ def tag_edit(tag_name):
 def manual_tagging(order_by):
     def tags_form(row):
         id = row[0]
-        tags = row[6]
-        tag_checkboxes = """<div id="checkboxContainer">"""
+        tags = row[6].split(',')
+        tag_checkboxes = """
+        <div class="dropdown">
+        <button class="dropbtn">Select Tags</button>
+        <div class="dropdown-content">
+        """
         for tag in all_tags:
-            checkbox = f"""<label><input type="checkbox" name="{tag}_for_{id}" {'checked disabled' if tag in tags else ''}>{tag}</label><br>"""
+            checkbox = f"""
+            <label >{tag}<input type="checkbox" name="{tag}_for_{id}" {'checked disabled' if tag in tags else ''}></label>
+            """
             tag_checkboxes += checkbox
-        return tag_checkboxes + "</div>"
+        tag_checkboxes = tag_checkboxes + "</div></div>"
+        tags_container = """
+        <div class="labelContainer">"""
+        for tag in tags:
+            tags_container += f"""<label class="tagLabel">{tag}</label>"""
+
+        tags_container += """</div>"""
+
+        result = tag_checkboxes + tags_container
+        return result.replace('\n', '')
 
     if request.method == 'POST':
         if "save_changes" in request.form:
@@ -212,7 +227,7 @@ def manual_tagging(order_by):
 
     transactions = get_transactions()
     all_tags = list(transactions.all_tags().keys())
-    df = transactions.dataframe()#[:10]
+    df = transactions.dataframe()
 
     if order_by == 'newest':
         df = df.sort_values(['datetime'], ascending=False)
