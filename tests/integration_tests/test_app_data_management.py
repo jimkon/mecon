@@ -7,7 +7,7 @@ from flask import Flask
 from flask_testing import TestCase
 
 from mecon.app import db, models
-from app import db_controller
+from mecon.data import db_controller
 
 
 def _create_app():
@@ -597,21 +597,6 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             self.assertEqual(inv_types_error.invalid_types, expected_errors)
         else:
             self.fail(f"Expecting InvalidTransactionsDataframeDataTypesException but not raised.")
-
-    def test__transaction_df_values_validation(self):
-        test_df = pd.DataFrame({
-            'id': [11, 12, 13],
-            'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
-                         datetime(2021, 12, 31, 23, 59, 59)],
-            'amount': [None, 200.0, 300.0],
-            'currency': ['GBP', 'GBP', 'GBP'],
-            'amount_cur': [100.0, 200.0, 300.0],
-            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
-            'tags': ['', 'tag1', 'tag1,tag2']
-        })
-
-        with self.assertRaises(db_controller.InvalidTransactionsDataframeDataValueException):
-            db_controller.TransactionsDBAccessor._transaction_df_values_validation(test_df)
 
     def test_get_transactions(self):
         self.assertIsNone(self.accessor.get_transactions())

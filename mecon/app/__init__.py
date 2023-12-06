@@ -12,10 +12,10 @@ except FileNotFoundError as e:
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.db_extension import db
 from mecon.app.views import main_bp
-from app.blueprints.data import data_bp
-from app.blueprints.reports import reports_bp
-from app.blueprints.tags import tags_bp
-from app.blueprints.monitoring import monitoring_bp
+from mecon.blueprints.data import data_bp
+from mecon.blueprints.reports import reports_bp
+from mecon.blueprints.tags import tags_bp
+from mecon.blueprints.monitoring import monitoring_bp
 
 logs.print_logs_info()
 logging.info('Starting app...')
