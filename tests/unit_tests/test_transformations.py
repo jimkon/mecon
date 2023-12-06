@@ -1,10 +1,14 @@
 import unittest
 from datetime import datetime, date, time
 
-from mecon import transformations as trns
+from tag_tools import transformations as trns
 
 
 class TestTransformationFunctions(unittest.TestCase):
+    def test_repr(self):
+        tf = trns.TransformationFunction.from_key('none')
+        str(tf) # make sure it doesn't crash
+
     def test_none(self):
         tf = trns.TransformationFunction.from_key('none')
 

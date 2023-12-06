@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <style>
+
+        .labelContainer {
+            max-width: 400px; /* Set a maximum width or adjust as needed */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px; /* Adjust the gap between checkboxes */
+        }
+
+        .tagLabel {
+            white-space: normal; /* Allow wrapping for checkbox labels */
+            margin-right: 1px; /* Adjust margin as needed */
+            font-size: 15px; /* Adjust font size as needed */
+            border: 1px solid #000; /* Add a black border around each label */
+            padding: 1px; /* Add padding for better visual appearance */
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="checkbox"] {
+            transform: scale(0.8); /* Adjust the scale to make the checkboxes smaller */
+            margin-right: 3px; /* Adjust margin between checkbox and label */
+        }
+
+        .dropdown {
+            width: 200px;
+            gap: 2px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: None;
+            flex-wrap: wrap;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 400px;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            border: 1px solid #000; /* Add a black border around each label */
+        }
+
+        .dropdown-content label:hover {
+            background-color: #ddd;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+    </style>
+
+
+    <h1>Manual tagging {{ selected_order }}</h1>
+    <form id="checkboxForm" method="POST">
+        <button type="submit" name="save_changes">Save Changes</button>
+        <button type="submit" name="reset">Reset</button>
+
+        <h2>Transcations</h2>
+        {% if order_by == 'newest' %}
+            <h3>Order: <a href={{ url_for('tags.manual_tagging', order_by='least tagged') }}>
+                <button type="button">Least tagged rows first</button>
+            </a></h3>
+        {% elif order_by == 'least tagged' %}
+            <h3>Order: <a href={{ url_for('tags.manual_tagging', order_by='newest') }}>
+                <button type="button">Newest rows first</button>
+            </a></h3>
+        {% else %}
+        {% endif %}
+        {{ table_html | safe }}
+
+    </form>
+    <script>
+        function orderChanged(value) {
+            // Perform action when the order changes
+            console.log('Order changed:', value);
+
+            // Add logic to trigger a POST request with the new order value
+            fetch('/tags/manual_tagging', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({orderBy: value}),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Order saved successfully', data);
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error saving order', error);
+                });
+        }
+    </script>
+
+{% endblock content %}

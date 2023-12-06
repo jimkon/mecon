@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from mecon import tagging
+from mecon.tag_tools import tagging
 
 
 class ConditionTestCase(unittest.TestCase):
@@ -38,6 +38,14 @@ class ConditionTestCase(unittest.TestCase):
                 value='1'
             )
 
+        with self.assertRaises(tagging.NotACallableException):
+            condition = tagging.Condition(
+                field='field',
+                transformation_op=str,
+                compare_op='not_a_callable',
+                value='1'
+            )
+
     def test_init_compare_op_validation_fail(self):
         with self.assertRaises(tagging.FieldIsNotStringException):
             condition = tagging.Condition(
@@ -60,10 +68,18 @@ class ConditionTestCase(unittest.TestCase):
         self.assertEqual(condition.compute({'field': '1'}), True)
         self.assertEqual(condition.compute({'field': 2}), False)
 
+    def test_repr(self):
+        condition = tagging.Condition(
+            field='field',
+            transformation_op=lambda x: str(x),
+            compare_op=lambda x, y: x == y,
+            value='1'
+        )
+        str(condition) # make sure it doesn't crash
 
 class ConjunctionTestCase(unittest.TestCase):
     def test_init_validation_success(self):
-        tagging.Conjunction([
+        conj = tagging.Conjunction([
             tagging.Condition(
                 field='field',
                 transformation_op=lambda x: str(x),
@@ -77,7 +93,7 @@ class ConjunctionTestCase(unittest.TestCase):
                 value='1'
             )
         ])
-        self.assertTrue(True)
+        self.assertTrue(len(conj.rules) > 0)
 
     def test_init_validation_fail(self):
         with self.assertRaises(tagging.NotARuleException):
@@ -116,7 +132,7 @@ class ConjunctionTestCase(unittest.TestCase):
 
 class DisjunctionTestCase(unittest.TestCase):
     def test_init_validation_success(self):
-        tagging.Disjunction([
+        disj = tagging.Disjunction([
             tagging.Condition(
                 field='field',
                 transformation_op=lambda x: str(x),
@@ -130,7 +146,7 @@ class DisjunctionTestCase(unittest.TestCase):
                 value='1'
             )
         ])
-        self.assertTrue(True)
+        self.assertTrue(len(disj.rules) > 0)
 
     def test_init_validation_fail(self):
         with self.assertRaises(tagging.NotARuleException):
@@ -165,6 +181,20 @@ class DisjunctionTestCase(unittest.TestCase):
         self.assertEqual(conjunction.compute({'int_field': 3}), False)
         self.assertEqual(conjunction.compute({'int_field': 4}), True)
         self.assertEqual(conjunction.compute({'int_field': 5}), True)
+
+    def test_from_json(self):
+        rule_dict = {
+            "field1.str": {"greater": "1"}
+        }
+        self.assertIsInstance(tagging.Disjunction.from_json(rule_dict), tagging.Disjunction)
+
+        with self.assertRaises(ValueError):
+            tagging.Disjunction.from_json('invalid_input')
+
+class TestTag(unittest.TestCase):
+    def test_from_json_string(self):
+        _json_str = """{"field1.str": {"greater": '1'}}"""
+        tagging.Tag.from_json_string('test_name', _json_str)
 
 
 class TestTagger(unittest.TestCase):
@@ -336,7 +366,6 @@ class TestTagMatchCondition(unittest.TestCase):
         self.assertEqual(match_condition.compute({'tags': 'another_tag,test_tag,another_tag'}), True)
         self.assertEqual(match_condition.compute({'tags': 'another_tag,another_tag,test_tag'}), True)
         self.assertEqual(match_condition.compute({'tags': 'not_test_tag'}), False)
-
 
 
 if __name__ == '__main__':

@@ -2,9 +2,7 @@ import unittest
 
 import pandas as pd
 
-from mecon import comparisons
-from mecon import transformations
-from mecon import tagging
+from mecon.tag_tools import comparisons, transformations, tagging
 
 
 class TestCondition(unittest.TestCase):
@@ -115,21 +113,33 @@ class TestConjunction(unittest.TestCase):
             field='field2',
             transformation_op_key="str",
             compare_op_key='greater',
-            value='3'
+            value=['3', '3.1']
         )
         cond4 = tagging.Condition.from_string_values(
             field='field2',
             transformation_op_key=None,
             compare_op_key='less',
-            value='4'
+            value=['4']
         )
-        conjunction = tagging.Conjunction([cond1, cond2, cond3, cond4])
+        cond5 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key=None,
+            compare_op_key='less',
+            value='5'
+        )
+        cond6 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key=None,
+            compare_op_key='less',
+            value=['6', '6.1']
+        )
+        conjunction = tagging.Conjunction([cond1, cond2, cond3, cond4, cond5, cond6])
         result_dict = conjunction.to_dict()
         self.assertDictEqual(result_dict,
                              {
                                  "field1.str": {"greater": "1"},
-                                 "field2.str": {"greater": ["2", "3"]},
-                                 "field2": {"less": "4"},
+                                 "field2.str": {"greater": ["2", "3", "3.1"]},
+                                 "field2": {"less": ["4", "5", "6", "6.1"]},
                              })
 
 
@@ -277,4 +287,3 @@ class TestTagging(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

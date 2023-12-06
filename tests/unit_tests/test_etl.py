@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pandas as pd
 
-from mecon.data import etl
+from mecon.import_data import etl
 
 
 class HSBCTransformerTest(unittest.TestCase):

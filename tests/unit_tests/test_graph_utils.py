@@ -1,6 +1,6 @@
 import unittest
 
-from mecon.blueprints.reports import graph_utils as gu
+from mecon.app.blueprints.reports import graph_utils as gu
 
 
 class TestGraphUtils(unittest.TestCase):

@@ -1,9 +1,14 @@
 import unittest
 
-from mecon import comparisons as cmp
+from tag_tools import comparisons as cmp
 
 
 class TestCompareOperator(unittest.TestCase):
+    def test_validate(self):
+        with self.assertRaises(cmp.CompareOperatorMustReturnBooleanResults):
+            test_cmp = cmp.CompareOperator('test', lambda a, b: a + b)
+            test_cmp(1, 2)
+
     def test_greater(self):
         co = cmp.CompareOperator.from_key('greater')
 

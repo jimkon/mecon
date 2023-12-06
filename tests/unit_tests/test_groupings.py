@@ -3,10 +3,9 @@ from datetime import datetime
 
 import pandas as pd
 
-from datafields import DataframeWrapper
-from groupings import LabelGroupingABC, TagGrouping
-from mecon import groupings as gp
-from mecon import datafields
+from data.datafields import DataframeWrapper
+from data.groupings import LabelGroupingABC, TagGrouping
+from data import groupings as gp, datafields
 
 
 class TestGrouping(unittest.TestCase):
