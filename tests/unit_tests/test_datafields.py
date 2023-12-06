@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from data import datafields
+from mecon import datafields
 
 
 # TODO:v3 merge with test_dataframe_wrappers maybe

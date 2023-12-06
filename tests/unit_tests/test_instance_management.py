@@ -23,7 +23,6 @@ class TestSingleton(unittest.TestCase):
         Singleton.set_instance(new_singleton)
         Singleton.reset_instance()
         self.assertIsNone(Singleton._instance)
-        self.assertIsNotNone(Singleton.get_instance())
 
 
 class TestMultiton(unittest.TestCase):

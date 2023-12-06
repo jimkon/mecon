@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pandas as pd
 
-from data import groupings
-from data.aggregators import CustomisedDefaultTransactionAggregator, CustomisedAmountTransactionAggregator
-from data.transactions import Transactions, TransactionDateFiller
+from mecon import groupings
+from mecon.aggregators import CustomisedDefaultTransactionAggregator, CustomisedAmountTransactionAggregator
+from mecon.transactions import Transactions, TransactionDateFiller
 
 
 class TestTransactionAggregator(unittest.TestCase):
