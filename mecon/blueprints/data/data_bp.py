@@ -6,9 +6,8 @@ from flask import Blueprint, redirect, url_for, render_template
 from json2html import json2html
 
 from mecon.app.datasets import WorkingDatasetDir
-from mecon.data.db_controller import reset_transactions, import_data_access, data_access
+from mecon.app.data_manager import DBDataManager
 from mecon.data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
-from mecon.transactions import Transactions
 from mecon.datafields import ZeroSizeTransactionsError
 from mecon.monitoring import logs
 
@@ -38,7 +37,8 @@ def _statement_files_info() -> Dict:
 
 def _db_statements_info():
     res = {}
-    hsbc_trans = import_data_access.hsbc_statements.get_transactions()
+    data_manager = DBDataManager()
+    hsbc_trans = data_manager.get_hsbc_statements()
     if hsbc_trans is not None:
         hsbc_trans['date'] = pd.to_datetime(hsbc_trans['date'], format="%d/%m/%Y")
         res['HSBC'] = {
@@ -48,7 +48,7 @@ def _db_statements_info():
             'max_date': hsbc_trans['date'].max(),
         }
 
-    monzo_trans = import_data_access.monzo_statements.get_transactions()
+    monzo_trans = data_manager.get_monzo_statements()
     if monzo_trans is not None:
         monzo_trans['date'] = pd.to_datetime(monzo_trans['date'], format="%d/%m/%Y")
         res['Monzo'] = {
@@ -58,7 +58,7 @@ def _db_statements_info():
             'max_date': monzo_trans['date'].max(),
         }
 
-    revo_trans = import_data_access.revo_statements.get_transactions()
+    revo_trans = data_manager.get_revo_statements()
     if revo_trans is not None:
         revo_trans['start_date'] = pd.to_datetime(revo_trans['start_date'], format="%Y-%m-%d %H:%M:%S")
         res['Revolut'] = {
@@ -73,7 +73,8 @@ def _db_statements_info():
 
 def _db_transactions_info():
     try:
-        transactions = Transactions(data_access.transactions.get_transactions())
+        data_manager = DBDataManager()
+        transactions = data_manager.get_transactions()
         res = {
             'rows': transactions.size()
         }
@@ -94,20 +95,22 @@ def data_menu():
 @data_bp.post('/reload')
 @logs.codeflow_log_wrapper('#api')
 def data_reload():
-    reset_transactions()
+    data_manager = DBDataManager()
+    data_manager.reset_statements()
     statements_info = _statement_files_info()
     for bank_name in statements_info:
         if bank_name == 'HSBC':
-            dfs = [HSBCStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
-            import_data_access.hsbc_statements.import_statement(dfs)
+            dfs = [HSBCStatementCSV.from_path(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
         elif bank_name == 'Monzo':
-            dfs = [MonzoStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
-            import_data_access.monzo_statements.import_statement(dfs)
+            dfs = [MonzoStatementCSV.from_path(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
         elif bank_name == 'Revolut':
-            dfs = [RevoStatementCSV(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
-            import_data_access.revo_statements.import_statement(dfs)
+            dfs = [RevoStatementCSV.from_path(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
+        else:
+            raise ValueError(f"Invalid bank name '{bank_name}' for statements")
 
-    data_access.transactions.load_transactions()
+        data_manager.add_statement(dfs, bank=bank_name)
+
+    data_manager.reset_transactions()
 
     return redirect(url_for('data.data_menu'))
 
@@ -130,4 +133,3 @@ def datafile_view(path):
     <h1>Table, shape: {df.shape}</h1>
     {table_html}
     """
-

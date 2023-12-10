@@ -1,14 +1,9 @@
-import numpy as np
 import pandas as pd
 
 
 class StatementCSV:
-    def __init__(self, path):
-        self._path = path
-        self._df = self.load()
-
-    def load(self):
-        return pd.read_csv(self._path)
+    def __init__(self, df):
+        self._df = df
 
     def validate(self):
         pass
@@ -21,10 +16,16 @@ class StatementCSV:
         df = self.transform()
         return df
 
+    @classmethod
+    def from_path(cls, path):
+        return cls(pd.read_csv(path))
+
 
 class HSBCStatementCSV(StatementCSV):
-    def load(self):
-        return pd.read_csv(self._path, names=['date', 'description', 'amount'], header=None)
+    @classmethod
+    def from_path(cls, path):
+        df = pd.read_csv(path, names=['date', 'description', 'amount'], header=None)
+        return cls(df)
 
 
 class MonzoStatementCSV(StatementCSV):

@@ -25,6 +25,10 @@ class AbstractRule(abc.ABC):
     def compute(self, element):
         pass
 
+    @abc.abstractmethod
+    def to_json(self) -> list | dict:
+        pass
+
 
 class Condition(AbstractRule):
     def __init__(self, field, transformation_op, compare_op, value):
@@ -66,6 +70,9 @@ class Condition(AbstractRule):
             field_and_transformations_key = self.field
         comparison_key = f"{self._compare_op.name}"
         return {field_and_transformations_key: {comparison_key: self.value}}
+
+    def to_json(self) -> list | dict:
+        return self.to_dict()
 
     @staticmethod
     def from_string_values(field, transformation_op_key, compare_op_key, value):
@@ -114,6 +121,10 @@ class Conjunction(AbstractRule):
                     merged_dict[key] = value
 
         return merged_dict
+
+    def to_json(self) -> list | dict:
+        return self.to_dict()
+
 
     @staticmethod
     def from_dict(_dict):
@@ -195,7 +206,7 @@ class Tag:
         return Tag(name, Disjunction.from_json(_json))
 
     @staticmethod
-    def from_json_string(name, _json_str):
+    def from_json_string(name, _json_str):  # TODO type hinting please
         _json_str = _json_str.replace("'", '"')
         return Tag.from_json(name, json.loads(_json_str))
 

@@ -8,7 +8,7 @@ from json2html import json2html
 from aggregators import CustomisedAmountTransactionAggregator
 from mecon import reports
 from mecon.blueprints.reports import graphs
-from mecon.data.db_controller import data_access
+from mecon.app.data_manager import DBDataManager
 from mecon.groupings import LabelGrouping
 from mecon.transactions import Transactions
 from mecon.utils import html_pages
@@ -62,8 +62,7 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
 
 @logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
-    data_df = data_access.transactions.get_transactions()
-    transactions = Transactions(data_df)
+    transactions = DBDataManager().get_transactions()
     return transactions
 
 
@@ -72,9 +71,12 @@ def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggr
                               fill_dates_before_groupagg=False,
                               fill_dates_after_groupagg=False) -> Transactions:
     tags = _split_tags(tags_str)
-    transactions = get_transactions() \
-        .containing_tag(tags) \
-        .select_date_range(start_date, end_date)
+    transactions = get_transactions().containing_tag(tags)
+
+    if transactions is None:
+        return None
+
+    transactions = transactions.select_date_range(start_date, end_date)
 
     if grouping_key != 'none':
         if fill_dates_before_groupagg:
@@ -108,14 +110,17 @@ def get_filter_values(tag_name, start_date=None, end_date=None, tags_str=None, g
         grouping = 'month' if grouping is None else grouping
         aggregation = 'sum' if aggregation is None else aggregation
         transactions = get_transactions().containing_tag(tag_name)
-        transactions_start_date, transactions_end_date = transactions.date_range()
+        if transactions is None:
+            transactions_start_date, transactions_end_date = None, None
+        else:
+            transactions_start_date, transactions_end_date = transactions.date_range()
         start_date = transactions_start_date if start_date is None else start_date
         end_date = transactions_end_date if end_date is None else end_date
 
         transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, aggregation)
 
     logging.info(
-        f"get_filter_values -> {transactions.size()=} {start_date=}, {end_date=}, {tags_str=}, {grouping=}, {aggregation=}")
+        f"get_filter_values -> {transactions.size() if transactions else 0=} {start_date=}, {end_date=}, {tags_str=}, {grouping=}, {aggregation=}")
     return transactions, start_date, end_date, tags_str, grouping, aggregation
 
 
@@ -207,30 +212,35 @@ def custom_graph(plot_type, start_date, end_date, tags_str, grouping, aggregatio
 def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
 
-    data_df = transactions.dataframe()
-    table_html = transactions.to_html()
-    transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
+    if transactions is not None:
+        data_df = transactions.dataframe()
+        table_html = transactions.to_html()
+        transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
 
-    html_tabs = html_pages.TabsHTML()
+        html_tabs = html_pages.TabsHTML()
 
-    for _plot_type, _route in [
-        ('amount_freq', 'reports.amount_freq_timeline_graph'),
-        ('balance', 'reports.balance_graph'),
-        ('histogram', 'reports.histogram_graph'),
-    ]:
-        _graph = fetch_graph_html(url_for(_route,
-                                          start_date=start_date,
-                                          end_date=end_date,
-                                          tags_str=tags_str,
-                                          grouping=grouping))
-        _href = produce_href_for_custom_graph(plot_type=_plot_type,
+        for _plot_type, _route in [
+            ('amount_freq', 'reports.amount_freq_timeline_graph'),
+            ('balance', 'reports.balance_graph'),
+            ('histogram', 'reports.histogram_graph'),
+        ]:
+            _graph = fetch_graph_html(url_for(_route,
                                               start_date=start_date,
                                               end_date=end_date,
                                               tags_str=tags_str,
-                                              grouping_key=grouping,
-                                              aggregation_key=aggregation
-                                              )
-        html_tabs.add_tab(_href, _graph)
+                                              grouping=grouping))
+            _href = produce_href_for_custom_graph(plot_type=_plot_type,
+                                                  start_date=start_date,
+                                                  end_date=end_date,
+                                                  tags_str=tags_str,
+                                                  grouping_key=grouping,
+                                                  aggregation_key=aggregation
+                                                  )
+            html_tabs.add_tab(_href, _graph)
 
-    graph_html = html_tabs.html()
+        graph_html = html_tabs.html()
+    else:
+        table_html = "<h4>'No transaction data left after filtering'</h4>"
+        transactions_stats_json = "<h4>'No stats'</h4>"
+        graph_html = "<h4>'No data to plot'</h4>"
     return render_template('tag_info.html', **locals(), **globals())
