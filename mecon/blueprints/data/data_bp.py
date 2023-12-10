@@ -11,7 +11,7 @@ from mecon.data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoState
 from mecon.datafields import ZeroSizeTransactionsError
 from mecon.monitoring import logs
 
-data_bp = Blueprint('data', __name__, template_folder='templates')  # https://exploreflask.com/en/latest/blueprints.html
+data_bp = Blueprint('data', __name__, template_folder='templates')
 
 
 def _statement_files_info() -> Dict:
