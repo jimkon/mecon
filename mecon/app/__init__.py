@@ -12,10 +12,11 @@ except FileNotFoundError as e:
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.db_extension import db
 from mecon.app.views import main_bp
+from mecon.app.data_manager import DBDataManager
 from mecon.blueprints.data import data_bp
-from mecon.blueprints.reports import reports_bp
-from mecon.blueprints.tags import tags_bp
-from mecon.blueprints.monitoring import monitoring_bp
+# from mecon.blueprints.reports import reports_bp
+# from mecon.blueprints.tags import tags_bp
+# from mecon.blueprints.monitoring import monitoring_bp
 
 logs.print_logs_info()
 logging.info('Starting app...')
@@ -30,12 +31,13 @@ db.init_app(app)
 app.app_context().push()
 db.create_all()
 
+DBDataManager()
 
 app.register_blueprint(main_bp)
 app.register_blueprint(data_bp.data_bp, url_prefix='/data')
-app.register_blueprint(tags_bp.tags_bp, url_prefix='/tags')
-app.register_blueprint(reports_bp.reports_bp, url_prefix='/reports')
-app.register_blueprint(monitoring_bp.monitoring_bp, url_prefix='/monitoring')
+# app.register_blueprint(tags_bp.tags_bp, url_prefix='/tags')
+# app.register_blueprint(reports_bp.reports_bp, url_prefix='/reports')
+# app.register_blueprint(monitoring_bp.monitoring_bp, url_prefix='/monitoring')
 
 logging.info('App initialised!')
 
