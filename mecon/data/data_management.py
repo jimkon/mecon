@@ -64,15 +64,22 @@ class DataManager:
         self._monzo_statements.delete_all()
         self._revo_statements.delete_all()
 
-    def get_tag(self, tag_name) -> Tag:
-        return Tag.from_json_string(tag_name, self._tags.get_tag(tag_name))
-        pass
+    def get_tag(self, tag_name) -> Tag | None:
+        tag_dict = self._tags.get_tag(tag_name)
 
-    def update_tag(self, tag: Tag, delete=False, update_tags=True):
-        if delete:
-            self._tags.delete_tag(tag.name)
-        else:
-            self._tags.set_tag(tag.name, tag.rule.to_json())
+        if tag_dict is None:
+            return None
+
+        return Tag.from_json_string(tag_name, tag_dict['conditions_json'])
+
+    def update_tag(self, tag: Tag, update_tags=True):
+        self._tags.set_tag(tag.name, tag.rule.to_json())
+
+        if update_tags:
+            self.reset_tags()
+
+    def delete_tag(self, tag_name: str, update_tags=True):
+        self._tags.delete_tag(tag_name)
 
         if update_tags:
             self.reset_tags()
