@@ -4,7 +4,7 @@ import tempfile
 import shutil
 from pathlib import Path
 
-from mecon.import_data import file_system as fs
+from mecon.data import file_system as fs
 
 
 def create_temporary_folder():
