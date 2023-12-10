@@ -20,7 +20,7 @@ class ZeroSizeTransactionsError(Exception):
 
 class DataframeWrapper:
     def __init__(self, df: pd.DataFrame):
-        if df is None:
+        if df is None or len(df) == 0:
             raise ZeroSizeTransactionsError
         self._df = df
 
@@ -41,10 +41,10 @@ class DataframeWrapper:
         return self.factory(self.dataframe()[index])
 
     @logs.codeflow_log_wrapper('#data#transactions#tags')
-    def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
+    def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper | None:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_rule(df, rule)
-        return self.factory(new_df)
+        return self.factory(new_df) if len(new_df) > 0 else None
 
     @logs.codeflow_log_wrapper('#data#transactions#tags')
     def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
@@ -230,7 +230,7 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
         self._validate_datetime_order()
 
     def _validate_datetime_order(self):
-        if not self.dataframe().datetime.is_monotonic_increasing:
+        if not self.datetime.is_monotonic_increasing:
             raise UnorderedDatedDataframeWrapper
 
     def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:

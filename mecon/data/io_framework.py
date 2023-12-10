@@ -25,7 +25,7 @@ class TagsIOABC(abc.ABC):
     """
 
     @abc.abstractmethod
-    def get_tag(self, name: str) -> list[str, Any] | None:
+    def get_tag(self, name: str) -> list[str, Any] | None:  # TODO is the correct typehint this maybe? -> List[Dict] | Dict]
         pass
 
     @abc.abstractmethod
