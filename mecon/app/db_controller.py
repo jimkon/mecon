@@ -5,16 +5,15 @@ import pandas as pd
 
 from mecon.app import models
 from mecon.app.db_extension import db
-from mecon.import_data import etl
-from mecon.import_data import io_framework as io
-from mecon.import_data.io_framework import ImportDataAccess, DataAccess
+from mecon.data import etl
+from mecon.data import io_framework
 from mecon.monitoring import logs
 from mecon.utils import currencies
 
 
-class TagsDBAccessor(io.TagsIOABC):
+class TagsDBAccessor(io_framework.TagsIOABC):
     @logs.codeflow_log_wrapper('#db#tags')
-    def get_tag(self, name) -> list[str, Any] | None:
+    def get_tag(self, name: str) -> list[str, Any] | None:
         tag = models.TagsDBTable.query.filter_by(name=name).first()
 
         if tag is None:
@@ -55,7 +54,7 @@ class TagsDBAccessor(io.TagsIOABC):
         return tags
 
 
-class HSBCTransactionsDBAccessor(io.HSBCTransactionsIOABC):
+class HSBCTransactionsDBAccessor(io_framework.HSBCTransactionsIOABC):
     def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
         merged_df.to_sql(models.HSBCTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
@@ -68,9 +67,10 @@ class HSBCTransactionsDBAccessor(io.HSBCTransactionsIOABC):
 
     def delete_all(self) -> None:
         db.session.query(models.HSBCTransactionsDBTable).delete()
+        db.session.commit()
 
 
-class MonzoTransactionsDBAccessor(io.MonzoTransactionsIOABC):
+class MonzoTransactionsDBAccessor(io_framework.MonzoTransactionsIOABC):
     def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
         merged_df.to_sql(models.MonzoTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
@@ -82,9 +82,10 @@ class MonzoTransactionsDBAccessor(io.MonzoTransactionsIOABC):
 
     def delete_all(self) -> None:
         db.session.query(models.MonzoTransactionsDBTable).delete()
+        db.session.commit()
 
 
-class RevoTransactionsDBAccessor(io.RevoTransactionsIOABC):
+class RevoTransactionsDBAccessor(io_framework.RevoTransactionsIOABC):
     def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
         merged_df.to_sql(models.RevoTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
@@ -96,6 +97,7 @@ class RevoTransactionsDBAccessor(io.RevoTransactionsIOABC):
 
     def delete_all(self) -> None:
         db.session.query(models.RevoTransactionsDBTable).delete()
+        db.session.commit()
 
 
 class InvalidTransactionsDataframeColumnsException(Exception):
@@ -128,7 +130,7 @@ class InvalidTransactionsDataframeDataValueException(Exception):
         super().__init__(f"Invalid value range: {self.value_errors}")
 
 
-class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
+class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
     @staticmethod
     def _transaction_df_validation(df):
         TransactionsDBAccessor._transaction_df_columns_validation(df)
@@ -172,6 +174,19 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         if len(value_errors):
             raise InvalidTransactionsDataframeDataValueException(value_errors)
 
+    @staticmethod
+    def _handle_duplicates(df: pd.DataFrame, cols_to_check=None):
+        cols_to_check = df.columns if cols_to_check is None else cols_to_check
+
+        dups = df.duplicated(subset=cols_to_check)
+
+        logging.warning(f"Duplicates found: {dups.sum()}")
+
+        # if dups.sum() > 0: TODO handle duplicates
+        #     logging.warning(f"Duplicate rows found with IDs: {df[dups]}")
+        #     df.drop_duplicates(subset=cols_to_check, inplace=True)
+        #     raise ValueError(f"Error due to duplicate rows in df.")
+
     @logs.codeflow_log_wrapper('#db#data#io')
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
@@ -179,11 +194,12 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         return transactions_df if len(transactions_df) > 0 else None
 
     @logs.codeflow_log_wrapper('#db#data#io')
-    def delete_all(self):
+    def delete_all(self) -> None:
         db.session.query(models.TransactionsDBTable).delete()
+        db.session.commit()
 
     @logs.codeflow_log_wrapper('#db#data#io')
-    def load_transactions(self):
+    def load_transactions(self) -> None:
         df_hsbc = HSBCTransactionsDBAccessor().get_transactions()
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
         df_revo = RevoTransactionsDBAccessor().get_transactions()
@@ -194,20 +210,17 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo.copy())
         df_revo_transformed = etl.RevoTransformer(currency_converter).transform(df_revo.copy())
 
-        dup_cols = ['datetime', 'amount', 'currency', 'amount_cur']  # , 'description']
-        logging.info(f"Duplicates: HSBC->{df_hsbc_transformed.duplicated(subset=dup_cols).sum()} "
-                     f"Monzo->{df_monzo_transformed.duplicated(subset=dup_cols).sum()} "
-                     f"Revolut->{df_revo_transformed.duplicated(subset=dup_cols).sum()}")
+        logging.info(f"Checking HSBC transactions for duplicates...")
+        self._handle_duplicates(df_hsbc_transformed,
+                                ['datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
-        # if df_hsbc_transformed.duplicated(subset=dup_cols).sum() > 0 or \
-        #         df_monzo_transformed.duplicated(subset=dup_cols).sum() or \
-        #         df_revo_transformed.duplicated(subset=dup_cols).sum():
-        #     raise NotImplementedError("Duplicates are not managed in v2.")
-        #     # TODO:v3 drop_duplicates reintroduce
-        #     # TODO:v3 test drop_duplicates
-        #     # df_hsbc_transformed = df_hsbc_transformed.drop_duplicates(subset=dup_cols)
-        #     # df_monzo_transformed = df_monzo_transformed.drop_duplicates(subset=dup_cols)
-        #     # df_revo_transformed = df_revo_transformed.drop_duplicates(subset=dup_cols)
+        logging.info(f"Checking Monzo transactions for duplicates...")
+        self._handle_duplicates(df_monzo_transformed,
+                                ['datetime', 'amount', 'currency', 'amount_cur', 'description'])
+
+        logging.info(f"Checking Revolut transactions for duplicates...")
+        self._handle_duplicates(df_revo_transformed,
+                                ['datetime', 'amount', 'currency', 'amount_cur'])  # TODO description is not considered
 
         self._transaction_df_validation(df_hsbc_transformed)
         self._transaction_df_validation(df_monzo_transformed)
@@ -220,7 +233,7 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         df_merged.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
 
     @logs.codeflow_log_wrapper('#db#tags')
-    def update_tags(self, df_tags):
+    def update_tags(self, df_tags) -> None:
         # transaction_ids = df_tags['id'].to_list()
         update_values = df_tags.set_index('id')['tags'].to_dict()
 
@@ -233,28 +246,3 @@ class TransactionsDBAccessor(io.CombinedTransactionsIOABC):
         #     synchronize_session=False
         # )
         db.session.commit()
-
-
-import_data_access = ImportDataAccess(HSBCTransactionsDBAccessor(),
-                                      MonzoTransactionsDBAccessor(),
-                                      RevoTransactionsDBAccessor())
-data_access = DataAccess(TransactionsDBAccessor(),
-                         TagsDBAccessor())
-
-
-def reset_transactions():
-    models.HSBCTransactionsDBTable.__table__.drop(db.engine)
-    models.RevoTransactionsDBTable.__table__.drop(db.engine)
-    models.MonzoTransactionsDBTable.__table__.drop(db.engine)
-    models.TransactionsDBTable.__table__.drop(db.engine)
-    db.create_all()
-
-
-def reset_tags():
-    models.TagsDBTable.__table__.drop(db.engine)
-    db.create_all()
-
-
-def reset_db():
-    reset_transactions()
-    reset_tags()

@@ -3,7 +3,8 @@ import json
 
 import pandas as pd
 
-from mecon.tag_tools import comparisons, transformations
+from mecon import comparisons
+from mecon import transformations
 from mecon.monitoring import logs
 
 
@@ -24,6 +25,10 @@ class AbstractRule(abc.ABC):
     def compute(self, element):
         pass
 
+    @abc.abstractmethod
+    def to_json(self) -> list | dict:
+        pass
+
 
 class Condition(AbstractRule):
     def __init__(self, field, transformation_op, compare_op, value):
@@ -32,11 +37,11 @@ class Condition(AbstractRule):
         self._field = field
 
         if transformation_op is not None and not hasattr(transformation_op, '__call__'):
-            raise NotACallableException(f'Transformation operator has to be a callable object.')
+            raise NotACallableException('Transformation operator has to be a callable object.')
         self._transformation_op = transformation_op if transformation_op is not None else transformations.NO_TRANSFORMATION
 
         if not hasattr(compare_op, '__call__'):
-            raise NotACallableException(f'Compare operator has to be a callable object.')
+            raise NotACallableException('Compare operator has to be a callable object.')
         self._compare_op = compare_op
 
         self._value = value
@@ -65,6 +70,9 @@ class Condition(AbstractRule):
             field_and_transformations_key = self.field
         comparison_key = f"{self._compare_op.name}"
         return {field_and_transformations_key: {comparison_key: self.value}}
+
+    def to_json(self) -> list | dict:
+        return self.to_dict()
 
     @staticmethod
     def from_string_values(field, transformation_op_key, compare_op_key, value):
@@ -96,23 +104,27 @@ class Conjunction(AbstractRule):
         merged_dict = {}
 
         for d in dicts_list:
-            for trans_field, comp_dict in d.items():
-                if trans_field in merged_dict:
-                    for comp_op, comp_value in comp_dict.items():
-                        if isinstance(merged_dict[trans_field].get(comp_op), list):
-                            if isinstance(comp_value, list):
-                                merged_dict[trans_field][comp_op].extend(comp_value)
+            for key, value in d.items():
+                if key in merged_dict:
+                    for merge_key, merge_value in value.items():
+                        if isinstance(merged_dict[key].get(merge_key), list):
+                            if isinstance(merge_value, list):
+                                merged_dict[key][merge_key].extend(merge_value)
                             else:
-                                merged_dict[trans_field][comp_op].append(comp_value)
+                                merged_dict[key][merge_key].append(merge_value)
                         else:
-                            if isinstance(comp_value, list):
-                                merged_dict[trans_field][comp_op] = [merged_dict[trans_field][comp_op]] + comp_value
+                            if isinstance(merge_value, list):
+                                merged_dict[key][merge_key] = [merged_dict[key][merge_key]] + merge_value
                             else:
-                                merged_dict[trans_field][comp_op] = [merged_dict[trans_field][comp_op], comp_value]
+                                merged_dict[key][merge_key] = [merged_dict[key][merge_key], merge_value]
                 else:
-                    merged_dict[trans_field] = comp_dict
+                    merged_dict[key] = value
 
         return merged_dict
+
+    def to_json(self) -> list | dict:
+        return self.to_dict()
+
 
     @staticmethod
     def from_dict(_dict):
@@ -194,7 +206,7 @@ class Tag:
         return Tag(name, Disjunction.from_json(_json))
 
     @staticmethod
-    def from_json_string(name, _json_str):
+    def from_json_string(name, _json_str):  # TODO type hinting please
         _json_str = _json_str.replace("'", '"')
         return Tag.from_json(name, json.loads(_json_str))
 

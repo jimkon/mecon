@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Mecon App</title>
-    <link rel="stylesheet" type= "text/css" href="{{ url_for('static', filename='styles.css') }}">  {# TODO:v2 not visible #}
+    <link rel="stylesheet" type= "text/css" href="{{ url_for('static', filename='styles.css') }}">  {# TODO:v2 not visible, # https://exploreflask.com/en/latest/blueprints.html #}
 {#    <link rel="stylesheet" href={{ url_for('static', filename='styles.css') }}>#}
 </head>
 <body>
+
 <a href={{ url_for('main.home') }}>Home</a>
 <a href={{ url_for('reports.reports_menu') }}>Reports</a>
 <a href={{ url_for('tags.tags_menu') }}>Tags</a>
 <a href={{ url_for('data.data_menu') }}>Data</a>
 <a href={{ url_for('monitoring.home') }}>Monitoring</a>
+
 {% block content %}
     <h1>Welcome to {{ title }}!</h1>
 {% endblock content %}
