@@ -5,12 +5,12 @@ import requests
 from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
-from aggregators import CustomisedAmountTransactionAggregator
-from mecon import reports
-from mecon.blueprints.reports import graphs
+from mecon.data.aggregators import CustomisedAmountTransactionAggregator
+from mecon.data import reports
+from mecon.app.blueprints.reports import graphs
 from mecon.app.data_manager import DBDataManager
-from mecon.groupings import LabelGrouping
-from mecon.transactions import Transactions
+from mecon.data.groupings import LabelGrouping
+from mecon.data.transactions import Transactions
 from mecon.utils import html_pages
 from mecon.monitoring import logs
 

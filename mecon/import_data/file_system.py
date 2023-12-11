@@ -27,6 +27,10 @@ class Dataset:
         self._statements.mkdir(parents=True, exist_ok=True)
 
     @property
+    def name(self):
+        return self._path.name
+
+    @property
     def db(self):
         return self._sqlite / 'sqlite3'
 

@@ -7,15 +7,16 @@ from json2html import json2html
 
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.data_manager import DBDataManager
-from mecon.data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
-from mecon.datafields import ZeroSizeTransactionsError
+from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
+from mecon.data.datafields import ZeroSizeTransactionsError
 from mecon.monitoring import logs
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 
 
 def _statement_files_info() -> Dict:
-    current_dataset = WorkingDatasetDir().get_dataset('v2')
+    dataset_name = 'v2'
+    current_dataset = WorkingDatasetDir().get_dataset(dataset_name)
     dirs_path = current_dataset.statements
     transformed_dict = current_dataset.statement_files().copy()
 
@@ -86,6 +87,7 @@ def _db_transactions_info():
 @data_bp.route('/menu')
 @logs.codeflow_log_wrapper('#api')
 def data_menu():
+    dataset_name = 'v2'
     db_transactions_info = _db_transactions_info()
     db_statements_info = json2html.convert(json=_db_statements_info())
     files_info_dict = _statement_files_info()

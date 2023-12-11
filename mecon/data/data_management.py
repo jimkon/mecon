@@ -1,13 +1,11 @@
 import logging
-import pathlib
 from typing import List
 
 import pandas as pd
 
-from mecon.data import io_framework
-from mecon.data import statements
-from mecon.tagging import Tag
-from mecon.transactions import Transactions
+from mecon.data.transactions import Transactions
+from mecon.import_data import io_framework
+from mecon.tag_tools.tagging import Tag
 
 
 class DataManagerStreamsCannotChange(Exception):

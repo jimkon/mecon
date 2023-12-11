@@ -1,14 +1,12 @@
 import json
-import logging
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
-import tagging
-from mecon import comparisons, transformations
 from mecon.app.data_manager import DBDataManager
-from mecon.tagging import Tag
-from mecon.transactions import Transactions
+from mecon.data.transactions import Transactions
 from mecon.monitoring import logs
+from mecon.tag_tools import tagging, comparisons, transformations
+from mecon.tag_tools.tagging import Tag
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 

@@ -5,28 +5,14 @@ from mecon.import_data.statements import StatementCSV, HSBCStatementCSV, MonzoSt
 
 
 class TestStatementCSV(unittest.TestCase):
-    def setUp(self):
-        self.path = 'test.csv'
-
-    def test_load(self):
-        # Mock the read_csv method of pd
-        with patch('pandas.read_csv', return_value=pd.DataFrame({'col1': [1, 2, 3]})) as mock_read_csv:
-            statement = StatementCSV(self.path)
-            statement_df = statement.load()
-
-            mock_read_csv.assert_called_with(self.path)
-            self.assertTrue(statement_df.equals(pd.DataFrame({'col1': [1, 2, 3]})))
-
     def test_dataframe(self):
-        # Mock the load and transform methods
-        with patch('pandas.read_csv', return_value=pd.DataFrame({'col1': [1, 2, 3]})) as mock_read_csv:
-            statement = StatementCSV(self.path)
-            statement.transform = Mock(return_value=pd.DataFrame({'col2': [4, 5, 6]}))
+        statement = StatementCSV(None)
+        statement.transform = Mock(return_value=pd.DataFrame({'col2': [4, 5, 6]}))
 
-            df = statement.dataframe()
+        df = statement.dataframe()
 
-            statement.transform.assert_called_once()
-            self.assertTrue(df.equals(pd.DataFrame({'col2': [4, 5, 6]})))
+        statement.transform.assert_called_once()
+        self.assertTrue(df.equals(pd.DataFrame({'col2': [4, 5, 6]})))
 
 
 class TestHSBCStatementCSV(unittest.TestCase):
@@ -34,7 +20,7 @@ class TestHSBCStatementCSV(unittest.TestCase):
     def test_load(self):
         # Mock the read_csv method of pd
         with patch('pandas.read_csv') as mock_read_csv:
-            statement = HSBCStatementCSV('example path')
+            statement = HSBCStatementCSV.from_path('example path')
 
             mock_read_csv.assert_called_with('example path', names=['date', 'description', 'amount'], header=None)
 
@@ -63,33 +49,32 @@ class TestMonzoStatementCSV(unittest.TestCase):
             "Money In": ["money_in"] * 3,
         })
 
-        with patch('pandas.read_csv', return_value=statement_df) as mock_read_csv:
-            statement = MonzoStatementCSV('example path')
-            transformed_df = statement.transform()
+        statement = MonzoStatementCSV(statement_df)
+        transformed_df = statement.transform()
 
-            mapping = {
-                # "Transaction ID": "id",  removed
-                "Date": "date",
-                "Time": "time",
-                "Type": "transaction_type",
-                "Name": "name",
-                "Emoji": "emoji",
-                "Category": "category",
-                "Amount": "amount",
-                "Currency": "currency",
-                "Local amount": "local_amount",
-                "Local currency": "local_currency",
-                "Notes and #tags": "notes_tags",
-                "Address": "address",
-                "Receipt": "receipt",
-                "Description": "description",
-                "Category split": "category_split",
-                "Money Out": "money_out",
-                "Money In": "money_in",
-            }
-            for value in mapping.values():
-                # Implement assertions for the transformed DataFrame
-                self.assertIn(value, transformed_df.columns)
+        mapping = {
+            # "Transaction ID": "id",  removed
+            "Date": "date",
+            "Time": "time",
+            "Type": "transaction_type",
+            "Name": "name",
+            "Emoji": "emoji",
+            "Category": "category",
+            "Amount": "amount",
+            "Currency": "currency",
+            "Local amount": "local_amount",
+            "Local currency": "local_currency",
+            "Notes and #tags": "notes_tags",
+            "Address": "address",
+            "Receipt": "receipt",
+            "Description": "description",
+            "Category split": "category_split",
+            "Money Out": "money_out",
+            "Money In": "money_in",
+        }
+        for value in mapping.values():
+            # Implement assertions for the transformed DataFrame
+            self.assertIn(value, transformed_df.columns)
         # ...
 
 
@@ -111,25 +96,24 @@ class TestRevoStatementCSV(unittest.TestCase):
             "Balance": ["balance"],
         })
 
-        with patch('pandas.read_csv', return_value=statement_df) as mock_read_csv:
-            statement = RevoStatementCSV('example path')
-            transformed_df = statement.transform()
+        statement = RevoStatementCSV(statement_df)
+        transformed_df = statement.transform()
 
-            mapping = {
-                "Type": "type",
-                "Product": "product",
-                "Started Date": "start_date",
-                "Completed Date": "completed_date",
-                "Description": "description",
-                "Amount": "amount",
-                "Fee": "fee",
-                "Currency": "currency",
-                "State": "state",
-                "Balance": "balance",
-            }
-            for value in mapping.values():
-                # Implement assertions for the transformed DataFrame
-                self.assertIn(value, transformed_df.columns)
+        mapping = {
+            "Type": "type",
+            "Product": "product",
+            "Started Date": "start_date",
+            "Completed Date": "completed_date",
+            "Description": "description",
+            "Amount": "amount",
+            "Fee": "fee",
+            "Currency": "currency",
+            "State": "state",
+            "Balance": "balance",
+        }
+        for value in mapping.values():
+            # Implement assertions for the transformed DataFrame
+            self.assertIn(value, transformed_df.columns)
 
 
 if __name__ == '__main__':

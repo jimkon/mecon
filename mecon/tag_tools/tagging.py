@@ -3,8 +3,8 @@ import json
 
 import pandas as pd
 
-from mecon import comparisons
-from mecon import transformations
+from mecon.tag_tools import comparisons
+from mecon.tag_tools import transformations
 from mecon.monitoring import logs
 
 
