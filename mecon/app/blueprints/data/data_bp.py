@@ -13,10 +13,11 @@ from mecon.monitoring import logs
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 
+_data_manager = DBDataManager()
+
 
 def _statement_files_info() -> Dict:
-    dataset_name = 'v2'
-    current_dataset = WorkingDatasetDir().get_dataset(dataset_name)
+    current_dataset = WorkingDatasetDir().working_dataset
     dirs_path = current_dataset.statements
     transformed_dict = current_dataset.statement_files().copy()
 
@@ -38,8 +39,7 @@ def _statement_files_info() -> Dict:
 
 def _db_statements_info():
     res = {}
-    data_manager = DBDataManager()
-    hsbc_trans = data_manager.get_hsbc_statements()
+    hsbc_trans = _data_manager.get_hsbc_statements()
     if hsbc_trans is not None:
         hsbc_trans['date'] = pd.to_datetime(hsbc_trans['date'], format="%d/%m/%Y")
         res['HSBC'] = {
@@ -49,7 +49,7 @@ def _db_statements_info():
             'max_date': hsbc_trans['date'].max(),
         }
 
-    monzo_trans = data_manager.get_monzo_statements()
+    monzo_trans = _data_manager.get_monzo_statements()
     if monzo_trans is not None:
         monzo_trans['date'] = pd.to_datetime(monzo_trans['date'], format="%d/%m/%Y")
         res['Monzo'] = {
@@ -59,7 +59,7 @@ def _db_statements_info():
             'max_date': monzo_trans['date'].max(),
         }
 
-    revo_trans = data_manager.get_revo_statements()
+    revo_trans = _data_manager.get_revo_statements()
     if revo_trans is not None:
         revo_trans['start_date'] = pd.to_datetime(revo_trans['start_date'], format="%Y-%m-%d %H:%M:%S")
         res['Revolut'] = {
@@ -87,7 +87,7 @@ def _db_transactions_info():
 @data_bp.route('/menu')
 @logs.codeflow_log_wrapper('#api')
 def data_menu():
-    dataset_name = 'v2'
+    dataset_name = WorkingDatasetDir().working_dataset.name
     db_transactions_info = _db_transactions_info()
     db_statements_info = json2html.convert(json=_db_statements_info())
     files_info_dict = _statement_files_info()

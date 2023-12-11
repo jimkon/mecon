@@ -16,6 +16,8 @@ from mecon.monitoring import logs
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')
 
+_data_manager = DBDataManager()
+
 
 def _split_tags(input_string):
     # return input_string.replace(' ', '').split(',')
@@ -62,7 +64,7 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
 
 @logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
-    transactions = DBDataManager().get_transactions()
+    transactions = _data_manager.get_transactions()
     return transactions
 
 
