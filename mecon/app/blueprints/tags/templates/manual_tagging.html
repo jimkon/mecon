@@ -60,16 +60,14 @@
         <button type="submit" name="reset">Reset</button>
 
         <h2>Transcations</h2>
-        {% if order_by == 'newest' %}
-            <h3>Order: <a href={{ url_for('tags.manual_tagging', order_by='least tagged') }}>
-                <button type="button">Least tagged rows first</button>
-            </a></h3>
-        {% elif order_by == 'least tagged' %}
-            <h3>Order: <a href={{ url_for('tags.manual_tagging', order_by='newest') }}>
-                <button type="button">Newest rows first</button>
-            </a></h3>
-        {% else %}
-        {% endif %}
+        <h3>Order:
+        <a href={{ url_for('tags.manual_tagging', order_by='least tagged') }}>
+            <button type="button" {% if order_by == 'least tagged' %}disabled{% endif %}>Least tagged rows first</button>
+        </a>
+        <a href={{ url_for('tags.manual_tagging', order_by='newest') }}>
+            <button type="button" {% if order_by == 'newest' %}disabled{% endif %}>Newest rows first</button>
+        </a>
+        </h3>
         {{ table_html | safe }}
 
     </form>
