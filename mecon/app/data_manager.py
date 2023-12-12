@@ -1,12 +1,6 @@
-import pathlib
-from typing import List
-
-import pandas as pd
-
-from mecon.data import statements
+from mecon.app import db_controller
 from mecon.data.data_management import DataManager
 from mecon.utils.instance_management import Singleton
-from mecon.data import db_controller
 
 
 class DBDataManager(DataManager, Singleton):
@@ -36,4 +30,3 @@ class DBDataManager(DataManager, Singleton):
     #
     #     filename = pathlib.Path(bank) / f"statement_{start_date}_to_{end_date}_rows{len(df_transformed)}.csv"
     #     df_transformed.to_csv(filename)
-

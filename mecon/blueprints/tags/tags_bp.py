@@ -1,14 +1,12 @@
 import json
-import logging
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
-import tagging
-from mecon import comparisons, transformations
 from mecon.app.data_manager import DBDataManager
-from mecon.tagging import Tag
-from mecon.transactions import Transactions
+from mecon.data.transactions import Transactions
 from mecon.monitoring import logs
+from mecon.tag_tools import tagging, comparisons, transformations
+from mecon.tag_tools.tagging import Tag
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
@@ -191,3 +189,56 @@ def tag_edit(tag_name):
     else:
         tag_json_str = json.dumps(_data_manager.get_tag(tag_name).rule.to_json())
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
+
+@tags_bp.route("/manual_tagging/order=<order_by>", methods=['POST', 'GET'])
+def manual_tagging(order_by):
+    def tags_form(row):
+        id = row[0]
+        tags = row[6].split(',')
+        tag_checkboxes = """
+        <div class="dropdown">
+        <button class="dropbtn">Select Tags</button>
+        <div class="dropdown-content">
+        """
+        for tag in all_tags:
+            checkbox = f"""
+            <label >{tag}<input type="checkbox" name="{tag}_for_{id}" {'checked disabled' if tag in tags else ''}></label>
+            """
+            tag_checkboxes += checkbox
+        tag_checkboxes = tag_checkboxes + "</div></div>"
+        tags_container = """
+        <div class="labelContainer">"""
+        for tag in tags:
+            tags_container += f"""<label class="tagLabel">{tag}</label>"""
+
+        tags_container += """</div>"""
+
+        result = tag_checkboxes + tags_container
+        return result.replace('\n', '')
+
+    if request.method == 'POST':
+        if "save_changes" in request.form:
+            tag_events = [{'tag': name.split('_for_')[0], 'id': name.split('_for_')[1]}
+                          for name, action
+                          in request.form.to_dict().items()
+                          if action == 'on']
+            # TODO Send new tag events to data manager
+        elif "reset" in request.form:
+            pass
+
+    transactions = get_transactions()
+    all_tags = list(transactions.all_tags().keys())
+    df = transactions.dataframe()
+
+    if order_by == 'newest':
+        df = df.sort_values(['datetime'], ascending=False)
+    elif order_by == 'least tagged':
+        df['n_tags'] = df['tags'].apply(lambda s: len(s.split(',')))
+        df = df.sort_values(['n_tags'], ascending=True)
+        del df['n_tags']
+
+    df['Edit'] = df.apply(tags_form, axis=1)
+    df = df[[df.columns[-1]] + list(df.columns[:-1])]
+    table_html = df.to_html(render_links=True, escape=False)
+
+    return render_template('manual_tagging.html', **locals())

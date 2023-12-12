@@ -11,6 +11,7 @@ except FileNotFoundError as e:
 
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.db_extension import db
+from mecon.app.data_manager import DBDataManager
 from mecon.app.views import main_bp
 from mecon.app.data_manager import DBDataManager
 from mecon.blueprints.data import data_bp
@@ -21,7 +22,9 @@ from mecon.blueprints.monitoring import monitoring_bp
 logs.print_logs_info()
 logging.info('Starting app...')
 
-current_dataset = WorkingDatasetDir().get_dataset('v2')
+current_dataset_dir = WorkingDatasetDir()
+current_dataset_dir.set_working_dataset('v2')
+current_dataset = current_dataset_dir.working_dataset
 
 app = Flask(__name__)
 app.debug = True

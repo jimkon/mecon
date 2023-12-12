@@ -5,16 +5,18 @@ import requests
 from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
-from aggregators import CustomisedAmountTransactionAggregator
-from mecon import reports
-from mecon.blueprints.reports import graphs
+from mecon.data.aggregators import CustomisedAmountTransactionAggregator
+from mecon.data import reports
+from mecon.app.blueprints.reports import graphs
 from mecon.app.data_manager import DBDataManager
-from mecon.groupings import LabelGrouping
-from mecon.transactions import Transactions
+from mecon.data.groupings import LabelGrouping
+from mecon.data.transactions import Transactions
 from mecon.utils import html_pages
 from mecon.monitoring import logs
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')
+
+_data_manager = DBDataManager()
 
 
 def _split_tags(input_string):
@@ -62,7 +64,7 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
 
 @logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
-    transactions = DBDataManager().get_transactions()
+    transactions = _data_manager.get_transactions()
     return transactions
 
 
