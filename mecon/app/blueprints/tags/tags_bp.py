@@ -12,6 +12,7 @@ tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
 _data_manager = DBDataManager()
 
+
 def _json_from_str(json_str):
     _json = json.loads(json_str)
     return _json
@@ -27,29 +28,6 @@ def _reformat_json_str(json_str):
 def get_transactions() -> Transactions:
     transactions = _data_manager.get_transactions()
     return transactions
-
-
-@logs.codeflow_log_wrapper('#data#tags#process')
-def recalculate_tags():
-    _data_manager.reset_tags()
-    # transactions = get_transactions().reset_tags()
-    #
-    # for tag in _data_manager.all_tags():
-    #     # curr_tag_name, curr_tag_json = tag_dict['name'], tag_dict['conditions_json']
-    #     # tag = Tag.from_json_string(curr_tag_name, curr_tag_json)
-    #     logging.info(f"Applying {tag.name} tag to transaction.")
-    #     transactions = transactions.apply_tag(tag)
-    #
-    # data_df = transactions.dataframe()
-    # logging.info(f"Updating transactions in DB.")
-    # _data_manager.update_tags(data_df)
-
-
-@logs.codeflow_log_wrapper('#data#tags#store')
-def save_and_recalculate_tags(tag_name, tag_json_str):
-    tag = Tag.from_json_string(tag_name, _json_from_str(tag_json_str))
-    _data_manager.update_tag(tag, update_tags=True)
-    # recalculate_tags()
 
 
 def render_tag_page(title='Tag page',
@@ -83,7 +61,7 @@ def render_tag_page(title='Tag page',
 def tags_menu():
     if request.method == 'POST':
         if "recalculate_tags" in request.form:
-            recalculate_tags()
+            _data_manager.reset_tags()
         elif "reset_tags" in request.form:
             _data_manager.reset_tags()
         elif "create_tag_button" in request.form:
@@ -94,7 +72,6 @@ def tags_menu():
             elif _data_manager.get_tag(tag_name) is not None:
                 create_tag_error = f"Tag '{tag_name}' already exists. Please use another name."
             else:
-                # tag = Tag.from_json_string(tag_name, _json_from_str(tag_json_str))
                 tag = Tag.from_json_string(tag_name, tag_json_str)
                 _data_manager.update_tag(tag, update_tags=False)
                 return redirect(url_for('tags.tag_edit', tag_name=tag_name))
@@ -126,7 +103,8 @@ def tag_edit(tag_name):
             tag_json_str = request.form.get('query_text_input')
 
             try:
-                save_and_recalculate_tags(tag_name, tag_json_str)
+                tag = Tag.from_json_string(tag_name, _json_from_str(tag_json_str))
+                _data_manager.update_tag(tag, update_tags=True)
             except Exception as e:
                 message_text = f"Error: {e}"
             else:
@@ -139,7 +117,7 @@ def tag_edit(tag_name):
         elif "confirm_delete" in request.form:
             _data_manager.delete_tag(tag_name)
             try:
-                recalculate_tags()
+                _data_manager.reset_tags()
             except Exception as e:
                 message_text = f"Error: {e}"
             else:
@@ -189,6 +167,7 @@ def tag_edit(tag_name):
     else:
         tag_json_str = json.dumps(_data_manager.get_tag(tag_name).rule.to_json())
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
+
 
 @tags_bp.route("/manual_tagging/order=<order_by>", methods=['POST', 'GET'])
 def manual_tagging(order_by):
