@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, date
 
 import pandas as pd
 
@@ -64,7 +65,6 @@ class TestTagsColumnMixin(unittest.TestCase):
 
 class TestDateTimeColumnMixin(unittest.TestCase):
     def test_date_range(self):
-        from datetime import date, datetime
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'datetime': [
                 datetime(2020, 1, 1, 0, 0, 0),
@@ -82,7 +82,6 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         self.assertTupleEqual(result_df, expected_date_range)
 
     def test_select_date_range(self):
-        from datetime import datetime
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'datetime': [
                 datetime(2020, 1, 1, 0, 0, 0),
@@ -107,7 +106,6 @@ class TestDateTimeColumnMixin(unittest.TestCase):
                                       expected_wrapper_df.reset_index(drop=True))
 
     def test_select_date_range_str(self):
-        from datetime import datetime
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'datetime': [
                 datetime(2020, 1, 1, 0, 0, 0),

@@ -14,14 +14,14 @@ from mecon.utils import calendar_utils
 from mecon.monitoring import logs
 
 
-class ZeroSizeTransactionsError(Exception):
+class NullDataframeInDataframeWrapper(Exception):
     pass
 
 
 class DataframeWrapper:
     def __init__(self, df: pd.DataFrame):
-        if df is None or len(df) == 0:
-            raise ZeroSizeTransactionsError
+        if df is None:  # or len(df) == 0:
+            raise NullDataframeInDataframeWrapper
         self._df = df
 
     def dataframe(self) -> pd.DataFrame:
@@ -63,10 +63,24 @@ class DataframeWrapper:
         return cls(df)
 
 
-# TODO:v3 add validation maybe
+class MissingRequiredColumnInDataframeWrapperError(Exception):
+    pass
+
+
 class ColumnMixin:
+    _required_column = None
+
     def __init__(self, df_wrapper: DataframeWrapper):
         self._df_wrapper_obj = df_wrapper
+        # self._validate_column() TODO tests have to be adapted
+
+    def _validate_column(self):
+        if self._required_column is not None:
+            _req_set = set(self._required_column) if isinstance(self._required_column, list) else {
+                self._required_column}
+            if _req_set.issubset(self._df_wrapper_obj.dataframe().columns):
+                raise MissingRequiredColumnInDataframeWrapperError(
+                    f"Column '{self._required_column}' is required from {self.__class__.__name__}")
 
     @property
     def dataframe_wrapper_obj(self):
@@ -74,12 +88,16 @@ class ColumnMixin:
 
 
 class IdColumnMixin(ColumnMixin):
+    _required_column = 'id'
+
     @property
     def id(self):
         return self._df_wrapper_obj.dataframe()['id']
 
 
 class DateTimeColumnMixin(ColumnMixin):
+    _required_column = 'datetime'
+
     @property
     def datetime(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['datetime']
@@ -104,6 +122,8 @@ class DateTimeColumnMixin(ColumnMixin):
 
 
 class AmountColumnMixin(ColumnMixin):
+    _required_column = ['amount', 'currency', 'amount_cur']
+
     @property
     def amount(self):
         return self._df_wrapper_obj.dataframe()['amount']
@@ -126,6 +146,8 @@ class AmountColumnMixin(ColumnMixin):
 
 
 class DescriptionColumnMixin(ColumnMixin):
+    _required_column = 'description'
+
     def description(self):
         return self._df_wrapper_obj.dataframe()['description']
 
@@ -135,6 +157,8 @@ class TagsColumnDoesNotExistInDataframe(Exception):
 
 
 class TagsColumnMixin(ColumnMixin):
+    _required_column = 'tags'
+
     @property
     def tags(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['tags']

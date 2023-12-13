@@ -8,7 +8,7 @@ from json2html import json2html
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.data_manager import DBDataManager
 from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
-from mecon.data.datafields import ZeroSizeTransactionsError
+from mecon.data.datafields import NullDataframeInDataframeWrapper
 from mecon.monitoring import logs
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
@@ -79,7 +79,7 @@ def _db_transactions_info():
         res = {
             'rows': transactions.size()
         }
-    except ZeroSizeTransactionsError:
+    except NullDataframeInDataframeWrapper:
         res = {'No transaction data'}
     return res
 
