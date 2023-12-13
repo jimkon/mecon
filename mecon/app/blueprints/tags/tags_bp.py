@@ -103,7 +103,7 @@ def tag_edit(tag_name):
             tag_json_str = request.form.get('query_text_input')
 
             try:
-                tag = Tag.from_json_string(tag_name, _json_from_str(tag_json_str))
+                tag = Tag.from_json_string(tag_name, tag_json_str)
                 _data_manager.update_tag(tag, update_tags=True)
             except Exception as e:
                 message_text = f"Error: {e}"
