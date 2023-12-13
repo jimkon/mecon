@@ -4,6 +4,8 @@ from math import ceil
 
 import pandas as pd
 
+from mecon import config
+
 
 class DayOfWeek(Enum):
     MONDAY = 'Monday'
@@ -58,6 +60,14 @@ def date_floor(dt: datetime, group_by_key: str):
         return datetime(dt.year, dt.month, 1, 0, 0, 0)
     elif group_by_key == DateRangeUnit.YEAR.value:
         return datetime(dt.year, 1, 1, 0, 0, 0)
+
+
+def datetime_to_str(dt: datetime) -> str:
+    return dt.strftime(format=config.DATETIME_STRING_FORMAT)
+
+
+def datetime_from_str(dt_str: str) -> datetime:
+    return datetime.strptime(dt_str, config.DATETIME_STRING_FORMAT)
 
 
 def datetime_to_date_id(dt):
