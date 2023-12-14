@@ -1,11 +1,12 @@
 import abc
 import json
+from datetime import datetime
 
 import pandas as pd
 
-from mecon.tag_tools import comparisons
-from mecon.tag_tools import transformations
+from mecon.tag_tools import comparisons, transformations
 from mecon.monitoring import logs
+from mecon.utils import calendar_utils
 
 
 class FieldIsNotStringException(Exception):
@@ -122,9 +123,8 @@ class Conjunction(AbstractRule):
 
         return merged_dict
 
-    def to_json(self) -> list | dict:
-        return self.to_dict()
-
+    def to_json(self) -> list:
+        return [self.to_dict()]
 
     @staticmethod
     def from_dict(_dict):
@@ -158,13 +158,19 @@ class Disjunction(AbstractRule):
     def to_json(self):
         return [rule.to_dict() for rule in self._rules]
 
-    def append(self, rule):
+    def append(self, rule):  # TODO unittest
         new_rule_list = self._rules.copy()
         new_rule_list.insert(0, rule)
         return Disjunction(new_rule_list)
 
-    @staticmethod
-    def from_json(_json):
+    def extend(self, rules):  # TODO unittest
+        res = None
+        for rule in rules:
+            res = self.append(rule)
+        return res
+
+    @classmethod
+    def from_json(cls, _json):
         if isinstance(_json, dict):
             _json = [_json]
 
@@ -173,6 +179,28 @@ class Disjunction(AbstractRule):
             return Disjunction(rule_list)
         else:
             raise ValueError(f"Attempted to create disjunction object from {type(_json)=}")
+
+    @classmethod
+    def from_json_string(cls, _json_str):
+        _json = json.loads(_json_str)
+        return cls.from_json(_json)
+
+    @classmethod
+    def from_dataframe(self, df: pd.DataFrame, exclude_cols=None):
+        def convert_to_conjunction(row):
+            conj_rule_list = []
+            for col in row.keys():
+                if exclude_cols and col in exclude_cols:
+                    continue
+                value = row[col]
+                value_str = calendar_utils.datetime_to_str(value) if isinstance(value, datetime) else str(value)
+                rule = Condition.from_string_values(col, 'str', 'equal', value_str)
+                conj_rule_list.append(rule)
+            conj = Conjunction(conj_rule_list)
+            return conj
+        conjunction_list = df.apply(convert_to_conjunction, axis=1)
+        disj = Disjunction(conjunction_list)
+        return disj
 
 
 class Tag:

@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 
 import pandas as pd
 
@@ -75,7 +76,8 @@ class ConditionTestCase(unittest.TestCase):
             compare_op=lambda x, y: x == y,
             value='1'
         )
-        str(condition) # make sure it doesn't crash
+        str(condition)  # make sure it doesn't crash
+
 
 class ConjunctionTestCase(unittest.TestCase):
     def test_init_validation_success(self):
@@ -190,6 +192,45 @@ class DisjunctionTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             tagging.Disjunction.from_json('invalid_input')
+
+    def test_from_json_string(self):
+        rule_dict_str = '{"field1.str": {"greater": "1"}}'
+        self.assertIsInstance(tagging.Disjunction.from_json_string(rule_dict_str), tagging.Disjunction)
+
+        with self.assertRaises(ValueError):
+            tagging.Disjunction.from_json('invalid_input')
+
+    def test_from_dataframe(self):
+        example_df = pd.DataFrame({'a': [1, 2], 'b': ['a', 'b'], "c": [datetime(2020, 1, 1, 12, 30, 45), datetime(2022, 2, 2, 2, 22, 22)]})
+        disj = tagging.Disjunction.from_dataframe(example_df)
+
+        result_json = [{
+                "a.str": {"equal": "1"},
+                "b.str": {"equal": "a"},
+                "c.str": {"equal": "2020-01-01 12:30:45"}
+            },
+            {
+                "a.str": {"equal": "2"},
+                "b.str": {"equal": "b"},
+                "c.str": {"equal": "2022-02-02 02:22:22"}
+            }
+        ]
+        self.assertEqual(disj.to_json(), result_json)
+
+    def test_from_dataframe_exclude_cols(self):
+        example_df = pd.DataFrame({'a': [1, 2], 'b': ['a', 'b'], "c": [datetime(2020, 1, 1, 12, 30, 45), datetime(2022, 2, 2, 2, 22, 22)]})
+        disj = tagging.Disjunction.from_dataframe(example_df, exclude_cols=['a', 'c'])
+
+        result_json = [{
+                "b.str": {"equal": "a"}
+            },
+            {
+                "b.str": {"equal": "b"}
+            }
+        ]
+        self.assertEqual(disj.to_json(), result_json)
+
+
 
 class TestTag(unittest.TestCase):
     def test_from_json_string(self):

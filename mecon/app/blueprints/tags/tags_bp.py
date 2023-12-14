@@ -13,15 +13,28 @@ tags_bp = Blueprint('tags', __name__, template_folder='templates')
 _data_manager = DBDataManager()
 
 
-def _json_from_str(json_str):
-    _json = json.loads(json_str)
-    return _json
-
-
 def _reformat_json_str(json_str):
     json_str = json_str.replace("'", '"')
     json_str = json.dumps(json.loads(json_str), indent=4)
     return json_str
+
+
+def _rule_for_id(_id):
+    condition = tagging.Condition.from_string_values(
+        field='id',
+        transformation_op_key="none",
+        compare_op_key="equal",
+        value=_id,
+    )
+    transactions_with_id = get_transactions().apply_rule(condition)
+    if transactions_with_id.size() > 1:
+        # message_text = f"More than one ({len(transactions_with_id.size())}) have the same id ({_id})"
+        # tag_json_str = request.form.get('query_text_input')
+        raise ValueError(f"More than one ({len(transactions_with_id.size())}) have the same id ({_id})")
+    else:
+        df = transactions_with_id.dataframe()
+        disjunction = tagging.Disjunction.from_dataframe(df, exclude_cols=['id', 'tags'])
+        return disjunction
 
 
 @logs.codeflow_log_wrapper('#data#transactions#load')
@@ -34,7 +47,8 @@ def render_tag_page(title='Tag page',
                     tag_name='',
                     tag_json_str='[{"description":{"contains":"something"}}]',
                     message_text='',
-                    confirm_delete=False):
+                    confirm_delete=False,
+                    **kwargs):
     # TODO:v3 maybe add rename function
 
     try:
@@ -46,8 +60,6 @@ def render_tag_page(title='Tag page',
         tag_json_str = _reformat_json_str(tag_json_str)
         transformations_list = [trans.name for trans in transformations.TransformationFunction.all_instances()]
         comparisons_list = [comp.name for comp in comparisons.CompareOperator.all_instances()]
-
-        # del untagged_transactions
     except json.decoder.JSONDecodeError as json_error:
         message_text = f"JSON Syntax error: {json_error}"
     # except Exception as e:
@@ -98,10 +110,9 @@ def tag_edit(tag_name):
             tag_json_str = _reformat_json_str(tag_json_str)
 
         elif "reset" in request.form:
-            tag_json_str = _data_manager.get_tag(tag_name).rule.to_json()
+            tag_json_str = json.dumps(_data_manager.get_tag(tag_name).rule.to_json())
         elif "save" in request.form or "save_and_close" in request.form:
             tag_json_str = request.form.get('query_text_input')
-
             try:
                 tag = Tag.from_json_string(tag_name, tag_json_str)
                 _data_manager.update_tag(tag, update_tags=True)
@@ -123,7 +134,7 @@ def tag_edit(tag_name):
             else:
                 return redirect(url_for('tags.tags_menu'))
         elif "add_condition" in request.form:
-            disjunction = tagging.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
+            disjunction = tagging.Disjunction.from_json_string(request.form.get('query_text_input'))
 
             condition = tagging.Condition.from_string_values(
                 field=request.form['field'],
@@ -134,36 +145,12 @@ def tag_edit(tag_name):
 
             new_tag_json = disjunction.append(condition).to_json()
             tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
-            del condition, disjunction, new_tag_json  # otherwise **locals() will break render_tag_page
         elif "add_id" in request.form:
-            id = int(request.form['input_id'])
-
-            disjunction = tagging.Disjunction.from_json(_json_from_str(request.form.get('query_text_input')))
-
-            condition = tagging.Condition.from_string_values(
-                field='id',
-                transformation_op_key="none",
-                compare_op_key="equal",
-                value=id,
-            )
-            rows = get_transactions().apply_rule(condition).dataframe().to_dict('records')
-            if len(rows) > 1:
-                message_text = f"More than one ({len(rows)}) have the same id ({id})"
-                tag_json_str = request.form.get('query_text_input')
-            else:
-                row = rows[0]
-
-                conj = tagging.Conjunction([  # TODO Conjunction.from_df_row()
-                    tagging.Condition.from_string_values('datetime', 'str', 'equal', str(row['datetime'])),
-                    tagging.Condition.from_string_values('amount', 'none', 'equal', row['amount']),
-                    tagging.Condition.from_string_values('currency', 'str', 'equal', row['currency']),
-                    tagging.Condition.from_string_values('description', 'none', 'equal', row['description']),
-                    # tagging.Condition.from_string_values(field, 'none', 'equal', value) for field, value in row.items()
-                ])
-                new_tag_json = disjunction.append(conj).to_json()
-                tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
-                del condition, disjunction, new_tag_json, id, rows, row, conj  # otherwise **locals() will break render_tag_page
-
+            _id = int(request.form['input_id'])
+            disjunction = _rule_for_id(_id)
+            old_disjunction = tagging.Disjunction.from_json_string(request.form.get('query_text_input'))
+            new_tag_json = old_disjunction.extend(disjunction.rules).to_json()
+            tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
     else:
         tag_json_str = json.dumps(_data_manager.get_tag(tag_name).rule.to_json())
     return render_tag_page(title=f'Edit tag "{tag_name}"', **locals())
@@ -174,40 +161,38 @@ def manual_tagging(order_by):
     def tags_form(row):
         id = row[0]
         tags = row[6].split(',')
-        tag_checkboxes = """
-        <div class="dropdown">
-        <button class="dropbtn">Select Tags</button>
-        <div class="dropdown-content">
-        """
+        tag_checkboxes = """<div class="labelContainer">"""
         for tag in all_tags:
             checkbox = f"""
-            <label >{tag}<input type="checkbox" name="{tag}_for_{id}" {'checked disabled' if tag in tags else ''}></label>
+            <label class="{'tagLabel_checked' if tag in tags else 'tagLabel_unchecked'}">{tag}<input type="checkbox"  name="{tag}_for_{id}" {'checked disabled' if tag in tags else ''}></label>
             """
             tag_checkboxes += checkbox
         tag_checkboxes = tag_checkboxes + "</div></div>"
-        tags_container = """
-        <div class="labelContainer">"""
-        for tag in tags:
-            tags_container += f"""<label class="tagLabel">{tag}</label>"""
 
-        tags_container += """</div>"""
-
-        result = tag_checkboxes + tags_container
+        result = tag_checkboxes  # + tags_container
         return result.replace('\n', '')
 
     if request.method == 'POST':
         if "save_changes" in request.form:
             tag_events = [{'tag': name.split('_for_')[0], 'id': name.split('_for_')[1]}
-                          for name, action
-                          in request.form.to_dict().items()
-                          if action == 'on']
+                                 for name, action
+                                 in request.form.to_dict().items()
+                                 if action == 'on']
+
+            for event in tag_events:
+                tag_added, _id = event['tag'], int(event['id'])
+                disjunction = _rule_for_id(_id)
+                tag_object = _data_manager.get_tag(tag_added)
+                old_disjunction = tag_object.rule
+                new_tag = tagging.Tag(tag_added, old_disjunction.extend(disjunction.rules))
+                _data_manager.update_tag(new_tag)
             # TODO Send new tag events to data manager
         elif "reset" in request.form:
             pass
 
     transactions = get_transactions()
-    all_tags = list(transactions.all_tags().keys())
-    df = transactions.dataframe()
+    all_tags = sorted([tag.name for tag in _data_manager.all_tags()])
+    df = transactions.dataframe()[:10]
 
     if order_by == 'newest':
         df = df.sort_values(['datetime'], ascending=False)
