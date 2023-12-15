@@ -3,6 +3,7 @@ from __future__ import annotations  # TODO:v2 upgrade to python 3.11
 import abc
 import itertools
 import json
+import logging
 from collections import Counter
 from itertools import chain
 from typing import List
@@ -190,6 +191,7 @@ class TagsColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.factory(new_df)
 
     def apply_tag(self, tag: tagging.Tag) -> DataframeWrapper:
+        logging.info(f"Applying {tag.name} tag to transaction.")
         new_df = self._df_wrapper_obj.dataframe().copy()
         tagging.Tagger.tag(tag, new_df)
         return self._df_wrapper_obj.factory(new_df)

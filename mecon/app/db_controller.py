@@ -234,6 +234,7 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
 
     @logs.codeflow_log_wrapper('#db#tags')
     def update_tags(self, df_tags) -> None:
+        logging.info(f"Updating tags (shape: {df_tags.shape}) in DB.")
         # transaction_ids = df_tags['id'].to_list()
         update_values = df_tags.set_index('id')['tags'].to_dict()
 
