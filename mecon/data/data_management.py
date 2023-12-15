@@ -93,11 +93,9 @@ class DataManager:
         self._cache.reset()
 
         for tag in all_tags:
-            logging.info(f"Applying {tag.name} tag to transaction.")
             transactions = transactions.apply_tag(tag)
 
         data_df = transactions.dataframe()
-        logging.info(f"Updating transactions (shape: {data_df.shape}) in DB.")
         self._transactions.update_tags(data_df)
 
 
