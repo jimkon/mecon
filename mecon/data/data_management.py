@@ -1,4 +1,3 @@
-import logging
 from typing import List
 
 import pandas as pd
@@ -6,10 +5,6 @@ import pandas as pd
 from mecon.data.transactions import Transactions
 from mecon.import_data import io_framework
 from mecon.tag_tools.tagging import Tag
-
-
-class DataManagerStreamsCannotChange(Exception):
-    pass
 
 
 class DataManager:
