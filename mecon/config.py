@@ -7,3 +7,5 @@ CURRENCY_LOOKUP_RATES_JSON_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\data
 CONDITION_JSON_MAX_SIZE = 2000
 
 DATETIME_STRING_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+DEFAULT_DATASET_NAME = 'v2'

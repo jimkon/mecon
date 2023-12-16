@@ -13,16 +13,17 @@ from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.db_extension import db
 from mecon.app.data_manager import DBDataManager
 from mecon.app.views import main_bp
-from app.blueprints.data import data_bp
-from app.blueprints.reports import reports_bp
-from app.blueprints.tags import tags_bp
-from app.blueprints.monitoring import monitoring_bp
+from mecon.app.blueprints.data import data_bp
+from mecon.app.blueprints.reports import reports_bp
+from mecon.app.blueprints.tags import tags_bp
+from mecon.app.blueprints.monitoring import monitoring_bp
+from mecon.config import DEFAULT_DATASET_NAME
 
 logs.print_logs_info()
 logging.info('Starting app...')
 
 current_dataset_dir = WorkingDatasetDir()
-current_dataset_dir.set_working_dataset('v2')
+current_dataset_dir.set_working_dataset(DEFAULT_DATASET_NAME)
 current_dataset = current_dataset_dir.working_dataset
 
 app = Flask(__name__)
