@@ -11,7 +11,7 @@ except FileNotFoundError as e:
 
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.db_extension import db
-from mecon.app.data_manager import DBDataManager
+from mecon.app.data_manager import CachedDBDataManager
 from mecon.app.views import main_bp
 from mecon.app.blueprints.data import data_bp
 from mecon.app.blueprints.reports import reports_bp
@@ -34,7 +34,7 @@ db.init_app(app)
 app.app_context().push()
 db.create_all()
 
-DBDataManager()
+CachedDBDataManager()
 
 app.register_blueprint(main_bp)
 app.register_blueprint(data_bp.data_bp, url_prefix='/data')

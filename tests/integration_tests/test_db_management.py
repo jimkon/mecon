@@ -7,7 +7,7 @@ from flask import Flask
 from flask_testing import TestCase
 
 from mecon.app import db, models
-from app import db_controller
+from mecon.app import db_controller
 
 
 def _create_app():
