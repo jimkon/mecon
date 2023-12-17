@@ -1,9 +1,9 @@
 from mecon.app import db_controller
-from mecon.data.data_management import DataManager
+from mecon.data import data_management
 from mecon.utils.instance_management import Singleton
 
 
-class DBDataManager(DataManager, Singleton):
+class DBDataManager(data_management.DataManager, Singleton):
     def __init__(self):
         super().__init__(
             trans_io=db_controller.TransactionsDBAccessor(),
@@ -30,3 +30,14 @@ class DBDataManager(DataManager, Singleton):
     #
     #     filename = pathlib.Path(bank) / f"statement_{start_date}_to_{end_date}_rows{len(df_transformed)}.csv"
     #     df_transformed.to_csv(filename)
+
+
+class CachedDBDataManager(data_management.CacheDataManager, Singleton):
+    def __init__(self):
+        super().__init__(
+            trans_io=db_controller.TransactionsDBAccessor(),
+            tags_io=db_controller.TagsDBAccessor(),
+            hsbc_stats_io=db_controller.HSBCTransactionsDBAccessor(),
+            monzo_stats_io=db_controller.MonzoTransactionsDBAccessor(),
+            revo_stats_io=db_controller.RevoTransactionsDBAccessor(),
+        )

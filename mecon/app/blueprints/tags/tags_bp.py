@@ -73,9 +73,9 @@ def render_tag_page(title='Tag page',
 def tags_menu():
     if request.method == 'POST':
         if "recalculate_tags" in request.form:
-            _data_manager.reset_tags()
+            _data_manager.reset_transaction_tags()
         elif "reset_tags" in request.form:
-            _data_manager.reset_tags()
+            _data_manager.reset_transaction_tags()
         elif "create_tag_button" in request.form:
             tag_name = request.form.get('tag_name_input')
             tag_json_str = '[{"description":{"contains":"something"}}]'
@@ -128,7 +128,7 @@ def tag_edit(tag_name):
         elif "confirm_delete" in request.form:
             _data_manager.delete_tag(tag_name)
             try:
-                _data_manager.reset_tags()
+                _data_manager.reset_transaction_tags()
             except Exception as e:
                 message_text = f"Error: {e}"
             else:
