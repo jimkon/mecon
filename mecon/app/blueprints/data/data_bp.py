@@ -17,7 +17,7 @@ _data_manager = DBDataManager()
 
 
 def _statement_files_info() -> Dict:
-    current_dataset = WorkingDatasetDir().working_dataset
+    current_dataset = WorkingDatasetDir.get_instance().working_dataset
     dirs_path = current_dataset.statements
     transformed_dict = current_dataset.statement_files().copy()
 

@@ -9,7 +9,7 @@ class WorkingDatasetDir(DatasetDir, Singleton):
             path = config.DEFAULT_DATASETS_DIR_PATH
         super().__init__(path)
 
-        self._working_dataset = self.datasets()[0]
+        self.set_working_dataset(config.DEFAULT_DATASET_NAME)
 
     @property
     def working_dataset(self) -> Dataset:
