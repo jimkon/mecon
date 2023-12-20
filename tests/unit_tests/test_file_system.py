@@ -4,6 +4,8 @@ import tempfile
 import shutil
 from pathlib import Path
 
+import pandas as pd
+
 from mecon.import_data import file_system as fs
 
 
@@ -97,6 +99,29 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(statement_files['test_bank'][0], str(csv_file.name))
 
         csv_file.unlink()
+
+    def test_add_df_statement(self):
+        # Initial assertion
+        self.assertEqual(self.dataset.statement_files(), {})
+
+        # Create a DataFrame for testing
+        data = {'col1': [1, 2, 3], 'col2': ['a', 'b', 'c']}
+        df = pd.DataFrame(data)
+
+        # Add DataFrame statement
+        filename = 'test_df_statement.csv'
+        bank_name = 'test_bank'
+        self.dataset.add_df_statement(bank_name, df, filename)
+
+        # Verify statement files
+        statement_files = self.dataset.statement_files()
+        self.assertEqual(list(statement_files.keys()), [bank_name])
+        self.assertEqual(len(statement_files[bank_name]), 1)
+        expected_path = self.dataset.statements / bank_name / filename
+        self.assertEqual(statement_files[bank_name][0], str(expected_path.name))
+
+        # Clean up temporary files
+        expected_path.unlink()
 
 
 if __name__ == '__main__':
