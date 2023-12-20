@@ -1,8 +1,9 @@
+import json
 import pathlib
 from typing import Dict
 
 import pandas as pd
-from flask import Blueprint, redirect, url_for, render_template
+from flask import Blueprint, redirect, url_for, render_template, request
 from json2html import json2html
 
 from mecon.app.datasets import WorkingDatasetDir
@@ -10,10 +11,12 @@ from mecon.app.data_manager import DBDataManager
 from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from mecon.data.datafields import NullDataframeInDataframeWrapper
 from mecon.monitoring import logs
+from mecon.import_data import monzo_data
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 
 _data_manager = DBDataManager()
+monzo_client = monzo_data.MonzoClient()
 
 
 def _statement_files_info() -> Dict:
@@ -135,3 +138,40 @@ def datafile_view(path):
     <h1>Table, shape: {df.shape}</h1>
     {table_html}
     """
+
+
+@data_bp.route('/fetch', methods=['POST', 'GET'])
+@logs.codeflow_log_wrapper('#api')
+def fetch_data():
+    auth_message = f"Athenticated: {monzo_client.is_authenticated()}, Expiry: {monzo_client.token_expiry()}"
+    if request.method == 'POST':
+        if "auth_monzo_button" in request.form:
+            if not monzo_client.is_authenticated():
+                url = monzo_client.start_authentication()
+                return redirect(url)
+            else:
+                auth_message = f"Already authenticated until {monzo_client.token_expiry()}"
+        elif "fetch_data_button" in request.form:
+            if monzo_client.is_authenticated():
+                dataset = WorkingDatasetDir.get_instance().working_dataset
+                json_file = dataset.statements / f"json/raw_data.json"
+                transactions_json = monzo_client.download_transactions(json_file)
+
+                trans = monzo_data.MonzoDataTransformer.from_json_file(json_file)
+                df = trans.to_dataframe()
+
+                csv_file = f"Monzo_Transactions.csv"
+                dataset.add_df_statement('Monzo', df, csv_file)
+                monzo_data_message = f" -> {len(df)} transactions added to {csv_file} from {df['Date'].min().date()} to {df['Date'].max().date()}"
+            else:
+                monzo_data_message = f" -> You must authenticate first!"
+
+    return render_template('fetch_data.html', **locals(), **globals())
+
+
+@data_bp.route('/auth/monzo')
+def auth_monzo():
+    token = request.args.get('code', None)
+    state = request.args.get('state', None)
+    monzo_client.finish_authentication(token, state)
+    return redirect(url_for('data.fetch_data'))

@@ -6,7 +6,10 @@
     <h1>Dataset: {{ dataset_name }}</h1>
 
     <h2>Transactions</h2>
+
     {{ db_transactions_info | safe }}
+    <h3><a href={{ url_for('data.fetch_data') }}>Fetch transaction data from the banks</a></h3>
+
     <h2>Statements</h2>
     <h3>Database</h3>
     {{ db_statements_info | safe }}

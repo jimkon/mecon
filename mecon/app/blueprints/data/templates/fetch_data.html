@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+    <h1>Fetch transaction data from the banks</h1>
+    <h2>HSBC</h2>
+    <h2>Monzo</h2>
+    <form method="POST" action="/data/fetch" enctype="multipart/form-data">
+        <input type="submit" id="auth_monzo_button" name="auth_monzo_button" value="Authenticate in Monzo Bank">
+        <label> -> {{ auth_message }}</label>
+        <br>
+        <input type="submit" id="fetch_data_button" name="fetch_data_button" value="Fetch data">
+        <label> {{ monzo_data_message }}</label>
+
+    </form>
+    <h2>Revolut</h2>
+
+
+{% endblock content %}

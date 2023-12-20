@@ -54,7 +54,7 @@ class Dataset:
     def add_df_statement(self, bank_name: str | pathlib.Path, df: pd.DataFrame, filename: str):
         new_statement_path = self.statements / bank_name / filename
         new_statement_path.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(new_statement_path)
+        df.to_csv(new_statement_path, index=False)
         logging.info(f"Added Monzo statement file with {len(df)} transactions to {new_statement_path}")
 
 
