@@ -2,18 +2,15 @@
 
 {% block content %}
     <h1>Home</h1>
-    Links:
+    {% for category_name, category in links.items() %}
+        <h3>{{ category_name }}</h3>
         <ul>
-{#            <li><a href={{url_for('overview')}}>Overview</a></li>#}
-{#            <li><a href={{url_for('tags')}}>Tags</a></li>#}
-{#            <li><a href={{url_for('edit_query_get', tag_name='new_tag', tag_json_str='[{}]')}}>Edit tag</a></li>#}
-{#            <ul>#}
-{#              <li><a href={{url_for('upload_statement', bank_name='HSBC')}}>HSBC</a></li>#}
-{#              <li><a href={{url_for('upload_statement', bank_name='Revolut')}}>Revolut</a></li>#}
-{#              <li><a href={{url_for('upload_statement', bank_name='Monzo')}}>Monzo</a></li>#}
-{#            </ul>#}
+            {% for link_name, link in category.items() %}
+                <li><a href={{ link }}>{{ link_name }}</a></li>
+            {% endfor %}
         </ul>
-    Saved links:
-        <ul>
-        </ul>
+
+    {% endfor %}
+
+
 {% endblock content %}
