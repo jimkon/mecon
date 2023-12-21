@@ -14,7 +14,7 @@ from mecon.monitoring import logs
 def amount_and_freq_timeline_html(time, amount, freq):
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1)))
+    fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     if freq is not None:
         fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1), yaxis='y2'))
 
@@ -36,7 +36,7 @@ def balance_graph_html(time, amount: pd.Series):
 
     balance = amount.cumsum()
 
-    fig.add_trace(go.Scatter(x=time, y=balance, name="balance", line=dict(width=3)))
+    fig.add_trace(go.Scatter(x=time, y=balance, name="balance", line=dict(width=3), fill='tozeroy'))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
