@@ -54,7 +54,7 @@ def _db_statements_info():
 
     monzo_trans = _data_manager.get_monzo_statements()
     if monzo_trans is not None:
-        monzo_trans['date'] = pd.to_datetime(monzo_trans['date'], format="%d/%m/%Y")
+        monzo_trans['date'] = pd.to_datetime(monzo_trans['date'], format="%Y-%m-%d")
         res['Monzo'] = {
             'transactions': len(monzo_trans),
             'days': monzo_trans['date'].nunique(),
@@ -154,7 +154,7 @@ def fetch_data():
         elif "fetch_data_button" in request.form:
             if monzo_client.is_authenticated():
                 dataset = WorkingDatasetDir.get_instance().working_dataset
-                json_file = dataset.statements / f"json/raw_data.json"
+                json_file = dataset.statements / 'Monzo' / f"json/raw_data.json"
                 transactions_json = monzo_client.download_transactions(json_file)
 
                 trans = monzo_data.MonzoDataTransformer.from_json_file(json_file)

@@ -88,7 +88,7 @@ class MonzoDataTransformer:
 
         transactions_json = []
         for transaction in transactions:
-            date = datetime.strptime(transaction['created'][:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+            date = transaction['created'][:10]  # datetime.strptime(transaction['created'][:10], "%Y-%m-%d").strftime("%d/%m/%Y")
             time = transaction['created'][11:19]
             _type = "Faster Payment" if look_for(transaction, ['metadata', 'faster_payment']) \
                         else "Monzo-to-Monzo" if look_for(transaction, ['counterparty', 'account_id']) \

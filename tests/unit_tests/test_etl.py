@@ -36,7 +36,7 @@ class MonzoTransformerTest(unittest.TestCase):
         df_monzo = pd.DataFrame(
             {
                 'id': [1, 2, 3],
-                'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+                'date': ["2022-01-01", "2022-06-15", "2022-12-31"],
                 'time': ["00:00:00", "12:30:30", "23:59:59"],
                 'transaction_type': ['Payment', 'Expense', 'Payment'],
                 'name': ['John Doe', 'Groceries', 'Jane Smith'],
