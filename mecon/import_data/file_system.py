@@ -29,6 +29,10 @@ class Dataset:
         self._statements.mkdir(parents=True, exist_ok=True)
 
     @property
+    def path(self):
+        return self._path
+
+    @property
     def name(self):
         return self._path.name
 
