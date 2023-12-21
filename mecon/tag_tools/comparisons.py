@@ -43,3 +43,6 @@ CONTAINS = CompareOperator('contains', lambda a, b: b in a)
 NOT_CONTAINS = CompareOperator('not_contains', lambda a, b: b not in a)
 REGEX = CompareOperator('regex',
                         lambda a, b: bool(re.search(pattern=b, string=a)) if (a is not None and len(a) > 0) else False)
+
+IN = CompareOperator('in', lambda a, b: a in b)
+NOT_IN = CompareOperator('not_in', lambda a, b: a not in b)
