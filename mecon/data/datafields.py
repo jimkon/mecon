@@ -7,6 +7,7 @@ import logging
 from collections import Counter
 from itertools import chain
 from typing import List
+from datetime import datetime, date
 
 import pandas as pd
 
@@ -114,10 +115,12 @@ class DateTimeColumnMixin(ColumnMixin):
     def date_range(self):
         return self.date.min(), self.date.max()
 
-    def select_date_range(self, start_date: [str | datetime], end_date: [str | datetime]) -> DataframeWrapper:
+    def select_date_range(self, start_date: [str | datetime | date], end_date: [str | datetime | date]) -> DatedDataframeWrapper | None:
+        start_date, end_date = calendar_utils.to_date(start_date), calendar_utils.to_date(end_date)
+
         rule = tagging.Conjunction([
-            tagging.Condition.from_string_values('datetime', 'str', 'greater_equal', str(start_date)),
-            tagging.Condition.from_string_values('datetime', 'str', 'less_equal', str(end_date)),
+            tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
+            tagging.Condition.from_string_values('datetime', 'date', 'less_equal', end_date),
         ])
         return self._df_wrapper_obj.apply_rule(rule)
 
@@ -264,8 +267,11 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
         df.sort_values(by='datetime', inplace=True)
         return self.factory(df)
 
-    def fill_dates(self, filler: DateFiller = None):
-        return filler.fill(self)
+    def fill_dates(self,
+                   filler: DateFiller = None,
+                   start_date: datetime | date | None = None,
+                   end_date: datetime | date | None = None):
+        return filler.fill(self, start_date, end_date)
 
 
 class DateFiller:
@@ -274,14 +280,21 @@ class DateFiller:
         self._fill_values = fill_values_dict
 
     @logs.codeflow_log_wrapper('#data#transactions#process')
-    def fill(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:
-        start_date, end_date = df_wrapper.date_range()
+    def fill(self, df_wrapper: DatedDataframeWrapper,
+             start_date: datetime | date | None = None,
+             end_date: datetime | date | None = None
+             ) -> DatedDataframeWrapper:
+        df_start_date, df_end_date = df_wrapper.date_range()
+        start_date = df_start_date if start_date is None else start_date
+        end_date = df_end_date if end_date is None else end_date
+
         fill_df = self.produce_fill_df_rows(start_date, end_date, df_wrapper.date)
         fill_df_wrapper = df_wrapper.factory(fill_df)
-        merged_df_wrapper = df_wrapper.merge(fill_df_wrapper)
+        filtered_df_wrapper = df_wrapper.select_date_range(start_date, end_date)
+        merged_df_wrapper = filtered_df_wrapper.merge(fill_df_wrapper)
         return merged_df_wrapper
 
-    def produce_fill_df_rows(self, start_date, end_date, remove_dates=None):
+    def produce_fill_df_rows(self, start_date: datetime | date, end_date: datetime | date, remove_dates=None):
         date_range = calendar_utils.date_range_group_beginning(start_date, end_date, step=self._fill_unit)
         date_range.name = 'datetime'
 

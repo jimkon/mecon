@@ -596,6 +596,51 @@ class TestFillTransactions(unittest.TestCase):
 
         pd.testing.assert_frame_equal(result_df, expected_df)
 
+    def test_fill_custom_dates(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': [11, 13, 15],
+            'datetime': [datetime(2023, 9, 2, 12, 23, 34),
+                         datetime(2023, 9, 4, 12, 23, 34),
+                         datetime(2023, 9, 6, 12, 23, 34)],
+            'amount': [100.0, 200.0, 300.0, ],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        }))
+
+        filler = TransactionDateFiller(
+            fill_unit='day',
+            id_fill=-1,
+            amount_fill=1.0,
+            currency_fill='currency_fill',
+            amount_curr=1.0,
+            description_fill='description_fill',
+            tags_fills='tags_fills'
+        )
+
+        result_df = filler.fill(
+            transactions,
+            start_date=datetime(2023, 9, 1, 0, 0, 0),
+            end_date=datetime(2023, 9, 5, 0, 0, 0)
+        ).dataframe().reset_index(drop=True)
+        expected_df = Transactions(pd.DataFrame({
+            'id': [-1, 11, -1, 13, -1],
+            'datetime': [datetime(2023, 9, 1, 0, 0, 0),
+                         datetime(2023, 9, 2, 12, 23, 34),
+                         datetime(2023, 9, 3, 0, 0, 0),
+                         datetime(2023, 9, 4, 12, 23, 34),
+                         datetime(2023, 9, 5, 0, 0, 0)],
+            'amount': [1.0, 100.0, 1.0, 200.0, 1.0],
+            'currency': ['currency_fill', 'GBP', 'currency_fill', 'GBP', 'currency_fill'],
+            'amount_cur': [1.0, 100.0, 1.0, 200.0, 1.0],
+            'description': ['description_fill', 'Transaction 1', 'description_fill', 'Transaction 2',
+                            'description_fill'],
+            'tags': ['tags_fills', '', 'tags_fills', 'tag1', 'tags_fills']
+        })).dataframe().reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(result_df, expected_df)
+
 
 class TestGroupAgg(unittest.TestCase):
     def test_group_agg(self):

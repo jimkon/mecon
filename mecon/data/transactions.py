@@ -1,6 +1,7 @@
 from __future__ import annotations  # TODO:v2 upgrade to python 3.11
 
 from collections import Counter
+from datetime import datetime, date
 
 import pandas as pd
 
@@ -27,8 +28,11 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         fields.DescriptionColumnMixin.__init__(self, df_wrapper=self)
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
-    def fill_values(self, fill_unit):
-        return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit))
+    def fill_values(self, fill_unit,
+                   start_date: datetime | date | None = None,
+                   end_date: datetime | date | None = None):
+        return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit),
+                               start_date=start_date, end_date=end_date)
 
     @classmethod
     def factory(cls, df: pd.DataFrame):

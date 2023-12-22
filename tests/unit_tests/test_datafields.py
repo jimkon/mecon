@@ -108,8 +108,8 @@ class TestDateTimeColumnMixin(unittest.TestCase):
     def test_select_date_range_str(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'datetime': [
-                datetime(2020, 1, 1, 0, 0, 0),
                 datetime(2019, 1, 1, 0, 0, 0),
+                datetime(2020, 1, 1, 0, 0, 0),
                 datetime(2021, 1, 1, 0, 0, 0),
                 datetime(2022, 1, 1, 0, 0, 0),
                 datetime(2023, 1, 1, 0, 0, 0),
