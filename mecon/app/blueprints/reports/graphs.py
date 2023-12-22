@@ -11,12 +11,61 @@ from mecon.monitoring import logs
 
 
 @logs.codeflow_log_wrapper('#graphs')
+def lines_graph_html(time, lines: [pd.Series]):
+    fig = go.Figure()
+    for line in lines:
+        fig.add_trace(go.Scatter(x=time, y=line, name=line.name, line=dict(width=3), fill='tozeroy'))
+
+    fig.update_layout(
+        autosize=True,  # Automatically adjust the size of the plot
+        hovermode='closest',  # Define hover behavior
+        yaxis=dict(title='£'),
+        # xaxis=dict(title=f"({len(time)} points)"),
+        uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
+    )
+    graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+    return graph_html
+
+
+@logs.codeflow_log_wrapper('#graphs')
+def stacked_bars_graph_html(time, lines: [pd.Series]):
+    fig = go.Figure()
+
+    for i, bar in enumerate(lines):
+        fig.add_trace(go.Bar(x=time, y=bar, name=bar.name))
+
+    fig.update_layout(
+        barmode='stack',  # Stacked bar mode
+        autosize=True,
+        hovermode='closest',
+        yaxis=dict(title='£'),
+        # xaxis=dict(title=f"({len(time)} points)"),
+        uirevision=str(datetime.datetime.now())
+    )
+
+    graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+    return graph_html
+
+
+
+@logs.codeflow_log_wrapper('#graphs')
 def amount_and_freq_timeline_html(time, amount, freq):
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
+    amount_pos = amount.clip(lower=0)
+    amount_neg = amount.clip(upper=0)
+    fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1, color='green'), fill='tozeroy'))
+    fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1, color='red'), fill='tozeroy'))
+    # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     if freq is not None:
-        fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1), yaxis='y2'))
+        fig.add_trace(go.Bar(
+            x=time,
+            y=freq,
+            name="freq",
+            yaxis='y2',
+            marker={'color': 'rgba(60,60,60,250)', 'opacity': 0.25}
+        ))
+        # fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1, color='black'), yaxis='y2'))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
@@ -26,6 +75,7 @@ def amount_and_freq_timeline_html(time, amount, freq):
         xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
+
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     return graph_html
 
