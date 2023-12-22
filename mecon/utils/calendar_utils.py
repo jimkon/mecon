@@ -7,6 +7,24 @@ import pandas as pd
 from mecon import config
 
 
+class InvalidDatetimeObjectType(Exception):
+    pass
+
+
+def to_date(date_arg):
+    if isinstance(date_arg, str) and len(date_arg) == 10:  # magic number
+        return datetime.strptime(date_arg, config.DATE_STRING_FORMAT).date()
+    elif isinstance(date_arg, str) and len(date_arg) == 19:  # magic number
+        return datetime.strptime(date_arg, config.DATETIME_STRING_FORMAT).date()
+    elif isinstance(date_arg, datetime):
+        return date_arg.date()
+    elif isinstance(date_arg, date):
+        return date_arg
+    else:
+        raise InvalidDatetimeObjectType(
+            f"Datetime objects must be of type [str | datetime | date], got {type(date_arg)} instead with value '{date_arg}'.")
+
+
 class DayOfWeek(Enum):
     MONDAY = 'Monday'
     TUESDAY = 'Tuesday'

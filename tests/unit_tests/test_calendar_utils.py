@@ -8,6 +8,15 @@ from mecon.utils import calendar_utils as cu
 
 
 class TestCalendarUtils(unittest.TestCase):
+    def test_to_date(self):
+        self.assertEqual(cu.to_date("2023-09-11"), date(2023, 9, 11))
+        self.assertEqual(cu.to_date("2023-09-11 12:34:56"), date(2023, 9, 11))
+        self.assertEqual(cu.to_date(datetime(2023, 9, 11, 12, 23, 34)), date(2023, 9, 11))
+        self.assertEqual(cu.to_date(date(2023, 9, 11)), date(2023, 9, 11))
+
+        with self.assertRaises(cu.InvalidDatetimeObjectType):
+            cu.to_date(5)
+
     def test_datetime_to_str(self):
         self.assertEqual(cu.datetime_to_str(datetime(2023, 9, 11, 12, 23, 34)), "2023-09-11 12:23:34")
 
