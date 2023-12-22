@@ -11,7 +11,7 @@ from mecon.app.blueprints.reports import graphs
 from mecon.app.data_manager import DBDataManager
 from mecon.data.groupings import LabelGrouping
 from mecon.data.transactions import Transactions
-from mecon.utils import html_pages
+from mecon.utils import html_pages, calendar_utils
 from mecon.monitoring import logs
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')
@@ -132,9 +132,15 @@ def reports_menu():
     return 'reports menu'
 
 
-@reports_bp.route('/graph/amount_freq/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
+@reports_bp.route('/graph/amount_freq')
 @logs.codeflow_log_wrapper('#api')
-def amount_freq_timeline_graph(start_date, end_date, tags_str, grouping):
+def amount_freq_timeline_graph():
+    start_date = request.args['start_date']
+    end_date = request.args['end_date']
+    tags_str = request.args['tags_str']
+    grouping = request.args['grouping']
+    # aggregation = request.args['aggregation']
+
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
                                                           fill_dates_after_groupagg=True)
 
@@ -153,9 +159,15 @@ def amount_freq_timeline_graph(start_date, end_date, tags_str, grouping):
     return graph_html
 
 
-@reports_bp.route('/graph/balance/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
+@reports_bp.route('/graph/balance')
 @logs.codeflow_log_wrapper('#api')
-def balance_graph(start_date, end_date, tags_str, grouping):
+def balance_graph():
+    start_date = request.args['start_date']
+    end_date = request.args['end_date']
+    tags_str = request.args['tags_str']
+    grouping = request.args['grouping']
+    # aggregation = request.args['aggregation']
+
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
 
     graph_html = graphs.balance_graph_html(
@@ -166,9 +178,15 @@ def balance_graph(start_date, end_date, tags_str, grouping):
     return graph_html
 
 
-@reports_bp.route('/graph/histogram/dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>')
+@reports_bp.route('/graph/histogram')
 @logs.codeflow_log_wrapper('#api')
-def histogram_graph(start_date, end_date, tags_str, grouping):
+def histogram_graph():
+    start_date = request.args['start_date']
+    end_date = request.args['end_date']
+    tags_str = request.args['tags_str']
+    grouping = request.args['grouping']
+    # aggregation = request.args['aggregation']
+
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
 
     graph_html = graphs.histogram_and_contributions(
@@ -179,16 +197,65 @@ def histogram_graph(start_date, end_date, tags_str, grouping):
 
 
 @reports_bp.route(
-    '/custom_graph/<plot_type>,dates:<start_date>_<end_date>,tags:<tags_str>,group:<grouping>,agg:<aggregation>',
+    '/graph/tags_split')
+@logs.codeflow_log_wrapper('#api')
+def tags_split_graph():
+    start_date = request.args['start_date']
+    end_date = request.args['end_date']
+    tags_str = request.args['tags_str']
+    grouping = request.args['grouping']
+    # aggregation = request.args['aggregation']
+    tags_split_str = request.args['tags_split_str']
+    split_tags = tags_split_str.split(',')
+
+    timeline = None
+    tag_total_amounts_list = []
+    for tag in split_tags:
+        tags = f"{tags_str},{tag}"
+        total_amount_transactions = get_filtered_transactions(start_date, end_date, tags, grouping, 'sum')
+        if grouping != 'none':
+            total_amount_transactions = total_amount_transactions.fill_values(fill_unit=grouping,
+                                                                              start_date=calendar_utils.to_date(start_date),
+                                                                              end_date=calendar_utils.to_date(end_date))
+
+        amount_series = total_amount_transactions.amount
+        amount_series.name = tag
+        timeline = total_amount_transactions.datetime
+        # breakpoint()
+        tag_total_amounts_list.append(amount_series)
+
+    graph_html = graphs.lines_graph_html(
+        timeline,
+        tag_total_amounts_list,
+    )
+
+    return graph_html
+
+
+@reports_bp.route(
+    '/custom_graph/<plot_type>',
     methods=['POST', 'GET'])
 @logs.codeflow_log_wrapper('#api')
-def custom_graph(plot_type, start_date, end_date, tags_str, grouping, aggregation):
-    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('',
-                                                                                            start_date=start_date,
-                                                                                            end_date=end_date,
-                                                                                            tags_str=tags_str,
-                                                                                            grouping=grouping,
-                                                                                            aggregation=aggregation)
+def custom_graph(plot_type):
+    start_date = request.args['start_date']
+    end_date = request.args['end_date']
+    tags_str = request.args['tags_str']
+    grouping = request.args['grouping']
+    aggregation = request.args['aggregation']
+
+    filter_kwargs = request.args.copy()
+
+    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('', **filter_kwargs)
+    # start_date=start_date,
+    # end_date=end_date,
+    # tags_str=tags_str,
+    # grouping=grouping,
+    # aggregation=aggregation)
+    filter_kwargs['start_date'] = start_date
+    filter_kwargs['end_date'] = end_date
+    filter_kwargs['tags_str'] = tags_str
+    filter_kwargs['grouping'] = grouping
+    filter_kwargs['aggregation'] = aggregation
 
     # if statement here is for security (so we cannot call any function by changing the url)
     if plot_type == 'amount_freq':
@@ -197,14 +264,12 @@ def custom_graph(plot_type, start_date, end_date, tags_str, grouping, aggregatio
         url = 'reports.balance_graph'
     elif plot_type == 'histogram':
         url = 'reports.histogram_graph'
+    elif plot_type == 'tags_split':
+        url = 'reports.tags_split_graph'
     else:
         raise ValueError(f"Unknown plot type ({plot_type}) requested.")
 
-    graph_html = fetch_graph_html(url_for(url,
-                                          start_date=start_date,
-                                          end_date=end_date,
-                                          tags_str=tags_str,
-                                          grouping=grouping))
+    graph_html = fetch_graph_html(url_for(url, **filter_kwargs))
 
     return render_template('custom_graph.html', **locals(), **globals())
 
@@ -246,3 +311,32 @@ def tag_info(tag_name):
         transactions_stats_json = "<h4>'No stats'</h4>"
         graph_html = "<h4>'No data to plot'</h4>"
     return render_template('tag_info.html', **locals(), **globals())
+
+
+@reports_bp.route('/overall', methods=['POST', 'GET'])
+@logs.codeflow_log_wrapper('#api')
+def overall_report():
+    # data filter???
+    # percentages
+    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('All')
+
+    html_tabs = html_pages.TabsHTML()
+    _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      tags_str=tags_str,
+                                      grouping=grouping,
+                                      tags_split_str='MoneyIn,MoneyOut'))
+    html_tabs.add_tab('Money In/Out', _graph)
+
+    _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      tags_str=tags_str,
+                                      grouping=grouping,
+                                      tags_split_str='Revolut,HSBC,Monzo'))
+    html_tabs.add_tab('Banks', _graph)
+
+    graph_html = html_tabs.html()
+
+    return render_template('overall_report.html', **locals(), **globals())
