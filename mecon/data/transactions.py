@@ -1,5 +1,6 @@
 from __future__ import annotations  # TODO:v2 upgrade to python 3.11
 
+import abc
 from collections import Counter
 from datetime import datetime, date
 
@@ -7,6 +8,7 @@ import pandas as pd
 
 import data.datafields as fields
 from mecon.monitoring import logs
+from mecon.utils import dataframe_transformers, calendar_utils
 
 
 class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.AmountColumnMixin,
@@ -29,8 +31,8 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     def fill_values(self, fill_unit,
-                   start_date: datetime | date | None = None,
-                   end_date: datetime | date | None = None):
+                    start_date: datetime | date | None = None,
+                    end_date: datetime | date | None = None):
         return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit),
                                start_date=start_date, end_date=end_date)
 
@@ -39,19 +41,40 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         return super().factory(df)
 
     def to_html(self):
-        def counts(curr_string):
-            value_counts = Counter(curr_string.split(','))
-
-            res_str = ''
-            for curr, count in value_counts.items():
-                res_str += f"{curr}:{count} "
-            return res_str
-
-        df = self.dataframe().iloc[::-1].reset_index(drop=True)
-        df['currency'] = df['currency'].apply(counts)
-        html_table = df.to_html()
-        res_html = f"<h1>Transactions table ({len(df)} rows)</h1>\n{html_table}"
+        styles = """
+        <style>
+        ul {
+            margin-right: 10px;
+            padding-left: 20px;
+        }
+        .tag_label {
+            font-size: 12px;
+            background-color: #dad;
+            padding: 3px;
+            border: 1px solid #555;
+            display: inline-block;
+        }
+        .datetime_label {
+            white-space: nowrap;
+            font-size: 16px;
+        }
+        .description_phrase_label {
+            font-size: 14px;
+            background-color: #ddd;
+            padding: 2px;
+        }
+    </style>
+        """
+        df = self.dataframe(df_transformer=HTMLTransactionsTableFormat())
+        html_table = df.to_html(escape=False, index=False)
+        res_html = f"{styles}<h1>Transactions table ({len(df)} rows)</h1>\n{html_table}"
         return res_html
+
+    def dataframe(self, df_transformer: AbstractTransactionsTransformer = None):
+        df = super().dataframe()
+        if df_transformer:
+            df = df_transformer.transform(df)
+        return df
 
 
 # TODO:v3 move other Transaction related classes here like TransactionAggregators
@@ -73,3 +96,77 @@ class TransactionDateFiller(fields.DateFiller):
             'tags': tags_fills
         }
         super().__init__(fill_unit, fill_values_dict)
+
+
+class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransformer, abc.ABC):
+    def validate_input_df(self, df):
+        missing_cols = []
+        for col in ['id', 'amount', 'currency', 'amount_cur', 'description', 'tags']:
+            if col not in df.columns:
+                missing_cols.append(col)
+
+        if len(missing_cols) > 0:
+            raise ValueError(f"Missing required columns for Transaction Transformer: {missing_cols}")
+
+
+class HTMLTransactionsTableFormat(AbstractTransactionsTransformer):
+    def _transform(self, df) -> pd.DataFrame:
+        df = df.copy().iloc[::-1].reset_index(drop=True)
+
+        df_out = pd.DataFrame(df['id'].apply(lambda _id: f"<h5>{_id}</h5>"))
+        df_out['Date/Time'] = df['datetime'].apply(self._format_datetime)
+        df_out['Amount'] = df['amount'].apply(self._format_amount)
+        df_out['Curr'] = df['currency'].apply(self._format_currency_count)
+        df_out['Amount (curr)'] = df['amount_cur'].apply(self._format_amount)
+        df_out['Description'] = df['description'].apply(self._format_description)
+        df_out['Tags'] = df['tags'].apply(self._format_tags)
+        return df_out
+
+    @staticmethod
+    def _format_datetime(dt):
+        formatted_date = dt.strftime("%A, %b %w, %Y")
+        formatted_time = dt.strftime("%I:%M:%S %p")
+
+        html_representation = f"""<label class="datetime_label">{formatted_date}</label><br><label class="datetime_label">{formatted_time}</label>"""
+
+        return html_representation
+
+    @staticmethod
+    def _format_amount(amount_str):
+        amount = float(amount_str)
+        text_color = 'orange' if amount < 0 else 'green' if amount > 0 else 'black'
+        return f"""<h4 style="color: {text_color}">{amount:.2f}</h4>"""
+
+    @staticmethod
+    def _format_currency_count(curr_string):
+        value_counts = Counter(curr_string.split(','))
+        if len(value_counts) == 1:
+            curr, count = value_counts.popitem()
+            if count > 1:
+                return f"{curr} ({count})"
+            return curr_string
+
+        res_str = '<ul>'
+        for curr, count in value_counts.items():
+            res_str += f"<li>{curr}:{count}</li>"
+        res_str += '</ul>'
+
+        return res_str
+
+    @staticmethod
+    def _format_description(descr_str):
+        descr_html = """<div>"""
+        for phrase in descr_str.split(','):
+            descr_html += f'<label class="description_phrase_label">{phrase}</label>'
+        descr_html += "</div>"
+        return descr_html
+
+    @staticmethod
+    def _format_tags(tag_str):
+        tags = tag_str.split(',')
+        tags_html = "<div>"
+        for tag in tags:
+            tags_html += f"""<label class="tag_label">{tag}</label>"""
+        tags_html += "</div>"
+
+        return tags_html
