@@ -65,7 +65,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         }
     </style>
         """
-        df = self.dataframe(df_transformer=HTMLTransactionsTableFormat())
+        df = self.dataframe(df_transformer=TransactionsHTMLTableFormat())
         html_table = df.to_html(escape=False, index=False)
         res_html = f"{styles}<h1>Transactions table ({len(df)} rows)</h1>\n{html_table}"
         return res_html
@@ -99,27 +99,27 @@ class TransactionDateFiller(fields.DateFiller):
 
 
 class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransformer, abc.ABC):
-    def validate_input_df(self, df):
+    def validate_input_df(self, df_in):
         missing_cols = []
         for col in ['id', 'amount', 'currency', 'amount_cur', 'description', 'tags']:
-            if col not in df.columns:
+            if col not in df_in.columns:
                 missing_cols.append(col)
 
         if len(missing_cols) > 0:
             raise ValueError(f"Missing required columns for Transaction Transformer: {missing_cols}")
 
 
-class HTMLTransactionsTableFormat(AbstractTransactionsTransformer):
-    def _transform(self, df) -> pd.DataFrame:
-        df = df.copy().iloc[::-1].reset_index(drop=True)
+class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
+    def _transform(self, df_in) -> pd.DataFrame:
+        df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
 
-        df_out = pd.DataFrame(df['id'].apply(lambda _id: f"<h5>{_id}</h5>"))
-        df_out['Date/Time'] = df['datetime'].apply(self._format_datetime)
-        df_out['Amount'] = df['amount'].apply(self._format_amount)
-        df_out['Curr'] = df['currency'].apply(self._format_currency_count)
-        df_out['Amount (curr)'] = df['amount_cur'].apply(self._format_amount)
-        df_out['Description'] = df['description'].apply(self._format_description)
-        df_out['Tags'] = df['tags'].apply(self._format_tags)
+        df_out = pd.DataFrame(df_in['id'].apply(lambda _id: f"<h5>{_id}</h5>"))
+        df_out['Date/Time'] = df_in['datetime'].apply(self._format_datetime)
+        df_out['Amount'] = df_in['amount'].apply(self._format_amount)
+        df_out['Curr'] = df_in['currency'].apply(self._format_currency_count)
+        df_out['Amount (curr)'] = df_in['amount_cur'].apply(self._format_amount)
+        df_out['Description'] = df_in['description'].apply(self._format_description)
+        df_out['Tags'] = df_in['tags'].apply(self._format_tags)
         return df_out
 
     @staticmethod
