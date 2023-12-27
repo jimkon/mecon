@@ -142,7 +142,9 @@ def amount_freq_timeline_graph():
     # aggregation = request.args['aggregation']
 
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
-                                                          fill_dates_after_groupagg=True)
+                                                          fill_dates_after_groupagg=False)
+
+    total_amount_transactions = total_amount_transactions.fill_values(grouping if grouping != 'none' else 'day')
 
     if grouping != 'none':
         freq_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'count',
