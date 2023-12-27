@@ -7,6 +7,7 @@ from mecon.data.transactions import Transactions
 from mecon.monitoring import logs
 from mecon.tag_tools import tagging, comparisons, transformations
 from mecon.tag_tools.tagging import Tag
+from mecon.app.app_utils import ManualTaggingHTMLTableFormat
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
@@ -158,20 +159,6 @@ def tag_edit(tag_name):
 
 @tags_bp.route("/manual_tagging/order=<order_by>", methods=['POST', 'GET'])
 def manual_tagging(order_by):
-    def tags_form(row):
-        id = row[0]
-        tags = row[6].split(',')
-        tag_checkboxes = """<div class="labelContainer">"""
-        for tag in all_tags:
-            checkbox = f"""
-            <label class="{'tagLabel_checked' if tag in tags else 'tagLabel_unchecked'}">{tag}<input type="checkbox"  name="{tag}_for_{id}" {'checked disabled' if tag in tags else ''}></label>
-            """
-            tag_checkboxes += checkbox
-        tag_checkboxes = tag_checkboxes + "</div></div>"
-
-        result = tag_checkboxes  # + tags_container
-        return result.replace('\n', '')
-
     if request.method == 'POST':
         if "save_changes" in request.form:
             tag_events = [{'tag': name.split('_for_')[0], 'id': name.split('_for_')[1]}
@@ -192,17 +179,10 @@ def manual_tagging(order_by):
 
     transactions = get_transactions()
     all_tags = sorted([tag.name for tag in _data_manager.all_tags()])
-    df = transactions.dataframe()[:10]
+    df = transactions.dataframe(
+        df_transformer=ManualTaggingHTMLTableFormat(all_tags, order_by=order_by)
+    )[:10]
 
-    if order_by == 'newest':
-        df = df.sort_values(['datetime'], ascending=False)
-    elif order_by == 'least tagged':
-        df['n_tags'] = df['tags'].apply(lambda s: len(s.split(',')))
-        df = df.sort_values(['n_tags'], ascending=True)
-        del df['n_tags']
-
-    df['Edit'] = df.apply(tags_form, axis=1)
-    df = df[[df.columns[-1]] + list(df.columns[:-1])]
     table_html = df.to_html(render_links=True, escape=False)
 
     return render_template('manual_tagging.html', **locals())
