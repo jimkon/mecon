@@ -115,7 +115,7 @@ class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
 
         df_out = pd.DataFrame(df_in['id'].apply(lambda _id: f"<h5>{_id}</h5>"))
         df_out['Date/Time'] = df_in['datetime'].apply(self._format_datetime)
-        df_out['Amount'] = df_in['amount'].apply(self._format_amount)
+        df_out['Amount (£)'] = df_in['amount'].apply(self._format_amount)
         df_out['Curr'] = df_in['currency'].apply(self._format_currency_count)
         df_out['Amount (curr)'] = df_in['amount_cur'].apply(self._format_amount)
         df_out['Description'] = df_in['description'].apply(self._format_description)
