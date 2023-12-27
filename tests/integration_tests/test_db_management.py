@@ -663,7 +663,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
                 'GBP': 1.0
             }) * amount
 
-        with mock.patch.object(db_controller.etl.RevoTransformer, 'convert_amounts', side_effect=convert_amounts):
+        with mock.patch.object(db_controller.etl.RevoStatementTransformer, 'convert_amounts', side_effect=convert_amounts):
             self.accessor.load_transactions()
 
         transactions = self.accessor.get_transactions()

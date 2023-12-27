@@ -4,10 +4,11 @@ import numpy as np
 import pandas as pd
 
 from mecon.utils import currencies
+from mecon.utils.dataframe_transformers import DataframeTransformer
 
 
-class HSBCTransformer:
-    def transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
+class HSBCStatementTransformer(DataframeTransformer):
+    def _transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming HSBC raw transactions ({df_hsbc.shape} shape)")
         # Add prefix to id
         df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
@@ -31,8 +32,8 @@ class HSBCTransformer:
         return df_transformed
 
 
-class MonzoTransformer:
-    def transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
+class MonzoStatementTransformer(DataframeTransformer):
+    def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
 
         df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
@@ -61,7 +62,7 @@ class MonzoTransformer:
         return df_transformed
 
 
-class RevoTransformer:
+class RevoStatementTransformer(DataframeTransformer):
     def __init__(self, currency_converter=None):
         self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
 
@@ -70,7 +71,7 @@ class RevoTransformer:
                 for amount, currency, date
                 in zip(amount_ser, currency_ser, datetime_ser)]
 
-    def transform(self, df_revo: pd.DataFrame) -> pd.DataFrame:
+    def _transform(self, df_revo: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Revolut raw transactions ({df_revo.shape} shape)")
 
         df_transformed = pd.DataFrame({'id': ('3' + df_revo['id'].astype(str)).astype(np.int64)})

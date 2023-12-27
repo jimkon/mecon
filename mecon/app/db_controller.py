@@ -206,9 +206,9 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
 
         currency_converter = currencies.HybridLookupCurrencyConverter()
 
-        df_hsbc_transformed = etl.HSBCTransformer().transform(df_hsbc.copy())
-        df_monzo_transformed = etl.MonzoTransformer().transform(df_monzo.copy())
-        df_revo_transformed = etl.RevoTransformer(currency_converter).transform(df_revo.copy())
+        df_hsbc_transformed = etl.HSBCStatementTransformer().transform(df_hsbc.copy())
+        df_monzo_transformed = etl.MonzoStatementTransformer().transform(df_monzo.copy())
+        df_revo_transformed = etl.RevoStatementTransformer(currency_converter).transform(df_revo.copy())
 
         logging.info(f"Checking HSBC transactions for duplicates...")
         self._handle_duplicates(df_hsbc_transformed,

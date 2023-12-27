@@ -26,7 +26,7 @@ class HSBCTransformerTest(unittest.TestCase):
             'description': ['bank:HSBC, Transaction 1', 'bank:HSBC, Transaction 2', 'bank:HSBC, Transaction 3']
         })
 
-        transformer = etl.HSBCTransformer()
+        transformer = etl.HSBCStatementTransformer()
         transformed_df = transformer.transform(df_hsbc)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
@@ -69,7 +69,7 @@ class MonzoTransformerTest(unittest.TestCase):
                 'bank:Monzo, transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0']
         })
 
-        transformer = etl.MonzoTransformer()
+        transformer = etl.MonzoStatementTransformer()
         transformed_df = transformer.transform(df_monzo)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
@@ -104,7 +104,7 @@ class RevoTransformerTest(unittest.TestCase):
                 'bank:Revolut, type: Type 3, product: Product C, completed_date: 2022-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0']
         })
 
-        transformer = etl.RevoTransformer()  # currency_converter will be FixedRateCurrencyConverter by default
+        transformer = etl.RevoStatementTransformer()  # currency_converter will be FixedRateCurrencyConverter by default
         transformed_df = transformer.transform(df_revo)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
