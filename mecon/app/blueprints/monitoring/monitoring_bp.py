@@ -75,7 +75,7 @@ def codeflow_timeline_graph_html(perf_data: PerformanceData):
 def console_table_tabs(df_logs: pd.DataFrame):
     tabs = html_pages.TabsHTML()
     tabs.add_tab('All', df_logs.to_html())
-    tabs.add_tab('Warning', df_logs[df_logs['level'] == 'WARNING'].to_html())
+    tabs.add_tab('Warnings', df_logs[df_logs['level'] == 'WARNING'].to_html())
     return tabs.html()
 
 
