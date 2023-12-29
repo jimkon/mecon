@@ -3,7 +3,7 @@ import pathlib
 import pandas as pd
 from flask import Blueprint, render_template, request
 
-from mecon import tag_tools
+from mecon.tag_tools import tagging
 from mecon.monitoring.logs import get_log_files, read_logs_as_df
 from mecon.utils import html_pages
 from mecon.monitoring.log_data import LogData, PerformanceData
@@ -30,7 +30,7 @@ def performance_stats_dict(perf_data: PerformanceData):
     tag_perf_stats = {}
 
     for tag in perf_data.all_tags().keys():
-        rule = tag_tools.TagMatchCondition(tag)
+        rule = tagging.TagMatchCondition(tag)
         tag_perf_data = perf_data.apply_rule(rule)
         non_zero_perf_data = tag_perf_data.finished()
         tag_perf_stats[tag] = non_zero_perf_data.execution_time
@@ -72,15 +72,22 @@ def codeflow_timeline_graph_html(perf_data: PerformanceData):
     return res_html
 
 
+def console_table_tabs(df_logs: pd.DataFrame):
+    tabs = html_pages.TabsHTML()
+    tabs.add_tab('All', df_logs.to_html())
+    tabs.add_tab('Warning', df_logs[df_logs['level'] == 'WARNING'].to_html())
+    return tabs.html()
+
+
 @monitoring_bp.route('/', methods=['POST', 'GET'])
 def home():
     all_log_filenames = [str(file) for file in get_log_files(historic_logs=True)]
     log_data, selected_log_file = get_logs()
-    table_html = log_data.dataframe().sort_values(['datetime'], ascending=False).to_html()
+    df_logs = log_data.dataframe().sort_values(['datetime'], ascending=False)
     perf_data = PerformanceData.from_log_data(log_data=log_data)
 
     tabs = html_pages.TabsHTML() \
         .add_tab('Performance', performance_stats_page(perf_data)) \
         .add_tab('Timeline', codeflow_timeline_graph_html(perf_data)) \
-        .add_tab('Console', table_html).html()
+        .add_tab('Console', console_table_tabs(df_logs)).html()
     return render_template('monitoring_home.html', **locals(), **globals())
