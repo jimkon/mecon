@@ -20,6 +20,7 @@ def aggregate_currencies(currencies):
     # return json.dumps(dict(sorted(Counter(currencies).items(), reverse=True)))
     return ','.join(currencies.to_list())
 
+ID_AGGREGATION_VALUE = 'aggregated'
 
 class TransactionAggregator(InTypeAggregator):
     def __init__(self, id_agg, datetime_agg, amount_agg, currency_agg, description_agg, tags_agg):
@@ -34,7 +35,7 @@ class TransactionAggregator(InTypeAggregator):
         })
 
 
-class CustomisedDefaultTransactionAggregator(TransactionAggregator):
+class CustomisableDefaultTransactionAggregator(TransactionAggregator):
     def __init__(self,
                  id_agg=None,
                  datetime_agg=None,
@@ -43,7 +44,8 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
                  description_agg=None,
                  tags_agg=None):
 
-        id_agg = min if id_agg is None else id_agg  # (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO:v3 if id becomes a string, then just concat
+        # id_agg = min if id_agg is None else id_agg  # (lambda ints: int(''.join([str(i) for i in ints]))) if id_agg is None else id_agg # TODO:v3 if id becomes a string, then just concat
+        id_agg = (lambda x: ID_AGGREGATION_VALUE) if id_agg is None else id_agg
         datetime_agg = min if datetime_agg is None else datetime_agg
         amount_agg = sum if amount_agg is None else amount_agg
         currency_agg = aggregate_currencies if currency_agg is None else currency_agg
@@ -75,7 +77,7 @@ class CustomisedDefaultTransactionAggregator(TransactionAggregator):
 # MIN_DAY = CustomisedAmountTransactionAggregator('count', min, 'day')
 # MIN_DAY = CustomisedAmountTransactionAggregator('min', min, 'day')
 
-class CustomisedAmountTransactionAggregator(CustomisedDefaultTransactionAggregator):
+class CustomisableAmountTransactionAggregator(CustomisableDefaultTransactionAggregator):
     def __init__(self, amount_agg_key, date_group_unit):
         self._amount_agg_key = amount_agg_key
         self._date_group_unit = date_group_unit

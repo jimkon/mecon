@@ -10,6 +10,7 @@ import data.datafields as fields
 from mecon.monitoring import logs
 from mecon.utils import dataframe_transformers, calendar_utils
 
+ID_FILL_VALUE = 'filled'
 
 class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.AmountColumnMixin,
                    fields.DescriptionColumnMixin, fields.TagsColumnMixin):

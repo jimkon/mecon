@@ -7,6 +7,43 @@ import pandas as pd
 from mecon.import_data import etl
 
 
+class TransactionIDTest(unittest.TestCase):
+    def test_monzo_positive_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
+        result = etl.transaction_id_formula(transaction, 'Monzo')
+        self.assertEqual(result, 'MZNd20230101t120000ap5000i123')
+
+    def test_monzo_negative_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -30, 'id': 456}
+        result = etl.transaction_id_formula(transaction, 'Monzo')
+        self.assertEqual(result, 'MZNd20230101t120000an3000i456')
+
+    def test_hsbc_positive_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 75, 'id': 789}
+        result = etl.transaction_id_formula(transaction, 'HSBC')
+        self.assertEqual(result, 'HSBCd20230101t120000ap7500i789')
+
+    def test_hsbc_negative_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -20, 'id': 101}
+        result = etl.transaction_id_formula(transaction, 'HSBC')
+        self.assertEqual(result, 'HSBCd20230101t120000an2000i101')
+
+    def test_revolut_positive_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 120, 'id': 111}
+        result = etl.transaction_id_formula(transaction, 'Revolut')
+        self.assertEqual(result, 'RVLTd20230101t120000ap12000i111')
+
+    def test_revolut_negative_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -45, 'id': 222}
+        result = etl.transaction_id_formula(transaction, 'Revolut')
+        self.assertEqual(result, 'RVLTd20230101t120000an4500i222')
+
+    def test_invalid_bank(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
+        with self.assertRaises(ValueError):
+            etl.transaction_id_formula(transaction, 'InvalidBank')
+
+
 class HSBCTransformerTest(unittest.TestCase):
     def test_transform_hsbc_transactions(self):
         df_hsbc = pd.DataFrame({
@@ -17,7 +54,7 @@ class HSBCTransformerTest(unittest.TestCase):
         })
 
         expected_output = pd.DataFrame({
-            'id': [11, 12, 13],
+            'id': ['HSBCd20220101t000000ap10000i1', 'HSBCd20220615t000000ap200000i2', 'HSBCd20221231t000000an30000i3'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 0, 0, 0),
                          datetime(2022, 12, 31, 0, 0, 0)],
             'amount': [100.0, 2000.0, -300.0],
@@ -57,7 +94,7 @@ class MonzoTransformerTest(unittest.TestCase):
         )
 
         expected_output = pd.DataFrame({
-            'id': [21, 22, 23],
+            'id': ['MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30),
                          datetime(2022, 12, 31, 23, 59, 59)],
             'amount': [100.0, 50.0, 200.0],
@@ -92,7 +129,7 @@ class RevoTransformerTest(unittest.TestCase):
         )
 
         expected_output = pd.DataFrame({
-            'id': [31, 32, 33],
+            'id': ['RVLTd20220101t000000ap10000i31', 'RVLTd20220615t123030ap20000i32', 'RVLTd20221231t235959ap30000i33'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30),
                          datetime(2022, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],

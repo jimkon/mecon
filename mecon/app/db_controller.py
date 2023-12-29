@@ -147,8 +147,8 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
     @staticmethod
     def _transaction_df_types_validation(df):
         invalid_types = []
-        if not pd.api.types.is_integer_dtype(df['id']):
-            invalid_types.append(f"invalid type for column 'id'. expected: int, got: {df['id'].dtype}")
+        if not pd.api.types.is_string_dtype(df['id']):
+            invalid_types.append(f"invalid type for column 'id'. expected: string, got: {df['id'].dtype}")
         if not pd.api.types.is_datetime64_dtype(df['datetime']):
             invalid_types.append(f"invalid type for column 'datetime'. expected: datetime, got: {df['datetime'].dtype}")
         if not pd.api.types.is_numeric_dtype(df['amount']):

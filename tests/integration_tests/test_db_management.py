@@ -525,7 +525,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
 
         expected_df = pd.DataFrame(
             {
-                'id': [31, 32, 33, 21, 22, 23, 11, 12, 13],
+                'id': ['RVLTd20210101t000000ap13000i31', 'RVLTd20210615t123030ap24000i32', 'RVLTd20211231t235959ap30000i33', 'MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3', 'HSBCd20230101t000000ap100000i1', 'HSBCd20230615t000000ap200000i2', 'HSBCd20231231t000000ap300000i3'],
                 'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
                              datetime(2021, 12, 31, 23, 59, 59), datetime(2022, 1, 1, 0, 0, 0),
                              datetime(2022, 6, 15, 12, 30, 30), datetime(2022, 12, 31, 23, 59, 59),
@@ -562,7 +562,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
 
     def test__transaction_df_validation_types_success(self):
         test_df = pd.DataFrame({
-            'id': [0, 1, 2],
+            'id': ['0', '1', '2'],
             'datetime': [datetime(2000, 1, 1, 0, 0, 0), datetime(2000, 1, 1, 0, 0, 0),
                          datetime(2000, 1, 1, 0, 0, 0)],
             'amount': [.0, 1, .2],
@@ -576,7 +576,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
     def test__transaction_df_validation_types_fail(self):
         try:
             test_df = pd.DataFrame({
-                'id': ['0', '1', '2'],
+                'id': [0, 1, 2],
                 'datetime': [0, 1, 2],
                 'amount': ['0', '1', '2'],
                 'currency': [0, 1, 2],
@@ -587,7 +587,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             db_controller.TransactionsDBAccessor._transaction_df_types_validation(test_df)
         except db_controller.InvalidTransactionsDataframeDataTypesException as inv_types_error:
             expected_errors = [
-                "invalid type for column 'id'. expected: int, got: object",
+                "invalid type for column 'id'. expected: string, got: int64",
                 "invalid type for column 'datetime'. expected: datetime, got: int64",
                 "invalid type for column 'amount'. expected: number, got: object",
                 "invalid type for column 'currency'. expected: string, got: int64",

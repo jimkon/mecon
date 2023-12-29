@@ -5,7 +5,7 @@ import requests
 from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
-from mecon.data.aggregators import CustomisedAmountTransactionAggregator
+from mecon.data.aggregators import CustomisableAmountTransactionAggregator
 from mecon.data import reports
 from mecon.app.blueprints.reports import graphs
 from mecon.app.data_manager import DBDataManager
@@ -86,7 +86,7 @@ def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggr
 
         transactions = transactions.groupagg(
             LabelGrouping.from_key(grouping_key),
-            CustomisedAmountTransactionAggregator(aggregation_key, grouping_key)
+            CustomisableAmountTransactionAggregator(aggregation_key, grouping_key)
         )
 
         if fill_dates_after_groupagg:
