@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch, Mock, call
 from datetime import datetime
 
 import pandas as pd
@@ -407,6 +408,110 @@ class TestTagMatchCondition(unittest.TestCase):
         self.assertEqual(match_condition.compute({'tags': 'another_tag,test_tag,another_tag'}), True)
         self.assertEqual(match_condition.compute({'tags': 'another_tag,another_tag,test_tag'}), True)
         self.assertEqual(match_condition.compute({'tags': 'not_test_tag'}), False)
+
+
+class BasicStatsObserverFunctionalityTestCase(unittest.TestCase):
+    def test_log_call(self):
+        observer = Mock()
+        tagging.Condition.add_observer(observer)
+
+        greater_than_one = tagging.Condition(
+            field='field',
+            transformation_op=None,
+            compare_op=lambda x, y: x > y,
+            value=1
+        )
+        less_than_one = tagging.Condition(
+            field='field',
+            transformation_op=None,
+            compare_op=lambda x, y: x < y,
+            value=1
+        )
+
+        with patch.object(observer, 'observe'):
+            greater_than_one.compute({'field': 0})
+            greater_than_one.compute({'field': 2})
+            less_than_one.compute({'field': 0})
+            less_than_one.compute({'field': 2})
+
+            observer.observe.assert_has_calls([
+                call(greater_than_one, {'field': 0}, False),
+                call(greater_than_one, {'field': 2}, True),
+                call(less_than_one, {'field': 0}, True),
+                call(less_than_one, {'field': 2}, False),
+            ])
+
+    def test_multiple_observers(self):
+        observer1 = Mock()
+        observer2 = Mock()
+
+        tagging.Condition.add_observer(observer1)
+        tagging.Condition.add_observer(observer2)
+
+        condition = tagging.Condition(
+            field='field',
+            transformation_op=None,
+            compare_op=lambda x, y: x > y,
+            value=1
+        )
+
+        with patch.object(observer1, 'observe'):
+            with patch.object(observer2, 'observe'):
+                condition.compute({'field': 0})
+
+                observer1.observe.assert_has_calls([call(condition, {'field': 0}, False)])
+                observer2.observe.assert_has_calls([call(condition, {'field': 0}, False)])
+
+
+class StatObserversTestCase(unittest.TestCase):
+    class ExampleRuleObserver(tagging.RuleStatsObserverABC):
+        cnt = 0
+        def observe(self, rule, element, outcome):
+            self.cnt += 1
+
+    class ExampleConditionObserver(tagging.ConditionStatsObserverABC):
+        cnt = 0
+        def observe_condition(self, rule, element, outcome):
+            self.cnt += 1
+
+    class ExampleConjunctionObserver(tagging.ConjunctionStatsObserverABC):
+        cnt = 0
+        def observe_conjunction(self, rule, element, outcome):
+            self.cnt += 1
+
+    class ExampleDisjunctionObserver(tagging.DisjunctionStatsObserverABC):
+        cnt = 0
+        def observe_disjunction(self, rule, element, outcome):
+            self.cnt += 1
+
+    def setUp(self) -> None:
+        self.rule_obs = self.ExampleRuleObserver()
+        self.cond_obs = self.ExampleConditionObserver()
+        self.conj_obs = self.ExampleConjunctionObserver()
+        self.disj_obs = self.ExampleDisjunctionObserver()
+
+        tagging.AbstractRule.add_observer(self.rule_obs)
+        tagging.AbstractRule.add_observer(self.cond_obs)
+        tagging.AbstractRule.add_observer(self.conj_obs)
+        tagging.AbstractRule.add_observer(self.disj_obs)
+
+    def test_all(self):
+        condition1 = tagging.Condition(field='field', transformation_op=None, compare_op=lambda x, y: x > y, value=1)
+        condition2 = tagging.Condition(field='field', transformation_op=None, compare_op=lambda x, y: x > y, value=1)
+        condition3 = tagging.Condition(field='field', transformation_op=None, compare_op=lambda x, y: x > y, value=1)
+        condition4 = tagging.Condition(field='field', transformation_op=None, compare_op=lambda x, y: x > y, value=1)
+
+        conjunction12 = tagging.Conjunction([condition1, condition2])
+        conjunction34 = tagging.Conjunction([condition3, condition4])
+
+        disjunction = tagging.Disjunction([conjunction12, conjunction34])
+
+        disjunction.compute({'field': 0})
+
+        self.assertEqual(self.rule_obs.cnt, 7)
+        self.assertEqual(self.cond_obs.cnt, 4)
+        self.assertEqual(self.conj_obs.cnt, 2)
+        self.assertEqual(self.disj_obs.cnt, 1)
 
 
 if __name__ == '__main__':
