@@ -28,12 +28,13 @@ class RuleStatsObserverABC(abc.ABC):
 
 
 class AbstractRule(abc.ABC):
-    __observers__ = []
+    def __init__(self):
+        self._observers = []
 
     def compute(self, element):
         result = self._compute(element)
 
-        for obs in self.__observers__:
+        for obs in self._observers:
             obs.observe(self, element, result)
 
         return result
@@ -46,13 +47,13 @@ class AbstractRule(abc.ABC):
     def to_json(self) -> list | dict:
         pass
 
-    @classmethod
-    def add_observer(cls, obs):
-        cls.__observers__.append(obs)
+    def add_observer(self, obs):
+        self._observers.append(obs)
 
 
 class Condition(AbstractRule):
     def __init__(self, field, transformation_op, compare_op, value):
+        super().__init__()
         if not isinstance(field, str):
             raise FieldIsNotStringException
         self._field = field
@@ -108,6 +109,7 @@ class Condition(AbstractRule):
 
 class Conjunction(AbstractRule):
     def __init__(self, rule_list):
+        super().__init__()
         for rule in rule_list:
             if not issubclass(rule.__class__, AbstractRule):
                 raise NotARuleException
@@ -163,6 +165,7 @@ class Conjunction(AbstractRule):
 
 class Disjunction(AbstractRule):
     def __init__(self, rule_list):
+        super().__init__()
         for rule in rule_list:
             if not issubclass(rule.__class__, AbstractRule):
                 raise NotARuleException
@@ -331,35 +334,3 @@ class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
         regex_value = r"\b" + tag_name + r"\b"
         super().__init__(field, transformation_op, compare_op, regex_value)
 
-
-class ConditionStatsObserverABC(RuleStatsObserverABC, abc.ABC):
-    def observe(self, rule, element, outcome):
-        if not issubclass(rule.__class__, Condition):
-            return
-        self.observe_condition(rule, element, outcome)
-
-    @abc.abstractmethod
-    def observe_condition(self, rule, element, outcome):
-        pass
-
-
-class ConjunctionStatsObserverABC(RuleStatsObserverABC, abc.ABC):
-    def observe(self, rule, element, outcome):
-        if not issubclass(rule.__class__, Conjunction):
-            return
-        self.observe_conjunction(rule, element, outcome)
-
-    @abc.abstractmethod
-    def observe_conjunction(self, rule, element, outcome):
-        pass
-
-
-class DisjunctionStatsObserverABC(RuleStatsObserverABC, abc.ABC):
-    def observe(self, rule, element, outcome):
-        if not issubclass(rule.__class__, Disjunction):
-            return
-        self.observe_disjunction(rule, element, outcome)
-
-    @abc.abstractmethod
-    def observe_disjunction(self, rule, element, outcome):
-        pass
