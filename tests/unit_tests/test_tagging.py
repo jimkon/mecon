@@ -412,10 +412,6 @@ class TestTagMatchCondition(unittest.TestCase):
 
 
 class BasicStatsObserverFunctionalityTestCase(unittest.TestCase):
-    class ExampleObserver(tagging.RuleStatsObserverABC):
-        def observe(self, rule, element, outcome):
-            pass
-
     def test_adding_observer_to_rule(self):
         condition = tagging.Condition(
             field='field',
@@ -423,13 +419,13 @@ class BasicStatsObserverFunctionalityTestCase(unittest.TestCase):
             compare_op=lambda x, y: x > y,
             value=1
         )
+        condition.add_observers(None)
+        self.assertEqual(len(condition._observers), 0)
 
-        condition.add_observers(self.ExampleObserver)
+        observer = Mock()
+        condition.add_observers(observer)
         self.assertEqual(len(condition._observers), 1)
-        self.assertIsInstance(condition._observers[0], self.ExampleObserver)
-
-        with self.assertRaises(TypeError):
-            condition.add_observers(lambda: 'a string object')
+        self.assertEqual(condition._observers[0], observer)
 
     def test_multiple_observers(self):
         condition = tagging.Condition(
@@ -438,16 +434,17 @@ class BasicStatsObserverFunctionalityTestCase(unittest.TestCase):
             compare_op=lambda x, y: x > y,
             value=1
         )
-        condition.add_observers(self.ExampleObserver)
-        condition.add_observers(self.ExampleObserver)
-        observer1, observer2 = condition.get_observers()
+        observer1, observer2 = Mock(), Mock()
+
+        condition.add_observers(observer1)
+        condition.add_observers(observer2)
 
         with patch.object(observer1, 'observe'):
             with patch.object(observer2, 'observe'):
                 condition.compute({'field': 0})
 
-                observer1.observe.assert_has_calls([call(condition, {'field': 0}, False)])
-                observer2.observe.assert_has_calls([call(condition, {'field': 0}, False)])
+                observer1.assert_has_calls([call(condition, {'field': 0}, False)])
+                observer2.assert_has_calls([call(condition, {'field': 0}, False)])
 
 
 if __name__ == '__main__':

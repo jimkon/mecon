@@ -21,12 +21,6 @@ class NotARuleException(Exception):
     pass
 
 
-class RuleStatsObserverABC(abc.ABC):
-    @abc.abstractmethod
-    def observe(self, rule, element, outcome):
-        pass
-
-
 class AbstractRule(abc.ABC):
     def __init__(self):
         self._observers = []
@@ -34,8 +28,8 @@ class AbstractRule(abc.ABC):
     def compute(self, element):
         result = self._compute(element)
 
-        for obs in self._observers:
-            obs.observe(self, element, result)
+        for observer_callback in self._observers:
+            observer_callback(self, element, result)
 
         return result
 
@@ -47,23 +41,14 @@ class AbstractRule(abc.ABC):
     def to_json(self) -> list | dict:
         pass
 
-    def add_observers(self, observers_init_f):
-        if observers_init_f is None:
-            return None
+    def add_observers(self, observers_f):
+        if observers_f is None:
+            return
 
-        if not isinstance(observers_init_f, list):
-            observers_init_f = [observers_init_f]
+        if not isinstance(observers_f, list):
+            observers_f = [observers_f]
 
-        observers = []
-        for init_func in observers_init_f:
-            observer = init_func()
-
-            if not issubclass(observer.__class__, RuleStatsObserverABC):
-                raise TypeError(f"Initialisation function '{init_func}' did not produce an object of RuleStatsObserverABC inheritance: {type(observer)} produced instead")
-
-            observers.append(observer)
-
-        self._observers.extend(observers)
+        self._observers.extend(observers_f)
 
     def get_observers(self):
         return self._observers
