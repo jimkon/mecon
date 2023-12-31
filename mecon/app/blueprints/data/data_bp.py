@@ -7,7 +7,7 @@ from flask import Blueprint, redirect, url_for, render_template, request
 from json2html import json2html
 
 from mecon.app.datasets import WorkingDatasetDir
-from mecon.app.data_manager import DBDataManager
+from mecon.app.data_manager import GlobalDataManager
 from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from mecon.data.datafields import NullDataframeInDataframeWrapper
 from mecon.monitoring import logs
@@ -15,7 +15,7 @@ from mecon.import_data import monzo_data
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 
-_data_manager = DBDataManager()
+_data_manager = GlobalDataManager()
 monzo_client = monzo_data.MonzoClient()
 
 

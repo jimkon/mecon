@@ -3,7 +3,7 @@ from mecon.data import data_management
 from mecon.utils.instance_management import Singleton
 
 
-class DBDataManager(data_management.DataManager, Singleton):
+class DBDataManager(data_management.DataManager):
     def __init__(self):
         super().__init__(
             trans_io=db_controller.TransactionsDBAccessor(),
@@ -32,7 +32,7 @@ class DBDataManager(data_management.DataManager, Singleton):
     #     df_transformed.to_csv(filename)
 
 
-class CachedDBDataManager(data_management.CacheDataManager, Singleton):
+class CachedDBDataManager(data_management.CacheDataManager):
     def __init__(self):
         super().__init__(
             trans_io=db_controller.TransactionsDBAccessor(),
@@ -41,3 +41,7 @@ class CachedDBDataManager(data_management.CacheDataManager, Singleton):
             monzo_stats_io=db_controller.MonzoTransactionsDBAccessor(),
             revo_stats_io=db_controller.RevoTransactionsDBAccessor(),
         )
+
+
+class GlobalDataManager(CachedDBDataManager, Singleton):
+    pass

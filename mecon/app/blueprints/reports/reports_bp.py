@@ -8,7 +8,7 @@ from json2html import json2html
 from mecon.data.aggregators import CustomisableAmountTransactionAggregator
 from mecon.data import reports
 from mecon.app.blueprints.reports import graphs
-from mecon.app.data_manager import DBDataManager
+from mecon.app.data_manager import GlobalDataManager
 from mecon.data.groupings import LabelGrouping
 from mecon.data.transactions import Transactions
 from mecon.utils import html_pages, calendar_utils
@@ -16,7 +16,7 @@ from mecon.monitoring import logs
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')
 
-_data_manager = DBDataManager()
+_data_manager = GlobalDataManager()
 
 
 def _split_tags(input_string):

@@ -2,7 +2,7 @@ import json
 
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from mecon.app.data_manager import DBDataManager
+from mecon.app.data_manager import GlobalDataManager
 from mecon.data.transactions import Transactions
 from mecon.monitoring import logs
 from mecon.tag_tools import tagging, comparisons, transformations
@@ -11,7 +11,7 @@ from mecon.app.app_utils import ManualTaggingHTMLTableFormat
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
-_data_manager = DBDataManager()
+_data_manager = GlobalDataManager()
 
 
 def _reformat_json_str(json_str):
