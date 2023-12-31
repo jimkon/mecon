@@ -50,9 +50,6 @@ class AbstractRule(abc.ABC):
 
         self._observers.extend(observers_f)
 
-    def get_observers(self):
-        return self._observers
-
 
 class AbstractCompositeRule(AbstractRule, abc.ABC):
     def __init__(self, rule_list):
@@ -65,6 +62,17 @@ class AbstractCompositeRule(AbstractRule, abc.ABC):
     @property
     def rules(self):
         return self._rules
+
+    def add_observers_recursively(self, observers_f):
+        if observers_f is None:
+            return
+
+        self.add_observers(observers_f)
+        for rule in self.rules:
+            if issubclass(rule.__class__, AbstractCompositeRule):
+                rule.add_observers_recursively(observers_f)
+            else:
+                rule.add_observers(observers_f)
 
 
 class Condition(AbstractRule):
@@ -112,19 +120,21 @@ class Condition(AbstractRule):
     def to_json(self) -> list | dict:
         return self.to_dict()
 
-    @staticmethod
-    def from_string_values(field, transformation_op_key, compare_op_key, value, observer_init_functions=None):
+    @classmethod
+    def from_string_values(cls, field, transformation_op_key, compare_op_key, value, observers_f=None):
         transformation_op = transformations.TransformationFunction.from_key(
             transformation_op_key if transformation_op_key else 'none')
         compare_op = comparisons.CompareOperator.from_key(compare_op_key)
 
-        condition = Condition(field, transformation_op, compare_op, value)
-        condition.add_observers(observer_init_functions)
+        condition = cls(field, transformation_op, compare_op, value)
+        condition.add_observers(observers_f)
 
         return condition
 
     def __repr__(self):
-        return f"{self._transformation_op}(x[{self._field}]) {self._compare_op} {self._value}"
+        transf_name = self._transformation_op.name if hasattr(self._transformation_op, 'name') else self._transformation_op
+        comp_name = self._compare_op.name if hasattr(self._compare_op, 'name') else self._compare_op
+        return f"{transf_name}(x[{self._field}]) {comp_name} {self._value}"
 
 
 class Conjunction(AbstractCompositeRule):
@@ -158,7 +168,7 @@ class Conjunction(AbstractCompositeRule):
         return [self.to_dict()]
 
     @staticmethod
-    def from_dict(_dict, observer_init_functions=None):
+    def from_dict(_dict, observers_f=None):
         rules_list = []
         for col_name_full, col_dict in _dict.items():
             field = col_name_full.split('.')[0]
@@ -173,11 +183,11 @@ class Conjunction(AbstractCompositeRule):
                         transformation_op,
                         compare_op,
                         compare_value,
-                        observer_init_functions=observer_init_functions
+                        # observers_f=observers_f
                     ))
 
         conjunction = Conjunction(rules_list)
-        conjunction.add_observers(observer_init_functions)
+        conjunction.add_observers_recursively(observers_f)
 
         return conjunction
 
@@ -201,26 +211,26 @@ class Disjunction(AbstractCompositeRule):
         return res
 
     @classmethod
-    def from_json(cls, _json, observer_init_functions=None):
+    def from_json(cls, _json, observers_f=None):
         if isinstance(_json, dict):
             _json = [_json]
 
         if isinstance(_json, list):
-            rule_list = [Conjunction.from_dict(_dict, observer_init_functions=observer_init_functions) for _dict in _json]
+            rule_list = [Conjunction.from_dict(_dict) for _dict in _json]
             disj = Disjunction(rule_list)
-            disj.add_observers(observer_init_functions)
+            disj.add_observers_recursively(observers_f)
             return disj
         else:
             raise ValueError(f"Attempted to create disjunction object from {type(_json)=}")
 
     @classmethod
-    def from_json_string(cls, _json_str, observer_init_functions=None):
+    def from_json_string(cls, _json_str, observers_f=None):
         _json = json.loads(_json_str)
-        disj = cls.from_json(_json, observer_init_functions=observer_init_functions)
+        disj = cls.from_json(_json, observers_f=observers_f)
         return disj
 
     @classmethod
-    def from_dataframe(self, df: pd.DataFrame, exclude_cols=None, observer_init_functions=None):
+    def from_dataframe(self, df: pd.DataFrame, exclude_cols=None, observers_f=None):
         def convert_to_conjunction(row):
             conj_rule_list = []
             for col in row.keys():
@@ -228,16 +238,14 @@ class Disjunction(AbstractCompositeRule):
                     continue
                 value = row[col]
                 value_str = calendar_utils.datetime_to_str(value) if isinstance(value, datetime) else str(value)
-                rule = Condition.from_string_values(col, 'str', 'equal', value_str,
-                                                    observer_init_functions=observer_init_functions)
+                rule = Condition.from_string_values(col, 'str', 'equal', value_str)
                 conj_rule_list.append(rule)
             conj = Conjunction(conj_rule_list)
-            conj.add_observers(observer_init_functions)
             return conj
 
         conjunction_list = df.apply(convert_to_conjunction, axis=1)
         disj = Disjunction(conjunction_list)
-        disj.add_observers(observer_init_functions)
+        disj.add_observers_recursively(observers_f)
         return disj
 
 
@@ -268,13 +276,13 @@ class Tag:
     #     return {field for field in _get_fields_rec(self._rule)}
 
     @staticmethod
-    def from_json(name, _json, observer_init_functions=None):
-        return Tag(name, Disjunction.from_json(_json, observer_init_functions=observer_init_functions))
+    def from_json(name, _json, observers_f=None):
+        return Tag(name, Disjunction.from_json(_json, observers_f=observers_f))
 
     @staticmethod
-    def from_json_string(name, _json_str, observer_init_functions=None):  # TODO type hinting please
+    def from_json_string(name, _json_str, observers_f=None):  # TODO type hinting please
         _json_str = _json_str.replace("'", '"')
-        return Tag.from_json(name, json.loads(_json_str), observer_init_functions=observer_init_functions)
+        return Tag.from_json(name, json.loads(_json_str), observers_f=observers_f)
 
 
 class Tagger(abc.ABC):

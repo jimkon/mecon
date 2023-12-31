@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch, Mock, call
 
 import pandas as pd
 
@@ -283,6 +284,63 @@ class TestTagging(unittest.TestCase):
             'tags': ['test_tag', '', '', '', 'test_tag']
         })
         pd.testing.assert_frame_equal(df, expected_df)
+
+
+class AddingRuleObserverersTestCase(unittest.TestCase):
+    def test_add_observers(self):
+        condition = tagging.Condition(
+            field='field',
+            transformation_op=None,
+            compare_op=lambda x, y: x > y,
+            value=1
+        )
+        condition.add_observers(None)
+        self.assertEqual(len(condition._observers), 0)
+
+        observer = Mock()
+        condition.add_observers(observer)
+        self.assertEqual(len(condition._observers), 1)
+        self.assertEqual(condition._observers[0], observer)
+
+        condition2 = tagging.Condition.from_string_values(
+            field='field',
+            transformation_op_key=None,
+            compare_op_key='greater',
+            value=1,
+            observers_f=observer
+        )
+        self.assertEqual(len(condition2._observers), 1)
+        self.assertEqual(condition2._observers[0], observer)
+
+    def test_add_observers_recursively(self):
+        test_json = [
+            {
+                'col1': {
+                    'greater': 1,
+                }
+            },
+            {
+                'col1': {
+                    'less': -1,
+                }
+            }
+
+        ]
+        disjunction = tagging.Disjunction.from_json(test_json)
+
+        self.assertEqual(len(disjunction._observers), 0)
+        self.assertEqual(len(disjunction.rules[0]._observers), 0)
+        self.assertEqual(len(disjunction.rules[0].rules[0]._observers), 0)
+        self.assertEqual(len(disjunction.rules[1]._observers), 0)
+        self.assertEqual(len(disjunction.rules[1].rules[0]._observers), 0)
+
+        observer_mock = 'test_observer_obj'
+        disjunction.add_observers_recursively(observer_mock)
+        self.assertEqual(disjunction._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[0]._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[0].rules[0]._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[1]._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[1].rules[0]._observers, [observer_mock])
 
 
 if __name__ == '__main__':

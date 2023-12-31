@@ -411,23 +411,8 @@ class TestTagMatchCondition(unittest.TestCase):
         self.assertEqual(match_condition.compute({'tags': 'not_test_tag'}), False)
 
 
-class BasicStatsObserverFunctionalityTestCase(unittest.TestCase):
-    def test_adding_observer_to_rule(self):
-        condition = tagging.Condition(
-            field='field',
-            transformation_op=None,
-            compare_op=lambda x, y: x > y,
-            value=1
-        )
-        condition.add_observers(None)
-        self.assertEqual(len(condition._observers), 0)
-
-        observer = Mock()
-        condition.add_observers(observer)
-        self.assertEqual(len(condition._observers), 1)
-        self.assertEqual(condition._observers[0], observer)
-
-    def test_multiple_observers(self):
+class RuleObserverFunctionalityTestCase(unittest.TestCase):
+    def test_observers(self):
         condition = tagging.Condition(
             field='field',
             transformation_op=None,
