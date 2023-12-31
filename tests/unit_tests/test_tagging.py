@@ -202,14 +202,15 @@ class DisjunctionTestCase(unittest.TestCase):
             tagging.Disjunction.from_json('invalid_input')
 
     def test_from_dataframe(self):
-        example_df = pd.DataFrame({'a': [1, 2], 'b': ['a', 'b'], "c": [datetime(2020, 1, 1, 12, 30, 45), datetime(2022, 2, 2, 2, 22, 22)]})
+        example_df = pd.DataFrame(
+            {'a': [1, 2], 'b': ['a', 'b'], "c": [datetime(2020, 1, 1, 12, 30, 45), datetime(2022, 2, 2, 2, 22, 22)]})
         disj = tagging.Disjunction.from_dataframe(example_df)
 
         result_json = [{
-                "a.str": {"equal": "1"},
-                "b.str": {"equal": "a"},
-                "c.str": {"equal": "2020-01-01 12:30:45"}
-            },
+            "a.str": {"equal": "1"},
+            "b.str": {"equal": "a"},
+            "c.str": {"equal": "2020-01-01 12:30:45"}
+        },
             {
                 "a.str": {"equal": "2"},
                 "b.str": {"equal": "b"},
@@ -219,18 +220,18 @@ class DisjunctionTestCase(unittest.TestCase):
         self.assertEqual(disj.to_json(), result_json)
 
     def test_from_dataframe_exclude_cols(self):
-        example_df = pd.DataFrame({'a': [1, 2], 'b': ['a', 'b'], "c": [datetime(2020, 1, 1, 12, 30, 45), datetime(2022, 2, 2, 2, 22, 22)]})
+        example_df = pd.DataFrame(
+            {'a': [1, 2], 'b': ['a', 'b'], "c": [datetime(2020, 1, 1, 12, 30, 45), datetime(2022, 2, 2, 2, 22, 22)]})
         disj = tagging.Disjunction.from_dataframe(example_df, exclude_cols=['a', 'c'])
 
         result_json = [{
-                "b.str": {"equal": "a"}
-            },
+            "b.str": {"equal": "a"}
+        },
             {
                 "b.str": {"equal": "b"}
             }
         ]
         self.assertEqual(disj.to_json(), result_json)
-
 
 
 class TestTag(unittest.TestCase):
@@ -411,50 +412,35 @@ class TestTagMatchCondition(unittest.TestCase):
 
 
 class BasicStatsObserverFunctionalityTestCase(unittest.TestCase):
-    def test_log_call(self):
-        observer = Mock()
-        # tagging.Condition.add_observer(observer)
+    class ExampleObserver(tagging.RuleStatsObserverABC):
+        def observe(self, rule, element, outcome):
+            pass
 
-        greater_than_one = tagging.Condition(
-            field='field',
-            transformation_op=None,
-            compare_op=lambda x, y: x > y,
-            value=1
-        )
-        less_than_one = tagging.Condition(
-            field='field',
-            transformation_op=None,
-            compare_op=lambda x, y: x < y,
-            value=1
-        )
-        greater_than_one.add_observer(observer)
-        less_than_one.add_observer(observer)
-
-        with patch.object(observer, 'observe'):
-            greater_than_one.compute({'field': 0})
-            greater_than_one.compute({'field': 2})
-            less_than_one.compute({'field': 0})
-            less_than_one.compute({'field': 2})
-
-            observer.observe.assert_has_calls([
-                call(greater_than_one, {'field': 0}, False),
-                call(greater_than_one, {'field': 2}, True),
-                call(less_than_one, {'field': 0}, True),
-                call(less_than_one, {'field': 2}, False),
-            ])
-
-    def test_multiple_observers(self):
-        observer1 = Mock()
-        observer2 = Mock()
-
+    def test_adding_observer_to_rule(self):
         condition = tagging.Condition(
             field='field',
             transformation_op=None,
             compare_op=lambda x, y: x > y,
             value=1
         )
-        condition.add_observer(observer1)
-        condition.add_observer(observer2)
+
+        condition.add_observers(self.ExampleObserver)
+        self.assertEqual(len(condition._observers), 1)
+        self.assertIsInstance(condition._observers[0], self.ExampleObserver)
+
+        with self.assertRaises(TypeError):
+            condition.add_observers(lambda: 'a string object')
+
+    def test_multiple_observers(self):
+        condition = tagging.Condition(
+            field='field',
+            transformation_op=None,
+            compare_op=lambda x, y: x > y,
+            value=1
+        )
+        condition.add_observers(self.ExampleObserver)
+        condition.add_observers(self.ExampleObserver)
+        observer1, observer2 = condition.get_observers()
 
         with patch.object(observer1, 'observe'):
             with patch.object(observer2, 'observe'):
