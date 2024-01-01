@@ -134,11 +134,18 @@ class TestConjunction(unittest.TestCase):
             compare_op_key='less',
             value=['6', '6.1']
         )
-        conjunction = tagging.Conjunction([cond1, cond2, cond3, cond4, cond5, cond6])
+        cond7 = tagging.Condition.from_string_values(
+            field='field1',
+            transformation_op_key='str',
+            compare_op_key='less',
+            value='2'
+        )
+
+        conjunction = tagging.Conjunction([cond1, cond2, cond3, cond4, cond5, cond6, cond7])
         result_dict = conjunction.to_dict()
         self.assertDictEqual(result_dict,
                              {
-                                 "field1.str": {"greater": "1"},
+                                 "field1.str": {"greater": "1", 'less': '2'},
                                  "field2.str": {"greater": ["2", "3", "3.1"]},
                                  "field2": {"less": ["4", "5", "6", "6.1"]},
                              })
@@ -184,7 +191,7 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(disjunction.compute({'col1': 1}), False)
         self.assertEqual(disjunction.compute({'col1': 2}), True)
 
-    def test_to_dict(self):
+    def test_to_json(self):
         cond1 = tagging.Condition.from_string_values(
             field='field1',
             transformation_op_key="str",

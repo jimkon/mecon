@@ -52,7 +52,7 @@ class AbstractRule(abc.ABC):
 
 
 class AbstractCompositeRule(AbstractRule, abc.ABC):
-    def __init__(self, rule_list):
+    def __init__(self, rule_list: list):
         super().__init__()
         for rule in rule_list:
             if not issubclass(rule.__class__, AbstractRule):
@@ -132,7 +132,8 @@ class Condition(AbstractRule):
         return condition
 
     def __repr__(self):
-        transf_name = self._transformation_op.name if hasattr(self._transformation_op, 'name') else self._transformation_op
+        transf_name = self._transformation_op.name if hasattr(self._transformation_op,
+                                                              'name') else self._transformation_op
         comp_name = self._compare_op.name if hasattr(self._compare_op, 'name') else self._compare_op
         return f"{transf_name}(x[{self._field}]) {comp_name} {self._value}"
 
@@ -142,33 +143,35 @@ class Conjunction(AbstractCompositeRule):
         return all([rule.compute(element) for rule in self._rules])
 
     def to_dict(self):
-        dicts_list = [rule.to_dict() for rule in self._rules]
+        all_rule_dicts = [rule.to_dict() for rule in self._rules]
         merged_dict = {}
 
-        for d in dicts_list:
-            for key, value in d.items():
-                if key in merged_dict:
-                    for merge_key, merge_value in value.items():
-                        if isinstance(merged_dict[key].get(merge_key), list):
-                            if isinstance(merge_value, list):
-                                merged_dict[key][merge_key].extend(merge_value)
+        for rule_dict in all_rule_dicts:
+            for field_and_trans, comparison_dict in rule_dict.items():
+                if field_and_trans in merged_dict:
+                    for comparison_key, comparison_value in comparison_dict.items():
+                        if comparison_key not in merged_dict[field_and_trans]:
+                            merged_dict[field_and_trans][comparison_key] = comparison_value
+                        elif isinstance(merged_dict[field_and_trans].get(comparison_key), list):
+                            if isinstance(comparison_value, list):
+                                merged_dict[field_and_trans][comparison_key].extend(comparison_value)
                             else:
-                                merged_dict[key][merge_key].append(merge_value)
+                                merged_dict[field_and_trans][comparison_key].append(comparison_value)
                         else:
-                            if isinstance(merge_value, list):
-                                merged_dict[key][merge_key] = [merged_dict[key][merge_key]] + merge_value
+                            if isinstance(comparison_value, list):
+                                merged_dict[field_and_trans][comparison_key] = [merged_dict[field_and_trans][comparison_key]] + comparison_value
                             else:
-                                merged_dict[key][merge_key] = [merged_dict[key][merge_key], merge_value]
+                                merged_dict[field_and_trans][comparison_key] = [merged_dict[field_and_trans][comparison_key], comparison_value]
                 else:
-                    merged_dict[key] = value
+                    merged_dict[field_and_trans] = comparison_dict
 
         return merged_dict
 
     def to_json(self) -> list:
         return [self.to_dict()]
 
-    @staticmethod
-    def from_dict(_dict, observers_f=None):
+    @classmethod
+    def from_dict(cls, _dict, observers_f=None):
         rules_list = []
         for col_name_full, col_dict in _dict.items():
             field = col_name_full.split('.')[0]
@@ -186,7 +189,7 @@ class Conjunction(AbstractCompositeRule):
                         # observers_f=observers_f
                     ))
 
-        conjunction = Conjunction(rules_list)
+        conjunction = cls(rules_list)
         conjunction.add_observers_recursively(observers_f)
 
         return conjunction
@@ -199,7 +202,7 @@ class Disjunction(AbstractCompositeRule):
     def to_json(self):
         return [rule.to_dict() for rule in self._rules]
 
-    def append(self, rule):  # TODO unittest
+    def append(self, rule):
         new_rule_list = self._rules.copy()
         new_rule_list.insert(0, rule)
         return Disjunction(new_rule_list)
@@ -217,7 +220,7 @@ class Disjunction(AbstractCompositeRule):
 
         if isinstance(_json, list):
             rule_list = [Conjunction.from_dict(_dict) for _dict in _json]
-            disj = Disjunction(rule_list)
+            disj = cls(rule_list)
             disj.add_observers_recursively(observers_f)
             return disj
         else:
@@ -244,7 +247,7 @@ class Disjunction(AbstractCompositeRule):
             return conj
 
         conjunction_list = df.apply(convert_to_conjunction, axis=1)
-        disj = Disjunction(conjunction_list)
+        disj = self(conjunction_list)
         disj.add_observers_recursively(observers_f)
         return disj
 
@@ -252,14 +255,19 @@ class Disjunction(AbstractCompositeRule):
 class Tag:
     def __init__(self, name: str, rule: AbstractRule):
         self._name = name
+        if isinstance(rule, Condition):
+            rule = Conjunction([rule])
+        if isinstance(rule, Conjunction):
+            rule = Disjunction([rule])
+
         self._rule = rule
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def rule(self):
+    def rule(self) -> Disjunction:
         return self._rule
 
     # @property
@@ -275,14 +283,14 @@ class Tag:
     #
     #     return {field for field in _get_fields_rec(self._rule)}
 
-    @staticmethod
-    def from_json(name, _json, observers_f=None):
-        return Tag(name, Disjunction.from_json(_json, observers_f=observers_f))
+    @classmethod
+    def from_json(cls, name, _json, observers_f=None):
+        return cls(name, Disjunction.from_json(_json, observers_f=observers_f))
 
-    @staticmethod
-    def from_json_string(name, _json_str, observers_f=None):  # TODO type hinting please
+    @classmethod
+    def from_json_string(cls, name, _json_str, observers_f=None):  # TODO type hinting please
         _json_str = _json_str.replace("'", '"')
-        return Tag.from_json(name, json.loads(_json_str), observers_f=observers_f)
+        return cls.from_json(name, json.loads(_json_str), observers_f=observers_f)
 
 
 class Tagger(abc.ABC):
@@ -355,4 +363,3 @@ class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
         compare_op = comparisons.REGEX
         regex_value = r"\b" + tag_name + r"\b"
         super().__init__(field, transformation_op, compare_op, regex_value)
-
