@@ -77,8 +77,7 @@ def _db_statements_info():
 
 def _db_transactions_info():
     try:
-        data_manager = DBDataManager()
-        transactions = data_manager.get_transactions()
+        transactions = _data_manager.get_transactions()
         res = {
             'rows': transactions.size()
         }
@@ -100,8 +99,7 @@ def data_menu():
 @data_bp.post('/reload')
 @logs.codeflow_log_wrapper('#api')
 def data_reload():
-    data_manager = DBDataManager()
-    data_manager.reset_statements()
+    _data_manager.reset_statements()
     statements_info = _statement_files_info()
     for bank_name in statements_info:
         if bank_name == 'HSBC':
@@ -113,9 +111,9 @@ def data_reload():
         else:
             raise ValueError(f"Invalid bank name '{bank_name}' for statements")
 
-        data_manager.add_statement(dfs, bank=bank_name)
+        _data_manager.add_statement(dfs, bank=bank_name)
 
-    data_manager.reset_transactions()
+    _data_manager.reset_transactions()
 
     return redirect(url_for('data.data_menu'))
 

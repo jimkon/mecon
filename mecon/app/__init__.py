@@ -33,7 +33,7 @@ db.init_app(app)
 app.app_context().push()
 db.create_all()
 
-data_manager.DBDataManager()
+data_manager.GlobalDataManager()
 
 app.register_blueprint(main_bp)
 app.register_blueprint(data_bp.data_bp, url_prefix='/data')
