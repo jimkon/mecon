@@ -301,7 +301,8 @@ class TestCacheDataManager(unittest.TestCase):
             self.data_manager._cache.reset_tags.assert_called_once()
             mock_reset_tags.assert_not_called()
 
-    def test_reset_transaction_tags(self):
+    @patch('mecon.data.data_management.tag_monitoring.TaggingStatsMonitoringSystem')
+    def test_reset_transaction_tags(self, mock_monitoring):
         transactions_mock = Mock()
         transactions_mock.reset_tags = Mock(return_value=transactions_mock)
         transactions_mock.apply_tag = Mock(return_value=transactions_mock)

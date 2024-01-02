@@ -3,6 +3,7 @@ import pathlib
 import pandas as pd
 from flask import Blueprint, render_template, request
 
+from mecon.app import WorkingDatasetDir
 from mecon.tag_tools import tagging
 from mecon.monitoring.logs import get_log_files, read_logs_as_df
 from mecon.utils import html_pages
@@ -79,6 +80,21 @@ def console_table_tabs(df_logs: pd.DataFrame):
     return tabs.html()
 
 
+def tagging_report():
+    filename = WorkingDatasetDir.get_instance().working_dataset.path / 'tag_report.csv'
+    if filename.exists():
+        df = pd.read_csv(filename, index_col=None)
+        tabs = html_pages.TabsHTML()
+        tabs.add_tab('All rules', df.to_html())
+        if (df['count'] == 0).sum() == 0:
+            tabs.add_tab('Zero-count rules', "<h2>No Zero-count rules found</h2>")
+        else:
+            tabs.add_tab('Zero-count rules', df[df['count'] == 0].to_html())
+        return tabs.html()
+    else:
+        return f"<h2>Tagging report found.</h2>"
+
+
 @monitoring_bp.route('/', methods=['POST', 'GET'])
 def home():
     all_log_filenames = [str(file) for file in get_log_files(historic_logs=True)]
@@ -89,5 +105,6 @@ def home():
     tabs = html_pages.TabsHTML() \
         .add_tab('Performance', performance_stats_page(perf_data)) \
         .add_tab('Timeline', codeflow_timeline_graph_html(perf_data)) \
-        .add_tab('Console', console_table_tabs(df_logs)).html()
+        .add_tab('Console', console_table_tabs(df_logs)) \
+        .add_tab('Tagging report', tagging_report()).html()
     return render_template('monitoring_home.html', **locals(), **globals())

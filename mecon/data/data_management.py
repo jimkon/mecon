@@ -2,9 +2,11 @@ from typing import List
 
 import pandas as pd
 
+from mecon.app import WorkingDatasetDir
 from mecon.data.transactions import Transactions
 from mecon.import_data import io_framework
-from mecon.tag_tools.tagging import Tag
+from mecon.tag_tools.tagging import Tag, Disjunction
+from mecon.monitoring import tag_monitoring
 
 
 class DataManager:
@@ -174,18 +176,31 @@ class CacheDataManager:
             self.reset_transaction_tags()
 
     def all_tags(self) -> List[Tag]:
-        if self._cache.tags is None:
+        if self._cache.tags is None or len(self._cache.tags) == 0:
             tags_dict = self._tags.all_tags()
-            tags = [Tag.from_json_string(tag_dict['name'], tag_dict['conditions_json']) for tag_dict in tags_dict]
+            tags = []
+            for tag_dict in tags_dict:
+                tag = Tag.from_json_string(tag_dict['name'],
+                                           tag_dict['conditions_json'])
+                tags.append(tag)
+
             self._cache.tags = {tag.name: tag for tag in tags}
         return list(self._cache.tags.values())
 
-    def reset_transaction_tags(self):
+    def reset_transaction_tags(self, enable_monitoring=True):
         transactions = self.get_transactions().reset_tags()
         all_tags = self.all_tags()
 
+        if enable_monitoring:
+            tagging_monitor = tag_monitoring.TaggingStatsMonitoringSystem(all_tags)
+
         for tag in all_tags:
             transactions = transactions.apply_tag(tag)
+
+        if enable_monitoring:
+            df_tag_report = tagging_monitor.produce_report()
+            filename = WorkingDatasetDir.get_instance().working_dataset.path / 'tag_report.csv'
+            df_tag_report.to_csv(filename, index=False)
 
         data_df = transactions.dataframe()
         self._transactions.update_tags(data_df)
