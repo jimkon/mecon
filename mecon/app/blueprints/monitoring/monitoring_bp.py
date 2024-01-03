@@ -9,6 +9,7 @@ from mecon.monitoring.logs import get_log_files, read_logs_as_df
 from mecon.utils import html_pages
 from mecon.monitoring.log_data import LogData, PerformanceData
 from mecon.app.blueprints.reports import graphs
+from mecon.monitoring.tag_monitoring import TaggingReport
 
 monitoring_bp = Blueprint('monitoring', __name__, template_folder='templates')
 
@@ -80,16 +81,16 @@ def console_table_tabs(df_logs: pd.DataFrame):
     return tabs.html()
 
 
-def tagging_report():
-    filename = WorkingDatasetDir.get_instance().working_dataset.path / 'tag_report.csv'
-    if filename.exists():
-        df = pd.read_csv(filename, index_col=None)
+def tagging_report_tabs():
+    tagging_report = TaggingReport.load(WorkingDatasetDir.get_instance().working_dataset.path)
+    if tagging_report:
         tabs = html_pages.TabsHTML()
-        tabs.add_tab('All rules', df.to_html())
-        if (df['count'] == 0).sum() == 0:
-            tabs.add_tab('Zero-count rules', "<h2>No Zero-count rules found</h2>")
+        tabs.add_tab('All rules', tagging_report.dataframe().to_html())
+        df_zero_cnts = tagging_report.zero_counts_dataframe()
+        if len(df_zero_cnts) > 0:
+            tabs.add_tab('Zero-count rules', df_zero_cnts.to_html())
         else:
-            tabs.add_tab('Zero-count rules', df[df['count'] == 0].to_html())
+            tabs.add_tab('Zero-count rules', "<h2>No Zero-count rules found</h2>")
         return tabs.html()
     else:
         return f"<h2>Tagging report found.</h2>"
@@ -106,5 +107,5 @@ def home():
         .add_tab('Performance', performance_stats_page(perf_data)) \
         .add_tab('Timeline', codeflow_timeline_graph_html(perf_data)) \
         .add_tab('Console', console_table_tabs(df_logs)) \
-        .add_tab('Tagging report', tagging_report()).html()
+        .add_tab('Tagging report', tagging_report_tabs()).html()
     return render_template('monitoring_home.html', **locals(), **globals())
