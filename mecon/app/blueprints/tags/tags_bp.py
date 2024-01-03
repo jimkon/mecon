@@ -43,6 +43,20 @@ def _rule_for_id(_id):
         return disjunction
 
 
+def create_alerts_from_tagging_report(tagging_report):
+    df = tagging_report.unsatisfied_tagging_rules_df()
+    for index, row in df.iterrows():
+        tag_edit_url = f"""<a href={url_for('tags.tag_edit', tag_name=row['tag'])}>{row['tag']}</a>"""
+        flash(f"Unsatisfied tagging rule in <strong>{tag_edit_url}</strong> tag! {row['rule_type']}: {row['rule']}",
+              category="error")
+
+    df = tagging_report.unsatisfied_rules_df()
+    for index, row in df.iterrows():
+        tag_edit_url = f"""<a href={url_for('tags.tag_edit', tag_name=row['tag'])}>{row['tag']}</a>"""
+        flash(f"Unsatisfied rule in <strong>{tag_edit_url}</strong> tag! {row['rule_type']}: {row['rule']}",
+              category="warning")
+
+
 @logs.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
     transactions = _data_manager.get_transactions()
@@ -66,10 +80,7 @@ def render_tag_page(title='Tag page',
 
         if config.TAG_MONITORING:
             tagging_report = tagging_monitor.produce_report()
-            df = tagging_report.zero_counts_dataframe()
-            if len(df) > 0:
-                for index, row in df.iterrows():
-                    flash(f"Rule {row['rule']} was never satisfied!", category="warning")
+            create_alerts_from_tagging_report(tagging_report)
 
         tagged_table_html = transactions.to_html() if transactions else "<h4>'No transaction data after applying rule'</h4>"
         untagged_transactions = get_transactions().apply_negated_rule(tag.rule)
@@ -121,12 +132,7 @@ def tags_menu():
         if tagging_report is None:
             logging.warning(f"Tagging report file {TaggingReport._filename} was not found.")
         else:
-            df = tagging_report.zero_counts_dataframe()
-            if len(df) > 0:
-                for index, row in df.iterrows():
-                    tag_edit_url = f"""<a href={url_for('tags.tag_edit', tag_name=row['tag'])}>{row['tag']}</a>"""
-                    flash(f"Tag <strong>{tag_edit_url}</strong>: Rule {row['rule']} was never satisfied!",
-                          category="warning")
+            create_alerts_from_tagging_report(tagging_report)
 
     return render_template('tags_menu.html', **locals(), **globals())
 

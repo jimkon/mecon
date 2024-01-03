@@ -5,6 +5,7 @@ import pandas as pd
 
 from mecon.tag_tools import tagging
 
+
 # TODO test all
 
 
@@ -44,8 +45,12 @@ class TaggingReport:
     def dataframe(self) -> pd.DataFrame:
         return self._df
 
-    def zero_counts_dataframe(self) -> pd.DataFrame:
+    def unsatisfied_rules_df(self) -> pd.DataFrame:
         return self._df[self._df['count'] == 0]
+
+    def unsatisfied_tagging_rules_df(self) -> pd.DataFrame:
+        tag_rules = self._df.groupby(by='tag').agg({'rule': 'last', 'rule_type': 'last', 'count': 'last'}).reset_index()
+        return tag_rules[tag_rules['count'] == 0]
 
 
 class TaggingStatsMonitoringSystem:  # TODO Disjunction dict appears twice in the report
@@ -81,5 +86,3 @@ class TaggingStatsMonitoringSystem:  # TODO Disjunction dict appears twice in th
         tagging_report = TaggingReport(report_df)
 
         return tagging_report
-
-

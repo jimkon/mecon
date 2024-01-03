@@ -86,7 +86,7 @@ def tagging_report_tabs():
     if tagging_report:
         tabs = html_pages.TabsHTML()
         tabs.add_tab('All rules', tagging_report.dataframe().to_html())
-        df_zero_cnts = tagging_report.zero_counts_dataframe()
+        df_zero_cnts = tagging_report.unsatisfied_rules_df()
         if len(df_zero_cnts) > 0:
             tabs.add_tab('Zero-count rules', df_zero_cnts.to_html())
         else:
