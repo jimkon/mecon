@@ -1,13 +1,18 @@
 import json
+import logging
 
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 
+from mecon import config
 from mecon.app.data_manager import GlobalDataManager
 from mecon.data.transactions import Transactions
 from mecon.monitoring import logs
 from mecon.tag_tools import tagging, comparisons, transformations
 from mecon.tag_tools.tagging import Tag
 from mecon.app.app_utils import ManualTaggingHTMLTableFormat
+from mecon.monitoring.tag_monitoring import TaggingReport
+from mecon.app import WorkingDatasetDir
+from mecon.monitoring import tag_monitoring
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
@@ -54,7 +59,18 @@ def render_tag_page(title='Tag page',
 
     try:
         tag = Tag.from_json_string(tag_name, tag_json_str)
+        if config.TAG_MONITORING:
+            tagging_monitor = tag_monitoring.TaggingStatsMonitoringSystem([tag])
+
         transactions = get_transactions().apply_rule(tag.rule)
+
+        if config.TAG_MONITORING:
+            tagging_report = tagging_monitor.produce_report()
+            df = tagging_report.zero_counts_dataframe()
+            if len(df) > 0:
+                for index, row in df.iterrows():
+                    flash(f"Rule {row['rule']} was never satisfied!", category="warning")
+
         tagged_table_html = transactions.to_html() if transactions else "<h4>'No transaction data after applying rule'</h4>"
         untagged_transactions = get_transactions().apply_negated_rule(tag.rule)
         untagged_table_html = untagged_transactions.to_html()
@@ -75,6 +91,7 @@ def tags_menu():
     if request.method == 'POST':
         if "recalculate_tags" in request.form:
             _data_manager.reset_transaction_tags()
+
         elif "reset_tags" in request.form:
             _data_manager.reset_transaction_tags()
         elif "create_tag_button" in request.form:
@@ -98,6 +115,18 @@ def tags_menu():
     for tag in all_tags:
         tagged_transactions = transactions.containing_tag(tag['name'])
         tag['n_rows'] = tagged_transactions.size() if tagged_transactions else 0
+
+    if config.TAG_MONITORING:
+        tagging_report = TaggingReport.load(WorkingDatasetDir.get_instance().working_dataset.path)
+        if tagging_report is None:
+            logging.warning(f"Tagging report file {TaggingReport._filename} was not found.")
+        else:
+            df = tagging_report.zero_counts_dataframe()
+            if len(df) > 0:
+                for index, row in df.iterrows():
+                    tag_edit_url = f"""<a href={url_for('tags.tag_edit', tag_name=row['tag'])}>{row['tag']}</a>"""
+                    flash(f"Tag <strong>{tag_edit_url}</strong>: Rule {row['rule']} was never satisfied!",
+                          category="warning")
 
     return render_template('tags_menu.html', **locals(), **globals())
 
@@ -162,9 +191,9 @@ def manual_tagging(order_by):
     if request.method == 'POST':
         if "save_changes" in request.form:
             tag_events = [{'tag': name.split('_for_')[0], 'id': name.split('_for_')[1]}
-                                 for name, action
-                                 in request.form.to_dict().items()
-                                 if action == 'on']
+                          for name, action
+                          in request.form.to_dict().items()
+                          if action == 'on']
 
             for event in tag_events:
                 tag_added, _id = event['tag'], int(event['id'])
