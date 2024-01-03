@@ -27,8 +27,9 @@ current_dataset = current_dataset_dir.working_dataset
 
 app = Flask(__name__)
 app.debug = True
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SECRET_KEY'] = 'secret key' #os.getenv('SECRET_KEY') TODO
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{current_dataset.db}"
+app.config['SESSION_TYPE'] = 'filesystem'
 db.init_app(app)
 app.app_context().push()
 db.create_all()
