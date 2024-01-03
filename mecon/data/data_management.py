@@ -5,8 +5,9 @@ import pandas as pd
 from mecon.app import WorkingDatasetDir
 from mecon.data.transactions import Transactions
 from mecon.import_data import io_framework
-from mecon.tag_tools.tagging import Tag, Disjunction
+from mecon.tag_tools.tagging import Tag
 from mecon.monitoring import tag_monitoring
+from mecon import config
 
 
 class DataManager:
@@ -154,7 +155,7 @@ class CacheDataManager:
         self._cache.reset_statements()
 
     def get_tag(self, tag_name) -> Tag | None:
-        if self._cache.tags is None:
+        if self._cache.tags is None or len(self._cache.tags) == 0:
             self.all_tags()
 
         if tag_name not in self._cache.tags:
@@ -187,20 +188,19 @@ class CacheDataManager:
             self._cache.tags = {tag.name: tag for tag in tags}
         return list(self._cache.tags.values())
 
-    def reset_transaction_tags(self, enable_monitoring=True):
+    def reset_transaction_tags(self):
         transactions = self.get_transactions().reset_tags()
         all_tags = self.all_tags()
 
-        if enable_monitoring:
+        if config.TAG_MONITORING:
             tagging_monitor = tag_monitoring.TaggingStatsMonitoringSystem(all_tags)
 
         for tag in all_tags:
             transactions = transactions.apply_tag(tag)
 
-        if enable_monitoring:
-            df_tag_report = tagging_monitor.produce_report()
-            filename = WorkingDatasetDir.get_instance().working_dataset.path / 'tag_report.csv'
-            df_tag_report.to_csv(filename, index=False)
+        if config.TAG_MONITORING:
+            tagging_report = tagging_monitor.produce_report()
+            tagging_report.store(WorkingDatasetDir.get_instance().working_dataset.path)
 
         data_df = transactions.dataframe()
         self._transactions.update_tags(data_df)

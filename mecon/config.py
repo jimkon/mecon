@@ -6,6 +6,7 @@ DEFAULT_DATASETS_DIR_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets"
 CURRENCY_LOOKUP_RATES_JSON_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets\currency_rates.json"
 
 CONDITION_JSON_MAX_SIZE = 2000
+TAG_MONITORING = True
 
 DATE_STRING_FORMAT = "%Y-%m-%d"
 TIME_STRING_FORMAT = "%H:%M:%S"
