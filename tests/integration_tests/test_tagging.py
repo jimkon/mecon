@@ -150,6 +150,16 @@ class TestConjunction(unittest.TestCase):
                                  "field2": {"less": ["4", "5", "6", "6.1"]},
                              })
 
+    def test_from_dict_to_dict_conversions(self):
+        test_dict = {
+            "field1.str": {"greater": "1", 'less': '2'},
+            "field2.str": {"greater": ["2", "3", "3.1"]},
+            "field2": {"less": ["4", "5", "6", "6.1"]},
+        }
+        conjunction = tagging.Conjunction.from_dict(test_dict)
+        result_dict = conjunction.to_dict()
+        self.assertDictEqual(test_dict, result_dict)
+
 
 class TestDisjunction(unittest.TestCase):
     def test_init_disjunction_from_json(self):
@@ -164,7 +174,6 @@ class TestDisjunction(unittest.TestCase):
                     'less': -1,
                 }
             }
-
         ]
 
         disjunction = tagging.Disjunction.from_json(test_json)
@@ -233,6 +242,22 @@ class TestDisjunction(unittest.TestCase):
                 "field2": {"less": "4"},
             }
         ])
+
+    def test_from_json_to_json_conversions(self):
+        test_json = [
+            {
+                "field1.str": {"greater": "1"}
+            },
+            {
+                "field2.str": {"greater": ["2", "3"]}
+            },
+            {
+                "field2": {"less": "4"},
+            }
+        ]
+        disjunction = tagging.Disjunction.from_json(test_json)
+        result_json = disjunction.to_json()
+        self.assertListEqual(test_json, result_json)
 
     def test_append(self):
         cond1 = tagging.Condition.from_string_values(
