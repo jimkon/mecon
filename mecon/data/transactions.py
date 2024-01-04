@@ -114,7 +114,7 @@ class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
     def _transform(self, df_in) -> pd.DataFrame:
         df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
 
-        df_out = pd.DataFrame(df_in['id'].apply(lambda _id: f"<h5>{_id}</h5>"))
+        df_out = pd.DataFrame(df_in['id'].apply(self._format_id))
         df_out['Date/Time'] = df_in['datetime'].apply(self._format_datetime)
         df_out['Amount (£)'] = df_in['amount'].apply(self._format_amount)
         df_out['Curr'] = df_in['currency'].apply(self._format_currency_count)
@@ -122,6 +122,14 @@ class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
         df_out['Description'] = df_in['description'].apply(self._format_description)
         df_out['Tags'] = df_in['tags'].apply(self._format_tags)
         return df_out
+
+    @staticmethod
+    def _format_id(id_str):
+        def wrap(string, chunk_size):
+            return [string[i:i + chunk_size] for i in range(0, len(string), chunk_size)]
+        id_parts = wrap(id_str, 6)
+        id_html = '<br>'.join([f"<small><small><strong>{part}</strong></small></small>" for part in id_parts])
+        return id_html
 
     @staticmethod
     def _format_datetime(dt):
@@ -136,7 +144,7 @@ class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
     def _format_amount(amount_str):
         amount = float(amount_str)
         text_color = 'orange' if amount < 0 else 'green' if amount > 0 else 'black'
-        return f"""<h4 style="color: {text_color}">{amount:.2f}</h4>"""
+        return f"""<h6 style="color: {text_color}">{amount:.2f}</h6>"""
 
     @staticmethod
     def _format_currency_count(curr_string):
