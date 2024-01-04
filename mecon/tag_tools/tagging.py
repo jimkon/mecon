@@ -97,6 +97,14 @@ class Condition(AbstractRule):
         return self._field
 
     @property
+    def transformation_operation(self):
+        return self._transformation_op
+
+    @property
+    def compare_operation(self):
+        return self._compare_op
+
+    @property
     def value(self):
         return self._value
 
