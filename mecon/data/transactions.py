@@ -125,7 +125,7 @@ class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
 
     @staticmethod
     def _format_datetime(dt):
-        formatted_date = dt.strftime("%A, %b %w, %Y")
+        formatted_date = dt.strftime("%A, %b %d, %Y")
         formatted_time = dt.strftime("%I:%M:%S %p")
 
         html_representation = f"""<label class="datetime_label">{formatted_date}</label><br><label class="datetime_label">{formatted_time}</label>"""
