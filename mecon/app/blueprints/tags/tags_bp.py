@@ -13,6 +13,7 @@ from mecon.app.app_utils import ManualTaggingHTMLTableFormat
 from mecon.monitoring.tag_monitoring import TaggingReport
 from mecon.app import WorkingDatasetDir
 from mecon.monitoring import tag_monitoring
+from mecon.tag_tools import tag_helpers
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 
@@ -23,24 +24,6 @@ def _reformat_json_str(json_str):
     json_str = json_str.replace("'", '"')
     json_str = json.dumps(json.loads(json_str), indent=4)
     return json_str
-
-
-def _rule_for_id(_id):
-    condition = tagging.Condition.from_string_values(
-        field='id',
-        transformation_op_key="none",
-        compare_op_key="equal",
-        value=_id,
-    )
-    transactions_with_id = get_transactions().apply_rule(condition)
-    if transactions_with_id.size() > 1:
-        # message_text = f"More than one ({len(transactions_with_id.size())}) have the same id ({_id})"
-        # tag_json_str = request.form.get('query_text_input')
-        raise ValueError(f"More than one ({len(transactions_with_id.size())}) have the same id ({_id})")
-    else:
-        df = transactions_with_id.dataframe()
-        disjunction = tagging.Disjunction.from_dataframe(df, exclude_cols=['id', 'tags'])
-        return disjunction
 
 
 def create_alerts_from_tagging_report(tagging_report):
@@ -182,10 +165,11 @@ def tag_edit(tag_name):
             new_tag_json = disjunction.append(condition).to_json()
             tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
         elif "add_id" in request.form:
-            _id = int(request.form['input_id'])
-            disjunction = _rule_for_id(_id)
-            old_disjunction = tagging.Disjunction.from_json_string(request.form.get('query_text_input'))
-            new_tag_json = old_disjunction.extend(disjunction.rules).to_json()
+            _id = request.form['input_id']
+            new_tag = tag_helpers.add_rule_for_id(
+                tag=tagging.Tag(tag_name, tagging.Disjunction.from_json_string(request.form.get('query_text_input'))),
+                _id_str=_id)
+            new_tag_json = new_tag.rule.to_json()
             tag_json_str = _reformat_json_str(json.dumps(new_tag_json))
     else:
         tag_json_str = json.dumps(_data_manager.get_tag(tag_name).rule.to_json())
@@ -201,14 +185,11 @@ def manual_tagging(order_by):
                           in request.form.to_dict().items()
                           if action == 'on']
 
-            for event in tag_events:
-                tag_added, _id = event['tag'], int(event['id'])
-                disjunction = _rule_for_id(_id)
-                tag_object = _data_manager.get_tag(tag_added)
-                old_disjunction = tag_object.rule
-                new_tag = tagging.Tag(tag_added, old_disjunction.extend(disjunction.rules))
+            for tag_name in set([event['tag'] for event in tag_events]):
+                ids = ','.join([event['id'] for event in tag_events if event['tag'] == tag_name])
+                tag_object = _data_manager.get_tag(tag_name)
+                new_tag = tag_helpers.add_rule_for_id(tag_object, ids)
                 _data_manager.update_tag(new_tag)
-            # TODO Send new tag events to data manager
         elif "reset" in request.form:
             pass
 
@@ -216,7 +197,7 @@ def manual_tagging(order_by):
     all_tags = sorted([tag.name for tag in _data_manager.all_tags()])
     df = transactions.dataframe(
         df_transformer=ManualTaggingHTMLTableFormat(all_tags, order_by=order_by)
-    )[:10]
+    )[:10]  # TODO print all
 
     table_html = df.to_html(render_links=True, escape=False)
 
