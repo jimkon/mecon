@@ -20,7 +20,6 @@ def lines_graph_html(time, lines: [pd.Series]):
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='£'),
-        # xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')

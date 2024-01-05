@@ -318,7 +318,6 @@ def tag_info(tag_name):
 @reports_bp.route('/overall', methods=['POST', 'GET'])
 @logs.codeflow_log_wrapper('#api')
 def overall_report():
-    # data filter???
     # percentages
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('All')
 
@@ -331,13 +330,20 @@ def overall_report():
                                       tags_split_str='MoneyIn,MoneyOut'))
     html_tabs.add_tab('Money In/Out', _graph)
 
-    _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    bank_in_graph = fetch_graph_html(url_for('reports.tags_split_graph',
                                       start_date=start_date,
                                       end_date=end_date,
-                                      tags_str=tags_str,
+                                      tags_str=tags_str+',MoneyIn',
                                       grouping=grouping,
                                       tags_split_str='Revolut,HSBC,Monzo'))
-    html_tabs.add_tab('Banks', _graph)
+
+    bank_out_graph = fetch_graph_html(url_for('reports.tags_split_graph',
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      tags_str=tags_str + ',MoneyOut',
+                                      grouping=grouping,
+                                      tags_split_str='Revolut,HSBC,Monzo'))
+    html_tabs.add_tab('Bank', f"<div><h2>Money in</h2>{bank_in_graph}<br><h2>Money out</h2>{bank_out_graph}</div>")
 
     graph_html = html_tabs.html()
 
