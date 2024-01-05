@@ -12,6 +12,7 @@ from mecon.utils import dataframe_transformers, calendar_utils
 
 ID_FILL_VALUE = 'filled'
 
+
 class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.AmountColumnMixin,
                    fields.DescriptionColumnMixin, fields.TagsColumnMixin):
     """
@@ -41,7 +42,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def factory(cls, df: pd.DataFrame):
         return super().factory(df)
 
-    def to_html(self):
+    def to_html(self, df_transformer=None):
         styles = """
         <style>
         ul {
@@ -66,15 +67,14 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         }
     </style>
         """
-        df = self.dataframe(df_transformer=TransactionsHTMLTableFormat())
+        df_transformer = df_transformer if df_transformer is not None else TransactionsDataTransformationToHTMLTable()
+        df = self.dataframe(df_transformer=df_transformer)
         html_table = df.to_html(escape=False, index=False)
         res_html = f"{styles}<h1>Transactions table ({len(df)} rows)</h1>\n{html_table}"
         return res_html
 
     def dataframe(self, df_transformer: AbstractTransactionsTransformer = None):
-        df = super().dataframe()
-        if df_transformer:
-            df = df_transformer.transform(df)
+        df = super().dataframe(df_transformer=df_transformer)
         return df
 
 
@@ -100,7 +100,7 @@ class TransactionDateFiller(fields.DateFiller):
 
 
 class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransformer, abc.ABC):
-    def validate_input_df(self, df_in):
+    def validate_input_df(self, df_in: pd.DataFrame, **kwargs):
         missing_cols = []
         for col in ['id', 'amount', 'currency', 'amount_cur', 'description', 'tags']:
             if col not in df_in.columns:
@@ -110,9 +110,9 @@ class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransforme
             raise ValueError(f"Missing required columns for Transaction Transformer: {missing_cols}")
 
 
-class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
-    def _transform(self, df_in) -> pd.DataFrame:
-        df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
+class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer):
+    def _transform(self, df_in: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        # df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
 
         df_out = pd.DataFrame(df_in['id'].apply(self._format_id))
         df_out['Date/Time'] = df_in['datetime'].apply(self._format_datetime)
@@ -127,6 +127,7 @@ class TransactionsHTMLTableFormat(AbstractTransactionsTransformer):
     def _format_id(id_str):
         def wrap(string, chunk_size):
             return [string[i:i + chunk_size] for i in range(0, len(string), chunk_size)]
+
         id_parts = wrap(id_str, 6)
         id_html = '<br>'.join([f"<small><small><strong>{part}</strong></small></small>" for part in id_parts])
         return id_html

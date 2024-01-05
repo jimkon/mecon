@@ -14,6 +14,7 @@ import pandas as pd
 from mecon.tag_tools import tagging
 from mecon.utils import calendar_utils
 from mecon.monitoring import logs
+from mecon.utils import dataframe_transformers
 
 
 class NullDataframeInDataframeWrapper(Exception):
@@ -26,7 +27,9 @@ class DataframeWrapper:
             raise NullDataframeInDataframeWrapper
         self._df = df
 
-    def dataframe(self) -> pd.DataFrame:
+    def dataframe(self, df_transformer: dataframe_transformers.DataframeTransformer = None) -> pd.DataFrame:
+        if df_transformer:
+            return df_transformer.transform(self._df.copy())
         return self._df
 
     def copy(self) -> DataframeWrapper:
@@ -40,7 +43,13 @@ class DataframeWrapper:
         return len(self.dataframe())
 
     def select_by_index(self, index: List[bool] | pd.Series):
-        return self.factory(self.dataframe()[index])
+        return self.factory(self.dataframe().copy()[index])
+
+    def select_by_index_range(self, index_start: int, index_end: int):
+        index_start, index_end = index_start if index_start<self.size() else 0, min(index_end, self.size())
+        index = pd.Series(list(range(0, self.size(), 1)))
+        boolean_index = (index >= index_start) & (index <= index_end)
+        return self.select_by_index(boolean_index)
 
     @logs.codeflow_log_wrapper('#data#transactions#tags')
     def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper | None:
