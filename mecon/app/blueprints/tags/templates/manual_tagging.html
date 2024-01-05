@@ -10,7 +10,6 @@
             flex-wrap: wrap;
             gap: 2px; /* Adjust the gap between checkboxes */
             z-index: 1;
-            background-color: #f9f9f9;
             margin-right: 10px; /* Adjust margin as needed */
         }
 
@@ -48,15 +47,7 @@
     <form id="checkboxForm" method="POST">
         <button type="submit" name="save_changes">Save Changes</button>
         <button type="submit" name="reset">Reset</button>
-
-        <h3>Transcations</h3>
-        {% for chunk in range(0, n_transactions, chunk_size) %}
-            <a href={{ url_for('tags.manual_tagging', order_by=order_by, index_start=chunk, index_end=[chunk+chunk_size-1, n_transactions]|min) }}>
-            [{{ chunk }} : {{ [chunk+chunk_size-1, n_transactions]|min }}]
-            </a>
-        {% endfor %}
-        <br>
-
+        <h3></h3>
         <h5>Order:
             <a href={{ url_for('tags.manual_tagging', order_by='least tagged', index_start=index_start, index_end=index_end) }}>
                 <button type="button" {% if order_by == 'least tagged' %}disabled{% endif %}>Least tagged rows first
@@ -66,6 +57,12 @@
                 <button type="button" {% if order_by == 'newest' %}disabled{% endif %}>Newest rows first</button>
             </a>
         </h5>
+
+        {% for chunk in range(0, n_transactions, chunk_size) %}
+            <a href={{ url_for('tags.manual_tagging', order_by=order_by, index_start=chunk, index_end=[chunk+chunk_size-1, n_transactions]|min) }}>
+                [{{ chunk }} : {{ [chunk+chunk_size-1, n_transactions]|min }}]
+            </a>
+        {% endfor %}
         {{ table_html | safe }}
 
     </form>

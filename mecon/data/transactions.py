@@ -62,15 +62,35 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         }
         .description_phrase_label {
             font-size: 14px;
-            background-color: #ddd;
+            background-color: #ffe;
             padding: 2px;
+            z-index: 1;
+            border: 1px solid #eee;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
         }
+        tr {
+            border: 1px solid #ccc;
+            background-color: #eff;
+        }
+        td {
+            text-align: center;
+            border: 1px solid #ccc;
+            padding: 4px;
+            
+        }
+        th {
+            font-size: 18px;
+            text-align: left;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        
     </style>
         """
         df_transformer = df_transformer if df_transformer is not None else TransactionsDataTransformationToHTMLTable()
         df = self.dataframe(df_transformer=df_transformer)
         html_table = df.to_html(escape=False, index=False)
-        res_html = f"{styles}<h1>Transactions table ({len(df)} rows)</h1>\n{html_table}"
+        res_html = f"{styles}<h3>Transactions table ({len(df)} rows)</h3>\n{html_table}"
         return res_html
 
     def dataframe(self, df_transformer: AbstractTransactionsTransformer = None):
@@ -117,8 +137,9 @@ class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer)
         df_out = pd.DataFrame(df_in['id'].apply(self._format_id))
         df_out['Date/Time'] = df_in['datetime'].apply(self._format_datetime)
         df_out['Amount (£)'] = df_in['amount'].apply(self._format_amount)
-        df_out['Curr'] = df_in['currency'].apply(self._format_currency_count)
-        df_out['Amount (curr)'] = df_in['amount_cur'].apply(self._format_amount)
+        # df_out['Curr'] = df_in['currency'].apply(self._format_currency_count)
+        # df_out['Amount (curr)'] = df_in['amount_cur'].apply(self._format_amount)
+        df_out['Local amount'] = df_in.apply(lambda row: self._format_local_amount(row['amount_cur'], row['currency']), axis=1)
         df_out['Description'] = df_in['description'].apply(self._format_description)
         df_out['Tags'] = df_in['tags'].apply(self._format_tags)
         return df_out
@@ -134,10 +155,10 @@ class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer)
 
     @staticmethod
     def _format_datetime(dt):
-        formatted_date = dt.strftime("%A, %b %d, %Y")
-        formatted_time = dt.strftime("%I:%M:%S %p")
+        formatted_date = dt.strftime("%b %d, %Y")
+        formatted_time = dt.strftime("%A, %H:%M:%S")
 
-        html_representation = f"""<label class="datetime_label">{formatted_date}</label><br><label class="datetime_label">{formatted_time}</label>"""
+        html_representation = f"""<label class="datetime_label">{formatted_time}</label><br><label class="datetime_label">{formatted_date}</label>"""
 
         return html_representation
 
@@ -146,6 +167,18 @@ class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer)
         amount = float(amount_str)
         text_color = 'orange' if amount < 0 else 'green' if amount > 0 else 'black'
         return f"""<h6 style="color: {text_color}">{amount:.2f}</h6>"""
+
+    @staticmethod
+    def _format_local_amount(amount_str, currency):
+        symbol_mapping = {
+            'EUR': '€',
+            'GBP': '£',
+            'USD': '$'
+        }
+        currency_symbol = symbol_mapping.get(currency, f"({currency})")
+        amount = float(amount_str)
+        text_color = 'orange' if amount < 0 else 'green' if amount > 0 else 'black'
+        return f"""<h6 style="color: {text_color}">{amount:.2f}{currency_symbol}</h6>"""
 
     @staticmethod
     def _format_currency_count(curr_string):
