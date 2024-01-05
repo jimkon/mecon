@@ -9,7 +9,7 @@ from mecon.data.transactions import Transactions
 from mecon.monitoring import logs
 from mecon.tag_tools import tagging, comparisons, transformations
 from mecon.tag_tools.tagging import Tag
-from mecon.app.app_utils import ManualTaggingHTMLTableFormat
+from mecon.app.app_utils import TransactionsDataTransformationToManualTaggingHTMLTable
 from mecon.monitoring.tag_monitoring import TaggingReport
 from mecon.app import WorkingDatasetDir
 from mecon.monitoring import tag_monitoring
@@ -40,7 +40,7 @@ def create_alerts_from_tagging_report(tagging_report):
               category="warning")
 
 
-@logs.codeflow_log_wrapper('#data#transactions#load')
+@logs.codeflow_log_wrapper('#data#transactions#load')  # TODO remove
 def get_transactions() -> Transactions:
     transactions = _data_manager.get_transactions()
     return transactions
@@ -193,12 +193,21 @@ def manual_tagging(order_by):
         elif "reset" in request.form:
             pass
 
-    transactions = get_transactions()
     all_tags = sorted([tag.name for tag in _data_manager.all_tags()])
-    df = transactions.dataframe(
-        df_transformer=ManualTaggingHTMLTableFormat(all_tags, order_by=order_by)
-    )[:10]  # TODO print all
 
-    table_html = df.to_html(render_links=True, escape=False)
+    transactions = get_transactions()
+    n_transactions = transactions.size()
+
+    chunk_size = 250
+    index_start = int(request.args['index_start']) if 'index_start' in request.args else 0
+    index_end = int(request.args['index_end']) if 'index_end' in request.args else (chunk_size - 1)
+
+    table_html = transactions.to_html(
+        df_transformer=TransactionsDataTransformationToManualTaggingHTMLTable(
+            all_tags,
+            order_by=order_by,
+            index_start=index_start,
+            index_end=index_end
+        ))
 
     return render_template('manual_tagging.html', **locals())

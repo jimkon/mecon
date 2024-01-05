@@ -49,40 +49,25 @@
         <button type="submit" name="save_changes">Save Changes</button>
         <button type="submit" name="reset">Reset</button>
 
-        <h2>Transcations</h2>
-        <h3>Order:
-        <a href={{ url_for('tags.manual_tagging', order_by='least tagged') }}>
-            <button type="button" {% if order_by == 'least tagged' %}disabled{% endif %}>Least tagged rows first</button>
-        </a>
-        <a href={{ url_for('tags.manual_tagging', order_by='newest') }}>
-            <button type="button" {% if order_by == 'newest' %}disabled{% endif %}>Newest rows first</button>
-        </a>
-        </h3>
+        <h3>Transcations</h3>
+        {% for chunk in range(0, n_transactions, chunk_size) %}
+            <a href={{ url_for('tags.manual_tagging', order_by=order_by, index_start=chunk, index_end=[chunk+chunk_size-1, n_transactions]|min) }}>
+            [{{ chunk }} : {{ [chunk+chunk_size-1, n_transactions]|min }}]
+            </a>
+        {% endfor %}
+        <br>
+
+        <h5>Order:
+            <a href={{ url_for('tags.manual_tagging', order_by='least tagged', index_start=index_start, index_end=index_end) }}>
+                <button type="button" {% if order_by == 'least tagged' %}disabled{% endif %}>Least tagged rows first
+                </button>
+            </a>
+            <a href={{ url_for('tags.manual_tagging', order_by='newest', index_start=index_start, index_end=index_end) }}>
+                <button type="button" {% if order_by == 'newest' %}disabled{% endif %}>Newest rows first</button>
+            </a>
+        </h5>
         {{ table_html | safe }}
 
     </form>
-{#    <script>#}
-{#        function orderChanged(value) {#}
-{#            // Perform action when the order changes#}
-{#            console.log('Order changed:', value);#}
-{##}
-{#            // Add logic to trigger a POST request with the new order value#}
-{#            fetch('/tags/manual_tagging', {#}
-{#                method: 'POST',#}
-{#                headers: {#}
-{#                    'Content-Type': 'application/json',#}
-{#                },#}
-{#                body: JSON.stringify({orderBy: value}),#}
-{#            })#}
-{#                .then(response => response.json())#}
-{#                .then(data => {#}
-{#                    console.log('Order saved successfully', data);#}
-                    {#window.location.reload();#}
-{#                })#}
-{#                .catch(error => {#}
-{#                    console.error('Error saving order', error);#}
-{#                });#}
-{#        }#}
-{#    </script>#}
 
 {% endblock content %}
