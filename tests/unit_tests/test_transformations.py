@@ -7,7 +7,7 @@ from tag_tools import transformations as trns
 class TestTransformationFunctions(unittest.TestCase):
     def test_repr(self):
         tf = trns.TransformationFunction.from_key('none')
-        str(tf) # make sure it doesn't crash
+        str(tf)  # make sure it doesn't crash
 
     def test_none(self):
         tf = trns.TransformationFunction.from_key('none')
@@ -33,6 +33,13 @@ class TestTransformationFunctions(unittest.TestCase):
         self.assertEqual(tf('a'), 'A')
         self.assertEqual(tf('A'), 'A')
 
+    def test_split_comma(self):
+        tf = trns.TransformationFunction.from_key('split_comma')
+
+        self.assertEqual(tf('a,b,c'), ['a', 'b', 'c'])
+        self.assertEqual(tf('a'), ['a'])
+        self.assertEqual(tf(''), [''])
+
     def test_int(self):
         tf = trns.TransformationFunction.from_key('int')
 
@@ -53,7 +60,7 @@ class TestTransformationFunctions(unittest.TestCase):
     def test_time(self):
         tf = trns.TransformationFunction.from_key('time')
 
-        self.assertEqual((tf(datetime(2020, 1, 1, 12, 30, 30))), time(12, 30, 30 ))
+        self.assertEqual((tf(datetime(2020, 1, 1, 12, 30, 30))), time(12, 30, 30))
 
     def test_day_of_week(self):
         tf = trns.TransformationFunction.from_key('day_of_week')

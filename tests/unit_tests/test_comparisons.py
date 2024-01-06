@@ -116,13 +116,55 @@ class TestCompareOperator(unittest.TestCase):
         co = cmp.CompareOperator.from_key('in')
 
         self.assertEqual(co('a', 'a,1'), True)
+        self.assertEqual(co('a', 'a'), True)
+        self.assertEqual(co('ab', 'a'), False)
         self.assertEqual(co('a', 'b,c'), False)
+        self.assertEqual(co('a', 'aa,1'), True)
+        self.assertEqual(co('a', ''), False)
+        self.assertEqual(co(['a'], 'a,b'), True)
+        self.assertEqual(co(['c'], 'a,b'), False)
+        self.assertEqual(co(['c', 'b'], 'a,b'), True)
 
     def test_not_in(self):
         co = cmp.CompareOperator.from_key('not_in')
 
         self.assertEqual(co('a', 'a,1'), False)
+        self.assertEqual(co('a', 'a'), False)
+        self.assertEqual(co('ab', 'a'), True)
         self.assertEqual(co('a', 'b,c'), True)
+        self.assertEqual(co('a', 'aa,1'), False)
+        self.assertEqual(co('a', ''), True)
+        self.assertEqual(co(['a'], 'a,b'), False)
+        self.assertEqual(co(['c'], 'a,b'), True)
+        self.assertEqual(co(['c', 'b'], 'a,b'), False)
+
+    def test_in_csv(self):
+        co = cmp.CompareOperator.from_key('in_csv')
+
+        self.assertEqual(co('a', 'a,1'), True)
+        self.assertEqual(co('a', 'a'), True)
+        self.assertEqual(co('ab', 'a'), False)
+        self.assertEqual(co('a', 'b,c'), False)
+        self.assertEqual(co('a', 'aa,1'), False)
+        self.assertEqual(co('a', 'b'), False)
+        self.assertEqual(co('a', ''), False)
+        self.assertEqual(co(['a'], 'a,b'), True)
+        self.assertEqual(co(['c'], 'a,b'), False)
+        self.assertEqual(co(['c', 'b'], 'a,b'), True)
+
+    def test_not_in_csv(self):
+        co = cmp.CompareOperator.from_key('not_in_csv')
+
+        self.assertEqual(co('a', 'a,1'), False)
+        self.assertEqual(co('a', 'a'), False)
+        self.assertEqual(co('ab', 'a'), True)
+        self.assertEqual(co('a', 'b,c'), True)
+        self.assertEqual(co('a', 'aa,1'), True)
+        self.assertEqual(co('a', 'b'), True)
+        self.assertEqual(co('a', ''), True)
+        self.assertEqual(co(['a'], 'a,b'), False)
+        self.assertEqual(co(['c'], 'a,b'), True)
+        self.assertEqual(co(['c', 'b'], 'a,b'), False)
 
 
 if __name__ == '__main__':

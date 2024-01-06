@@ -3,6 +3,15 @@ import re
 from mecon.utils import instance_management
 
 
+def _any_input_items_in_target_items(input_items, target_items):
+    if not isinstance(input_items, list):
+        input_items = [input_items]
+    for input_item in input_items:
+        if input_item in target_items:
+            return True
+    return False
+
+
 class CompareOperatorMustReturnBooleanResults(Exception):
     pass
 
@@ -44,5 +53,8 @@ NOT_CONTAINS = CompareOperator('not_contains', lambda a, b: b not in a)
 REGEX = CompareOperator('regex',
                         lambda a, b: bool(re.search(pattern=b, string=a)) if (a is not None and len(a) > 0) else False)
 
-IN = CompareOperator('in', lambda a, b: a in b if b else False)
-NOT_IN = CompareOperator('not_in', lambda a, b: a not in b if b else False)
+IN = CompareOperator('in', lambda a, b: _any_input_items_in_target_items(a, b))
+NOT_IN = CompareOperator('not_in', lambda a, b: not _any_input_items_in_target_items(a, b))
+
+IN_CSV = CompareOperator('in_csv', lambda a, b: _any_input_items_in_target_items(a, b.split(',')))
+NOT_IN_CSV = CompareOperator('not_in_csv', lambda a, b: not _any_input_items_in_target_items(a, b.split(',')))

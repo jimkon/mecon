@@ -25,6 +25,7 @@ NO_TRANSFORMATION = TransformationFunction('none', None)
 STR = TransformationFunction('str', lambda x: str(x))
 LOWER = TransformationFunction('lower', lambda x: str(x).lower())
 UPPER = TransformationFunction('upper', lambda x: str(x).upper())
+SPLIT_COMMA = TransformationFunction('split_comma', lambda x: str(x).split(','))
 
 INT = TransformationFunction('int', lambda x: int(x))
 ABS = TransformationFunction('abs', lambda x: abs(int(x)))
