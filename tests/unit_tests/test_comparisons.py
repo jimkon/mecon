@@ -115,14 +115,14 @@ class TestCompareOperator(unittest.TestCase):
     def test_in(self):
         co = cmp.CompareOperator.from_key('in')
 
-        self.assertEqual(co('a', ['a', 1]), True)
-        self.assertEqual(co('a', ['b', 'c']), False)
+        self.assertEqual(co('a', 'a,1'), True)
+        self.assertEqual(co('a', 'b,c'), False)
 
     def test_not_in(self):
         co = cmp.CompareOperator.from_key('not_in')
 
-        self.assertEqual(co('a', ['a', 1]), False)
-        self.assertEqual(co('a', ['b', 'c']), True)
+        self.assertEqual(co('a', 'a,1'), False)
+        self.assertEqual(co('a', 'b,c'), True)
 
 
 if __name__ == '__main__':
