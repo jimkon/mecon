@@ -32,12 +32,10 @@
                 <!-- Input text field -->
                 <label for="field">Field:</label>
                 <select id="field" name="field">
-                {% if transactions is not none %}
-                    {% for field in transactions.dataframe().columns.to_list() %}
-                        <option value="{{ field }}" {% if field == "description" %}
-                                selected {% endif %}>{{ field }}</option>
-                    {% endfor %}
-                {% endif %}
+                {% for field in all_fields %}
+                    <option value="{{ field }}" {% if field == "description" %}
+                            selected {% endif %}>{{ field }}</option>
+                {% endfor %}
                 </select><br><br>
                 <!-- Dropdown menu for 'transform' -->
                 <label for="transform">Transform:</label>

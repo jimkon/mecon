@@ -67,6 +67,8 @@ def render_tag_page(title='Tag page',
 
         tagged_table_html = transactions.to_html() if transactions else "<h4>'No transaction data after applying rule'</h4>"
         untagged_transactions = get_transactions().apply_negated_rule(tag.rule)
+
+        all_fields = transactions.dataframe().columns.to_list() if transactions else untagged_transactions.dataframe().columns.to_list()
         untagged_table_html = untagged_transactions.to_html()
         tag_json_str = _reformat_json_str(tag_json_str)
         transformations_list = [trans.name for trans in transformations.TransformationFunction.all_instances()]
