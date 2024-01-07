@@ -3,6 +3,7 @@ import pathlib
 from datetime import datetime
 import logging
 from io import StringIO
+from typing import Mapping
 
 import pandas as pd
 from monzo.authentication import Authentication
@@ -80,7 +81,7 @@ class MonzoDataTransformer:
 
             subdict = _dict
             for key in keys:
-                if key in subdict and subdict[key] is not None:
+                if isinstance(subdict, Mapping) and key in subdict and subdict[key] is not None:
                     subdict = subdict[key]
                 else:
                     return default
@@ -124,4 +125,6 @@ class MonzoDataTransformer:
             transactions_json.append(transactions_dict)
 
         df = pd.read_json(StringIO(json.dumps(transactions_json)))
+        df['Date'] = df['Date'].dt.strftime("%Y-%m-%d")
         return df
+
