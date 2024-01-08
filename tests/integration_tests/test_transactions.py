@@ -674,6 +674,24 @@ class TestGroupAgg(unittest.TestCase):
         pd.testing.assert_frame_equal(result_trans_df.reset_index(drop=True),
                                       expected_trans_df.reset_index(drop=True))
 
+    def test_group_agg__empyt_group(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': [],
+            'datetime': [],
+            'amount': [],
+            'currency': [],
+            'amount_cur': [],
+            'description': [],
+            'tags': []
+        }))
+
+        grouper = groupings.WEEK
+        agg = CustomisableAmountTransactionAggregator('sum', 'week')
+        new_transactions = transactions.groupagg(grouper=grouper, aggregator=agg)
+
+        pd.testing.assert_frame_equal(transactions.dataframe().reset_index(drop=True),
+                                      new_transactions.dataframe().reset_index(drop=True))
+
 
 if __name__ == '__main__':
     unittest.main()

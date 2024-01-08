@@ -55,7 +55,7 @@ class DataframeWrapper:
     def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper | None:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_rule(df, rule)
-        return self.factory(new_df) if len(new_df) > 0 else None
+        return self.factory(new_df)
 
     @logs.codeflow_log_wrapper('#data#transactions#tags')
     def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
@@ -65,6 +65,9 @@ class DataframeWrapper:
 
     @logs.codeflow_log_wrapper('#data#transactions#groupagg')
     def groupagg(self, grouper: Grouping, aggregator: InTypeAggregator) -> DataframeWrapper:
+        if self.size() == 0:
+            return self.factory(self.dataframe())
+
         groups = grouper.group(self)
         aggregated_groups = aggregator.aggregate(groups)
         return aggregated_groups
@@ -226,8 +229,15 @@ class Grouping(abc.ABC):
         pass
 
 
+class InvalidInputToAggregator(Exception):
+    pass
+
+
 class AggregatorABC(abc.ABC):  # TODO:v3 tested only through InTypeAggregator
     def aggregate_result_df(self, lists_of_df_wrapper: List[DataframeWrapper]) -> pd.DataFrame:
+        if len(lists_of_df_wrapper) == 0:
+            raise InvalidInputToAggregator(f"No DataframeWrapper object to aggregate.")
+
         aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
         df_agg = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list])
         return df_agg
@@ -243,6 +253,7 @@ class InTypeAggregator(AggregatorABC):
 
     @logs.codeflow_log_wrapper('#data#transactions#process')
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
+        # TODO what if lists_of_df_wrapper = []
         df_agg = self.aggregate_result_df(lists_of_df_wrapper)
         res_df_wrapper = lists_of_df_wrapper[0].factory(df_agg)
         return res_df_wrapper
