@@ -127,7 +127,7 @@ class TestPerformanceDataAggregator(unittest.TestCase):
                          Timestamp('2023-09-29 18:11:58.433000'), Timestamp('2023-09-29 18:11:58.433000'),
                          Timestamp('2023-09-29 18:11:58.438000'), Timestamp('2023-09-29 18:11:58.439000'),
                          Timestamp('2023-09-29 18:11:58.539000')],
-            'level': ['INFO', 'INFO', 'INFO', 'INFO', 'INFO', 'INFO', 'INFO', 'INFO', 'INFO', 'INFO', 'INFO', 'INFO',
+            'level': ['DEBUG', 'INFO', 'DEBUG', 'INFO', 'DEBUG', 'INFO', 'DEBUG', 'DEBUG', 'INFO', 'DEBUG', 'DEBUG', 'DEBUG',
                       'INFO'],  # same for all
             'module': ['logs', 'logs', 'logs', 'logs', 'logs', 'logs', 'logs', 'logs', 'logs', 'logs', 'logs', 'logs',
                        'logs'],  # same for all
@@ -241,58 +241,23 @@ class TestPerformanceData(unittest.TestCase):
         )
 
     def test_from_log_data(self):
-        #         csv_string = """
-        # 2023-09-29 18:11:58,001,root,INFO,logs,wrapper,~a random log #notcodeflow#start#balance_graph#api~
-        # 2023-09-29 18:11:58,002,root,INFO,logs,wrapper,~mecon.blueprints.reports.reports_bp.balance_graph started... #codeflow#start#balance_graph#api~
-        # 2023-09-29 18:11:58,003,root,INFO,logs,wrapper,~mecon.blueprints.reports.reports_bp.get_filtered_transactions started... #codeflow#start#get_filtered_transactions#data#transactions#process~
-        # 2023-09-29 18:11:58,004,root,INFO,logs,wrapper,~mecon.blueprints.reports.reports_bp.get_transactions started... #codeflow#start#get_transactions#data#transactions#load~
-        # 2023-09-29 18:11:58,005,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,006,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ finished... #codeflow#end#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,007,root,INFO,logs,wrapper,~mecon.blueprints.reports.reports_bp.get_transactions finished... #codeflow#end#get_transactions#data#transactions#load~
-        # 2023-09-29 18:11:58,008,root,INFO,logs,wrapper,~mecon.datafields.DataframeWrapper.apply_rule started... #codeflow#start#DataframeWrapper.apply_rule#data#transactions#tags~
-        # 2023-09-29 18:11:58,009,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,010,root,INFO,logs,wrapper,~a random log #notcodeflow#start#balance_graph#api~
-        # 2023-09-29 18:11:58,011,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ finished... #codeflow#end#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,012,root,INFO,logs,wrapper,~mecon.datafields.DataframeWrapper.apply_rule finished... #codeflow#end#DataframeWrapper.apply_rule#data#transactions#tags~
-        # 2023-09-29 18:11:58,013,root,INFO,logs,wrapper,~mecon.datafields.DataframeWrapper.apply_rule started... #codeflow#start#DataframeWrapper.apply_rule#data#transactions#tags~
-        # 2023-09-29 18:11:58,014,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,015,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ finished... #codeflow#end#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,016,root,INFO,logs,wrapper,~mecon.datafields.DataframeWrapper.apply_rule finished... #codeflow#end#DataframeWrapper.apply_rule#data#transactions#tags~
-        # 2023-09-29 18:11:58,017,root,INFO,logs,wrapper,~mecon.datafields.DataframeWrapper.groupagg started... #codeflow#start#DataframeWrapper.groupagg#data#transactions#groupagg~
-        # 2023-09-29 18:11:58,018,root,INFO,logs,wrapper,~a random log #notcodeflow#start#balance_graph#api~
-        # 2023-09-29 18:11:58,019,root,INFO,logs,wrapper,~mecon.datafields.Grouping.group started... #codeflow#start#Grouping.group#data#transactions#process~
-        # 2023-09-29 18:11:58,021,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,022,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,023,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ finished... #codeflow#end#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,024,root,INFO,logs,wrapper,~mecon.datafields.Aggregator.aggregate started... #codeflow#start#Aggregator.aggregate#data#transactions#process~
-        # 2023-09-29 18:11:58,025,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,026,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,027,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,028,root,INFO,logs,wrapper,~mecon.transactions.Transactions.__init__ finished... #codeflow#end#Transactions.__init__#data#transactions#process~
-        # 2023-09-29 18:11:58,029,root,INFO,logs,wrapper,~mecon.datafields.Aggregator.aggregate finished... #codeflow#end#Aggregator.aggregate#data#transactions#process~
-        # 2023-09-29 18:11:58,030,root,INFO,logs,wrapper,~mecon.datafields.DataframeWrapper.groupagg finished... #codeflow#end#DataframeWrapper.groupagg#data#transactions#groupagg~
-        # 2023-09-29 18:11:58,031,root,INFO,logs,wrapper,~mecon.blueprints.reports.reports_bp.get_filtered_transactions finished... #codeflow#end#get_filtered_transactions#data#transactions#process~
-        # 2023-09-29 18:11:58,032,root,INFO,logs,wrapper,~mecon.blueprints.reports.reports_bp.balance_graph finished... #codeflow#end#balance_graph#api~
-        # """
-        #        log_data_obj = log_data.LogData.from_raw_logs(logs.read_logs_string_as_df(csv_string))
-
         log_data_df = pd.DataFrame.from_dict({
             0: {'datetime': Timestamp('2023-09-29 18:11:58.00100000'), 'level': 'INFO', 'module': 'logs',
                 'funcName': 'wrapper', 'description': 'a random log #notcodeflow#start#balance_graph#api',
                 'tags': 'notcodeflow,start,balance_graph,api'},
-            1: {'datetime': Timestamp('2023-09-29 18:11:58.00200000'), 'level': 'INFO', 'module': 'logs',
+            1: {'datetime': Timestamp('2023-09-29 18:11:58.00200000'), 'level': 'DEBUG', 'module': 'logs',
                 'funcName': 'wrapper',
                 'description': 'mecon.blueprints.reports.reports_bp.balance_graph started... #codeflow#start#balance_graph#api',
                 'tags': 'codeflow,start,balance_graph,api'},
-            2: {'datetime': Timestamp('2023-09-29 18:11:58.00300000'), 'level': 'INFO', 'module': 'logs',
+            2: {'datetime': Timestamp('2023-09-29 18:11:58.00300000'), 'level': 'DEBUG', 'module': 'logs',
                 'funcName': 'wrapper',
                 'description': 'mecon.blueprints.reports.reports_bp.get_filtered_transactions started... #codeflow#start#get_filtered_transactions#data#transactions#process',
                 'tags': 'codeflow,start,get_filtered_transactions,data,transactions,process'},
-            3: {'datetime': Timestamp('2023-09-29 18:11:58.00400000'), 'level': 'INFO', 'module': 'logs',
+            3: {'datetime': Timestamp('2023-09-29 18:11:58.00400000'), 'level': 'DEBUG', 'module': 'logs',
                 'funcName': 'wrapper',
                 'description': 'mecon.blueprints.reports.reports_bp.get_transactions started... #codeflow#start#get_transactions#data#transactions#load',
                 'tags': 'codeflow,start,get_transactions,data,transactions,load'},
-            4: {'datetime': Timestamp('2023-09-29 18:11:58.00500000'), 'level': 'INFO', 'module': 'logs',
+            4: {'datetime': Timestamp('2023-09-29 18:11:58.00500000'), 'level': 'DEBUG', 'module': 'logs',
                 'funcName': 'wrapper',
                 'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                 'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
@@ -304,11 +269,11 @@ class TestPerformanceData(unittest.TestCase):
                 'funcName': 'wrapper',
                 'description': 'mecon.blueprints.reports.reports_bp.get_transactions finished... #codeflow#end#get_transactions#data#transactions#load',
                 'tags': 'codeflow,end,get_transactions,data,transactions,load'},
-            7: {'datetime': Timestamp('2023-09-29 18:11:58.00800000'), 'level': 'INFO', 'module': 'logs',
+            7: {'datetime': Timestamp('2023-09-29 18:11:58.00800000'), 'level': 'DEBUG', 'module': 'logs',
                 'funcName': 'wrapper',
                 'description': 'mecon.datafields.DataframeWrapper.apply_rule started... #codeflow#start#DataframeWrapper.apply_rule#data#transactions#tags',
                 'tags': 'codeflow,start,DataframeWrapper.apply_rule,data,transactions,tags'},
-            8: {'datetime': Timestamp('2023-09-29 18:11:58.00900000'), 'level': 'INFO', 'module': 'logs',
+            8: {'datetime': Timestamp('2023-09-29 18:11:58.00900000'), 'level': 'DEBUG', 'module': 'logs',
                 'funcName': 'wrapper',
                 'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                 'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
@@ -323,11 +288,11 @@ class TestPerformanceData(unittest.TestCase):
                  'funcName': 'wrapper',
                  'description': 'mecon.datafields.DataframeWrapper.apply_rule finished... #codeflow#end#DataframeWrapper.apply_rule#data#transactions#tags',
                  'tags': 'codeflow,end,DataframeWrapper.apply_rule,data,transactions,tags'},
-            12: {'datetime': Timestamp('2023-09-29 18:11:58.0130000'), 'level': 'INFO', 'module': 'logs',
+            12: {'datetime': Timestamp('2023-09-29 18:11:58.0130000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.datafields.DataframeWrapper.apply_rule started... #codeflow#start#DataframeWrapper.apply_rule#data#transactions#tags',
                  'tags': 'codeflow,start,DataframeWrapper.apply_rule,data,transactions,tags'},
-            13: {'datetime': Timestamp('2023-09-29 18:11:58.0140000'), 'level': 'INFO', 'module': 'logs',
+            13: {'datetime': Timestamp('2023-09-29 18:11:58.0140000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                  'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
@@ -339,25 +304,25 @@ class TestPerformanceData(unittest.TestCase):
                  'funcName': 'wrapper',
                  'description': 'mecon.datafields.DataframeWrapper.apply_rule finished... #codeflow#end#DataframeWrapper.apply_rule#data#transactions#tags',
                  'tags': 'codeflow,end,DataframeWrapper.apply_rule,data,transactions,tags'},
-            16: {'datetime': Timestamp('2023-09-29 18:11:58.0170000'), 'level': 'INFO', 'module': 'logs',
+            16: {'datetime': Timestamp('2023-09-29 18:11:58.0170000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.datafields.DataframeWrapper.groupagg started... #codeflow#start#DataframeWrapper.groupagg#data#transactions#groupagg',
                  'tags': 'codeflow,start,DataframeWrapper.groupagg,data,transactions,groupagg'},
             17: {'datetime': Timestamp('2023-09-29 18:11:58.0180000'), 'level': 'INFO', 'module': 'logs',
                  'funcName': 'wrapper', 'description': 'a random log #notcodeflow#start#balance_graph#api',
                  'tags': 'notcodeflow,start,balance_graph,api'},
-            18: {'datetime': Timestamp('2023-09-29 18:11:58.0190000'), 'level': 'INFO', 'module': 'logs',
+            18: {'datetime': Timestamp('2023-09-29 18:11:58.0190000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.datafields.Grouping.group started... #codeflow#start#Grouping.group#data#transactions#process',
                  'tags': 'codeflow,start,Grouping.group,data,transactions,process'},
             19: {'datetime': Timestamp('2023-09-29 18:11:58.0190000'), 'level': 'INFO', 'module': 'logs',
                  'funcName': 'wrapper', 'description': 'a random log #notcodeflow#start#balance_graph#api',
                  'tags': 'notcodeflow,start,balance_graph,api'},
-            20: {'datetime': Timestamp('2023-09-29 18:11:58.0210000'), 'level': 'INFO', 'module': 'logs',
+            20: {'datetime': Timestamp('2023-09-29 18:11:58.0210000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                  'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
-            21: {'datetime': Timestamp('2023-09-29 18:11:58.0220000'), 'level': 'INFO', 'module': 'logs',
+            21: {'datetime': Timestamp('2023-09-29 18:11:58.0220000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                  'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
@@ -365,19 +330,19 @@ class TestPerformanceData(unittest.TestCase):
                  'funcName': 'wrapper',
                  'description': 'mecon.transactions.Transactions.__init__ finished... #codeflow#end#Transactions.__init__#data#transactions#process',
                  'tags': 'codeflow,end,Transactions.__init__,data,transactions,process'},
-            23: {'datetime': Timestamp('2023-09-29 18:11:58.0240000'), 'level': 'INFO', 'module': 'logs',
+            23: {'datetime': Timestamp('2023-09-29 18:11:58.0240000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.datafields.Aggregator.aggregate started... #codeflow#start#Aggregator.aggregate#data#transactions#process',
                  'tags': 'codeflow,start,Aggregator.aggregate,data,transactions,process'},
-            24: {'datetime': Timestamp('2023-09-29 18:11:58.0250000'), 'level': 'INFO', 'module': 'logs',
+            24: {'datetime': Timestamp('2023-09-29 18:11:58.0250000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                  'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
-            25: {'datetime': Timestamp('2023-09-29 18:11:58.0260000'), 'level': 'INFO', 'module': 'logs',
+            25: {'datetime': Timestamp('2023-09-29 18:11:58.0260000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                  'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
-            26: {'datetime': Timestamp('2023-09-29 18:11:58.0270000'), 'level': 'INFO', 'module': 'logs',
+            26: {'datetime': Timestamp('2023-09-29 18:11:58.0270000'), 'level': 'DEBUG', 'module': 'logs',
                  'funcName': 'wrapper',
                  'description': 'mecon.transactions.Transactions.__init__ started... #codeflow#start#Transactions.__init__#data#transactions#process',
                  'tags': 'codeflow,start,Transactions.__init__,data,transactions,process'},
