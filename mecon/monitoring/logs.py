@@ -8,12 +8,23 @@ from typing import List
 
 import pandas as pd
 
-LOGS_DIRECTORY = pathlib.Path("logs")
-LOG_FILENAME = "logs_raw.csv"
+from mecon import config
+
 
 """Use log rotation Implement log rotation to prevent excessive file growth and disk space usage in your log files. 
 Old log files are automatically archived, compressed, and deleted using this approach. You can either use a 
 third-party tool like logrotate or the Python language's built-in RotatingFileHandler to construct your own solution.
+"""
+
+"""
+Level,              Value,  What it means / When to use it
+-                   -       -
+logging.NOTSET,     0,      When set on a logger, indicates that ancestor loggers are to be consulted to determine the effective level. If that still resolves to NOTSET, then all events are logged. When set on a handler, all events are handled.
+logging.DEBUG,      10,     Detailed information, typically only of interest to a developer trying to diagnose a problem.
+logging.INFO,       20,     Confirmation that things are working as expected.
+logging.WARNING,    30,     An indication that something unexpected happened, or that a problem might occur in the near future (e.g. ‘disk space low’). The software is still working as expected.
+logging.ERROR,      40,     Due to a more serious problem, the software has not been able to perform some function.
+logging.CRITICAL,   50,     A serious error, indicating that the program itself may be unable to continue running.
 """
 
 
@@ -28,11 +39,11 @@ def setup_logging(logger=None):
         logger = logging.getLogger()
 
     # Set the logging level (e.g., INFO, DEBUG)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # Create a file handler (logs to a file)
     file_handler = TimedRotatingFileHandler(
-        filename=LOGS_DIRECTORY / LOG_FILENAME,
+        filename=config.LOGS_DIRECTORY_PATH / config.CURRENT_LOG_FILENAME,
         when='midnight',
         interval=1,
         backupCount=7,
@@ -48,9 +59,11 @@ def setup_logging(logger=None):
 
     # Set the format for the file handler
     file_handler.setFormatter(file_formatter)
+    file_handler.setLevel(logging.DEBUG)
 
     # Set the format for the console handler
     console_handler.setFormatter(console_formatter)
+    console_handler.setLevel(logging.INFO)
 
     # Add the handlers to the logger
     logger.addHandler(file_handler)
@@ -60,7 +73,7 @@ def setup_logging(logger=None):
 
 
 def print_logs_info():
-    logging.info(f"Logs are stored in {LOGS_DIRECTORY} (filename: {LOG_FILENAME}, historic: {get_log_files(True)})")
+    logging.info(f"Logs are stored in {config.LOGS_DIRECTORY_PATH} (filename: {config.CURRENT_LOG_FILENAME}, historic: {get_log_files(True)})")
 
 
 def read_logs_string_as_df(logs_string: str):
@@ -76,9 +89,9 @@ def read_logs_string_as_df(logs_string: str):
 
 def get_log_files(historic_logs=False):
     if historic_logs:
-        log_files = list(LOGS_DIRECTORY.glob('*'))
+        log_files = list(config.LOGS_DIRECTORY_PATH.glob('*'))
     else:
-        log_files = [LOGS_DIRECTORY / LOG_FILENAME]
+        log_files = [config.LOGS_DIRECTORY_PATH / config.CURRENT_LOG_FILENAME]
     return log_files
 
 
@@ -100,13 +113,13 @@ def codeflow_log_wrapper(tags=''):
     def decorator(_func):
         # https://flask.palletsprojects.com/en/2.3.x/patterns/viewdecorators/
         @wraps(_func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs): # TODO indent function call
             _funct_name = f"{_func.__module__}.{_func.__qualname__}"
-            logging.info(f"{_funct_name} started... #codeflow#start#{_func.__qualname__}{tags}")
+            logging.debug(f"{_funct_name} started... #codeflow#start#{_func.__qualname__}{tags}") # TODO remove function_start log
             try:
                 res = _func(*args, **kwargs)
             except Exception as e:
-                logging.info(f"{_funct_name} raised {e}! #codeflow#error#{_func.__qualname__}{tags}")
+                logging.error(f"{_funct_name} raised {e}! #codeflow#error#{_func.__qualname__}{tags}")
                 raise
             else:
                 logging.info(f"{_funct_name} finished... #codeflow#end#{_func.__qualname__}{tags}")

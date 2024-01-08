@@ -15,3 +15,6 @@ DATETIME_STRING_FORMAT = f"{DATE_STRING_FORMAT} {TIME_STRING_FORMAT}"
 DEFAULT_DATASET_NAME = 'v2'
 
 CREDS_DIRECTORY_PATH = pathlib.Path(r"C:\Users\dimitris\PycharmProjects\mecon\creds")
+
+LOGS_DIRECTORY_PATH = pathlib.Path("logs")
+CURRENT_LOG_FILENAME = "logs_raw.csv"
