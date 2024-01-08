@@ -160,7 +160,7 @@ def fetch_data():
 
                 csv_file = f"Monzo_Transactions.csv"
                 dataset.add_df_statement('Monzo', df, csv_file)
-                monzo_data_message = f" -> {len(df)} transactions added to {csv_file} from {df['Date'].min().date()} to {df['Date'].max().date()}"
+                monzo_data_message = f" -> {len(df)} transactions added to {csv_file} from {df['Date'].min()} to {df['Date'].max()}"
             else:
                 monzo_data_message = f" -> You must authenticate first!"
 

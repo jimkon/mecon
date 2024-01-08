@@ -54,7 +54,7 @@ class MonzoClient:
         transactions_json = self._monzo.make_request('/transactions', data={
             'account_id': account_id,
             'expand': 'merchant'
-        })['data']
+        })
 
         with open(filepath, 'w') as fp:
             json.dump(transactions_json['data']['transactions'], fp, indent=4)
