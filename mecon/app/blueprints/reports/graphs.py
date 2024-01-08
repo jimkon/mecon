@@ -5,9 +5,15 @@ import plotly.graph_objects as go
 from plotly.offline import plot
 from plotly.subplots import make_subplots
 import plotly.express as px
+import plotly.io as pio
 
 from mecon.app.blueprints.reports import graph_utils
 from mecon.monitoring import logs
+
+pio.templates["custom_template"] = go.layout.Template(
+    layout_colorway=px.colors.qualitative.Antique
+)
+pio.templates.default = "custom_template"
 
 
 @logs.codeflow_log_wrapper('#graphs')
