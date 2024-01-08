@@ -75,9 +75,6 @@ def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggr
     tags = _split_tags(tags_str)
     transactions = get_transactions().containing_tag(tags)
 
-    if transactions is None:
-        return None
-
     transactions = transactions.select_date_range(start_date, end_date)
 
     if grouping_key != 'none':
@@ -344,6 +341,30 @@ def overall_report():
                                       grouping=grouping,
                                       tags_split_str='Revolut,HSBC,Monzo'))
     html_tabs.add_tab('Bank', f"<div><h2>Money in</h2>{bank_in_graph}<br><h2>Money out</h2>{bank_out_graph}</div>")
+
+    _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      tags_str=tags_str,
+                                      grouping=grouping,
+                                      tags_split_str='Income,ITV income,Deloitte income'))
+    html_tabs.add_tab('Income', _graph)
+
+    _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      tags_str=tags_str,
+                                      grouping=grouping,
+                                      tags_split_str='Commute,TFL,BorisBike,LimeBike,Uber Taxi'))
+    html_tabs.add_tab('Commute', _graph)
+
+    _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      tags_str=tags_str,
+                                      grouping=grouping,
+                                      tags_split_str='Food,Food delivery,Super Market,Food out'))
+    html_tabs.add_tab('Food', _graph)
 
     graph_html = html_tabs.html()
 
