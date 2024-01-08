@@ -180,7 +180,8 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
 
         dups = df.duplicated(subset=cols_to_check)
 
-        logging.warning(f"Duplicates found: {dups.sum()}")
+        if dups.sum() > 0:
+            logging.warning(f"Duplicates found: {dups.sum()}")
 
         # if dups.sum() > 0: TODO handle duplicates
         #     logging.warning(f"Duplicate rows found with IDs: {df[dups]}")
