@@ -1,3 +1,4 @@
+import logging
 from collections import OrderedDict
 
 import pandas as pd
@@ -121,7 +122,7 @@ class ExecutionInfoMixin(datafields.ColumnMixin):
         return groups
 
 
-class PerformanceDataAggregator(datafields.AggregatorABC):
+class PerformanceDataAggregator(datafields.AggregatorABC):  # TODO legacy code, replaced by PerformanceDataAggregatorV2
     def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
         # will not work for recursive calls
         df_logs = df_wrapper.dataframe().copy()
@@ -143,11 +144,39 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
         for tag in ['codeflow', 'start', 'end']:
             tagging.Tagger.remove_tag(tag, perf_df)
 
-        perf_df.dropna(subset=['execution_time'], inplace=True)  # TODO:v3 added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
+        perf_df.dropna(subset=['execution_time'],
+                       inplace=True)  # TODO:v3 added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
         perf_df['execution_time'] = perf_df['execution_time'].astype('int64')
 
         perf_logs = PerformanceData(perf_df)
         return perf_logs
+
+
+class PerformanceDataAggregatorV2(datafields.AggregatorABC):
+    def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
+        df_logs = df_wrapper.containing_tag(['end']).dataframe()
+        df_logs.sort_values('datetime', inplace=True)
+
+        df_logs['execution_time'] = df_logs['description'].apply(self._extract_execution_duration) * 1000
+        df_logs['datetime'] = df_logs['datetime'] - df_logs['execution_time'].apply(lambda t: pd.Timedelta(milliseconds=t))
+
+        perf_df = df_logs[['datetime', 'execution_time', 'tags']]
+        perf_df = perf_df.sort_values(by='datetime').reset_index(drop=True)
+
+        for tag in ['codeflow', 'start', 'end']:
+            tagging.Tagger.remove_tag(tag, perf_df)
+
+        perf_logs = PerformanceData(perf_df)
+        return perf_logs
+
+    @staticmethod
+    def _extract_execution_duration(log_message):
+        try:
+            exec_dur = float(log_message.split('exec_dur=')[1].split(' ')[0])
+            return exec_dur
+        except (IndexError, ValueError) as e:
+            logging.warning(f"Unable to extract exec_dur from log description: {log_message}, {e}")
+            return None
 
 
 class PerformanceData(datafields.DatedDataframeWrapper,
@@ -169,7 +198,7 @@ class PerformanceData(datafields.DatedDataframeWrapper,
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(codeflow_logs)
 
-        aggregator = PerformanceDataAggregator()
+        aggregator = PerformanceDataAggregatorV2()  # PerformanceDataAggregator()
         performance_df = aggregator.aggregate_result_df(groups).sort_values('datetime').reset_index(drop=True)
 
         return PerformanceData(performance_df)
