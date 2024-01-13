@@ -5,14 +5,14 @@ import requests
 from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
-from mecon.data.aggregators import CustomisableAmountTransactionAggregator
-from mecon.data import reports
+import monitoring.logging_utils
 from mecon.app.blueprints.reports import graphs
 from mecon.app.data_manager import GlobalDataManager
+from mecon.data import reports
+from mecon.data.aggregators import CustomisableAmountTransactionAggregator
 from mecon.data.groupings import LabelGrouping
 from mecon.data.transactions import Transactions
 from mecon.utils import html_pages, calendar_utils
-from mecon.monitoring import logs
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')
 
@@ -62,13 +62,13 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
     return href
 
 
-@logs.codeflow_log_wrapper('#data#transactions#load')
+@monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
     transactions = _data_manager.get_transactions()
     return transactions
 
 
-@logs.codeflow_log_wrapper('#data#transactions#process')
+@monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
 def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key,
                               fill_dates_before_groupagg=False,
                               fill_dates_after_groupagg=False) -> Transactions:
@@ -124,13 +124,13 @@ def get_filter_values(tag_name, start_date=None, end_date=None, tags_str=None, g
 
 
 @reports_bp.route('/')
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def reports_menu():
     return 'reports menu'
 
 
 @reports_bp.route('/graph/amount_freq')
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def amount_freq_timeline_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -159,7 +159,7 @@ def amount_freq_timeline_graph():
 
 
 @reports_bp.route('/graph/balance')
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def balance_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -178,7 +178,7 @@ def balance_graph():
 
 
 @reports_bp.route('/graph/histogram')
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def histogram_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -197,7 +197,7 @@ def histogram_graph():
 
 @reports_bp.route(
     '/graph/tags_split')
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def tags_split_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -234,7 +234,7 @@ def tags_split_graph():
 @reports_bp.route(
     '/custom_graph/<plot_type>',
     methods=['POST', 'GET'])
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def custom_graph(plot_type):
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -274,7 +274,7 @@ def custom_graph(plot_type):
 
 
 @reports_bp.route('/tag_info/<tag_name>', methods=['POST', 'GET'])
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
 
@@ -313,7 +313,7 @@ def tag_info(tag_name):
 
 
 @reports_bp.route('/overall', methods=['POST', 'GET'])
-@logs.codeflow_log_wrapper('#api')
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
 def overall_report():
     # percentages
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('All')

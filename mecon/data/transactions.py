@@ -7,8 +7,8 @@ from datetime import datetime, date
 import pandas as pd
 
 import data.datafields as fields
-from mecon.monitoring import logs
-from mecon.utils import dataframe_transformers, calendar_utils
+import monitoring.logging_utils
+from mecon.utils import dataframe_transformers
 
 ID_FILL_VALUE = 'filled'
 
@@ -24,7 +24,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     Not responsible for any IO operations.
     """
 
-    @logs.codeflow_log_wrapper('#data#transactions#process')
+    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)

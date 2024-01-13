@@ -7,6 +7,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
 
+import monitoring.logging_utils
 from mecon.app.blueprints.reports import graph_utils
 from mecon.monitoring import logs
 
@@ -16,7 +17,7 @@ pio.templates["custom_template"] = go.layout.Template(
 pio.templates.default = "custom_template"
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def lines_graph_html(time, lines: [pd.Series]):
     fig = go.Figure()
     for line in lines:
@@ -32,7 +33,7 @@ def lines_graph_html(time, lines: [pd.Series]):
     return graph_html
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def stacked_bars_graph_html(time, lines: [pd.Series]):
     fig = go.Figure()
 
@@ -53,7 +54,7 @@ def stacked_bars_graph_html(time, lines: [pd.Series]):
 
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def amount_and_freq_timeline_html(time, amount, freq):
     fig = go.Figure()
 
@@ -85,7 +86,7 @@ def amount_and_freq_timeline_html(time, amount, freq):
     return graph_html
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def balance_graph_html(time, amount: pd.Series):
     fig = go.Figure()
 
@@ -104,7 +105,7 @@ def balance_graph_html(time, amount: pd.Series):
     return graph_html
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def histogram_and_cumsum_graph_html(amount: pd.Series):
     fig = go.Figure()
 
@@ -127,7 +128,7 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
     return graph_html
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def histogram_and_contributions(amounts: pd.Series):
     bin_centers, counts, contributions = graph_utils.calculated_histogram_and_contributions(amounts)
 
@@ -162,7 +163,7 @@ def histogram_and_contributions(amounts: pd.Series):
     return graph_html
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
     data = list(zip(functions, start_datetime, end_datetime))
 
@@ -191,7 +192,7 @@ def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
     return graph_html
 
 
-@logs.codeflow_log_wrapper('#graphs')
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def performance_stats_graph_html(perf_data_stats: dict):
     stats = perf_data_stats
 
@@ -251,7 +252,7 @@ def performance_stats_graph_html(perf_data_stats: dict):
             # 'type': 'log',  # Set the y-axis to log scale
         },
         'yaxis2': {
-            'title': 'Percentage (%)',
+            'title': 'Total perc (%)',
             # 'type': 'log',  # Set the y-axis to log scale
             'overlaying': 'y',
             'side': 'right',
