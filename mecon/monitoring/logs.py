@@ -2,15 +2,13 @@ import io
 import logging
 import pathlib
 import sys
-from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
 from typing import List
-import time
 
 import pandas as pd
 
 from mecon import config
-
+from mecon.monitoring import log_data
 
 """Use log rotation Implement log rotation to prevent excessive file growth and disk space usage in your log files. 
 Old log files are automatically archived, compressed, and deleted using this approach. You can either use a 
@@ -29,9 +27,25 @@ logging.CRITICAL,   50,     A serious error, indicating that the program itself 
 """
 
 
-# %Y-%m-%d %H:%M:%S
-# https://realpython.com/python-logging/
-# logging.basicConfig(format='%(name)s,%(levelname)s,%(asctime)s,%(msecs)d,%(module)s,%(funcName)s,"%(message)s"')
+class TimedRotatingFileHandlerV1(TimedRotatingFileHandler):
+    def __init__(self):
+        super().__init__(
+            filename=config.LOGS_DIRECTORY_PATH / config.CURRENT_LOG_FILENAME,
+            when='midnight',
+            interval=1,
+            backupCount=7,
+            encoding='utf-8',
+            # suffix='%Y-%m-%d'  # Include the date as a suffix in the log file name
+            delay=True,  # to resolve the PermissionError
+        )
+
+    def doRollover(self) -> None:
+        df_logs = read_logs_as_df([pathlib.Path(self.baseFilename)])
+        super().doRollover()
+        current_log_data = log_data.LogData.from_raw_logs(df_logs)
+        perf_data = HistoricalPerformanceData.load_historical_data()
+        perf_data.append_log_data(current_log_data)
+        perf_data.store()
 
 
 def setup_logging(logger=None):
@@ -43,14 +57,7 @@ def setup_logging(logger=None):
     logger.setLevel(logging.DEBUG)
 
     # Create a file handler (logs to a file)
-    file_handler = TimedRotatingFileHandler(
-        filename=config.LOGS_DIRECTORY_PATH / config.CURRENT_LOG_FILENAME,
-        when='midnight',
-        interval=1,
-        backupCount=7,
-        encoding='utf-8',  # Optional, specify encoding if needed
-        # suffix='%Y-%m-%d'  # Include the date as a suffix in the log file name
-    )
+    file_handler = TimedRotatingFileHandlerV1()
     # Create a console handler (logs to the console)
     console_handler = logging.StreamHandler(sys.stdout)
 
@@ -74,7 +81,8 @@ def setup_logging(logger=None):
 
 
 def print_logs_info():
-    logging.info(f"Logs are stored in {config.LOGS_DIRECTORY_PATH} (filename: {config.CURRENT_LOG_FILENAME}, historic: {get_log_files(True)})")
+    logging.info(
+        f"Logs are stored in {config.LOGS_DIRECTORY_PATH} (filename: {config.CURRENT_LOG_FILENAME}, historic: {get_log_files(True)})")
 
 
 def read_logs_string_as_df(logs_string: str):
@@ -110,23 +118,22 @@ def read_logs_as_df(log_files: List[pathlib.Path]):
     return df_logs
 
 
-def codeflow_log_wrapper(tags=''):
-    def decorator(_func):
-        # https://flask.palletsprojects.com/en/2.3.x/patterns/viewdecorators/
-        @wraps(_func)
-        def wrapper(*args, **kwargs): # TODO indent function call
-            _funct_name = f"{_func.__module__}.{_func.__qualname__}"
-            logging.debug(f"{_funct_name} started... #codeflow#start#{_func.__qualname__}{tags}") # TODO remove function_start log
-            time_started = time.time()
-            try:
-                res = _func(*args, **kwargs)
-                exec_dur = time.time()-time_started
-                logging.debug(f"{_funct_name} finished.  ({exec_dur=} seconds) #codeflow#end#{_func.__qualname__}{tags}")
-                return res
-            except Exception as e:
-                logging.error(f"{_funct_name} raised {e}! #codeflow#error#{_func.__qualname__}{tags}")
-                raise
+class HistoricalPerformanceData(log_data.PerformanceData):
+    _filename = config.HISTORIC_PERFORMANCE_DATA_DIRECTORY_PATH / config.HISTORIC_PERFORMANCE_DATA_FILENAME
 
-        return wrapper
+    def append_log_data(self, new_log_data: log_data.LogData):
+        perf_data = log_data.PerformanceData.from_log_data(new_log_data)
+        self._df = self.merge(perf_data).dataframe()
 
-    return decorator
+    def store(self):
+        self._df.to_csv(self._filename, index=False, header=False)
+
+    @classmethod
+    def load_historical_data(cls):
+        df = pd.read_csv(cls._filename, index_col=None, header=None, names=['datetime', 'execution_time', 'tags'])
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        df['execution_time'] = df['execution_time'].astype(float)
+        return cls(df)
+
+
+

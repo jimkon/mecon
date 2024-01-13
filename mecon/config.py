@@ -17,4 +17,11 @@ DEFAULT_DATASET_NAME = 'v2'
 CREDS_DIRECTORY_PATH = pathlib.Path(r"C:\Users\dimitris\PycharmProjects\mecon\creds")
 
 LOGS_DIRECTORY_PATH = pathlib.Path("logs")
+LOGS_DIRECTORY_PATH.mkdir(exist_ok=True)
+
 CURRENT_LOG_FILENAME = "logs_raw.csv"
+
+HISTORIC_PERFORMANCE_DATA_DIRECTORY_PATH = LOGS_DIRECTORY_PATH / 'historic_perf_data'
+HISTORIC_PERFORMANCE_DATA_DIRECTORY_PATH.mkdir(exist_ok=True)
+
+HISTORIC_PERFORMANCE_DATA_FILENAME = "performance_data.csv"
