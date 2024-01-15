@@ -53,7 +53,6 @@ def stacked_bars_graph_html(time, lines: [pd.Series]):
     return graph_html
 
 
-
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def amount_and_freq_timeline_html(time, amount, freq):
     fig = go.Figure()
@@ -193,7 +192,7 @@ def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
 
 
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
-def performance_stats_graph_html(perf_data_stats: dict):
+def performance_stats_barplot_graph_html(perf_data_stats: dict):
     stats = perf_data_stats
 
     # Create a subplots figure with two y-axes
@@ -285,3 +284,53 @@ def performance_stats_graph_html(perf_data_stats: dict):
     graph_html = plot(fig, output_type='div',
                       include_plotlyjs='cdn')  # , config={'autosizable': True, 'responsive': True})
     return graph_html
+
+
+@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
+def performance_stats_scatterplot_graph_html(perf_data_stats: dict):
+    fig = go.Figure()
+
+    for tag_name, tag_data in perf_data_stats.items():
+        fig.add_trace(go.Scatter(x=tag_data['datetime'], y=tag_data['execution_time'], name=tag_name, mode='markers'))
+
+    layout = {
+        'autosize': True,  # TODO:v3 it does not autosize
+        'title': 'Function Execution Statistics',
+        'xaxis': {
+            'title': 'Functions',
+            'showticklabels': True,
+        },
+        'yaxis': {
+            'title': 'Time (milliseconds)',
+            # 'type': 'log',  # Set the y-axis to log scale
+        },
+    }
+    fig.update_layout(layout,
+                          updatemenus=[
+                              dict(
+                                  type="buttons",
+                                  direction="left",
+                                  buttons=list([
+                                      dict(
+                                          args=[{'yaxis': {'type': 'linear'}}],
+                                          label="Linear Scale",
+                                          method="relayout"
+                                      ),
+                                      dict(
+                                          args=[{'yaxis': {'type': 'log'}}],
+                                          label="Log Scale",
+                                          method="relayout"
+                                      )
+                                  ])
+                              ),
+                          ])
+
+    fig.update_layout(
+        autosize=True,  # Automatically adjust the size of the plot
+        hovermode='closest',  # Define hover behavior
+        yaxis=dict(title='Total time [ms]'),
+        uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
+    )
+    graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+    return graph_html
+

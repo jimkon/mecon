@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request
 
 from mecon.app import WorkingDatasetDir
 from mecon.tag_tools import tagging
-from mecon.monitoring.logs import get_log_files, read_logs_as_df
+from mecon.monitoring.logs import get_log_files, read_logs_as_df, HistoricalPerformanceData
 from mecon.utils import html_pages
 from mecon.monitoring.log_data import LogData, PerformanceData
 from mecon.app.blueprints.reports import graphs
@@ -59,11 +59,31 @@ def performance_stats_dict(perf_data: PerformanceData):
 
 
 def performance_stats_page(perf_data: PerformanceData):
+    tabs = html_pages.TabsHTML()
+    tabs.add_tab('Last', last_performance_stats_page(perf_data))
+    tabs.add_tab('Historical data', historical_performance_stats_page())
+    return tabs.html()
+
+
+def last_performance_stats_page(perf_data: PerformanceData):
     perf_stats = performance_stats_dict(perf_data)
-    graph_html = graphs.performance_stats_graph_html(perf_stats)
+    graph_html = graphs.performance_stats_barplot_graph_html(perf_stats)
     table_html = pd.DataFrame.from_dict(perf_stats, orient='index').sort_values('Total', ascending=False).to_html()
     res_html = f"""{graph_html}<br><br>{table_html}"""
     return res_html
+
+
+def historical_performance_stats_page():
+    perf_data = HistoricalPerformanceData.load_historical_data()
+    tag_perf_stats = {}
+
+    for tag in perf_data.all_tags().keys():
+        tag_data = perf_data.containing_tag(tag)
+        tag_perf_stats[tag] = {'datetime': tag_data.datetime, 'execution_time': tag_data.execution_time}
+
+    graph_html = graphs.performance_stats_scatterplot_graph_html(tag_perf_stats)
+
+    return graph_html
 
 
 def codeflow_timeline_graph_html(perf_data: PerformanceData):
