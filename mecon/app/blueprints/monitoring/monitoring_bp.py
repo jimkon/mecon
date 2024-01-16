@@ -3,8 +3,8 @@ import pathlib
 import pandas as pd
 from flask import Blueprint, render_template, request
 
+from mecon.app.blueprints.monitoring.monitoring_helpers import performance_stats_dict
 from mecon.app import WorkingDatasetDir
-from mecon.tag_tools import tagging
 from mecon.monitoring.logs import get_log_files, read_logs_as_df, HistoricalPerformanceData
 from mecon.utils import html_pages
 from mecon.monitoring.log_data import LogData, PerformanceData
@@ -26,36 +26,6 @@ def get_logs(selected_log_file=None):
     log_data = LogData.from_raw_logs(df_logs)
 
     return log_data, selected_log_file
-
-
-def performance_stats_dict(perf_data: PerformanceData):
-    tag_perf_stats = {}
-
-    for tag in perf_data.all_tags().keys():
-        rule = tagging.TagMatchCondition(tag)
-        tag_perf_data = perf_data.apply_rule(rule)
-        non_zero_perf_data = tag_perf_data.finished()
-        tag_perf_stats[tag] = non_zero_perf_data.execution_time
-
-    stats = {}
-    total_time = 0
-
-    for func, times in tag_perf_stats.items():
-        total_time += times.sum()
-
-        stats[func] = {
-            'Min': times.min(),
-            'Average': times.mean(),
-            'Max': times.max(),
-            'Total': times.sum(),
-            'Count': len(times),
-        }
-
-    # Calculate percentage of total execution time
-    for func, times in tag_perf_stats.items():
-        stats[func]['Percentage'] = (times.sum() / total_time) * 100
-
-    return stats
 
 
 def performance_stats_page(perf_data: PerformanceData):
@@ -83,7 +53,11 @@ def historical_performance_stats_page():
 
     graph_html = graphs.performance_stats_scatterplot_graph_html(tag_perf_stats)
 
-    return graph_html
+    perf_stats = performance_stats_dict(perf_data)
+    table_html = pd.DataFrame.from_dict(perf_stats, orient='index').sort_values('Total', ascending=False).to_html()
+    res_html = f"""{graph_html}<br><br>{table_html}"""
+
+    return res_html
 
 
 def codeflow_timeline_graph_html(perf_data: PerformanceData):

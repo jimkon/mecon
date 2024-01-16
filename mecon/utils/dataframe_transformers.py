@@ -14,7 +14,7 @@ class DataframeTransformer(abc.ABC):
         return df_out
 
     @abc.abstractmethod
-    def _transform(self, df) -> pd.DataFrame:
+    def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
 
     def validate_input_df(self, df: pd.DataFrame):
