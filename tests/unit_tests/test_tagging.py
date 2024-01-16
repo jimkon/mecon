@@ -432,5 +432,17 @@ class RuleObserverFunctionalityTestCase(unittest.TestCase):
                 observer2.assert_has_calls([call(condition, {'field': 0}, False)])
 
 
+class HardCodedRuleTestCase(unittest.TestCase):
+    def test_condition(self):
+        class ExampleHardCodedRule(tagging.HardCodedRule):
+            def calculate_matching_ids(self, df_in):
+                return {'id_1', 'id_3'}
+        cond = ExampleHardCodedRule(None)
+
+        example_df = pd.DataFrame({'id': ['id_1', 'id_2', 'id_3', 'id_4']})
+        cond_values = example_df.apply(cond.compute, axis=1).to_list()
+        self.assertListEqual(cond_values, [True, False, True, False])
+
+
 if __name__ == '__main__':
     unittest.main()

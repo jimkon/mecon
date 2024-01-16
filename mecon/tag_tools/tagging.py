@@ -1,6 +1,7 @@
 import abc
 import json
 from datetime import datetime
+from typing import Set
 
 import pandas as pd
 
@@ -371,3 +372,20 @@ class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
         compare_op = comparisons.REGEX
         regex_value = r"\b" + tag_name + r"\b"
         super().__init__(field, transformation_op, compare_op, regex_value)
+
+
+class HardCodedRule(Condition, abc.ABC):
+    def __init__(self, df_input: pd.DataFrame):
+        ids = self.calculate_matching_ids(df_input)
+        matching_value = ','.join(ids)
+        super().__init__(
+            field='id',
+            transformation_op=None,
+            compare_op=comparisons.IN_CSV,
+            value=matching_value
+        )
+
+    @abc.abstractmethod
+    def calculate_matching_ids(self, df_input: pd.DataFrame) -> Set[str]:
+        pass
+
