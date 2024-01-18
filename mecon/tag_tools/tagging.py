@@ -1,9 +1,10 @@
 import abc
 import json
 from datetime import datetime
-from typing import List
+from typing import List, Iterable
 
 import pandas as pd
+import numpy as np
 
 import monitoring.logging_utils
 from mecon.tag_tools import comparisons, transformations
@@ -37,6 +38,10 @@ class AbstractRule(abc.ABC):
 
     @abc.abstractmethod
     def _compute(self, element):
+        pass
+
+    @abc.abstractmethod
+    def fit(self, elements: Iterable):
         pass
 
     @abc.abstractmethod
@@ -114,6 +119,9 @@ class Condition(AbstractRule):
         res = self._compare_op(self._transformation_op(element[self.field]), self.value)
         return res
 
+    def fit(self, elements: Iterable):
+        return [self.compute(element) for element in elements]
+
     def to_dict(self):
         if not hasattr(self._transformation_op, 'name') or not hasattr(self._compare_op, 'name'):
             raise NotImplementedError(f"Condition.to_dict only works with transformations.TransformationFunction"
@@ -152,6 +160,10 @@ class Conjunction(AbstractCompositeRule):
     def _compute(self, element):
         return all([rule.compute(element) for rule in self._rules])
 
+    def fit(self, elements: Iterable):
+        all_rule_results = [rule.fit(elements) for rule in self.rules]
+        return np.bitwise_and.reduce(all_rule_results).tolist()
+
     def to_dict(self):
         all_rule_dicts = [rule.to_dict() for rule in self._rules]
         merged_dict = RuleToJsonConverter.merge_rule_dicts(all_rule_dicts)
@@ -174,6 +186,10 @@ class Conjunction(AbstractCompositeRule):
 class Disjunction(AbstractCompositeRule):
     def _compute(self, element):
         return any([rule.compute(element) for rule in self._rules])
+
+    def fit(self, elements: Iterable):
+        all_rule_results = [rule.fit(elements) for rule in self.rules]
+        return np.bitwise_or.reduce(all_rule_results).tolist()
 
     def to_json(self):
         return [rule.to_dict() for rule in self._rules]
@@ -349,10 +365,15 @@ class CustomRule(AbstractRule, abc.ABC, instance_management.Multiton):
 
     @classmethod
     def from_dict(cls, _dict):
-        pass
+        if 'custom' not in _dict:
+            raise ValueError(f"Missing 'custom' field. Cannot initialise CustomRule from dict: {_dict}")
+        if isinstance(_dict['custom'], list):
+            raise ValueError(f"More than one rule keys in 'custom' field. Cannot initialise CustomRule from dict: {_dict}")
+
+        return cls.from_key(_dict['custom'])
 
     def to_dict(self):
-        pass
+        return {'custom': self._name}
 
 
 class JsonRuleParser:
@@ -418,6 +439,8 @@ class RuleToJsonConverter:
                         merged_dict[field_and_trans].append(comparison_values)
                     elif isinstance(comparison_values, list):
                         merged_dict[field_and_trans].extend(comparison_values)
+                    else:
+                        raise ValueError(f"Unexpected type for comparison: {comparison_values}")
                 else:
                     merged_dict[field_and_trans] = comparison_values if not isinstance(comparison_values, str) else [
                         comparison_values]
