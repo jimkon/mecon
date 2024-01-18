@@ -432,16 +432,80 @@ class RuleObserverFunctionalityTestCase(unittest.TestCase):
                 observer2.assert_has_calls([call(condition, {'field': 0}, False)])
 
 
-class HardCodedRuleTestCase(unittest.TestCase):
-    def test_condition(self):
-        class ExampleHardCodedRule(tagging.HardCodedRule):
-            def calculate_matching_ids(self, df_in):
-                return {'id_1', 'id_3'}
-        cond = ExampleHardCodedRule(None)
+class JsonRuleParserTestCase(unittest.TestCase):
+    @patch.object(tagging.Condition, 'from_string_values')
+    def test_conditions_from_dict_field(self, mock_cond_factory):
+        tagging.JsonRuleParser.conditions_from_dict_field({
+            'greater': [1, 10],
+            'less': 100,
+        }, 'col1')
 
-        example_df = pd.DataFrame({'id': ['id_1', 'id_2', 'id_3', 'id_4']})
-        cond_values = example_df.apply(cond.compute, axis=1).to_list()
-        self.assertListEqual(cond_values, [True, False, True, False])
+        mock_cond_factory.assert_has_calls([
+            call('col1', None, 'greater', 1),
+            call('col1', None, 'greater', 10),
+            call('col1', None, 'less', 100)
+        ])
+
+    @patch.object(tagging.CustomRule, 'from_key')
+    def test_custom_rules_from_dict_field(self, mock_crule_factory):
+        tagging.JsonRuleParser.custom_rules_from_dict_field(['example_rule1', 'example_rule2'])
+
+        mock_crule_factory.assert_has_calls([
+            call('example_rule1'),
+            call('example_rule2'),
+        ])
+
+    @patch.object(tagging.CustomRule, 'from_key')
+    @patch.object(tagging.Condition, 'from_string_values')
+    def test_rules_from_dict(self, mock_cond_factory, mock_crule_factory):
+        test_dict = {
+            'col1': {
+                'greater': [1, 10],
+                'less': 100,
+            },
+            'custom': ['example_rule1', 'example_rule2'],
+            'col2.str': {
+                'equal': '20',
+            }
+        }
+        tagging.JsonRuleParser.rules_from_dict(test_dict)
+
+        mock_cond_factory.assert_has_calls([
+            call('col1', None, 'greater', 1),
+            call('col1', None, 'greater', 10),
+            call('col1', None, 'less', 100),
+            call('col2', 'str', 'equal', '20')
+        ])
+        mock_crule_factory.assert_has_calls([
+            call('example_rule1'),
+            call('example_rule2'),
+        ])
+
+
+class RuleToJsonConverterTestCase(unittest.TestCase):
+    def test_merge_rule_dicts(self):
+        example_dict_list = [
+            {'field1.str': {"greater": "1"}},
+            {'field1.str': {"less": "2"}},
+            {'field2.str': {"greater": "2"}},
+            {'field2.str': {"greater": "3"}},
+            {'field2.str': {"greater": "3.1"}},
+            {'field2': {"less": "4"}},
+            {'custom': 'example_custom_rule1'},
+            {'field2': {"less": "5"}},
+            {'field2': {"less": "6"}},
+            {'custom': 'example_custom_rule2'},
+            {'field2': {"less": "6.1"}},
+            {'custom': ['example_custom_rule3', 'example_custom_rule4']},
+        ]
+        merged_dict = tagging.RuleToJsonConverter.merge_rule_dicts(example_dict_list)
+
+        self.assertDictEqual(merged_dict, {
+            "field1.str": {"greater": "1", 'less': '2'},
+            "field2.str": {"greater": ["2", "3", "3.1"]},
+            "field2": {"less": ["4", "5", "6", "6.1"]},
+            'custom': ['example_custom_rule1', 'example_custom_rule2', 'example_custom_rule3', 'example_custom_rule4'],
+        })
 
 
 if __name__ == '__main__':

@@ -1,13 +1,14 @@
 import abc
 import json
 from datetime import datetime
-from typing import Set
+from typing import List
 
 import pandas as pd
 
 import monitoring.logging_utils
 from mecon.tag_tools import comparisons, transformations
 from mecon.utils import calendar_utils
+from mecon.utils import instance_management
 
 
 class FieldIsNotStringException(Exception):
@@ -153,26 +154,7 @@ class Conjunction(AbstractCompositeRule):
 
     def to_dict(self):
         all_rule_dicts = [rule.to_dict() for rule in self._rules]
-        merged_dict = {}
-
-        for rule_dict in all_rule_dicts:
-            for field_and_trans, comparison_dict in rule_dict.items():
-                if field_and_trans in merged_dict:
-                    for comparison_key, comparison_value in comparison_dict.items():
-                        if comparison_key not in merged_dict[field_and_trans]:
-                            merged_dict[field_and_trans][comparison_key] = comparison_value
-                        elif isinstance(merged_dict[field_and_trans].get(comparison_key), list):
-                            if isinstance(comparison_value, list):
-                                merged_dict[field_and_trans][comparison_key].extend(comparison_value)
-                            else:
-                                merged_dict[field_and_trans][comparison_key].append(comparison_value)
-                        else:
-                            if isinstance(comparison_value, list):
-                                merged_dict[field_and_trans][comparison_key] = [merged_dict[field_and_trans][comparison_key]] + comparison_value
-                            else:
-                                merged_dict[field_and_trans][comparison_key] = [merged_dict[field_and_trans][comparison_key], comparison_value]
-                else:
-                    merged_dict[field_and_trans] = comparison_dict
+        merged_dict = RuleToJsonConverter.merge_rule_dicts(all_rule_dicts)
 
         return merged_dict
 
@@ -181,22 +163,7 @@ class Conjunction(AbstractCompositeRule):
 
     @classmethod
     def from_dict(cls, _dict, observers_f=None):
-        rules_list = []
-        for col_name_full, col_dict in _dict.items():
-            field = col_name_full.split('.')[0]
-            transformation_op = col_name_full.split('.')[1] if len(col_name_full.split('.')) > 1 else None
-            for compare_op, compare_value_list in _dict[col_name_full].items():
-                if not isinstance(compare_value_list, list):
-                    compare_value_list = [compare_value_list]
-
-                for compare_value in compare_value_list:
-                    rules_list.append(Condition.from_string_values(
-                        field,
-                        transformation_op,
-                        compare_op,
-                        compare_value,
-                        # observers_f=observers_f
-                    ))
+        rules_list = JsonRuleParser.rules_from_dict(_dict)
 
         conjunction = cls(rules_list)
         conjunction.add_observers_recursively(observers_f)
@@ -374,18 +341,85 @@ class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
         super().__init__(field, transformation_op, compare_op, regex_value)
 
 
-class HardCodedRule(Condition, abc.ABC):
-    def __init__(self, df_input: pd.DataFrame):
-        ids = self.calculate_matching_ids(df_input)
-        matching_value = ','.join(ids)
-        super().__init__(
-            field='id',
-            transformation_op=None,
-            compare_op=comparisons.IN_CSV,
-            value=matching_value
-        )
+class CustomRule(AbstractRule, abc.ABC, instance_management.Multiton):
+    _name = None
 
-    @abc.abstractmethod
-    def calculate_matching_ids(self, df_input: pd.DataFrame) -> Set[str]:
+    def __init__(self):
+        super().__init__(self._name)
+
+    @classmethod
+    def from_dict(cls, _dict):
         pass
 
+    def to_dict(self):
+        pass
+
+
+class JsonRuleParser:
+    @staticmethod
+    def conditions_from_dict_field(_dict: dict, field_name: str) -> List[Condition]:
+        conditions = []
+        field = field_name.split('.')[0]
+        transformation_op = field_name.split('.')[1] if len(field_name.split('.')) > 1 else None
+        for compare_op, compare_value_list in _dict.items():
+            if not isinstance(compare_value_list, list):
+                compare_value_list = [compare_value_list]
+
+            for compare_value in compare_value_list:
+                conditions.append(Condition.from_string_values(
+                    field,
+                    transformation_op,
+                    compare_op,
+                    compare_value,
+                ))
+        return conditions
+
+    @staticmethod
+    def custom_rules_from_dict_field(dict_field: List) -> List[CustomRule]:
+        return [CustomRule.from_key(custom_rule_name) for custom_rule_name in dict_field]
+
+    @staticmethod
+    def rules_from_dict(_dict: dict) -> List[AbstractRule]:
+        rules_list = []
+        for col_name_full, col_dict in _dict.items():
+            if col_name_full == 'custom':
+                rules_list.extend(JsonRuleParser.custom_rules_from_dict_field(_dict[col_name_full]))
+            else:
+                rules_list.extend(JsonRuleParser.conditions_from_dict_field(_dict[col_name_full], col_name_full))
+
+        return rules_list
+
+
+class RuleToJsonConverter:
+    @staticmethod
+    def merge_rule_dicts(list_of_dicts: List[dict]):
+        merged_dict = {}
+
+        for rule_dict in list_of_dicts:
+            for field_and_trans, comparison_values in rule_dict.items():
+                if field_and_trans in merged_dict:
+                    if isinstance(comparison_values, dict):
+                        for comparison_key, comparison_value in comparison_values.items():
+                            if comparison_key not in merged_dict[field_and_trans]:
+                                merged_dict[field_and_trans][comparison_key] = comparison_value
+                            elif isinstance(merged_dict[field_and_trans].get(comparison_key), list):
+                                if isinstance(comparison_value, list):
+                                    merged_dict[field_and_trans][comparison_key].extend(comparison_value)
+                                else:
+                                    merged_dict[field_and_trans][comparison_key].append(comparison_value)
+                            else:
+                                if isinstance(comparison_value, list):
+                                    merged_dict[field_and_trans][comparison_key] = [merged_dict[field_and_trans][
+                                                                                        comparison_key]] + comparison_value
+                                else:
+                                    merged_dict[field_and_trans][comparison_key] = [
+                                        merged_dict[field_and_trans][comparison_key], comparison_value]
+                    elif isinstance(comparison_values, str):
+                        merged_dict[field_and_trans].append(comparison_values)
+                    elif isinstance(comparison_values, list):
+                        merged_dict[field_and_trans].extend(comparison_values)
+                else:
+                    merged_dict[field_and_trans] = comparison_values if not isinstance(comparison_values, str) else [
+                        comparison_values]
+
+        return merged_dict
