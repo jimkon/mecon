@@ -119,8 +119,9 @@ class Condition(AbstractRule):
         res = self._compare_op(self._transformation_op(element[self.field]), self.value)
         return res
 
-    def fit(self, elements: Iterable):
-        return [self.compute(element) for element in elements]
+    def fit(self, elements: Iterable) -> List[bool]:
+        bool_array = [self.compute(element) for element in elements]
+        return bool_array
 
     def to_dict(self):
         if not hasattr(self._transformation_op, 'name') or not hasattr(self._compare_op, 'name'):
@@ -285,6 +286,7 @@ class Tag:
         return cls.from_json(name, json.loads(_json_str), observers_f=observers_f)
 
 
+# TODO this is a DataframeTagger, isolate the abstract Tagger out of it
 class Tagger(abc.ABC):
     @staticmethod
     @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
@@ -299,7 +301,8 @@ class Tagger(abc.ABC):
     @staticmethod
     @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
     def get_index_for_rule(df, rule):
-        rows_to_tag = df.apply(lambda x: rule.compute(x), axis=1)
+        rows = [row for index, row in df.iterrows()]
+        rows_to_tag = pd.Series(rule.fit(rows), index=df.index)
         return rows_to_tag
 
     @staticmethod
@@ -358,22 +361,29 @@ class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
 
 
 class CustomRule(AbstractRule, abc.ABC, instance_management.Multiton):
-    _name = None
-
     def __init__(self):
-        super().__init__(self._name)
+        super().__init__(self.name)
+
+    @property
+    @abc.abstractmethod
+    def name(self) -> str:
+        pass
 
     @classmethod
     def from_dict(cls, _dict):
         if 'custom' not in _dict:
             raise ValueError(f"Missing 'custom' field. Cannot initialise CustomRule from dict: {_dict}")
         if isinstance(_dict['custom'], list):
-            raise ValueError(f"More than one rule keys in 'custom' field. Cannot initialise CustomRule from dict: {_dict}")
+            raise ValueError(
+                f"More than one rule keys in 'custom' field. Cannot initialise CustomRule from dict: {_dict}")
 
         return cls.from_key(_dict['custom'])
 
     def to_dict(self):
-        return {'custom': self._name}
+        return {'custom': self.name}
+
+    def to_json(self):
+        return [self.to_dict()]
 
 
 class JsonRuleParser:

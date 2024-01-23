@@ -242,11 +242,9 @@ class TestTag(unittest.TestCase):
 
 class TestTagger(unittest.TestCase):
     def test_get_index_for_rule(self):
-        class TestRule:
-            def compute(self, x):
-                return x['field'] == 2
+        rule = Mock()
+        rule.fit = Mock(return_value=[False, False, True, False, False])
 
-        rule = TestRule()
         df = pd.DataFrame({'field': [0, 1, 2, 3, 4]})
 
         tagger = tagging.Tagger()
@@ -255,11 +253,9 @@ class TestTagger(unittest.TestCase):
         self.assertListEqual(rows_to_tag.to_list(), [False, False, True, False, False])
 
     def test_filter_df_with_rule(self):
-        class TestRule:
-            def compute(self, x):
-                return x['a'] == 2 or x['b'] == '4'
+        rule = Mock()
+        rule.fit = Mock(return_value=[False, False, True, False, True])
 
-        rule = TestRule()
         df = pd.DataFrame({'a': [0, 1, 2, 3, 4], 'b': ['0', '1', '2', '3', '4']})
 
         tagger = tagging.Tagger()
@@ -269,11 +265,9 @@ class TestTagger(unittest.TestCase):
         pd.testing.assert_frame_equal(res_df.reset_index(drop=True), expected_df)
 
     def test_filter_df_with_negated_rule(self):
-        class TestRule:
-            def compute(self, x):
-                return x['a'] == 2 or x['b'] == '4'
+        rule = Mock()
+        rule.fit = Mock(return_value=[False, False, True, False, True])
 
-        rule = TestRule()
         df = pd.DataFrame({'a': [0, 1, 2, 3, 4], 'b': ['0', '1', '2', '3', '4']})
 
         tagger = tagging.Tagger()
@@ -361,11 +355,9 @@ class TestTagger(unittest.TestCase):
             ], name='tags'))
 
     def test_tag_without_removing_old_tags(self):
-        class TestRule:
-            def compute(self, x):
-                return x['field'] == 2 or x['field'] == 3
+        rule = Mock()
+        rule.fit = Mock(return_value=[False, False, True, True, False])
 
-        rule = TestRule()
         tag = tagging.Tag('test_tag', rule)
         df = pd.DataFrame({'field': [0, 1, 2, 3, 4],
                            'tags': ['', 'test_tag', 'another_tag', 'test_tag', 'another_tag']})
@@ -378,11 +370,9 @@ class TestTagger(unittest.TestCase):
         pd.testing.assert_frame_equal(df, expected_df)
 
     def test_tag_with_removing_old_tags(self):
-        class TestRule:
-            def compute(self, x):
-                return x['field'] == 2 or x['field'] == 3
+        rule = Mock()
+        rule.fit = Mock(return_value=[False, False, True, True, False])
 
-        rule = TestRule()
         tag = tagging.Tag('test_tag', rule)
         df = pd.DataFrame({'field': [0, 1, 2, 3, 4],
                            'tags': ['', 'test_tag', 'another_tag', 'test_tag', 'another_tag']})
