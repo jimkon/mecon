@@ -132,7 +132,7 @@ class DateTimeColumnMixin(ColumnMixin):
     def select_date_range(self,
                           start_date: [str | datetime | date, None],
                           end_date: [str | datetime | date, None]
-                          ) -> DatedDataframeWrapper:
+                          ) -> DatedDataframeWrapper:  # TODO fix type hinting issues
         if start_date is None or end_date is None:
             self_start_date, self_end_date = self.date_range()
             if self_start_date is None and self_end_date is None:
