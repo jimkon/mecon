@@ -46,7 +46,7 @@ class DataframeWrapper:
         return self.factory(self.dataframe().copy()[index])
 
     def select_by_index_range(self, index_start: int, index_end: int):
-        index_start, index_end = index_start if index_start<self.size() else 0, min(index_end, self.size())
+        index_start, index_end = index_start if index_start < self.size() else 0, min(index_end, self.size())
         index = pd.Series(list(range(0, self.size(), 1)))
         boolean_index = (index >= index_start) & (index <= index_end)
         return self.select_by_index(boolean_index)
@@ -125,10 +125,21 @@ class DateTimeColumnMixin(ColumnMixin):
         return self.datetime.dt.time
 
     def date_range(self):
+        if self._df_wrapper_obj.size() == 0:
+            return None, None
         return self.date.min(), self.date.max()
 
-    def select_date_range(self, start_date: [str | datetime | date], end_date: [str | datetime | date]) -> DatedDataframeWrapper | None:
-        start_date, end_date = calendar_utils.to_date(start_date), calendar_utils.to_date(end_date)
+    def select_date_range(self,
+                          start_date: [str | datetime | date, None],
+                          end_date: [str | datetime | date, None]
+                          ) -> DatedDataframeWrapper:
+        if start_date is None or end_date is None:
+            self_start_date, self_end_date = self.date_range()
+            if self_start_date is None and self_end_date is None:
+                return self._df_wrapper_obj.factory(self._df_wrapper_obj.dataframe())
+
+        start_date = calendar_utils.to_date(start_date) if start_date is not None else self_start_date
+        end_date = calendar_utils.to_date(end_date) if end_date is not None else self_end_date
 
         rule = tagging.Conjunction([
             tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
