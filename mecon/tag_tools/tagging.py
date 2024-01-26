@@ -162,7 +162,11 @@ class Conjunction(AbstractCompositeRule):
         return all([rule.compute(element) for rule in self._rules])
 
     def fit(self, elements: Iterable):
+        if len(elements) == 0:
+            return []
+
         all_rule_results = [rule.fit(elements) for rule in self.rules]
+
         return np.bitwise_and.reduce(all_rule_results).tolist()
 
     def to_dict(self):
@@ -308,6 +312,9 @@ class Tagger(abc.ABC):
     @staticmethod
     @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
     def filter_df_with_rule(df, rule):
+        if len(df) == 0:
+            return df
+
         rows_to_tag = Tagger.get_index_for_rule(df, rule)
         res_df = df[rows_to_tag].reset_index(drop=True)
         return res_df
@@ -315,6 +322,9 @@ class Tagger(abc.ABC):
     @staticmethod
     @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
     def filter_df_with_negated_rule(df, rule):
+        if len(df) == 0:
+            return df
+
         rows_to_tag = Tagger.get_index_for_rule(df, rule)
         res_df = df[~rows_to_tag].reset_index(drop=True)
         return res_df

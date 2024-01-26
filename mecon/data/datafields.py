@@ -21,10 +21,13 @@ class NullDataframeInDataframeWrapper(Exception):
     pass
 
 
+class InvalidInputDataFrameColumns(Exception):
+    pass
+
+
 class DataframeWrapper:
     def __init__(self, df: pd.DataFrame):
-        if df is None:  # or len(df) == 0:
-            raise NullDataframeInDataframeWrapper
+        self._check_input_df(df)
         self._df = df
 
     def dataframe(self, df_transformer: dataframe_transformers.DataframeTransformer = None) -> pd.DataFrame:
@@ -75,6 +78,14 @@ class DataframeWrapper:
     @classmethod
     def factory(cls, df: pd.DataFrame):
         return cls(df)
+
+    @staticmethod
+    def _check_input_df(df: pd.DataFrame):
+        if df is None:  # or len(df) == 0:
+            raise NullDataframeInDataframeWrapper
+
+        if len(df.columns) == 0:
+            raise InvalidInputDataFrameColumns(f"No columns found in the input Dataframe.")
 
 
 class MissingRequiredColumnInDataframeWrapperError(Exception):
@@ -145,7 +156,7 @@ class DateTimeColumnMixin(ColumnMixin):
             tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
             tagging.Condition.from_string_values('datetime', 'date', 'less_equal', end_date),
         ])
-        return self._df_wrapper_obj.apply_rule(rule)
+        return self._df_wrapper_obj.apply_rule(rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
 
 
 class AmountColumnMixin(ColumnMixin):

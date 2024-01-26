@@ -264,6 +264,17 @@ class TestTagger(unittest.TestCase):
         expected_df = pd.DataFrame({'a': [2, 4], 'b': ['2', '4']}).reset_index(drop=True)
         pd.testing.assert_frame_equal(res_df.reset_index(drop=True), expected_df)
 
+    def test_filter_df_with_rule_empty_df(self):
+        rule = Mock()
+
+        df = pd.DataFrame({'a': [], 'b': []})
+
+        tagger = tagging.Tagger()
+
+        res_df = tagger.filter_df_with_rule(df, rule)
+        expected_df = df
+        pd.testing.assert_frame_equal(res_df.reset_index(drop=True), expected_df)
+
     def test_filter_df_with_negated_rule(self):
         rule = Mock()
         rule.fit = Mock(return_value=[False, False, True, False, True])
@@ -274,6 +285,17 @@ class TestTagger(unittest.TestCase):
 
         res_df = tagger.filter_df_with_negated_rule(df, rule)
         expected_df = pd.DataFrame({'a': [0, 1, 3], 'b': ['0', '1', '3']}).reset_index(drop=True)
+        pd.testing.assert_frame_equal(res_df.reset_index(drop=True), expected_df)
+
+    def test_filter_df_with_negated_rule_empty_df(self):
+        rule = Mock()
+
+        df = pd.DataFrame({'a': [], 'b': []})
+
+        tagger = tagging.Tagger()
+
+        res_df = tagger.filter_df_with_negated_rule(df, rule)
+        expected_df = df
         pd.testing.assert_frame_equal(res_df.reset_index(drop=True), expected_df)
 
     def test_already_tagged_rows(self):

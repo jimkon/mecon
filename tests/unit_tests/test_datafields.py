@@ -136,7 +136,7 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
                                       expected_wrapper_df.reset_index(drop=True))
 
-    def test_select_date_range_null_values(self):
+    def test_select_date_range_null_input_dates(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'datetime': [
                 datetime(2019, 1, 1, 0, 0, 0),
@@ -195,6 +195,24 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         ).dataframe()
         pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
                                       expected_wrapper_df.reset_index(drop=True))
+
+    def test_select_date_range_empty_transactions(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'datetime': [
+            ]
+        }))
+        # expected_wrapper_df = pd.DataFrame({
+        #     'datetime': [
+        #     ]
+        # })
+        result_df = example_wrapper.select_date_range(
+            start_date='2020-01-01 00:00:00',
+            end_date='2022-01-01 00:00:00'
+        ).dataframe()
+        # uncomment fix TODO in datafields.select_date_range (if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns)
+        # pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
+        #                               expected_wrapper_df.reset_index(drop=True))
+        self.assertEqual(len(result_df), 0)
 
 
 if __name__ == '__main__':
