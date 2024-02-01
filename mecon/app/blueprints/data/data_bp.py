@@ -6,9 +6,10 @@ from flask import Blueprint, redirect, url_for, render_template, request
 from json2html import json2html
 
 import monitoring.logging_utils
+from data.datafields import NullDataframeInDataframeWrapper, \
+    InvalidInputDataFrameColumns  # TODO: It doesn't work if it is "from mecon.data.datafields import ...". the exceptions cannot be caught by the try statement.
 from mecon.app.data_manager import GlobalDataManager
 from mecon.app.datasets import WorkingDatasetDir
-from mecon.data.datafields import NullDataframeInDataframeWrapper
 from mecon.import_data import monzo_data
 from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 
@@ -80,7 +81,7 @@ def _db_transactions_info():
         res = {
             'rows': transactions.size()
         }
-    except NullDataframeInDataframeWrapper:
+    except (NullDataframeInDataframeWrapper, InvalidInputDataFrameColumns):
         res = {'No transaction data'}
     return res
 
