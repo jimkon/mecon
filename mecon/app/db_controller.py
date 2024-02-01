@@ -193,7 +193,7 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
-        return transactions_df if len(transactions_df) > 0 else None
+        return transactions_df
 
     @monitoring.logging_utils.codeflow_log_wrapper('#db#data#io')
     def delete_all(self) -> None:

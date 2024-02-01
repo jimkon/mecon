@@ -109,7 +109,8 @@ class CacheDataManager:
 
     def get_transactions(self) -> Transactions:
         if self._cache.transaction is None:
-            self._cache.transaction = Transactions(self._transactions.get_transactions())
+            trans_df = self._transactions.get_transactions()  # TODO make sure df has the right columns even if it is empty
+            self._cache.transaction = Transactions(trans_df)
         return self._cache.transaction
 
     def reset_transactions(self):
