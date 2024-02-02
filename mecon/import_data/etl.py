@@ -58,6 +58,8 @@ class MonzoStatementTransformer(DataframeTransformer):
         # df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
         df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%Y-%m-%d") + pd.to_timedelta(
             df_monzo['time'].astype(str))
+        # df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(
+        #     df_monzo['time'].astype(str))
         df_monzo['currency'] = df_monzo['local_currency']
         df_monzo['amount_cur'] = df_monzo['local_amount']
 

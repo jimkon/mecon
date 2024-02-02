@@ -324,7 +324,7 @@ def overall_report():
                                       end_date=end_date,
                                       tags_str=tags_str,
                                       grouping=grouping,
-                                      tags_split_str='MoneyIn,MoneyOut'))
+                                      tags_split_str='MoneyIn,MoneyOut,All'))
     html_tabs.add_tab('Money In/Out', _graph)
 
     bank_in_graph = fetch_graph_html(url_for('reports.tags_split_graph',

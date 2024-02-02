@@ -1,5 +1,6 @@
 import pathlib
 from typing import Dict
+from datetime import datetime
 
 import pandas as pd
 from flask import Blueprint, redirect, url_for, render_template, request
@@ -12,6 +13,7 @@ from mecon.app.data_manager import GlobalDataManager
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.import_data import monzo_data
 from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
+from mecon.import_data import fetch_statement_files
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 
@@ -149,7 +151,7 @@ def fetch_data():
                 return redirect(url)
             else:
                 auth_message = f"Already authenticated until {monzo_client.token_expiry()}"
-        elif "fetch_data_button" in request.form:
+        elif "fetch_data_from_bank_button" in request.form:
             if monzo_client.is_authenticated():
                 dataset = WorkingDatasetDir.get_instance().working_dataset
                 json_file = dataset.statements / 'Monzo' / f"json/raw_data.json"
@@ -160,10 +162,12 @@ def fetch_data():
 
                 csv_file = f"Monzo_Transactions.csv"
                 dataset.add_df_statement('Monzo', df, csv_file)
-                monzo_data_message = f" -> {len(df)} transactions added to {csv_file} from {df['Date'].min()} to {df['Date'].max()}"
+                monzo_fetch_bank_data_message = f" -> {datetime.now()}: {len(df)} transactions added to {csv_file} from {df['Date'].min()} to {df['Date'].max()}"
             else:
-                monzo_data_message = f" -> You must authenticate first!"
-
+                monzo_fetch_bank_data_message = f" -> You must authenticate first!"
+        elif "import_statement_button" in request.form:
+            dest_filepath = fetch_statement_files.fetch_monzo_statement(WorkingDatasetDir().working_dataset.statements / 'Monzo')
+            monzo_fetch_statement_data_message = f'Done ({datetime.now()}): {dest_filepath}'
     return render_template('fetch_data.html', **locals(), **globals())
 
 

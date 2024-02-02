@@ -9,8 +9,14 @@
         <input type="submit" id="auth_monzo_button" name="auth_monzo_button" value="Authenticate in Monzo Bank">
         <label> -> {{ auth_message }}</label>
         <br>
-        <input type="submit" id="fetch_data_button" name="fetch_data_button" value="Fetch data">
-        <label> {{ monzo_data_message }}</label>
+        <input type="submit" id="fetch_data_from_bank_button" name="fetch_data_from_bank_button"
+               value="Fetch data from Bank">
+        <label> {{ monzo_fetch_bank_data_message }}</label>
+        <br>
+        <br>
+        <input type="submit" id="import_statement_button" name="import_statement_button"
+               value="Import statement .csv file">
+        <label> {{ monzo_fetch_statement_data_message }}</label>
 
     </form>
     <h2>Revolut</h2>

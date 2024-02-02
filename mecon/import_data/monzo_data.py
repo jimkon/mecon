@@ -9,9 +9,10 @@ import pandas as pd
 from monzo.authentication import Authentication
 from monzo.endpoints.account import Account
 
-
 from mecon import config
 
+
+# needs fixing: TODO downloading only 30 datapoints
 
 class MonzoClient:
     def __init__(self):
@@ -89,14 +90,19 @@ class MonzoDataTransformer:
 
         transactions_json = []
         for transaction in transactions:
-            date = transaction['created'][:10]  # datetime.strptime(transaction['created'][:10], "%Y-%m-%d").strftime("%d/%m/%Y")
+            date = transaction['created'][
+                   :10]  # datetime.strptime(transaction['created'][:10], "%Y-%m-%d").strftime("%d/%m/%Y")
             time = transaction['created'][11:19]
             _type = "Faster Payment" if look_for(transaction, ['metadata', 'faster_payment']) \
-                        else "Monzo-to-Monzo" if look_for(transaction, ['counterparty', 'account_id']) \
-                        else "Card Payment"
+                else "Monzo-to-Monzo" if look_for(transaction, ['counterparty', 'account_id']) \
+                else "Card Payment"
             name = look_for(transaction, ['counterparty', 'name']) or look_for(transaction, ['merchant', 'name'])
             emoji = look_for(transaction, ['merchant', 'emoji'])
-            notes_and_tags = look_for(transaction, ['notes'], default='') +' tags=('+ look_for(transaction, ['merchant', 'suggested_tags'], default='').replace('#', '')+')'
+            notes_and_tags = look_for(transaction, ['notes'], default='') + ' tags=(' + look_for(transaction,
+                                                                                                 ['merchant',
+                                                                                                  'suggested_tags'],
+                                                                                                 default='').replace(
+                '#', '') + ')'
             address = look_for(transaction, ['merchant', 'address', 'formatted']) \
                       or look_for(transaction, ['merchant', 'address', 'short_formatted']) \
                       or look_for(transaction, ['merchant', 'address', 'address']) \
@@ -127,4 +133,3 @@ class MonzoDataTransformer:
         df = pd.read_json(StringIO(json.dumps(transactions_json)))
         df['Date'] = df['Date'].dt.strftime("%Y-%m-%d")
         return df
-
