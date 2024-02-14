@@ -17,6 +17,16 @@ class TestCalendarUtils(unittest.TestCase):
         with self.assertRaises(cu.InvalidDatetimeObjectType):
             cu.to_date(5)
 
+    def test_to_datetime(self):
+        self.assertEqual(cu.to_datetime("2023-09-11"), datetime(2023, 9, 11, 0, 0, 0))
+        self.assertEqual(cu.to_datetime("2023-09-11 12:34:56"), datetime(2023, 9, 11, 12, 34, 56))
+        self.assertEqual(cu.to_datetime(datetime(2023, 9, 11, 12, 23, 34)), datetime(2023, 9, 11, 12, 23, 34))
+        self.assertEqual(cu.to_datetime(date(2023, 9, 11)), datetime(2023, 9, 11, 0, 0, 0))
+
+        with self.assertRaises(cu.InvalidDatetimeObjectType):
+            cu.to_datetime(5)
+
+
     def test_datetime_to_str(self):
         self.assertEqual(cu.datetime_to_str(datetime(2023, 9, 11, 12, 23, 34)), "2023-09-11 12:23:34")
 
@@ -146,6 +156,35 @@ class TestCalendarUtils(unittest.TestCase):
         self.assertEqual(cu.hour_range_of_part_of_day('Afternoon'), (12, 17))
         self.assertEqual(cu.hour_range_of_part_of_day('Evening'), (17, 21))
         self.assertEqual(cu.hour_range_of_part_of_day('Night'), (21, 5))
+
+    def test_hour_of_day(self):
+        self.assertEqual(cu.hour_of_day(datetime(2024, 2, 14, 12, 23, 34)), 12)
+        self.assertEqual(cu.hour_of_day(date(2024, 2, 14)), 0)
+
+    def test_day_of_week(self):
+        self.assertEqual(cu.day_of_week(datetime(2024, 2, 14, 12, 23, 34)), cu.DayOfWeek.WEDNESDAY.value)
+        self.assertEqual(cu.day_of_week(date(2024, 2, 14)), cu.DayOfWeek.WEDNESDAY.value)
+
+    def test_day_of_month(self):
+        self.assertEqual(cu.day_of_month(datetime(2024, 2, 14, 12, 23, 34)), 14)
+        self.assertEqual(cu.day_of_month(date(2024, 2, 14)), 14)
+
+    def test_day_of_year(self):
+        self.assertEqual(cu.day_of_year(datetime(2024, 1, 1, 12, 23, 34)), 1)
+        self.assertEqual(cu.day_of_year(datetime(2024, 2, 14, 12, 23, 34)), 45)
+        self.assertEqual(cu.day_of_year(date(2024, 2, 14)), 45)
+
+    def test_week_of_year(self):
+        self.assertEqual(cu.week_of_year(datetime(2024, 1, 1, 12, 23, 34)), 1)
+        self.assertEqual(cu.week_of_year(datetime(2024, 2, 14, 12, 23, 34)), 7)
+        self.assertEqual(cu.week_of_year(date(2024, 2, 14)), 7)
+
+    def test_month_of_year(self):
+        self.assertEqual(cu.month_of_year(datetime(2024, 1, 1, 12, 23, 34)), 1)
+        self.assertEqual(cu.month_of_year(datetime(2024, 2, 14, 12, 23, 34)), 2)
+        self.assertEqual(cu.month_of_year(date(2024, 2, 14)), 2)
+
+
 
 
 class TestDateRange(unittest.TestCase):
