@@ -98,6 +98,10 @@ def datetime_to_date_id_str(dt):
     return str(datetime_to_date_id(dt))
 
 
+def datetime_to_hour_id_str(dt):
+    return f"{str(datetime_to_date_id(dt))}{hour_of_day(dt):0>2}"
+
+
 def date_range(start_date: datetime, end_date: datetime, step: str):
     #  https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#period-aliases
     #  https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases

@@ -45,6 +45,12 @@ class TestCalendarUtils(unittest.TestCase):
         self.assertEqual(cu.datetime_to_date_id_str(datetime(2023, 10, 31, 12, 23, 34)), "20231031")
         self.assertEqual(cu.datetime_to_date_id_str(datetime(2023, 12, 31, 12, 23, 34)), "20231231")
 
+    def test_datetime_to_hour_id_str(self):
+        self.assertEqual(cu.datetime_to_hour_id_str(datetime(2023, 9, 11, 12, 23, 34)), "2023091112")
+        self.assertEqual(cu.datetime_to_hour_id_str(datetime(2023, 1, 1, 0, 23, 1)), "2023010100")
+        self.assertEqual(cu.datetime_to_hour_id_str(datetime(2023, 10, 31, 12, 23, 34)), "2023103112")
+        self.assertEqual(cu.datetime_to_hour_id_str(datetime(2023, 12, 31, 3, 23, 34)), "2023123103")
+
     def test_get_closest_past_monday(self):
         self.assertEqual(
             cu.get_closest_past_monday(datetime(2023, 9, 11, 12, 23, 34)),

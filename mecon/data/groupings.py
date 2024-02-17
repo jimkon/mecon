@@ -56,6 +56,7 @@ class LabelGrouping(LabelGroupingABC, abc.ABC):
         return res
 
 
+HOUR = LabelGrouping('hour', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.datetime_to_hour_id_str))
 DAY = LabelGrouping('day', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.datetime_to_date_id_str))
 WEEK = LabelGrouping('week', lambda df_wrapper: df_wrapper.datetime.apply(
     calendar_utils.get_closest_past_monday).dt.date.astype(str))
