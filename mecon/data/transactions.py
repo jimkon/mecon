@@ -174,7 +174,12 @@ class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer)
             'GBP': '£',
             'USD': '$'
         }
-        currency_symbol = symbol_mapping.get(currency, f"({currency})")
+        if ',' in currency:
+            split_currs = currency.split(',')
+            currency_symbol = f"({','.join(symbol_mapping.get(curr, curr) for curr in split_currs)})"
+        else:
+            currency_symbol = symbol_mapping.get(currency, f"({currency})")
+
         amount = float(amount_str)
         text_color = 'orange' if amount < 0 else 'green' if amount > 0 else 'black'
         return f"""<h6 style="color: {text_color}">{amount:.2f}{currency_symbol}</h6>"""
