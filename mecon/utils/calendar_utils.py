@@ -148,8 +148,9 @@ def date_range_group_beginning(start_date: datetime | date, end_date: datetime |
     return date_range(start_date, end_date, step)
 
 
-def date_to_month_date(date_series):
-    return date_series.dt.year.astype(str) + '-' + date_series.dt.month.astype(str).apply(lambda x: f'{x:0>2}')
+def date_to_month_date(date_arg) -> str:
+    _date = to_datetime(date_arg)
+    return _date.strftime("%Y-%m")
 
 
 def days_in_between(start_date, end_date):

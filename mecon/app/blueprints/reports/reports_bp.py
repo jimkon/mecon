@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
 import monitoring.logging_utils
-from mecon.app.blueprints.reports import graphs
+from mecon.app.blueprints.reports import graphs, graph_utils
 from mecon.app.data_manager import GlobalDataManager
 from mecon.data import reports
 from mecon.data.aggregators import CustomisableAmountTransactionAggregator
@@ -99,7 +99,7 @@ def get_filter_values(tag_name, start_date=None, end_date=None, tags_str=None, g
         tags_str = request.form['tags_text_box']
         tags = _split_tags(tags_str).union({tag_name})
         tags_str = ', '.join(sorted(_filter_tags(tags)))
-        grouping = request.form['groups']
+        grouping = request.form['groups'] if 'groups' in request.form else grouping
         aggregation = request.form['aggregations'] if grouping != 'none' else 'none'
 
         transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, aggregation)
@@ -214,7 +214,8 @@ def tags_split_graph():
         total_amount_transactions = get_filtered_transactions(start_date, end_date, tags, grouping, 'sum')
         if grouping != 'none':
             total_amount_transactions = total_amount_transactions.fill_values(fill_unit=grouping,
-                                                                              start_date=calendar_utils.to_date(start_date),
+                                                                              start_date=calendar_utils.to_date(
+                                                                                  start_date),
                                                                               end_date=calendar_utils.to_date(end_date))
 
         amount_series = total_amount_transactions.amount
@@ -285,7 +286,7 @@ def tag_info(tag_name):
 
         html_tabs = html_pages.TabsHTML()
 
-        for _plot_type, _route in [
+        for _plot_type, _route in [  # TODO graphs don't get aggregation key, don't remember why
             ('amount_freq', 'reports.amount_freq_timeline_graph'),
             ('balance', 'reports.balance_graph'),
             ('histogram', 'reports.histogram_graph'),
@@ -328,18 +329,18 @@ def overall_report():
     html_tabs.add_tab('Money In/Out', _graph)
 
     bank_in_graph = fetch_graph_html(url_for('reports.tags_split_graph',
-                                      start_date=start_date,
-                                      end_date=end_date,
-                                      tags_str=tags_str+',MoneyIn',
-                                      grouping=grouping,
-                                      tags_split_str='Revolut,HSBC,Monzo'))
+                                             start_date=start_date,
+                                             end_date=end_date,
+                                             tags_str=tags_str + ',MoneyIn',
+                                             grouping=grouping,
+                                             tags_split_str='Revolut,HSBC,Monzo'))
 
     bank_out_graph = fetch_graph_html(url_for('reports.tags_split_graph',
-                                      start_date=start_date,
-                                      end_date=end_date,
-                                      tags_str=tags_str + ',MoneyOut',
-                                      grouping=grouping,
-                                      tags_split_str='Revolut,HSBC,Monzo'))
+                                              start_date=start_date,
+                                              end_date=end_date,
+                                              tags_str=tags_str + ',MoneyOut',
+                                              grouping=grouping,
+                                              tags_split_str='Revolut,HSBC,Monzo'))
     html_tabs.add_tab('Bank', f"<div><h2>Money in</h2>{bank_in_graph}<br><h2>Money out</h2>{bank_out_graph}</div>")
 
     _graph = fetch_graph_html(url_for('reports.tags_split_graph',
@@ -369,3 +370,16 @@ def overall_report():
     graph_html = html_tabs.html()
 
     return render_template('overall_report.html', **locals(), **globals())
+
+
+@reports_bp.route('/calendar', methods=['POST', 'GET'])
+@monitoring.logging_utils.codeflow_log_wrapper('#api')
+def calendar_view():
+    disable_groups = True
+    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('All', grouping='day')
+    # TODO aggregation should be mapped to pandas aggfuncs (sum, min, max, count work already, anything else)
+    data_df = transactions.fill_values('day').dataframe(
+        df_transformer=graph_utils.FullLengthYearCalendarTransformer(aggregation))
+    html_table = data_df.to_html(escape=False, index=True)
+
+    return render_template('calendar_view.html', **locals(), **globals())

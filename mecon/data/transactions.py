@@ -84,7 +84,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
             padding: 10px;
         }
         
-    </style>
+        </style>
         """
         df_transformer = df_transformer if df_transformer is not None else TransactionsDataTransformationToHTMLTable()
         df = self.dataframe(df_transformer=df_transformer)
