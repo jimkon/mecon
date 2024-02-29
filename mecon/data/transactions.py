@@ -131,7 +131,7 @@ class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransforme
 
 class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer):
     def _transform(self, df_in: pd.DataFrame, **kwargs) -> pd.DataFrame:
-        # df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
+        df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
 
         df_out = pd.DataFrame(df_in['id'].apply(self._format_id))
         df_out['Date/Time'] = df_in['datetime'].apply(self._format_datetime)
@@ -141,6 +141,7 @@ class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer)
         df_out['Local amount'] = df_in.apply(lambda row: self._format_local_amount(row['amount_cur'], row['currency']), axis=1)
         df_out['Description'] = df_in['description'].apply(self._format_description)
         df_out['Tags'] = df_in['tags'].apply(self._format_tags)
+
         return df_out
 
     @staticmethod
