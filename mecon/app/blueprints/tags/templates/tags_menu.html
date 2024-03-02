@@ -5,7 +5,7 @@
     <h1>Tags</h1>
 
     <h3>Manual tagging</h3>
-    <a href={{ url_for('tags.manual_tagging', order_by='newest', index_start=0, index_end=99) }}>
+    <a href={{ url_for('tags.manual_tagging', order_by='newest', index_start=0, index_end=config.TRANSACTIONS_CHUNK_SIZE) }}>
         <button type="button">Tag rows one by one</button>
     </a>
 

@@ -200,7 +200,7 @@ def manual_tagging(order_by):
     transactions = get_transactions()
     n_transactions = transactions.size()
 
-    chunk_size = 250
+    chunk_size = config.TRANSACTIONS_CHUNK_SIZE
     index_start = int(request.args['index_start']) if 'index_start' in request.args else 0
     index_end = int(request.args['index_end']) if 'index_end' in request.args else (chunk_size - 1)
 
