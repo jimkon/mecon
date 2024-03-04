@@ -138,7 +138,8 @@ class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer)
         df_out['Amount (£)'] = df_in['amount'].apply(self._format_amount)
         # df_out['Curr'] = df_in['currency'].apply(self._format_currency_count)
         # df_out['Amount (curr)'] = df_in['amount_cur'].apply(self._format_amount)
-        df_out['Local amount'] = df_in.apply(lambda row: self._format_local_amount(row['amount_cur'], row['currency']), axis=1)
+        df_out['Local amount'] = df_in.apply(lambda row: self._format_local_amount(row['amount_cur'], row['currency']),
+                                             axis=1, result_type='reduce')
         df_out['Description'] = df_in['description'].apply(self._format_description)
         df_out['Tags'] = df_in['tags'].apply(self._format_tags)
 
