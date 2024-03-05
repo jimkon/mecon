@@ -55,8 +55,16 @@ def stacked_bars_graph_html(time, lines: [pd.Series]):
 
 
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
-def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.Series):
+def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.Series, grouping='month'):
     fig = go.Figure()
+
+    rolling_window = {
+        'none': 10,
+        'day': 7,
+        'week': 4,
+        'month': 3,
+        'year': 1
+    }.get(grouping, 1)
 
     amount_pos = amount.clip(lower=0)
     amount_neg = amount.clip(upper=0)
@@ -66,7 +74,7 @@ def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.S
     fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1, color='green'), fill='tozeroy'))
     fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1, color='red'), fill='tozeroy'))
 
-    smoothed_total = amount.rolling(3).mean()
+    smoothed_total = amount.rolling(rolling_window).mean()
     smoothed_total = smoothed_total.round(2)
     fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5, color='rgba(100,0,100,0.5)')))
     # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
@@ -107,7 +115,7 @@ def balance_graph_html(time, amount: pd.Series, fit_line=False):
     if fit_line:
         x = np.arange(len(time))
         a, b = np.polyfit(x, balance, deg=1)
-        y = a*x + b
+        y = a * x + b
         y = y.round(2)
         fig.add_trace(go.Scatter(x=time, y=y, name=f"fit: {a=:.1f}*x + {b=:.1f}",
                                  line=dict(width=5, color='rgba(100,100,0,0.5)')))

@@ -152,7 +152,8 @@ def amount_freq_timeline_graph():
     graph_html = graphs.amount_and_freq_timeline_html(
         total_amount_transactions.datetime,
         total_amount_transactions.amount,
-        freq_transactions.amount if freq_transactions is not None else None
+        freq_transactions.amount if freq_transactions is not None else None,
+        grouping=grouping
     )
 
     return graph_html
