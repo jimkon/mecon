@@ -64,7 +64,7 @@ def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.S
     fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1, color='red'), fill='tozeroy'))
 
     smoothed_total = amount.rolling(3).mean()
-    fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5, color='rgba(60,60,60,0.5)')))
+    fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5, color='rgba(100,0,100,0.5)')))
     # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     if freq is not None:
         freq_axis_range = [0, 5 * freq.max()]
