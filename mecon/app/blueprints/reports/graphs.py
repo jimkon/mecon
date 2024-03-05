@@ -66,6 +66,7 @@ def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.S
     smoothed_total = amount.rolling(3).mean()
     fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5, color='rgba(100,0,100,0.5)')))
     # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
+    freq_axis_range = None
     if freq is not None:
         freq_axis_range = [0, 5 * freq.max()]
         fig.add_trace(go.Bar(
@@ -81,7 +82,7 @@ def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.S
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='[£]', range=amount_axis_range),
-        yaxis2=dict(title='Freq [transactions/time]', overlaying='y', side='right', range=freq_axis_range),
+        yaxis2=dict(title='# transactions', overlaying='y', side='right', range=freq_axis_range),
         xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
     )
