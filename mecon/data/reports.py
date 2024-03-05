@@ -8,14 +8,14 @@ def transactions_stats(trans: transactions.Transactions, grouping='none'):
     return {
         'General': {
             '#': trans.size(),
-            'avg Amount (per event)': trans.amount.mean(),
-            f'avg Amount (per {grouping})': avg_amount_per_unit,
-            'avg Frequency': trans.datetime.diff().mean()
+            'avg Amount (per event)': trans.amount.mean().round(2),
+            f'avg Amount (per {grouping})': avg_amount_per_unit.round(2),
+            'avg Frequency': trans.datetime.diff().mean().round('1s')
         },
         'Amount': {
-            'Total': df['amount'].sum(),
-            'Pos': df[df['amount'] > 0]['amount'].sum(),
-            'Neg': df[df['amount'] < 0]['amount'].sum(),
+            'Total': df['amount'].sum().round(2),
+            'Pos': df[df['amount'] > 0]['amount'].sum().round(2),
+            'Neg': df[df['amount'] < 0]['amount'].sum().round(2),
         },
         'Dates': {
             'min': trans.date.min(),
