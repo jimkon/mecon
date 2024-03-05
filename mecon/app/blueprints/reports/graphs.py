@@ -142,19 +142,16 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
 
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def histogram_and_contributions(amounts: pd.Series):
-    bin_centers, counts, contributions = graph_utils.calculated_histogram_and_contributions(amounts)
+    bin_centers, counts, contributions, bin_width = graph_utils.calculated_histogram_and_contributions(amounts)
 
-    # Create a custom histogram using Plotly
     fig = go.Figure()
 
-    # Plot the bars for counts
     fig.add_trace(go.Bar(
         x=bin_centers,
         y=counts,
-        name="Counts"
+        name="Counts",
     ))
 
-    # Plot the bars for contributions
     fig.add_trace(go.Scatter(
         x=bin_centers,
         y=-contributions,
@@ -168,7 +165,8 @@ def histogram_and_contributions(amounts: pd.Series):
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='#'),
         yaxis2=dict(title='cumsum [£]', overlaying='y', side='right'),
-        uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
+        uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
+        xaxis_title=f"Bin width: £{bin_width:.2f}"
     )
 
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')

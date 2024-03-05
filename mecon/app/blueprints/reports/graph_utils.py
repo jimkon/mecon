@@ -9,6 +9,7 @@ def calculated_histogram_and_contributions(amount):
     bin_counts, bin_edges = np.histogram(amount, bins='auto')
 
     bin_midpoints = (bin_edges[:-1] + bin_edges[1:]) / 2
+    bin_width = bin_edges[1]-bin_edges[0] if len(bin_edges)>1 else None
 
     bin_edges_t = list(bin_edges)
     bin_edges_t[-1] = bin_edges_t[-1] + 1  # move it a bit to the right
@@ -19,7 +20,7 @@ def calculated_histogram_and_contributions(amount):
 
     df_bin_totals = pd.concat([df_bin_amounts, fill_df], keys='ind').groupby('ind').agg('sum').reset_index()
 
-    return bin_midpoints, bin_counts, df_bin_totals['amount']
+    return bin_midpoints, bin_counts, df_bin_totals['amount'], bin_width
 
 
 class FullLengthYearCalendarTransformer(DataframeTransformer):
