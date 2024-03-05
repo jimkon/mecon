@@ -287,7 +287,7 @@ def tag_info(tag_name):
     else:
         data_df = transactions.dataframe()
         table_html = transactions.to_html()
-        transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
+        transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions, grouping))
 
         html_tabs = html_pages.TabsHTML()
 

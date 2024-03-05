@@ -1,12 +1,15 @@
 from data import transactions
 
 
-def transactions_stats(trans: transactions.Transactions):
+def transactions_stats(trans: transactions.Transactions, grouping='none'):
     df = trans.dataframe()
+
+    avg_amount_per_unit = trans.fill_values(grouping).amount.mean() if grouping and grouping != 'none' else 'Undefined'
     return {
         'General': {
             '#': trans.size(),
-            'avg Amount': trans.amount.mean(),
+            'avg Amount (per event)': trans.amount.mean(),
+            f'avg Amount (per {grouping})': avg_amount_per_unit,
             'avg Frequency': trans.datetime.diff().mean()
         },
         'Amount': {
