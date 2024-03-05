@@ -60,11 +60,14 @@ def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.S
 
     amount_pos = amount.clip(lower=0)
     amount_neg = amount.clip(upper=0)
+    amount_pos, amount_neg = amount_pos.round(2), amount_neg.round(2)
+
     amount_axis_range = [1.6 * amount_neg.min(), 1.0 * amount_pos.max()]
     fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1, color='green'), fill='tozeroy'))
     fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1, color='red'), fill='tozeroy'))
 
     smoothed_total = amount.rolling(3).mean()
+    smoothed_total = smoothed_total.round(2)
     fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5, color='rgba(100,0,100,0.5)')))
     # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     freq_axis_range = None
@@ -94,6 +97,8 @@ def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.S
 
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def balance_graph_html(time, amount: pd.Series, fit_line=False):
+    amount = amount.round(2)
+
     fig = go.Figure()
 
     balance = amount.cumsum()
@@ -103,6 +108,7 @@ def balance_graph_html(time, amount: pd.Series, fit_line=False):
         x = np.arange(len(time))
         a, b = np.polyfit(x, balance, deg=1)
         y = a*x + b
+        y = y.round(2)
         fig.add_trace(go.Scatter(x=time, y=y, name=f"fit: {a=:.1f}*x + {b=:.1f}",
                                  line=dict(width=5, color='rgba(100,100,0,0.5)')))
 
@@ -143,6 +149,7 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
 def histogram_and_contributions(amounts: pd.Series):
     bin_centers, counts, contributions, bin_width = graph_utils.calculated_histogram_and_contributions(amounts)
+    bin_centers, contributions = bin_centers.round(2), contributions.round(2)
 
     fig = go.Figure()
 
