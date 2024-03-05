@@ -59,27 +59,30 @@ def amount_and_freq_timeline_html(time, amount, freq):
 
     amount_pos = amount.clip(lower=0)
     amount_neg = amount.clip(upper=0)
+    amount_axis_range = [1.6*amount_neg.min(), 1.0*amount_pos.max()]
     fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1, color='green'), fill='tozeroy'))
     fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1, color='red'), fill='tozeroy'))
     # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     if freq is not None:
+        freq_axis_range = [0, 5*freq.max()]
         fig.add_trace(go.Bar(
             x=time,
             y=freq,
             name="freq",
             yaxis='y2',
-            marker={'color': 'rgba(60,60,60,250)', 'opacity': 0.25}
+            marker={'color': 'rgba(60,60,60,250)', 'opacity': 0.5},
         ))
         # fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1, color='black'), yaxis='y2'))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
-        yaxis=dict(title='[£]'),
-        yaxis2=dict(title='Freq [#/time]', overlaying='y', side='right'),
+        yaxis=dict(title='[£]', range=amount_axis_range),
+        yaxis2=dict(title='Freq [transactions/time]', overlaying='y', side='right', range=freq_axis_range),
         xaxis=dict(title=f"({len(time)} points)"),
-        uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
+        uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
     )
+
 
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     return graph_html
