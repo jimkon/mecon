@@ -54,17 +54,20 @@ def stacked_bars_graph_html(time, lines: [pd.Series]):
 
 
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
-def amount_and_freq_timeline_html(time, amount, freq):
+def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.Series):
     fig = go.Figure()
 
     amount_pos = amount.clip(lower=0)
     amount_neg = amount.clip(upper=0)
-    amount_axis_range = [1.6*amount_neg.min(), 1.0*amount_pos.max()]
+    amount_axis_range = [1.6 * amount_neg.min(), 1.0 * amount_pos.max()]
     fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1, color='green'), fill='tozeroy'))
     fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1, color='red'), fill='tozeroy'))
+
+    smoothed_total = amount.rolling(3).mean()
+    fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5, color='rgba(60,60,60,0.5)')))
     # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     if freq is not None:
-        freq_axis_range = [0, 5*freq.max()]
+        freq_axis_range = [0, 5 * freq.max()]
         fig.add_trace(go.Bar(
             x=time,
             y=freq,
@@ -82,7 +85,6 @@ def amount_and_freq_timeline_html(time, amount, freq):
         xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
     )
-
 
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     return graph_html
@@ -309,24 +311,24 @@ def performance_stats_scatterplot_graph_html(perf_data_stats: dict):
         },
     }
     fig.update_layout(layout,
-                          updatemenus=[
-                              dict(
-                                  type="buttons",
-                                  direction="left",
-                                  buttons=list([
-                                      dict(
-                                          args=[{'yaxis': {'type': 'linear'}}],
-                                          label="Linear Scale",
-                                          method="relayout"
-                                      ),
-                                      dict(
-                                          args=[{'yaxis': {'type': 'log'}}],
-                                          label="Log Scale",
-                                          method="relayout"
-                                      )
-                                  ])
-                              ),
-                          ])
+                      updatemenus=[
+                          dict(
+                              type="buttons",
+                              direction="left",
+                              buttons=list([
+                                  dict(
+                                      args=[{'yaxis': {'type': 'linear'}}],
+                                      label="Linear Scale",
+                                      method="relayout"
+                                  ),
+                                  dict(
+                                      args=[{'yaxis': {'type': 'log'}}],
+                                      label="Log Scale",
+                                      method="relayout"
+                                  )
+                              ])
+                          ),
+                      ])
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
@@ -336,4 +338,3 @@ def performance_stats_scatterplot_graph_html(perf_data_stats: dict):
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     return graph_html
-
