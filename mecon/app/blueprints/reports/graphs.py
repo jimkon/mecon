@@ -1,5 +1,6 @@
 import datetime
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.offline import plot
@@ -92,12 +93,18 @@ def amount_and_freq_timeline_html(time: pd.Series, amount: pd.Series, freq: pd.S
 
 
 @monitoring.logging_utils.codeflow_log_wrapper('#graphs')
-def balance_graph_html(time, amount: pd.Series):
+def balance_graph_html(time, amount: pd.Series, fit_line=False):
     fig = go.Figure()
 
     balance = amount.cumsum()
-
     fig.add_trace(go.Scatter(x=time, y=balance, name="balance", line=dict(width=3), fill='tozeroy'))
+
+    if fit_line:
+        x = np.arange(len(time))
+        a, b = np.polyfit(x, balance, deg=1)
+        y = a*x + b
+        fig.add_trace(go.Scatter(x=time, y=y, name=f"fit: {a=:.1f}*x + {b=:.1f}",
+                                 line=dict(width=5, color='rgba(100,100,0,0.5)')))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot

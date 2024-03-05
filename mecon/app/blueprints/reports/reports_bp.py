@@ -167,11 +167,12 @@ def balance_graph():
     grouping = request.args['grouping']
     # aggregation = request.args['aggregation']
 
-    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
-
+    total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
+                                            fill_dates_after_groupagg=True)
     graph_html = graphs.balance_graph_html(
         total_amount_transactions.datetime,
         total_amount_transactions.amount,
+        fit_line=grouping != 'none'
     )
 
     return graph_html
@@ -279,7 +280,11 @@ def custom_graph(plot_type):
 def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
 
-    if transactions is not None:
+    if transactions is None:
+        table_html = "<h4>'No transaction data left after filtering'</h4>"
+        transactions_stats_json = "<h4>'No stats'</h4>"
+        graph_html = "<h4>'No data to plot'</h4>"
+    else:
         data_df = transactions.dataframe()
         table_html = transactions.to_html()
         transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions))
@@ -306,10 +311,7 @@ def tag_info(tag_name):
             html_tabs.add_tab(_href, _graph)
 
         graph_html = html_tabs.html()
-    else:
-        table_html = "<h4>'No transaction data left after filtering'</h4>"
-        transactions_stats_json = "<h4>'No stats'</h4>"
-        graph_html = "<h4>'No data to plot'</h4>"
+
     return render_template('tag_info.html', **locals(), **globals())
 
 
