@@ -116,7 +116,8 @@ class Condition(AbstractRule):
         return self._value
 
     def _compute(self, element):
-        res = self._compare_op(self._transformation_op(element[self.field]), self.value)
+        left, right = self._transformation_op(element[self.field]), self.value
+        res = self._compare_op(left, right)
         return res
 
     def fit(self, elements: Iterable) -> List[bool]:
