@@ -370,6 +370,14 @@ def overall_report():
                                       tags_split_str='Food,Food delivery,Super Market,Food out'))
     html_tabs.add_tab('Food', _graph)
 
+    _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      tags_str=tags_str,
+                                      grouping=grouping,
+                                      tags_split_str='All,Morning,Afternoon,Night'))
+    html_tabs.add_tab('Day segments', _graph)
+
     graph_html = html_tabs.html()
 
     return render_template('overall_report.html', **locals(), **globals())
