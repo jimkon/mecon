@@ -157,11 +157,14 @@ def tag_edit(tag_name):
         elif "add_condition" in request.form:
             disjunction = tagging.Disjunction.from_json_string(request.form.get('query_text_input'))
 
+            value_str = request.form['value']
+            value = value_str if not value_str.isnumeric() else int(value_str) if value_str.isdigit() else float(value_str)
+
             condition = tagging.Condition.from_string_values(
                 field=request.form['field'],
                 transformation_op_key=request.form['transform'],
                 compare_op_key=request.form['comparison'],
-                value=request.form['value'],
+                value=value,
             )
 
             new_tag_json = disjunction.append(condition).to_json()
