@@ -117,14 +117,9 @@ class TestCalendarUtils(unittest.TestCase):
         self.assertEqual(cu.week_of_month(dt3), 3)
 
     def test_date_to_month_date(self):
-        # Test date_to_month_date function
-        dates = pd.Series([datetime(2023, 10, 5), datetime(2023, 11, 15), datetime(2023, 12, 25)])
-
-        result = cu.date_to_month_date(dates)
-
-        self.assertEqual(result[0], '2023-10')
-        self.assertEqual(result[1], '2023-11')
-        self.assertEqual(result[2], '2023-12')
+        self.assertEqual(cu.date_to_month_date(datetime(2023, 10, 5)), '2023-10')
+        self.assertEqual(cu.date_to_month_date(datetime(2023, 11, 15)), '2023-11')
+        self.assertEqual(cu.date_to_month_date(datetime(2023, 12, 25)), '2023-12')
 
     def test_days_in_between(self):
         # Test days_in_between function
