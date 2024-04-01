@@ -614,7 +614,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             db_controller.TransactionsDBAccessor._transaction_df_values_validation(test_df)
 
     def test_get_transactions(self):
-        self.assertIsNone(self.accessor.get_transactions())
+        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
+
         # expected_df = self._load_db()
         df = pd.DataFrame({
             'id': [11, 12, 13],
@@ -650,7 +651,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
 
         self.accessor.delete_all()
 
-        self.assertIsNone(self.accessor.get_transactions())
+        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
 
     def test_load_transactions(self):
         self.accessor.delete_all()
