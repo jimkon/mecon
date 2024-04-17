@@ -19,7 +19,7 @@ def transaction_id_formula(transaction, bank):
 
     datetime_str = transaction['datetime'].strftime("d%Y%m%dt%H%M%S")
     amount_str = f"a{'p' if transaction['amount']>0 else 'n'}{int(100 * abs(transaction['amount']))}"
-    ordinal_value = f"i{transaction['id']}"
+    ordinal_value = f"i{transaction['id']}" # TODO that can change depending on the dataset. maybe get different counter for each day
     result = f"{bank_abr}{datetime_str}{amount_str}{ordinal_value}"
     return result
 
