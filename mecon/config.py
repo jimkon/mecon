@@ -1,7 +1,9 @@
 # TODO:v3 work with relative files
 import pathlib
 
+
 DEFAULT_DATASETS_DIR_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets"
+SETTINGS_JSON_FILENAME = r"settings.json"
 
 CURRENCY_LOOKUP_RATES_JSON_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets\currency_rates.json"
 
