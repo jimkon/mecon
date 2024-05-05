@@ -3,17 +3,16 @@ import logging
 
 import pandas as pd
 
-import monitoring.logging_utils
 from mecon.app import models
 from mecon.app.db_extension import db
 from mecon.import_data import etl
 from mecon.import_data import io_framework
-from mecon.monitoring import logs
+from mecon.monitoring import logging_utils
 from mecon.utils import currencies
 
 
 class TagsDBAccessor(io_framework.TagsIOABC):
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#tags')
+    @logging_utils.codeflow_log_wrapper('#db#tags')
     def get_tag(self, name: str) -> list[str, Any] | None:
         tag = models.TagsDBTable.query.filter_by(name=name).first()
 
@@ -22,7 +21,7 @@ class TagsDBAccessor(io_framework.TagsIOABC):
 
         return tag.to_dict()
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#tags')
+    @logging_utils.codeflow_log_wrapper('#db#tags')
     def set_tag(self, name: str, conditions_json: list | dict) -> None:
         # if len(conditions_json) > 2000:  # TODO:v3 do we need this?
         #     raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
@@ -40,7 +39,7 @@ class TagsDBAccessor(io_framework.TagsIOABC):
             tag.conditions_json = str(conditions_json)
             db.session.commit()
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#tags')
+    @logging_utils.codeflow_log_wrapper('#db#tags')
     def delete_tag(self, name: str) -> bool:
         tag = db.session.query(models.TagsDBTable).filter_by(name=name).first()
         if tag:
@@ -49,7 +48,7 @@ class TagsDBAccessor(io_framework.TagsIOABC):
             return True
         return False
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#tags')
+    @logging_utils.codeflow_log_wrapper('#db#tags')
     def all_tags(self) -> list[dict]:
         tags = [tag.to_dict() for tag in models.TagsDBTable.query.all()]
         return tags
@@ -189,18 +188,18 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
         #     df.drop_duplicates(subset=cols_to_check, inplace=True)
         #     raise ValueError(f"Error due to duplicate rows in df.")
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#data#io')
+    @logging_utils.codeflow_log_wrapper('#db#data#io')
     def get_transactions(self) -> pd.DataFrame:
         transactions = models.TransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#data#io')
+    @logging_utils.codeflow_log_wrapper('#db#data#io')
     def delete_all(self) -> None:
         db.session.query(models.TransactionsDBTable).delete()
         db.session.commit()
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#data#io')
+    @logging_utils.codeflow_log_wrapper('#db#data#io')
     def load_transactions(self) -> None:
         df_hsbc = HSBCTransactionsDBAccessor().get_transactions()
         df_monzo = MonzoTransactionsDBAccessor().get_transactions()
@@ -234,7 +233,7 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
 
         df_merged.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#db#tags')
+    @logging_utils.codeflow_log_wrapper('#db#tags')
     def update_tags(self, df_tags) -> None:
         logging.info(f"Updating tags (shape: {df_tags.shape}) in DB.")
         # transaction_ids = df_tags['id'].to_list()
