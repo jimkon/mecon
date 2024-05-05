@@ -2,7 +2,7 @@ from itertools import chain
 
 import pandas as pd
 
-from data.datafields import InTypeAggregator
+from mecon.data.datafields import InTypeAggregator
 from mecon.utils import calendar_utils
 
 

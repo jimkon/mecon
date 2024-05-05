@@ -5,7 +5,7 @@ import requests
 from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
-import monitoring.logging_utils
+from mecon.monitoring import logging_utils
 from mecon.app.blueprints.reports import graphs, graph_utils
 from mecon.app.data_manager import GlobalDataManager
 from mecon.data import reports
@@ -62,13 +62,13 @@ def produce_href_for_custom_graph(plot_type, start_date=None, end_date=None, tag
     return href
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#load')
+@logging_utils.codeflow_log_wrapper('#data#transactions#load')
 def get_transactions() -> Transactions:
     transactions = _data_manager.get_transactions()
     return transactions
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
+@logging_utils.codeflow_log_wrapper('#data#transactions#process')
 def get_filtered_transactions(start_date, end_date, tags_str, grouping_key, aggregation_key,
                               fill_dates_before_groupagg=False,
                               fill_dates_after_groupagg=False) -> Transactions:
@@ -124,13 +124,13 @@ def get_filter_values(tag_name, start_date=None, end_date=None, tags_str=None, g
 
 
 @reports_bp.route('/')
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def reports_menu():
     return 'reports menu'
 
 
 @reports_bp.route('/graph/amount_freq')
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def amount_freq_timeline_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -160,7 +160,7 @@ def amount_freq_timeline_graph():
 
 
 @reports_bp.route('/graph/balance')
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def balance_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -180,7 +180,7 @@ def balance_graph():
 
 
 @reports_bp.route('/graph/histogram')
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def histogram_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -199,7 +199,7 @@ def histogram_graph():
 
 @reports_bp.route(
     '/graph/tags_split')
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def tags_split_graph():
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -237,7 +237,7 @@ def tags_split_graph():
 @reports_bp.route(
     '/custom_graph/<plot_type>',
     methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def custom_graph(plot_type):
     start_date = request.args['start_date']
     end_date = request.args['end_date']
@@ -277,7 +277,7 @@ def custom_graph(plot_type):
 
 
 @reports_bp.route('/tag_info/<tag_name>', methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def tag_info(tag_name):
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values(tag_name)
 
@@ -317,7 +317,7 @@ def tag_info(tag_name):
 
 
 @reports_bp.route('/overall', methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def overall_report():
     # percentages
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('All')
@@ -378,13 +378,16 @@ def overall_report():
                                       tags_split_str='All,Morning,Afternoon,Night'))
     html_tabs.add_tab('Day segments', _graph)
 
+    # TODO currency split?
+    # TODO location split?
+
     graph_html = html_tabs.html()
 
     return render_template('overall_report.html', **locals(), **globals())
 
 
 @reports_bp.route('/calendar', methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def calendar_view():
     disable_groups = True
     transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('All', grouping='day')

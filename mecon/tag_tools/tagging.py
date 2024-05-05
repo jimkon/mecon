@@ -6,7 +6,7 @@ from typing import List, Iterable
 import pandas as pd
 import numpy as np
 
-import monitoring.logging_utils
+from mecon.monitoring import logging_utils
 from mecon.tag_tools import comparisons, transformations
 from mecon.utils import calendar_utils
 from mecon.utils import instance_management
@@ -294,7 +294,7 @@ class Tag:
 # TODO this is a DataframeTagger, isolate the abstract Tagger out of it
 class Tagger(abc.ABC):
     @staticmethod
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
+    @logging_utils.codeflow_log_wrapper('#data#tags')
     def tag(tag: Tag, df: pd.DataFrame, remove_old_tags=False):
         tag_name = tag.name
         if remove_old_tags:
@@ -304,14 +304,14 @@ class Tagger(abc.ABC):
         Tagger.add_tag(tag_name, df, rows_to_tag)
 
     @staticmethod
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
+    @logging_utils.codeflow_log_wrapper('#data#tags')
     def get_index_for_rule(df, rule):
         rows = [row for index, row in df.iterrows()]
         rows_to_tag = pd.Series(rule.fit(rows), index=df.index)
         return rows_to_tag
 
     @staticmethod
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
+    @logging_utils.codeflow_log_wrapper('#data#tags')
     def filter_df_with_rule(df, rule):
         if len(df) == 0:
             return df
@@ -321,7 +321,7 @@ class Tagger(abc.ABC):
         return res_df
 
     @staticmethod
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
+    @logging_utils.codeflow_log_wrapper('#data#tags')
     def filter_df_with_negated_rule(df, rule):
         if len(df) == 0:
             return df
@@ -331,13 +331,13 @@ class Tagger(abc.ABC):
         return res_df
 
     @staticmethod
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
+    @logging_utils.codeflow_log_wrapper('#data#tags')
     def _already_tagged_rows(tag_name, df):
         already_tagged_rows = df['tags'].apply(lambda tags_row: tag_name in tags_row.split(','))
         return already_tagged_rows
 
     @staticmethod
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
+    @logging_utils.codeflow_log_wrapper('#data#tags')
     def remove_tag(tag_name, df):
         def _remove_tag_from_row(row):
             row_elements = row.split(',')
@@ -348,7 +348,7 @@ class Tagger(abc.ABC):
         df['tags'] = df['tags'].apply(_remove_tag_from_row)
 
     @staticmethod
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#tags')
+    @logging_utils.codeflow_log_wrapper('#data#tags')
     def add_tag(tag_name, df, to_rows):
         def _add_tag_to_row(row):
             row_elements = row.split(',')

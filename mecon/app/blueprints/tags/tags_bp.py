@@ -3,7 +3,7 @@ import logging
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
-import monitoring.logging_utils
+from mecon.monitoring import logging_utils
 from mecon import config
 from mecon.app import WorkingDatasetDir
 from mecon.app.app_utils import TransactionsDataTransformationToManualTaggingHTMLTable
@@ -40,7 +40,7 @@ def create_alerts_from_tagging_report(tagging_report):
               category="warning")
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#load')  # TODO remove
+@logging_utils.codeflow_log_wrapper('#data#transactions#load')  # TODO remove
 def get_transactions() -> Transactions:
     transactions = _data_manager.get_transactions()
     return transactions
@@ -82,7 +82,7 @@ def render_tag_page(title='Tag page',
 
 
 @tags_bp.route('/', methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def tags_menu():
     if request.method == 'POST':
         if "recalculate_tags" in request.form:
@@ -123,7 +123,7 @@ def tags_menu():
 
 
 @tags_bp.route('/edit/<tag_name>', methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def tag_edit(tag_name):
     if request.method == 'POST':
         if "refresh" in request.form:

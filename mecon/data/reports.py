@@ -1,4 +1,4 @@
-from data import transactions
+from mecon.data import transactions
 
 
 def transactions_stats(trans: transactions.Transactions, grouping='none'):

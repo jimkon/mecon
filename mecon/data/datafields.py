@@ -11,7 +11,7 @@ from typing import List
 
 import pandas as pd
 
-import monitoring.logging_utils
+from mecon.monitoring import logging_utils
 from mecon.tag_tools import tagging
 from mecon.utils import calendar_utils
 from mecon.utils import dataframe_transformers
@@ -54,19 +54,19 @@ class DataframeWrapper:
         boolean_index = (index >= index_start) & (index <= index_end)
         return self.select_by_index(boolean_index)
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#tags')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#tags')
     def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper | None:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_rule(df, rule)
         return self.factory(new_df)
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#tags')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#tags')
     def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_negated_rule(df, rule)
         return self.factory(new_df)
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#groupagg')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#groupagg')
     def groupagg(self, grouper: Grouping, aggregator: InTypeAggregator) -> DataframeWrapper:
         if self.size() == 0:
             return self.factory(self.dataframe())
@@ -235,7 +235,7 @@ class TagsColumnMixin(ColumnMixin):
 
 
 class Grouping(abc.ABC):
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def group(self, df_wrapper: DataframeWrapper) -> List[DataframeWrapper]:
         indexes = self.compute_group_indexes(df_wrapper)
 
@@ -273,7 +273,7 @@ class InTypeAggregator(AggregatorABC):
     def __init__(self, aggregation_functions):
         self._agg_functions = aggregation_functions
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
         # TODO what if lists_of_df_wrapper = []
         df_agg = self.aggregate_result_df(lists_of_df_wrapper)
@@ -321,7 +321,7 @@ class DateFiller:
         self._fill_unit = fill_unit
         self._fill_values = fill_values_dict
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def fill(self, df_wrapper: DatedDataframeWrapper,
              start_date: datetime | date | None = None,
              end_date: datetime | date | None = None
