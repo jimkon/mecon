@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock, call
 
 from pandas import Timestamp
 
-from mecon.import_data.statements import StatementCSV, HSBCStatementCSV,\
+from mecon.import_data.statements import StatementCSV, HSBCStatementCSV, \
     MonzoStatementCSV, RevoStatementCSV, \
     StatementDFMergeStrategies
 
@@ -219,7 +219,7 @@ class TestStatementCSV(unittest.TestCase):
 
 
 class TestHSBCStatementCSV(unittest.TestCase):
-    def test_from_path(self):   
+    def test_from_path(self):
         mock_csv_file = StringIO("""24/12/2020,desc1,-100.00\r\n22/12/2020,desc2,100.00""")
         statement = HSBCStatementCSV.from_path(mock_csv_file)
         self.assertEqual(statement._df.shape, (2, 3))
@@ -363,6 +363,37 @@ class TestRevoStatementCSV(unittest.TestCase):
         for value in mapping.values():
             # Implement assertions for the transformed DataFrame
             self.assertIn(value, transformed_df.columns)
+
+
+class TestDatasetStatements(unittest.TestCase):
+    from mecon import config
+    statements_dir = pathlib.Path(config.DEFAULT_DATASETS_DIR_PATH) / 'test/data/mock_statements_source_dir'
+
+    def test_hsbc(self):
+        dfs = HSBCStatementCSV.from_all_paths_in_dir(self.statements_dir)._df
+
+        self.assertEqual(len(dfs), 58)
+        self.assertEqual(dfs.shape[1], 3)
+        self.assertEqual(dfs['date'].min(), Timestamp('2020-12-03 00:00:00'))
+        self.assertEqual(dfs['date'].max(), Timestamp('2024-01-30 00:00:00'))
+        self.assertEqual(int(dfs['amount'].sum()), 13430)
+
+    def test_monzo(self):
+        dfs = MonzoStatementCSV.from_all_paths_in_dir(self.statements_dir)._df
+
+        self.assertEqual(len(dfs), 138)
+        self.assertEqual(dfs.shape[1], 18)
+        self.assertEqual(dfs['Date'].min(), '2019-05-15')
+        self.assertEqual(dfs['Date'].max(), '2024-02-18')
+        self.assertEqual(int(dfs['Amount'].sum()), -6247)
+
+    def test_revo(self):
+        dfs = RevoStatementCSV.from_all_paths_in_dir(self.statements_dir)._df
+        self.assertEqual(len(dfs), 374)
+        self.assertEqual(dfs.shape[1], 10)
+        self.assertEqual(dfs['Started Date'].min(), '2019-05-11 16:57:56')
+        self.assertEqual(dfs['Started Date'].max(), '2024-02-10 16:02:38')
+        self.assertEqual(int(dfs['Amount'].sum()), 1317)
 
 
 if __name__ == '__main__':

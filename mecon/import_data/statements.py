@@ -50,7 +50,7 @@ class StatementCSV:
                               date_col_name: str,
                               file_prefix: str):
         statements = cls.load_many_from_dir(dir_path, lambda name: name.startswith(file_prefix))
-        dfs = [statement.dataframe() for statement in statements]
+        dfs = [statement._df for statement in statements]
         single_df = StatementDFMergeStrategies.merge_last_first(dfs, date_col_name)
         return cls(single_df)
 
@@ -128,14 +128,14 @@ class MonzoStatementCSV(StatementCSV):
 
     @classmethod
     def from_all_paths_in_dir(cls, dir_path: Union[pathlib.Path, str],
-                              date_col_name: str = 'Started Date',
+                              date_col_name: str = 'Date',
                               file_prefix: str = 'Monzo_Transactions'):
         return super().from_all_paths_in_dir(dir_path=dir_path,
                                              date_col_name=date_col_name,
                                              file_prefix=file_prefix)
 
     def split_and_store_files_based_on_year(self, dir_path: Union[pathlib.Path, str],
-                                            date_col_name: str = 'Started Date',
+                                            date_col_name: str = 'Date',
                                             filename_prefix: str = 'Monzo_Transactions') -> None:
         super().split_and_store_files_based_on_year(dir_path=dir_path,
                                                     date_col_name=date_col_name,
