@@ -2,6 +2,7 @@ import pathlib
 import json
 
 
+# TODO add saved links
 class Settings(dict):
     def __init__(self, path: str | pathlib.Path):
         self._json_path = pathlib.Path(path)
