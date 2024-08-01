@@ -24,6 +24,8 @@ logging.info('Starting app...')
 
 current_dataset_dir = WorkingDatasetDir.get_instance()
 current_dataset = current_dataset_dir.working_dataset
+logging.info(f"Current dataset: {current_dataset.name}")
+
 
 app = Flask(__name__)
 app.debug = True

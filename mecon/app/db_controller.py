@@ -59,8 +59,8 @@ class HSBCTransactionsDBAccessor(io_framework.HSBCTransactionsIOABC):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
         merged_df.to_sql(models.HSBCTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
 
-    def get_transactions(
-            self) -> pd.DataFrame:  # TODO:v3 get and delete transactions is the same for all tables. deal with duplicated code
+    def get_transactions(self) -> pd.DataFrame:
+        # TODO:v3 get and delete transactions is the same for all tables. deal with duplicated code
         transactions = models.HSBCTransactionsDBTable.query.all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df) > 0 else None
