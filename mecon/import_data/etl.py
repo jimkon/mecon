@@ -25,13 +25,14 @@ def transaction_id_formula(transaction, bank):
 
 
 class HSBCStatementTransformer(DataframeTransformer):
-    def _transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
+    def _transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:
+        # TODO:v3 make it more readable
         logging.info(f"Transforming HSBC raw transactions ({df_hsbc.shape} shape)")
         # Add prefix to id
         # df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
 
         # Combine date and time to create datetime
-        df_hsbc['datetime'] = pd.to_datetime(df_hsbc['date'], format="%d/%m/%Y") + pd.Timedelta('00:00:00')
+        df_hsbc['datetime'] = pd.to_datetime(df_hsbc['date'])
 
         # Set currency to GBP and amount_cur to amount
         df_hsbc['currency'] = 'GBP'
