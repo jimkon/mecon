@@ -19,6 +19,7 @@ class WorkingDatasetDir(DatasetDir, Singleton):
     def set_working_directory(cls, new_path):
         super().set_instance(WorkingDatasetDir(path=new_path))
 
-    def set_working_dataset(self, dataset_name):
+    def set_working_dataset(self, dataset_name) -> Dataset:
         self._working_dataset = self.get_dataset(dataset_name)
+        return self.working_dataset
 
