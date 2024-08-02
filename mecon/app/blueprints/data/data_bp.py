@@ -1,3 +1,4 @@
+import logging
 import pathlib
 from typing import Dict
 from datetime import datetime
@@ -46,7 +47,8 @@ def _db_statements_info():
     res = {}
     hsbc_trans = _data_manager.get_hsbc_statements()
     if hsbc_trans is not None:
-        hsbc_trans['date'] = pd.to_datetime(hsbc_trans['date'], format="%d/%m/%Y")
+        # hsbc_trans['date'] = pd.to_datetime(hsbc_trans['date'], format="%d/%m/%Y") # ValueError: time data "2020-12-27 00:00:00.000000" doesn't match format "%d/%m/%Y", at position 0. You might want to try:
+        hsbc_trans['date'] = pd.to_datetime(hsbc_trans['date'])
         res['HSBC'] = {
             'transactions': len(hsbc_trans),
             'days': hsbc_trans['date'].nunique(),
@@ -88,10 +90,26 @@ def _db_transactions_info():
     return res
 
 
+def _reset_db():
+    _data_manager.reset_statements()
+    statements_dir = WorkingDatasetDir.get_instance().working_dataset.statements
+
+    hsbc_dfs = HSBCStatementCSV.from_all_paths_in_dir(statements_dir / 'HSBC').dataframe()
+    _data_manager.add_statement(hsbc_dfs, bank='HSBC')
+
+    monzo_dfs = MonzoStatementCSV.from_all_paths_in_dir(statements_dir / 'Monzo').dataframe()
+    _data_manager.add_statement(monzo_dfs, bank='Monzo')
+
+    revo_dfs = RevoStatementCSV.from_all_paths_in_dir(statements_dir / 'Revolut').dataframe()
+    _data_manager.add_statement(revo_dfs, bank='Revolut')
+
+    _data_manager.reset_transactions()
+
+
 @data_bp.route('/menu')
 @logging_utils.codeflow_log_wrapper('#api')
 def data_menu():
-    dataset_name = WorkingDatasetDir().working_dataset.name
+    dataset_name = WorkingDatasetDir.get_instance().working_dataset.name
     db_transactions_info = _db_transactions_info()
     db_statements_info = json2html.convert(json=_db_statements_info())
     files_info_dict = _statement_files_info()
@@ -101,22 +119,7 @@ def data_menu():
 @data_bp.post('/reload')
 @logging_utils.codeflow_log_wrapper('#api')
 def data_reload():
-    _data_manager.reset_statements()
-    statements_info = _statement_files_info()
-    for bank_name in statements_info:
-        if bank_name == 'HSBC':
-            dfs = [HSBCStatementCSV.from_path(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
-        elif bank_name == 'Monzo':
-            dfs = [MonzoStatementCSV.from_path(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
-        elif bank_name == 'Revolut':
-            dfs = [RevoStatementCSV.from_path(filepath).dataframe() for filepath, *_ in statements_info[bank_name]]
-        else:
-            raise ValueError(f"Invalid bank name '{bank_name}' for statements")
-
-        _data_manager.add_statement(dfs, bank=bank_name)
-
-    _data_manager.reset_transactions()
-
+    _reset_db()
     return redirect(url_for('data.data_menu'))
 
 
@@ -143,8 +146,8 @@ def datafile_view(path):
 @data_bp.route('/fetch', methods=['POST', 'GET'])
 @logging_utils.codeflow_log_wrapper('#api')
 def fetch_data():
-    path_to_fetch_data_from = WorkingDatasetDir().working_dataset.settings['AUTOFETCH_STATEMENTS_DIR_PATH']
-    fetch_statement_data_message = path_to_fetch_data_from
+    path_to_fetch_data_from = WorkingDatasetDir.get_instance().working_dataset.settings['AUTOFETCH_STATEMENTS_DIR_PATH']
+    logging.info(f"Fetching raw statement files from {path_to_fetch_data_from}...")
     auth_message = f"Athenticated: {monzo_client.is_authenticated()}, Expiry: {monzo_client.token_expiry()}"
     if request.method == 'POST':
         if "auth_monzo_button" in request.form:
@@ -168,17 +171,18 @@ def fetch_data():
             else:
                 monzo_fetch_bank_data_message = f" -> You must authenticate first!"
         elif "import_statement_button" in request.form:
-            fetch_statement_files.fetch_monzo_statement(
-                from_path=fetch_statement_data_message,
-                dest_path=WorkingDatasetDir().working_dataset.statements / 'Monzo'
+            path_to_fetch_data_from = pathlib.Path(path_to_fetch_data_from)
+            fetch_statement_files.fetch_and_merge_raw_monzo_statements(
+                from_path=path_to_fetch_data_from,
+                dest_path=WorkingDatasetDir.get_instance().working_dataset.statements / 'Monzo'
             )
             fetch_statement_files.fetch_hsbc_statement(
-                from_path=fetch_statement_data_message,
-                dest_path=WorkingDatasetDir().working_dataset.statements / 'HSBC'
+                from_path=path_to_fetch_data_from,
+                dest_path=WorkingDatasetDir.get_instance().working_dataset.statements / 'HSBC'
             )
             fetch_statement_files.fetch_revo_statement(
-                from_path=fetch_statement_data_message,
-                dest_path=WorkingDatasetDir().working_dataset.statements / 'Revolut'
+                from_path=path_to_fetch_data_from,
+                dest_path=WorkingDatasetDir.get_instance().working_dataset.statements / 'Revolut'
             )
     return render_template('fetch_data.html', **locals(), **globals())
 
