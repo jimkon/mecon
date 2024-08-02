@@ -105,7 +105,7 @@ class CacheDataManager:
         self._hsbc_statements = hsbc_stats_io
         self._monzo_statements = monzo_stats_io
         self._revo_statements = revo_stats_io
-        self._cache = DataCache()  # TODO use cache
+        self._cache = DataCache()
 
     def get_transactions(self) -> Transactions:
         if self._cache.transaction is None:
