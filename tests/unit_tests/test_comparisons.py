@@ -4,9 +4,14 @@ from tag_tools import comparisons as cmp
 
 
 class TestCompareOperator(unittest.TestCase):
-    def test_validate(self):
+    def test_validate_inputs(self):
+        with self.assertRaises(cmp.TypesOfComparedValuesDoNotMatch):
+            test_cmp = cmp.CompareOperator('test_validate_inputs', lambda a, b: a + b)
+            test_cmp(1, '2')
+
+    def test_validate_result(self):
         with self.assertRaises(cmp.CompareOperatorMustReturnBooleanResults):
-            test_cmp = cmp.CompareOperator('test', lambda a, b: a + b)
+            test_cmp = cmp.CompareOperator('test_validate_result', lambda a, b: a + b)
             test_cmp(1, 2)
 
     def test_greater(self):

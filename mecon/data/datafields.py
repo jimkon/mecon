@@ -11,7 +11,7 @@ from typing import List
 
 import pandas as pd
 
-import monitoring.logging_utils
+from mecon.monitoring import logging_utils
 from mecon.tag_tools import tagging
 from mecon.utils import calendar_utils
 from mecon.utils import dataframe_transformers
@@ -21,10 +21,13 @@ class NullDataframeInDataframeWrapper(Exception):
     pass
 
 
+class InvalidInputDataFrameColumns(Exception):
+    pass
+
+
 class DataframeWrapper:
     def __init__(self, df: pd.DataFrame):
-        if df is None:  # or len(df) == 0:
-            raise NullDataframeInDataframeWrapper
+        self._check_input_df(df)
         self._df = df
 
     def dataframe(self, df_transformer: dataframe_transformers.DataframeTransformer = None) -> pd.DataFrame:
@@ -46,24 +49,24 @@ class DataframeWrapper:
         return self.factory(self.dataframe().copy()[index])
 
     def select_by_index_range(self, index_start: int, index_end: int):
-        index_start, index_end = index_start if index_start<self.size() else 0, min(index_end, self.size())
+        index_start, index_end = index_start if index_start < self.size() else 0, min(index_end, self.size())
         index = pd.Series(list(range(0, self.size(), 1)))
         boolean_index = (index >= index_start) & (index <= index_end)
         return self.select_by_index(boolean_index)
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#tags')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#tags')
     def apply_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper | None:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_rule(df, rule)
         return self.factory(new_df)
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#tags')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#tags')
     def apply_negated_rule(self, rule: tagging.AbstractRule) -> DataframeWrapper:
         df = self.dataframe().copy()
         new_df = tagging.Tagger.filter_df_with_negated_rule(df, rule)
         return self.factory(new_df)
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#groupagg')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#groupagg')
     def groupagg(self, grouper: Grouping, aggregator: InTypeAggregator) -> DataframeWrapper:
         if self.size() == 0:
             return self.factory(self.dataframe())
@@ -75,6 +78,14 @@ class DataframeWrapper:
     @classmethod
     def factory(cls, df: pd.DataFrame):
         return cls(df)
+
+    @staticmethod
+    def _check_input_df(df: pd.DataFrame):
+        if df is None:  # or len(df) == 0:
+            raise NullDataframeInDataframeWrapper
+
+        if len(df.columns) == 0:
+            raise InvalidInputDataFrameColumns(f"No columns found in the input Dataframe.")
 
 
 class MissingRequiredColumnInDataframeWrapperError(Exception):
@@ -125,16 +136,27 @@ class DateTimeColumnMixin(ColumnMixin):
         return self.datetime.dt.time
 
     def date_range(self):
+        if self._df_wrapper_obj.size() == 0:
+            return None, None
         return self.date.min(), self.date.max()
 
-    def select_date_range(self, start_date: [str | datetime | date], end_date: [str | datetime | date]) -> DatedDataframeWrapper | None:
-        start_date, end_date = calendar_utils.to_date(start_date), calendar_utils.to_date(end_date)
+    def select_date_range(self,
+                          start_date: [str | datetime | date, None],
+                          end_date: [str | datetime | date, None]
+                          ) -> DatedDataframeWrapper:  # TODO fix type hinting issues
+        if start_date is None or end_date is None:
+            self_start_date, self_end_date = self.date_range()
+            if self_start_date is None and self_end_date is None:
+                return self._df_wrapper_obj.factory(self._df_wrapper_obj.dataframe())
+
+        start_date = calendar_utils.to_date(start_date) if start_date is not None else self_start_date
+        end_date = calendar_utils.to_date(end_date) if end_date is not None else self_end_date
 
         rule = tagging.Conjunction([
             tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
             tagging.Condition.from_string_values('datetime', 'date', 'less_equal', end_date),
         ])
-        return self._df_wrapper_obj.apply_rule(rule)
+        return self._df_wrapper_obj.apply_rule(rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
 
 
 class AmountColumnMixin(ColumnMixin):
@@ -213,7 +235,7 @@ class TagsColumnMixin(ColumnMixin):
 
 
 class Grouping(abc.ABC):
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def group(self, df_wrapper: DataframeWrapper) -> List[DataframeWrapper]:
         indexes = self.compute_group_indexes(df_wrapper)
 
@@ -251,7 +273,7 @@ class InTypeAggregator(AggregatorABC):
     def __init__(self, aggregation_functions):
         self._agg_functions = aggregation_functions
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def aggregate(self, lists_of_df_wrapper: List[DataframeWrapper]) -> DataframeWrapper:
         # TODO what if lists_of_df_wrapper = []
         df_agg = self.aggregate_result_df(lists_of_df_wrapper)
@@ -299,7 +321,7 @@ class DateFiller:
         self._fill_unit = fill_unit
         self._fill_values = fill_values_dict
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
+    @logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def fill(self, df_wrapper: DatedDataframeWrapper,
              start_date: datetime | date | None = None,
              end_date: datetime | date | None = None

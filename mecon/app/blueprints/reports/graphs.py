@@ -1,5 +1,7 @@
 import datetime
+from typing import List
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.offline import plot
@@ -7,9 +9,8 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
 
-import monitoring.logging_utils
+from mecon.monitoring import logging_utils
 from mecon.app.blueprints.reports import graph_utils
-from mecon.monitoring import logs
 
 pio.templates["custom_template"] = go.layout.Template(
     layout_colorway=px.colors.qualitative.Antique
@@ -17,8 +18,8 @@ pio.templates["custom_template"] = go.layout.Template(
 pio.templates.default = "custom_template"
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
-def lines_graph_html(time, lines: [pd.Series]):
+@logging_utils.codeflow_log_wrapper('#graphs')
+def lines_graph_html(time: List | pd.Series, lines: [List | pd.Series]):
     fig = go.Figure()
     for line in lines:
         fig.add_trace(go.Scatter(x=time, y=line, name=line.name, line=dict(width=3), fill='tozeroy'))
@@ -33,7 +34,7 @@ def lines_graph_html(time, lines: [pd.Series]):
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
+@logging_utils.codeflow_log_wrapper('#graphs')
 def stacked_bars_graph_html(time, lines: [pd.Series]):
     fig = go.Figure()
 
@@ -53,45 +54,74 @@ def stacked_bars_graph_html(time, lines: [pd.Series]):
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
-def amount_and_freq_timeline_html(time, amount, freq):
+@logging_utils.codeflow_log_wrapper('#graphs')
+def amount_and_freq_timeline_html(time: List | pd.Series,
+                                  amount: List | pd.Series,
+                                  freq: List | pd.Series,
+                                  grouping='month'):
     fig = go.Figure()
+
+    rolling_window = {
+        'none': 10,
+        'day': 7,
+        'week': 4,
+        'month': 3,
+        'year': 1
+    }.get(grouping, 1)
 
     amount_pos = amount.clip(lower=0)
     amount_neg = amount.clip(upper=0)
+    amount_pos, amount_neg = amount_pos.round(2), amount_neg.round(2)
+
+    amount_axis_range = [1.6 * amount_neg.min(), 1.0 * amount_pos.max()]
     fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1, color='green'), fill='tozeroy'))
     fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1, color='red'), fill='tozeroy'))
+
+    smoothed_total = amount.rolling(rolling_window).mean()
+    smoothed_total = smoothed_total.round(2)
+    fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5, color='rgba(100,0,100,0.5)')))
     # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
+    freq_axis_range = None
     if freq is not None:
+        freq_axis_range = [0, 5 * freq.max()]
         fig.add_trace(go.Bar(
             x=time,
             y=freq,
             name="freq",
             yaxis='y2',
-            marker={'color': 'rgba(60,60,60,250)', 'opacity': 0.25}
+            marker={'color': 'rgba(60,60,60,250)', 'opacity': 0.5},
         ))
         # fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1, color='black'), yaxis='y2'))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
-        yaxis=dict(title='[£]'),
-        yaxis2=dict(title='Freq [#/time]', overlaying='y', side='right'),
+        yaxis=dict(title='[£]', range=amount_axis_range),
+        yaxis2=dict(title='# transactions', overlaying='y', side='right', range=freq_axis_range),
         xaxis=dict(title=f"({len(time)} points)"),
-        uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
+        uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
     )
 
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
-def balance_graph_html(time, amount: pd.Series):
+@logging_utils.codeflow_log_wrapper('#graphs')
+def balance_graph_html(time, amount: pd.Series, fit_line=False):
+    amount = amount.round(2)
+
     fig = go.Figure()
 
     balance = amount.cumsum()
-
     fig.add_trace(go.Scatter(x=time, y=balance, name="balance", line=dict(width=3), fill='tozeroy'))
+
+    if fit_line:
+        x = np.arange(len(time))
+        a, b = np.polyfit(x, balance, deg=1)
+        y = a * x + b
+        y = y.round(2)
+        fig.add_trace(go.Scatter(x=time, y=y, name=f"fit: {a=:.1f}*x + {b=:.1f}",
+                                 line=dict(width=5, color='rgba(100,100,0,0.5)')))
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
@@ -104,7 +134,7 @@ def balance_graph_html(time, amount: pd.Series):
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
+@logging_utils.codeflow_log_wrapper('#graphs')
 def histogram_and_cumsum_graph_html(amount: pd.Series):
     fig = go.Figure()
 
@@ -127,21 +157,19 @@ def histogram_and_cumsum_graph_html(amount: pd.Series):
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
+@logging_utils.codeflow_log_wrapper('#graphs')
 def histogram_and_contributions(amounts: pd.Series):
-    bin_centers, counts, contributions = graph_utils.calculated_histogram_and_contributions(amounts)
+    bin_centers, counts, contributions, bin_width = graph_utils.calculated_histogram_and_contributions(amounts)
+    bin_centers, contributions = bin_centers.round(2), contributions.round(2)
 
-    # Create a custom histogram using Plotly
     fig = go.Figure()
 
-    # Plot the bars for counts
     fig.add_trace(go.Bar(
         x=bin_centers,
         y=counts,
-        name="Counts"
+        name="Counts",
     ))
 
-    # Plot the bars for contributions
     fig.add_trace(go.Scatter(
         x=bin_centers,
         y=-contributions,
@@ -155,14 +183,15 @@ def histogram_and_contributions(amounts: pd.Series):
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='#'),
         yaxis2=dict(title='cumsum [£]', overlaying='y', side='right'),
-        uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
+        uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
+        xaxis_title=f"Bin width: £{bin_width:.2f}"
     )
 
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
+@logging_utils.codeflow_log_wrapper('#graphs')
 def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
     data = list(zip(functions, start_datetime, end_datetime))
 
@@ -191,7 +220,7 @@ def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
+@logging_utils.codeflow_log_wrapper('#graphs')
 def performance_stats_barplot_graph_html(perf_data_stats: dict):
     stats = perf_data_stats
 
@@ -286,7 +315,7 @@ def performance_stats_barplot_graph_html(perf_data_stats: dict):
     return graph_html
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#graphs')
+@logging_utils.codeflow_log_wrapper('#graphs')
 def performance_stats_scatterplot_graph_html(perf_data_stats: dict):
     fig = go.Figure()
 
@@ -306,24 +335,24 @@ def performance_stats_scatterplot_graph_html(perf_data_stats: dict):
         },
     }
     fig.update_layout(layout,
-                          updatemenus=[
-                              dict(
-                                  type="buttons",
-                                  direction="left",
-                                  buttons=list([
-                                      dict(
-                                          args=[{'yaxis': {'type': 'linear'}}],
-                                          label="Linear Scale",
-                                          method="relayout"
-                                      ),
-                                      dict(
-                                          args=[{'yaxis': {'type': 'log'}}],
-                                          label="Log Scale",
-                                          method="relayout"
-                                      )
-                                  ])
-                              ),
-                          ])
+                      updatemenus=[
+                          dict(
+                              type="buttons",
+                              direction="left",
+                              buttons=list([
+                                  dict(
+                                      args=[{'yaxis': {'type': 'linear'}}],
+                                      label="Linear Scale",
+                                      method="relayout"
+                                  ),
+                                  dict(
+                                      args=[{'yaxis': {'type': 'log'}}],
+                                      label="Log Scale",
+                                      method="relayout"
+                                  )
+                              ])
+                          ),
+                      ])
 
     fig.update_layout(
         autosize=True,  # Automatically adjust the size of the plot
@@ -333,4 +362,3 @@ def performance_stats_scatterplot_graph_html(perf_data_stats: dict):
     )
     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     return graph_html
-

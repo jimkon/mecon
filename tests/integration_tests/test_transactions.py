@@ -6,7 +6,7 @@ import pandas as pd
 from data import groupings
 from data.aggregators import CustomisableDefaultTransactionAggregator, CustomisableAmountTransactionAggregator, \
     ID_AGGREGATION_VALUE
-from data.transactions import Transactions, TransactionDateFiller, ID_FILL_VALUE
+from data.transactions import Transactions, TransactionDateFiller, ID_FILL_VALUE, TransactionsDataTransformationToHTMLTable
 
 
 class TestTransactionAggregator(unittest.TestCase):
@@ -691,6 +691,23 @@ class TestGroupAgg(unittest.TestCase):
 
         pd.testing.assert_frame_equal(transactions.dataframe().reset_index(drop=True),
                                       new_transactions.dataframe().reset_index(drop=True))
+
+
+class TransactionsDataTransformationToHTMLTableTestCase(unittest.TestCase):
+    def test__format_local_amount(self):
+        class_abr = TransactionsDataTransformationToHTMLTable
+
+        self.assertEqual(class_abr._format_local_amount("-1.1203", 'EUR'),
+                         '<h6 style="color: orange">-1.12€</h6>')
+        self.assertEqual(class_abr._format_local_amount("10.1203", 'GBP'),
+                         '<h6 style="color: green">10.12£</h6>')
+        self.assertEqual(class_abr._format_local_amount("10.1203", 'HUF'),
+                         '<h6 style="color: green">10.12(HUF)</h6>')
+        self.assertEqual(class_abr._format_local_amount("10.1203", 'GBP,EUR'),
+                         '<h6 style="color: green">10.12(£,€)</h6>')
+        self.assertEqual(class_abr._format_local_amount("10.1203", 'GBP,EUR,HUF'),
+                         '<h6 style="color: green">10.12(£,€,HUF)</h6>')
+
 
 
 if __name__ == '__main__':

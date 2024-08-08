@@ -3,7 +3,7 @@ import logging
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
-import monitoring.logging_utils
+from mecon.monitoring import logging_utils
 from mecon import config
 from mecon.app import WorkingDatasetDir
 from mecon.app.app_utils import TransactionsDataTransformationToManualTaggingHTMLTable
@@ -40,7 +40,7 @@ def create_alerts_from_tagging_report(tagging_report):
               category="warning")
 
 
-@monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#load')  # TODO remove
+@logging_utils.codeflow_log_wrapper('#data#transactions#load')  # TODO remove
 def get_transactions() -> Transactions:
     transactions = _data_manager.get_transactions()
     return transactions
@@ -82,7 +82,7 @@ def render_tag_page(title='Tag page',
 
 
 @tags_bp.route('/', methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def tags_menu():
     if request.method == 'POST':
         if "recalculate_tags" in request.form:
@@ -123,7 +123,7 @@ def tags_menu():
 
 
 @tags_bp.route('/edit/<tag_name>', methods=['POST', 'GET'])
-@monitoring.logging_utils.codeflow_log_wrapper('#api')
+@logging_utils.codeflow_log_wrapper('#api')
 def tag_edit(tag_name):
     if request.method == 'POST':
         if "refresh" in request.form:
@@ -157,11 +157,14 @@ def tag_edit(tag_name):
         elif "add_condition" in request.form:
             disjunction = tagging.Disjunction.from_json_string(request.form.get('query_text_input'))
 
+            value_str = request.form['value']
+            value = value_str if not value_str.isnumeric() else int(value_str) if value_str.isdigit() else float(value_str)
+
             condition = tagging.Condition.from_string_values(
                 field=request.form['field'],
                 transformation_op_key=request.form['transform'],
                 compare_op_key=request.form['comparison'],
-                value=request.form['value'],
+                value=value,
             )
 
             new_tag_json = disjunction.append(condition).to_json()
@@ -200,7 +203,7 @@ def manual_tagging(order_by):
     transactions = get_transactions()
     n_transactions = transactions.size()
 
-    chunk_size = 250
+    chunk_size = config.TRANSACTIONS_CHUNK_SIZE
     index_start = int(request.args['index_start']) if 'index_start' in request.args else 0
     index_end = int(request.args['index_end']) if 'index_end' in request.args else (chunk_size - 1)
 

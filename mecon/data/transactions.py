@@ -6,8 +6,7 @@ from datetime import datetime, date
 
 import pandas as pd
 
-import data.datafields as fields
-import monitoring.logging_utils
+import mecon.data.datafields as fields
 from mecon.utils import dataframe_transformers
 
 ID_FILL_VALUE = 'filled'
@@ -24,7 +23,6 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     Not responsible for any IO operations.
     """
 
-    @monitoring.logging_utils.codeflow_log_wrapper('#data#transactions#process')
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)
@@ -85,7 +83,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
             padding: 10px;
         }
         
-    </style>
+        </style>
         """
         df_transformer = df_transformer if df_transformer is not None else TransactionsDataTransformationToHTMLTable()
         df = self.dataframe(df_transformer=df_transformer)
@@ -132,16 +130,18 @@ class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransforme
 
 class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer):
     def _transform(self, df_in: pd.DataFrame, **kwargs) -> pd.DataFrame:
-        # df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
+        df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
 
         df_out = pd.DataFrame(df_in['id'].apply(self._format_id))
         df_out['Date/Time'] = df_in['datetime'].apply(self._format_datetime)
         df_out['Amount (£)'] = df_in['amount'].apply(self._format_amount)
         # df_out['Curr'] = df_in['currency'].apply(self._format_currency_count)
         # df_out['Amount (curr)'] = df_in['amount_cur'].apply(self._format_amount)
-        df_out['Local amount'] = df_in.apply(lambda row: self._format_local_amount(row['amount_cur'], row['currency']), axis=1)
+        df_out['Local amount'] = df_in.apply(lambda row: self._format_local_amount(row['amount_cur'], row['currency']),
+                                             axis=1, result_type='reduce')
         df_out['Description'] = df_in['description'].apply(self._format_description)
         df_out['Tags'] = df_in['tags'].apply(self._format_tags)
+
         return df_out
 
     @staticmethod
@@ -175,7 +175,12 @@ class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer)
             'GBP': '£',
             'USD': '$'
         }
-        currency_symbol = symbol_mapping.get(currency, f"({currency})")
+        if ',' in currency:
+            split_currs = currency.split(',')
+            currency_symbol = f"({','.join(symbol_mapping.get(curr, curr) for curr in split_currs)})"
+        else:
+            currency_symbol = symbol_mapping.get(currency, f"({currency})")
+
         amount = float(amount_str)
         text_color = 'orange' if amount < 0 else 'green' if amount > 0 else 'black'
         return f"""<h6 style="color: {text_color}">{amount:.2f}{currency_symbol}</h6>"""

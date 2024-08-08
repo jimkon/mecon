@@ -50,6 +50,17 @@ class TestCondition(unittest.TestCase):
                 value='1'
             ).to_dict()
 
+    def test_fit(self):
+        condition = tagging.Condition.from_string_values(
+            field='field',
+            transformation_op_key='str',
+            compare_op_key='greater',
+            value='1'
+        )
+
+        self.assertListEqual(condition.fit([{'field': 0}, {'field': 1}, {'field': 2}]),
+                             [False, False, True])
+
 
 class TestConjunction(unittest.TestCase):
     def test_init_conjunction_from_dict(self):
@@ -159,6 +170,20 @@ class TestConjunction(unittest.TestCase):
         conjunction = tagging.Conjunction.from_dict(test_dict)
         result_dict = conjunction.to_dict()
         self.assertDictEqual(test_dict, result_dict)
+
+    def test_fit(self):
+        test_dict = {
+            "field1.str": {"greater": "1", 'less': '2'},
+            "field2.str": {"greater": ["2", "3", "3.1"]},
+            "field2": {"less": ["4", "5", "6", "6.1"]},
+        }
+        conjunction = tagging.Conjunction.from_dict(test_dict)
+        fit_results = conjunction.fit([
+            {'field1': 1.5, 'field2': '5'},
+            {'field1': 1.5, 'field2': '3.5'},
+            {'field1': 3, 'field2': '3.5'},
+        ])
+        self.assertListEqual(fit_results, [False, True, False])
 
 
 class TestDisjunction(unittest.TestCase):
@@ -284,6 +309,23 @@ class TestDisjunction(unittest.TestCase):
                 "field1.str": {"greater": "1"}
             }
         ])
+
+    def test_fit(self):
+        test_json = [
+            {
+                "field2": {"less": "4"},
+            },
+            {
+                "field1.str": {"greater": "1"}
+            }
+        ]
+        conjunction = tagging.Disjunction.from_json(test_json)
+        fit_results = conjunction.fit([
+            {'field1': 0, 'field2': '3'},
+            {'field1': 1, 'field2': '4'},
+            {'field1': 2, 'field2': '5'},
+        ])
+        self.assertListEqual(fit_results, [True, False, True])
 
 
 class TestTagging(unittest.TestCase):

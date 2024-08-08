@@ -26,7 +26,7 @@ class TransactionsDataTransformationToManualTaggingHTMLTable(TransactionsDataTra
         df_in = df_in[index_start:index_end]
 
         df_out = super()._transform(df_in)
-        df_out['Edit'] = df_in.apply(lambda row: self._tags_form(self._tag_names, row), axis=1)
+        df_out['Edit'] = df_in.apply(lambda row: self._tags_form(self._tag_names, row), axis=1).tolist()[::-1] # super()._transform also reverses df_in
         df_out = df_out[[df_out.columns[-1]] + list(df_out.columns[:-1])]
         return df_out
 

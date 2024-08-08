@@ -107,10 +107,11 @@ def get_log_files(historic_logs=False):
 def read_logs_as_df(log_files: List[pathlib.Path]):
     df_logs = None
     for log_file in log_files:
+        log_text = log_file.read_text(encoding='utf8')
         if df_logs is None:
-            df_logs = read_logs_string_as_df(log_file.read_text())
+            df_logs = read_logs_string_as_df(log_text)
         else:
-            df_logs_temp = read_logs_string_as_df(log_file.read_text())
+            df_logs_temp = read_logs_string_as_df(log_text)
             df_logs = pd.concat([df_logs, df_logs_temp])
 
     df_logs = df_logs.sort_values(['datetime', 'msecs']).reset_index(drop=True)

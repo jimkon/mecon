@@ -471,7 +471,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             pd.DataFrame(
                 {
                     'id': [1, 2, 3],
-                    'date': ["01/01/2023", "15/06/2023", "31/12/2023"],
+                    'date': ["01/01/2023", "06/15/2023", "12/31/2023"],
                     'amount': ['1,000.0', '2,000.0', '3,000.0'],
                     'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
                 }
@@ -525,7 +525,9 @@ class TransactionsDBAccessorssorTestCase(TestCase):
 
         expected_df = pd.DataFrame(
             {
-                'id': ['RVLTd20210101t000000ap13000i31', 'RVLTd20210615t123030ap24000i32', 'RVLTd20211231t235959ap30000i33', 'MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3', 'HSBCd20230101t000000ap100000i1', 'HSBCd20230615t000000ap200000i2', 'HSBCd20231231t000000ap300000i3'],
+                'id': ['RVLTd20210101t000000ap13000i31', 'RVLTd20210615t123030ap24000i32', 'RVLTd20211231t235959ap30000i33',
+                       'MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3',
+                       'HSBCd20230101t000000ap100000i1', 'HSBCd20230615t000000ap200000i2', 'HSBCd20231231t000000ap300000i3'],
                 'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
                              datetime(2021, 12, 31, 23, 59, 59), datetime(2022, 1, 1, 0, 0, 0),
                              datetime(2022, 6, 15, 12, 30, 30), datetime(2022, 12, 31, 23, 59, 59),
@@ -614,7 +616,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             db_controller.TransactionsDBAccessor._transaction_df_values_validation(test_df)
 
     def test_get_transactions(self):
-        self.assertIsNone(self.accessor.get_transactions())
+        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
+
         # expected_df = self._load_db()
         df = pd.DataFrame({
             'id': [11, 12, 13],
@@ -650,7 +653,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
 
         self.accessor.delete_all()
 
-        self.assertIsNone(self.accessor.get_transactions())
+        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
 
     def test_load_transactions(self):
         self.accessor.delete_all()

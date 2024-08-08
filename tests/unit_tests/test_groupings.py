@@ -93,6 +93,42 @@ class TestLabelGrouping(unittest.TestCase):
 
 
 class TestDatetimeGrouping(unittest.TestCase):
+    def test_hour_grouping(self):
+        class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
+            def __init__(self, df):
+                super().__init__(df=df)
+                datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+
+        data = {
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                         datetime(2021, 1, 1, 0, 20, 0),
+                         datetime(2021, 1, 1, 0, 40, 0),
+                         datetime(2021, 1, 1, 12, 30, 30),
+                         datetime(2021, 1, 1, 23, 59, 59),
+                         ],
+            'B': [6, 7, 8, 9, 10]
+        }
+        df = pd.DataFrame(data)
+        wrapper = CustomDataframeWrapper(df)
+        grouper = gp.HOUR
+
+        grouped_wrappers = grouper.group(wrapper)
+
+        self.assertEqual(len(grouped_wrappers), 3)
+        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                                                                 datetime(2021, 1, 1, 0, 20, 0),
+                                                                 datetime(2021, 1, 1, 0, 40, 0),
+                                                                 ],
+                                                    'B': [6, 7, 8]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 1, 12, 30, 30),
+                                                                 ],
+                                                    'B': [9]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 1, 23, 59, 59)],
+                                                    'B': [10]}))
+
     def test_day_grouping(self):
         class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
             def __init__(self, df):

@@ -33,6 +33,11 @@ ABS = TransformationFunction('abs', lambda x: abs(int(x)))
 # TODO:v3 datetime transformations don't work
 # TODO: v3 add part of day, day of week
 DATE = TransformationFunction('date', lambda x: x.date())  # TODO:v3 extract date
+DAY = TransformationFunction('day', lambda x: x.date().day)  # TODO:v3 extract date
+MONTH = TransformationFunction('month', lambda x: x.date().month)  # TODO:v3 extract date
+YEAR = TransformationFunction('year', lambda x: x.date().year)  # TODO:v3 extract date
 TIME = TransformationFunction('time', lambda x: x.time())  # TODO:v3 extract time
-DAY_OF_WEEK = TransformationFunction('day_of_week', calendar_utils.dayofweek)
+HOUR = TransformationFunction('hour', lambda x: x.time().hour)  # TODO:v3 extract time
+MINUTE = TransformationFunction('minute', lambda x: x.time().minute)  # TODO:v3 extract time
+DAY_OF_WEEK = TransformationFunction('day_of_week', calendar_utils.day_of_week)
 

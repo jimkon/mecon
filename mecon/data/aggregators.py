@@ -2,7 +2,7 @@ from itertools import chain
 
 import pandas as pd
 
-from data.datafields import InTypeAggregator
+from mecon.data.datafields import InTypeAggregator
 from mecon.utils import calendar_utils
 
 
@@ -90,6 +90,8 @@ class CustomisableAmountTransactionAggregator(CustomisableDefaultTransactionAggr
             amount_agg_f = sum
         elif amount_agg_key == 'avg':
             amount_agg_f = pd.Series.mean
+        elif amount_agg_key == 'median':
+            amount_agg_f = pd.Series.median
         elif amount_agg_key == 'count':
             amount_agg_f = len
         else:

@@ -19,19 +19,20 @@ def transaction_id_formula(transaction, bank):
 
     datetime_str = transaction['datetime'].strftime("d%Y%m%dt%H%M%S")
     amount_str = f"a{'p' if transaction['amount']>0 else 'n'}{int(100 * abs(transaction['amount']))}"
-    ordinal_value = f"i{transaction['id']}"
+    ordinal_value = f"i{transaction['id']}" # TODO that can change depending on the dataset. maybe get different counter for each day
     result = f"{bank_abr}{datetime_str}{amount_str}{ordinal_value}"
     return result
 
 
 class HSBCStatementTransformer(DataframeTransformer):
-    def _transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
+    def _transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:
+        # TODO:v3 make it more readable
         logging.info(f"Transforming HSBC raw transactions ({df_hsbc.shape} shape)")
         # Add prefix to id
         # df_hsbc['id'] = ('1' + df_hsbc['id'].astype(str)).astype(np.int64)
 
         # Combine date and time to create datetime
-        df_hsbc['datetime'] = pd.to_datetime(df_hsbc['date'], format="%d/%m/%Y") + pd.Timedelta('00:00:00')
+        df_hsbc['datetime'] = pd.to_datetime(df_hsbc['date'])
 
         # Set currency to GBP and amount_cur to amount
         df_hsbc['currency'] = 'GBP'
@@ -58,6 +59,8 @@ class MonzoStatementTransformer(DataframeTransformer):
         # df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
         df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%Y-%m-%d") + pd.to_timedelta(
             df_monzo['time'].astype(str))
+        # df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(
+        #     df_monzo['time'].astype(str))
         df_monzo['currency'] = df_monzo['local_currency']
         df_monzo['amount_cur'] = df_monzo['local_amount']
 

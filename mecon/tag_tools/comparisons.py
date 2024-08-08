@@ -16,6 +16,10 @@ class CompareOperatorMustReturnBooleanResults(Exception):
     pass
 
 
+class TypesOfComparedValuesDoNotMatch(Exception):
+    ...
+
+
 class CompareOperator(instance_management.Multiton):
     """
     Compare operators used by Condition.
@@ -30,13 +34,19 @@ class CompareOperator(instance_management.Multiton):
         return self.apply(value_1, value_2)
 
     def apply(self, value_1, value_2):
-        result = self.function(value_1, value_2)
-        self.validate(result)
+        try:
+            result = self.function(value_1, value_2)
+        except TypeError as error:
+            raise TypesOfComparedValuesDoNotMatch(f"Compare operation: {self} received unmatched input types."
+                                                  f" {value_1=} ({type(value_1)})  {value_2=} ({type(value_2)})"
+                                                  f"\n{error=}")
+
+        self.validate_result(result)
         return result
 
-    def validate(self, result):
+    def validate_result(self, result):
         if result != True and result != False:
-            raise CompareOperatorMustReturnBooleanResults(f"{self} return result of {type(result)=}: {result=}")
+            raise CompareOperatorMustReturnBooleanResults(f"Compare operation: {self} return result of {type(result)=}: {result=}")
 
     def __repr__(self):
         return f"CompareOp({self.name})"

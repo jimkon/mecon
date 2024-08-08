@@ -48,7 +48,7 @@ class HSBCTransformerTest(unittest.TestCase):
     def test_transform_hsbc_transactions(self):
         df_hsbc = pd.DataFrame({
             'id': [1, 2, 3],
-            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+            'date': ["01/01/2022", "06/15/2022", "12/31/2022"],
             'amount': [100.0, '2,000.0', '-300.00'],
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
         })

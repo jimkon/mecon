@@ -2,6 +2,7 @@
 import pathlib
 
 DEFAULT_DATASETS_DIR_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets"
+SETTINGS_JSON_FILENAME = r"settings.json"
 
 CURRENCY_LOOKUP_RATES_JSON_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets\currency_rates.json"
 
@@ -25,3 +26,13 @@ HISTORIC_PERFORMANCE_DATA_DIRECTORY_PATH = LOGS_DIRECTORY_PATH / 'historic_perf_
 HISTORIC_PERFORMANCE_DATA_DIRECTORY_PATH.mkdir(exist_ok=True)
 
 HISTORIC_PERFORMANCE_DATA_FILENAME = "performance_data.csv"
+
+TRANSACTIONS_CHUNK_SIZE = 250
+
+EXPECTED_MONZO_COLUMNS_IN_RAW_STATEMENT = {'Transaction',
+                                           "ID",
+                                           "Date", "Time", "Type", "Name", "Emoji",
+                                           "Category", "Amount", "Currency", "Local amount",
+                                           "Local currency", "Notes and  # tags", "Address", "Receipt", "Description",
+                                           "Category split",
+                                           "Money Out", "Money In"}

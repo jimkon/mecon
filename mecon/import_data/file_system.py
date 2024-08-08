@@ -4,6 +4,9 @@ from typing import Dict
 
 import pandas as pd
 
+from mecon import settings
+from mecon import config
+
 
 def _subfolder_csvs(path):
     result = {}
@@ -35,6 +38,10 @@ class Dataset:
     @property
     def name(self):
         return self._path.name
+
+    @property
+    def settings(self):
+        return settings.Settings(self.path / config.SETTINGS_JSON_FILENAME)
 
     @property
     def db(self):

@@ -78,8 +78,15 @@ class TestDateTimeColumnMixin(unittest.TestCase):
             date(2019, 1, 1),
             date(2023, 1, 1),
         )
-        result_df = example_wrapper.date_range()
-        self.assertTupleEqual(result_df, expected_date_range)
+        date_range = example_wrapper.date_range()
+        self.assertTupleEqual(date_range, expected_date_range)
+
+    def test_date_range_empty_df(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'datetime': [
+            ]
+        }))
+        self.assertTupleEqual(example_wrapper.date_range(), (None, None))
 
     def test_select_date_range(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -128,6 +135,84 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         ).dataframe()
         pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
                                       expected_wrapper_df.reset_index(drop=True))
+
+    def test_select_date_range_null_input_dates(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'datetime': [
+                datetime(2019, 1, 1, 0, 0, 0),
+                datetime(2020, 1, 1, 0, 0, 0),
+                datetime(2021, 1, 1, 0, 0, 0),
+                datetime(2022, 1, 1, 0, 0, 0),
+                datetime(2023, 1, 1, 0, 0, 0),
+            ]
+        }))
+
+        # end_date = None
+        expected_wrapper_df = pd.DataFrame({
+            'datetime': [
+                datetime(2020, 1, 1, 0, 0, 0),
+                datetime(2021, 1, 1, 0, 0, 0),
+                datetime(2022, 1, 1, 0, 0, 0),
+                datetime(2023, 1, 1, 0, 0, 0),
+            ]
+        })
+        result_df = example_wrapper.select_date_range(
+            start_date=datetime(2020, 1, 1, 0, 0, 0),
+            end_date=None
+        ).dataframe()
+        pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+        # start_date = None
+        expected_wrapper_df = pd.DataFrame({
+            'datetime': [
+                datetime(2019, 1, 1, 0, 0, 0),
+                datetime(2020, 1, 1, 0, 0, 0),
+                datetime(2021, 1, 1, 0, 0, 0),
+                datetime(2022, 1, 1, 0, 0, 0),
+            ]
+        })
+        result_df = example_wrapper.select_date_range(
+            start_date=None,
+            end_date=datetime(2022, 1, 1, 0, 0, 0)
+        ).dataframe()
+        pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+        # start_date = None and end_date = None
+        expected_wrapper_df = pd.DataFrame({
+            'datetime': [
+                datetime(2019, 1, 1, 0, 0, 0),
+                datetime(2020, 1, 1, 0, 0, 0),
+                datetime(2021, 1, 1, 0, 0, 0),
+                datetime(2022, 1, 1, 0, 0, 0),
+                datetime(2023, 1, 1, 0, 0, 0),
+            ]
+        })
+        result_df = example_wrapper.select_date_range(
+            start_date=None,
+            end_date=None
+        ).dataframe()
+        pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+    def test_select_date_range_empty_transactions(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'datetime': [
+            ]
+        }))
+        # expected_wrapper_df = pd.DataFrame({
+        #     'datetime': [
+        #     ]
+        # })
+        result_df = example_wrapper.select_date_range(
+            start_date='2020-01-01 00:00:00',
+            end_date='2022-01-01 00:00:00'
+        ).dataframe()
+        # uncomment fix TODO in datafields.select_date_range (if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns)
+        # pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
+        #                               expected_wrapper_df.reset_index(drop=True))
+        self.assertEqual(len(result_df), 0)
 
 
 if __name__ == '__main__':

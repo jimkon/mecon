@@ -25,6 +25,20 @@ def to_date(date_arg):
             f"Datetime objects must be of type [str | datetime | date], got {type(date_arg)} instead with value '{date_arg}'.")
 
 
+def to_datetime(date_arg):
+    if isinstance(date_arg, str) and len(date_arg) == 10:  # magic number
+        return datetime.strptime(date_arg, config.DATE_STRING_FORMAT)
+    elif isinstance(date_arg, str) and len(date_arg) == 19:  # magic number
+        return datetime.strptime(date_arg, config.DATETIME_STRING_FORMAT)
+    elif isinstance(date_arg, datetime):
+        return date_arg
+    elif isinstance(date_arg, date):
+        return datetime(date_arg.year, date_arg.month, date_arg.day, 0, 0, 0)
+    else:
+        raise InvalidDatetimeObjectType(
+            f"Datetime objects must be of type [str | datetime | date], got {type(date_arg)} instead with value '{date_arg}'.")
+
+
 class DayOfWeek(Enum):
     MONDAY = 'Monday'
     TUESDAY = 'Tuesday'
@@ -44,18 +58,6 @@ class DateRangeUnit(Enum):
 
 class InvalidDataRange(Exception):
     pass
-
-
-def dayofweek(s):
-    return {
-        0: DayOfWeek.MONDAY.value,
-        1: DayOfWeek.TUESDAY.value,
-        2: DayOfWeek.WEDNESDAY.value,
-        3: DayOfWeek.THURSDAY.value,
-        4: DayOfWeek.FRIDAY.value,
-        5: DayOfWeek.SATURDAY.value,
-        6: DayOfWeek.SUNDAY.value
-    }[s.weekday()]
 
 
 def get_closest_past_monday(dt):
@@ -94,6 +96,10 @@ def datetime_to_date_id(dt):
 
 def datetime_to_date_id_str(dt):
     return str(datetime_to_date_id(dt))
+
+
+def datetime_to_hour_id_str(dt):
+    return f"{str(datetime_to_date_id(dt))}{hour_of_day(dt):0>2}"
 
 
 def date_range(start_date: datetime, end_date: datetime, step: str):
@@ -142,25 +148,65 @@ def date_range_group_beginning(start_date: datetime | date, end_date: datetime |
     return date_range(start_date, end_date, step)
 
 
-def week_of_month(dt):
+def date_to_month_date(date_arg) -> str:
+    _date = to_datetime(date_arg)
+    return _date.strftime("%Y-%m")
+
+
+def days_in_between(start_date, end_date):
+    return [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+
+
+def hour_of_day(date_arg):
+    _date = to_datetime(date_arg)
+    return _date.hour
+
+
+def day_of_week(date_arg) -> str:
+    _date = to_date(date_arg)
+    return {
+        0: DayOfWeek.MONDAY.value,
+        1: DayOfWeek.TUESDAY.value,
+        2: DayOfWeek.WEDNESDAY.value,
+        3: DayOfWeek.THURSDAY.value,
+        4: DayOfWeek.FRIDAY.value,
+        5: DayOfWeek.SATURDAY.value,
+        6: DayOfWeek.SUNDAY.value
+    }[_date.weekday()]
+
+
+def day_of_month(date_arg) -> int:
+    _date = to_date(date_arg)
+    return _date.day
+
+
+def day_of_year(date_arg) -> int:
+    _date = to_date(date_arg)
+    return _date.timetuple().tm_yday
+
+
+def week_of_month(date_arg):
     """ Returns the week of the month for the specified date.
     https://stackoverflow.com/questions/3806473/week-number-of-the-month
     """
 
-    first_day = dt.replace(day=1)
+    _date = to_date(date_arg)
+    first_day = _date.replace(day=1)
 
-    dom = dt.day
+    dom = _date.day
     adjusted_dom = dom + first_day.weekday()
 
     return int(ceil(adjusted_dom / 7.0))
 
 
-def date_to_month_date(date_series):
-    return date_series.dt.year.astype(str) + '-' + date_series.dt.month.astype(str).apply(lambda x: f'{x:0>2}')
+def week_of_year(date_arg):
+    _date = to_date(date_arg)
+    return _date.isocalendar()[1]
 
 
-def days_in_between(start_date, end_date):
-    return [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+def month_of_year(date_arg):
+    _date = to_date(date_arg)
+    return _date.month
 
 
 def part_of_day(hour):
