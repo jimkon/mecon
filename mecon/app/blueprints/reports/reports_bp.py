@@ -1,5 +1,7 @@
+import concurrent
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from flask import Blueprint, render_template, request, url_for
@@ -316,7 +318,184 @@ def tag_info(tag_name):
     return render_template('tag_info.html', **locals(), **globals())
 
 
+import asyncio
+import aiohttp
+
+
+async def fetch_graph_html_from_ui_elements_app(sess, start_date, end_date, tags_str, grouping, tags_split_str):
+    split_tags = tags_split_str.split(',')
+    timeline = None
+    tag_total_amounts_list = []
+    for tag in split_tags:
+        tags = f"{tags_str},{tag}"
+        total_amount_transactions = get_filtered_transactions(start_date, end_date, tags, grouping, 'sum')
+        if grouping != 'none':
+            total_amount_transactions = total_amount_transactions.fill_values(fill_unit=grouping,
+                                                                              start_date=calendar_utils.to_date(
+                                                                                  start_date),
+                                                                              end_date=calendar_utils.to_date(end_date))
+
+        amount_series = total_amount_transactions.amount
+        amount_series.name = tag
+        timeline = total_amount_transactions.datetime
+        # breakpoint()
+        tag_total_amounts_list.append(amount_series)
+
+        # graph_html = graphs.lines_graph_html(
+        #     timeline,
+        #     tag_total_amounts_list,
+        # )
+        graph_kwargs = {
+            'time': timeline,
+            'lines': tag_total_amounts_list
+        }
+
+
+    try:
+        graph_url = f"http://127.0.0.1:5001/graphs/lines_graph_html"
+        async with sess.get(graph_url, **graph_kwargs) as response:
+            if response.status != 200:
+                response.raise_for_status()
+            return response.text
+    except requests.exceptions.RequestException as e:
+        # Handle request-related exceptions, e.g., connection errors, timeout, etc.
+        return f"Failed to fetch URL: {str(e)}"
+
+
+async def async_fetch_all(start_date, end_date, tags_str, grouping):
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for tag_set in ['MoneyIn,MoneyOut,All']:
+            task = asyncio.create_task(fetch_graph_html_from_ui_elements_app(session,
+                                                                             start_date,
+                                                                             end_date,
+                                                                             tags_str,
+                                                                             grouping,
+                                                                             tag_set))
+            tasks.append(task)
+        all_html_graphs = await asyncio.gather(*tasks)
+
+
+def fetch_graph_html_from_ui_elements_app_th(start_date, end_date, tags_str, grouping, tags_split_str):
+    split_tags = tags_split_str.split(',')
+    timeline = None
+    tag_total_amounts_list = []
+    for tag in split_tags:
+        tags = f"{tags_str},{tag}"
+        total_amount_transactions = get_filtered_transactions(start_date, end_date, tags, grouping, 'sum')
+        if grouping != 'none':
+            total_amount_transactions = total_amount_transactions.fill_values(fill_unit=grouping,
+                                                                              start_date=calendar_utils.to_date(
+                                                                                  start_date),
+                                                                              end_date=calendar_utils.to_date(end_date))
+
+        amount_series = total_amount_transactions.amount
+        amount_series.name = tag
+        timeline = total_amount_transactions.datetime
+        # breakpoint()
+        tag_total_amounts_list.append(amount_series)
+
+        # graph_html = graphs.lines_graph_html(
+        #     timeline,
+        #     tag_total_amounts_list,
+        # )
+        graph_kwargs = {
+            'time': timeline,
+            'lines': tag_total_amounts_list
+        }
+
+    try:
+        graph_url = f"http://127.0.0.1:5001/graphs/lines_graph_html"
+        response = requests.get(graph_url, params=graph_kwargs)
+        response.raise_for_status()  # Raise an exception if there's an HTTP error
+        graph_html_result = response.text
+        return graph_html_result
+    except requests.exceptions.RequestException as e:
+        # Handle request-related exceptions, e.g., connection errors, timeout, etc.
+        return f"Failed to fetch URL: {str(e)}"
+
+
 @reports_bp.route('/overall', methods=['POST', 'GET'])
+@logging_utils.codeflow_log_wrapper('#api')
+def overall_report_threading():
+    # percentages
+    transactions, start_date, end_date, tags_str, grouping, aggregation = get_filter_values('All')
+
+    futures = []
+    with ThreadPoolExecutor() as executor:
+        for tag_set in ['MoneyIn,MoneyOut,All', 'Revolut,HSBC,Monzo']:
+            func = lambda: fetch_graph_html_from_ui_elements_app_th(start_date, end_date, tags_str, grouping, tag_set)
+            futures.append(executor.submit(func))
+
+    html_tabs = html_pages.TabsHTML()
+    for future in concurrent.futures.as_completed(futures):
+        html_tabs.add_tab('test', future.result())
+
+
+    # _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    #                                   start_date=start_date,
+    #                                   end_date=end_date,
+    #                                   tags_str=tags_str,
+    #                                   grouping=grouping,
+    #                                   tags_split_str='MoneyIn,MoneyOut,All'))
+    # html_tabs.add_tab('Money In/Out', _graph)
+    #
+    # bank_in_graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    #                                          start_date=start_date,
+    #                                          end_date=end_date,
+    #                                          tags_str=tags_str + ',MoneyIn',
+    #                                          grouping=grouping,
+    #                                          tags_split_str='Revolut,HSBC,Monzo'))
+    #
+    # bank_out_graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    #                                           start_date=start_date,
+    #                                           end_date=end_date,
+    #                                           tags_str=tags_str + ',MoneyOut',
+    #                                           grouping=grouping,
+    #                                           tags_split_str='Revolut,HSBC,Monzo'))
+    # html_tabs.add_tab('Bank', f"<div><h2>Money in</h2>{bank_in_graph}<br><h2>Money out</h2>{bank_out_graph}</div>")
+    #
+    # _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    #                                   start_date=start_date,
+    #                                   end_date=end_date,
+    #                                   tags_str=tags_str,
+    #                                   grouping=grouping,
+    #                                   tags_split_str='Income,ITV income,Deloitte income'))
+    # html_tabs.add_tab('Income', _graph)
+    #
+    # _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    #                                   start_date=start_date,
+    #                                   end_date=end_date,
+    #                                   tags_str=tags_str,
+    #                                   grouping=grouping,
+    #                                   tags_split_str='Commute,TFL,BorisBike,LimeBike,Uber Taxi'))
+    # html_tabs.add_tab('Commute', _graph)
+    #
+    # _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    #                                   start_date=start_date,
+    #                                   end_date=end_date,
+    #                                   tags_str=tags_str,
+    #                                   grouping=grouping,
+    #                                   tags_split_str='Food,Food delivery,Super Market,Food out'))
+    # html_tabs.add_tab('Food', _graph)
+    #
+    # _graph = fetch_graph_html(url_for('reports.tags_split_graph',
+    #                                   start_date=start_date,
+    #                                   end_date=end_date,
+    #                                   tags_str=tags_str,
+    #                                   grouping=grouping,
+    #                                   tags_split_str='All,Morning,Afternoon,Night'))
+    # html_tabs.add_tab('Day segments', _graph)
+
+    # TODO currency split?
+    # TODO location split?
+
+    graph_html = html_tabs.html()
+
+    return render_template('overall_report.html', **locals(), **globals())
+
+
+@reports_bp.route('/overall_old', methods=['POST', 'GET'])
 @logging_utils.codeflow_log_wrapper('#api')
 def overall_report():
     # percentages
