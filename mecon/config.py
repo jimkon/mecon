@@ -18,7 +18,7 @@ DATETIME_STRING_FORMAT = f"{DATE_STRING_FORMAT} {TIME_STRING_FORMAT}"
 
 CREDS_DIRECTORY_PATH = pathlib.Path(r"C:\Users\dimitris\PycharmProjects\mecon\creds")
 
-LOGS_DIRECTORY_PATH = pathlib.Path("logs")
+LOGS_DIRECTORY_PATH = pathlib.Path(r"C:\Users\dimitris\PycharmProjects\mecon\logs")
 LOGS_DIRECTORY_PATH.mkdir(exist_ok=True)
 
 CURRENT_LOG_FILENAME = "logs_raw.csv"
