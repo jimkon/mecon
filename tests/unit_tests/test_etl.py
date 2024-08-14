@@ -4,44 +4,44 @@ from unittest.mock import MagicMock
 
 import pandas as pd
 
-from mecon.import_data import etl
+from mecon.import_data import transformers
 
 
 class TransactionIDTest(unittest.TestCase):
     def test_monzo_positive_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
-        result = etl.transaction_id_formula(transaction, 'Monzo')
+        result = transformers.transaction_id_formula(transaction, 'Monzo')
         self.assertEqual(result, 'MZNd20230101t120000ap5000i123')
 
     def test_monzo_negative_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -30, 'id': 456}
-        result = etl.transaction_id_formula(transaction, 'Monzo')
+        result = transformers.transaction_id_formula(transaction, 'Monzo')
         self.assertEqual(result, 'MZNd20230101t120000an3000i456')
 
     def test_hsbc_positive_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 75, 'id': 789}
-        result = etl.transaction_id_formula(transaction, 'HSBC')
+        result = transformers.transaction_id_formula(transaction, 'HSBC')
         self.assertEqual(result, 'HSBCd20230101t120000ap7500i789')
 
     def test_hsbc_negative_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -20, 'id': 101}
-        result = etl.transaction_id_formula(transaction, 'HSBC')
+        result = transformers.transaction_id_formula(transaction, 'HSBC')
         self.assertEqual(result, 'HSBCd20230101t120000an2000i101')
 
     def test_revolut_positive_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 120, 'id': 111}
-        result = etl.transaction_id_formula(transaction, 'Revolut')
+        result = transformers.transaction_id_formula(transaction, 'Revolut')
         self.assertEqual(result, 'RVLTd20230101t120000ap12000i111')
 
     def test_revolut_negative_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -45, 'id': 222}
-        result = etl.transaction_id_formula(transaction, 'Revolut')
+        result = transformers.transaction_id_formula(transaction, 'Revolut')
         self.assertEqual(result, 'RVLTd20230101t120000an4500i222')
 
     def test_invalid_bank(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
         with self.assertRaises(ValueError):
-            etl.transaction_id_formula(transaction, 'InvalidBank')
+            transformers.transaction_id_formula(transaction, 'InvalidBank')
 
 
 class HSBCTransformerTest(unittest.TestCase):
@@ -63,7 +63,7 @@ class HSBCTransformerTest(unittest.TestCase):
             'description': ['bank:HSBC, Transaction 1', 'bank:HSBC, Transaction 2', 'bank:HSBC, Transaction 3']
         })
 
-        transformer = etl.HSBCStatementTransformer()
+        transformer = transformers.HSBCStatementTransformer()
         transformed_df = transformer.transform(df_hsbc)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
@@ -106,7 +106,7 @@ class MonzoTransformerTest(unittest.TestCase):
                 'bank:Monzo, transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0']
         })
 
-        transformer = etl.MonzoStatementTransformer()
+        transformer = transformers.MonzoStatementTransformer()
         transformed_df = transformer.transform(df_monzo)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
@@ -141,7 +141,7 @@ class RevoTransformerTest(unittest.TestCase):
                 'bank:Revolut, type: Type 3, product: Product C, completed_date: 2022-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0']
         })
 
-        transformer = etl.RevoStatementTransformer()  # currency_converter will be FixedRateCurrencyConverter by default
+        transformer = transformers.RevoStatementTransformer()  # currency_converter will be FixedRateCurrencyConverter by default
         transformed_df = transformer.transform(df_revo)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 

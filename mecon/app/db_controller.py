@@ -5,7 +5,7 @@ import pandas as pd
 
 from mecon.app import models
 from mecon.app.db_extension import db
-from mecon.import_data import etl
+from mecon.import_data import transformers
 from mecon.import_data import io_framework
 from mecon.monitoring import logging_utils
 from mecon.utils import currencies
@@ -207,9 +207,9 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
 
         currency_converter = currencies.HybridLookupCurrencyConverter()
 
-        df_hsbc_transformed = etl.HSBCStatementTransformer().transform(df_hsbc.copy())
-        df_monzo_transformed = etl.MonzoStatementTransformer().transform(df_monzo.copy())
-        df_revo_transformed = etl.RevoStatementTransformer(currency_converter).transform(df_revo.copy())
+        df_hsbc_transformed = transformers.HSBCStatementTransformer().transform(df_hsbc.copy())
+        df_monzo_transformed = transformers.MonzoStatementTransformer().transform(df_monzo.copy())
+        df_revo_transformed = transformers.RevoStatementTransformer(currency_converter).transform(df_revo.copy())
 
         logging.info(f"Checking HSBC transactions for duplicates...")
         self._handle_duplicates(df_hsbc_transformed,
