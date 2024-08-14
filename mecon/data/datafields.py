@@ -12,7 +12,7 @@ from typing import List
 import pandas as pd
 
 from mecon.monitoring import logging_utils
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 from mecon.utils import calendar_utils
 from mecon.utils import dataframe_transformers
 

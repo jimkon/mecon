@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from mecon.monitoring import logging_utils
-from mecon.tag_tools import comparisons, transformations
+from mecon.tags import comparisons, transformations
 from mecon.utils import calendar_utils
 from mecon.utils import instance_management
 

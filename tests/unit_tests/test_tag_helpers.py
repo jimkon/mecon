@@ -1,6 +1,6 @@
 import unittest
 
-from mecon.tag_tools import tag_helpers, tagging
+from mecon.tags import tag_helpers, tagging
 
 
 class TagHelpersTestCase(unittest.TestCase):

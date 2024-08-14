@@ -11,9 +11,9 @@ from mecon.data.transactions import Transactions
 from mecon.monitoring import logging_utils
 from mecon.monitoring import tag_monitoring
 from mecon.monitoring.tag_monitoring import TaggingReport
-from mecon.tag_tools import tag_helpers
-from mecon.tag_tools import tagging, comparisons, transformations
-from mecon.tag_tools.tagging import Tag
+from mecon.tags import tag_helpers
+from mecon.tags import tagging, comparisons, transformations
+from mecon.tags.tagging import Tag
 
 tags_bp = Blueprint('tags', __name__, template_folder='templates')
 

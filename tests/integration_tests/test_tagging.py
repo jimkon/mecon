@@ -3,7 +3,7 @@ from unittest.mock import patch, Mock, call
 
 import pandas as pd
 
-from mecon.tag_tools import comparisons, transformations, tagging
+from mecon.tags import comparisons, transformations, tagging
 
 
 class TestCondition(unittest.TestCase):

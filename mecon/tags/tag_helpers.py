@@ -1,4 +1,4 @@
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 
 
 def add_rule_for_id(tag: tagging.Tag, _id_str: str) -> tagging.Tag:

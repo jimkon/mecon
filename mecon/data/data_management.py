@@ -7,7 +7,7 @@ from mecon.app.datasets import WorkingDatasetDir
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework
 from mecon.monitoring import tag_monitoring
-from mecon.tag_tools.tagging import Tag
+from mecon.tags.tagging import Tag
 
 
 class DataManager:

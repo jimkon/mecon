@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 
 from mecon.data.datafields import DataframeWrapper, Grouping
-from mecon.tag_tools.tagging import Tagger, TagMatchCondition
+from mecon.tags.tagging import Tagger, TagMatchCondition
 from mecon.utils import calendar_utils
 from mecon.utils.instance_management import Multiton
 

@@ -4,7 +4,7 @@ from collections import OrderedDict
 import pandas as pd
 
 from mecon.data import groupings, datafields
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 
 
 def _extract_tags(string):

@@ -1,5 +1,5 @@
 from mecon.monitoring.log_data import PerformanceData
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 
 
 def performance_stats_dict(perf_data: PerformanceData):

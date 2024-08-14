@@ -2,7 +2,7 @@ import abc
 from typing import Set, Iterable
 
 from mecon.data.transactions import Transactions
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 
 
 class IdMatchingCustomRule(tagging.CustomRule, abc.ABC):

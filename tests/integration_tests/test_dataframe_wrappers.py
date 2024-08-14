@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 import pandas as pd
 
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 from data.datafields import DataframeWrapper, Grouping, InTypeAggregator, DateFiller, DatedDataframeWrapper, \
     UnorderedDatedDataframeWrapper, AggregatorABC, InvalidInputToAggregator
 

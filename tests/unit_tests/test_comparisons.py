@@ -1,6 +1,6 @@
 import unittest
 
-from tag_tools import comparisons as cmp
+from tags import comparisons as cmp
 
 
 class TestCompareOperator(unittest.TestCase):
