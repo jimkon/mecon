@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from mecon.import_data import file_system as fs
+from mecon.etl import file_system as fs
 
 
 def create_temporary_folder():

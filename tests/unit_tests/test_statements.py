@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock, call
 
 from pandas import Timestamp
 
-from mecon.import_data.statements import StatementCSV, HSBCStatementCSV, \
+from mecon.etl.statements import StatementCSV, HSBCStatementCSV, \
     MonzoStatementCSV, RevoStatementCSV, \
     StatementDFMergeStrategies
 

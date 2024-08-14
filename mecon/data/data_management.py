@@ -4,7 +4,7 @@ import pandas as pd
 
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.data.transactions import Transactions
-from mecon.import_data import io_framework
+from mecon.etl import io_framework
 from mecon.tag_tools.tagging import Tag
 from mecon.monitoring import tag_monitoring
 from mecon import config

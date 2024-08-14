@@ -1,4 +1,4 @@
-from mecon.import_data.file_system import DatasetDir, Dataset
+from mecon.etl.file_system import DatasetDir, Dataset
 from mecon.utils.instance_management import Singleton
 from mecon import config
 

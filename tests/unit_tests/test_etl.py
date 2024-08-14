@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pandas as pd
 
-from mecon.import_data import transformers
+from mecon.etl import transformers
 
 
 class TransactionIDTest(unittest.TestCase):

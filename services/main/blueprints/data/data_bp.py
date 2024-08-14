@@ -12,9 +12,9 @@ from mecon.data.datafields import NullDataframeInDataframeWrapper, \
     InvalidInputDataFrameColumns  # TODO: It doesn't work if it is "from mecon.data.datafields import ...". the exceptions cannot be caught by the try statement.
 from mecon.app.data_manager import GlobalDataManager
 from mecon.app.datasets import WorkingDatasetDir
-from mecon.import_data import monzo_data
-from mecon.import_data.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
-from mecon.import_data import fetch_statement_files
+from mecon.etl import monzo_data
+from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
+from mecon.etl import fetch_statement_files
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 
