@@ -2,12 +2,12 @@ from typing import List
 
 import pandas as pd
 
+from mecon import config
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework
-from mecon.tag_tools.tagging import Tag
 from mecon.monitoring import tag_monitoring
-from mecon import config
+from mecon.tag_tools.tagging import Tag
 
 
 class DataManager:

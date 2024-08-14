@@ -3,12 +3,12 @@ import logging
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 
-from mecon.monitoring import logging_utils
 from mecon import config
-from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.app_utils import TransactionsDataTransformationToManualTaggingHTMLTable
 from mecon.app.data_manager import GlobalDataManager
+from mecon.app.datasets import WorkingDatasetDir
 from mecon.data.transactions import Transactions
+from mecon.monitoring import logging_utils
 from mecon.monitoring import tag_monitoring
 from mecon.monitoring.tag_monitoring import TaggingReport
 from mecon.tag_tools import tag_helpers

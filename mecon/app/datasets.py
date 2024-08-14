@@ -1,8 +1,8 @@
-from mecon.etl.file_system import DatasetDir, Dataset
-from mecon.utils.instance_management import Singleton
 from mecon import config
-
+from mecon.etl.file_system import DatasetDir, Dataset
 from mecon.settings import GlobalSettings
+from mecon.utils.instance_management import Singleton
+
 
 class WorkingDatasetDir(DatasetDir, Singleton):
     def __init__(self, path=None):

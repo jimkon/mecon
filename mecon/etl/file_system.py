@@ -4,8 +4,8 @@ from typing import Dict
 
 import pandas as pd
 
-from mecon import settings
 from mecon import config
+from mecon import settings
 
 
 def _subfolder_csvs(path):

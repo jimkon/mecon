@@ -5,14 +5,13 @@ import requests
 from flask import Blueprint, render_template, request, url_for
 from json2html import json2html
 
-from mecon.monitoring import logging_utils
 from mecon.app.data_manager import GlobalDataManager
 from mecon.data import reports
 from mecon.data.aggregators import CustomisableAmountTransactionAggregator
 from mecon.data.groupings import LabelGrouping
 from mecon.data.transactions import Transactions
+from mecon.monitoring import logging_utils
 from mecon.utils import html_pages, calendar_utils
-
 from services.main.blueprints.reports import graphs, graph_utils
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')

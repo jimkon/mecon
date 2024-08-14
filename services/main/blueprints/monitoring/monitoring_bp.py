@@ -4,11 +4,10 @@ import pandas as pd
 from flask import Blueprint, render_template, request
 
 from mecon.app.datasets import WorkingDatasetDir
-from mecon.monitoring.logs import get_log_files, read_logs_as_df, HistoricalPerformanceData
-from mecon.utils import html_pages
 from mecon.monitoring.log_data import LogData, PerformanceData
+from mecon.monitoring.logs import get_log_files, read_logs_as_df, HistoricalPerformanceData
 from mecon.monitoring.tag_monitoring import TaggingReport
-
+from mecon.utils import html_pages
 from services.main.blueprints.monitoring.monitoring_helpers import performance_stats_dict
 from services.main.blueprints.reports import graphs
 

@@ -1,7 +1,7 @@
 import json
+import logging
 import pathlib
 from datetime import datetime
-import logging
 from io import StringIO
 from typing import Mapping
 

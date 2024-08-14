@@ -1,20 +1,20 @@
 import logging
 import pathlib
-from typing import Dict
 from datetime import datetime
+from typing import Dict
 
 import pandas as pd
 from flask import Blueprint, redirect, url_for, render_template, request
 from json2html import json2html
 
-from mecon.monitoring import logging_utils
-from mecon.data.datafields import NullDataframeInDataframeWrapper, \
-    InvalidInputDataFrameColumns  # TODO: It doesn't work if it is "from mecon.data.datafields import ...". the exceptions cannot be caught by the try statement.
 from mecon.app.data_manager import GlobalDataManager
 from mecon.app.datasets import WorkingDatasetDir
+from mecon.data.datafields import NullDataframeInDataframeWrapper, \
+    InvalidInputDataFrameColumns  # TODO: It doesn't work if it is "from mecon.data.datafields import ...". the exceptions cannot be caught by the try statement.
+from mecon.etl import fetch_statement_files
 from mecon.etl import monzo_data
 from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
-from mecon.etl import fetch_statement_files
+from mecon.monitoring import logging_utils
 
 data_bp = Blueprint('data', __name__, template_folder='templates')
 

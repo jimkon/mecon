@@ -1,5 +1,5 @@
-import pathlib
 import json
+import pathlib
 
 from mecon.config import SETTINGS_JSON_FILEPATH
 

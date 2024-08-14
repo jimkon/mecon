@@ -3,8 +3,8 @@ import json
 from datetime import datetime
 from typing import List, Iterable
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from mecon.monitoring import logging_utils
 from mecon.tag_tools import comparisons, transformations
