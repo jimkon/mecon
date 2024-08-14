@@ -6,8 +6,9 @@ import pandas as pd
 from flask import Flask
 from flask_testing import TestCase
 
-from mecon.app import db, models
+from mecon.app import models
 from mecon.app import db_controller
+from mecon.app.db_extension import db
 
 
 def _create_app():

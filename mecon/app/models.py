@@ -1,5 +1,3 @@
-import json
-
 from mecon.app.db_extension import db
 
 

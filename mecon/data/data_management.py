@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from mecon.app import WorkingDatasetDir
+from mecon.app.datasets import WorkingDatasetDir
 from mecon.data.transactions import Transactions
 from mecon.import_data import io_framework
 from mecon.tag_tools.tagging import Tag

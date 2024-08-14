@@ -2,6 +2,7 @@ from mecon.import_data.file_system import DatasetDir, Dataset
 from mecon.utils.instance_management import Singleton
 from mecon import config
 
+from mecon.settings import GlobalSettings
 
 class WorkingDatasetDir(DatasetDir, Singleton):
     def __init__(self, path=None):
@@ -9,7 +10,8 @@ class WorkingDatasetDir(DatasetDir, Singleton):
             path = config.DEFAULT_DATASETS_DIR_PATH
         super().__init__(path)
 
-        self.set_working_dataset(config.DEFAULT_DATASET_NAME)
+        curr_dataset_name = GlobalSettings()['CURRENT_DATASET']
+        self.set_working_dataset(curr_dataset_name)
 
     @property
     def working_dataset(self) -> Dataset:

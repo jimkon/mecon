@@ -10,7 +10,7 @@ import plotly.express as px
 import plotly.io as pio
 
 from mecon.monitoring import logging_utils
-from mecon.app.blueprints.reports import graph_utils
+from services.main.blueprints.reports import graph_utils
 
 pio.templates["custom_template"] = go.layout.Template(
     layout_colorway=px.colors.qualitative.Antique

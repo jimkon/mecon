@@ -1,10 +1,10 @@
 import unittest
 from pandas import Timestamp
 
-from mecon.app.blueprints.data import data_bp
 from mecon.app.datasets import WorkingDatasetDir
 from mecon.app.data_manager import GlobalDataManager
 
+from services.main.blueprints.data import data_bp
 
 test_dataset_obj = WorkingDatasetDir.get_instance().set_working_dataset('test')
 
