@@ -24,6 +24,3 @@ class Settings(dict):
         super().__setitem__(key, value)
         self.save()
 
-class GlobalSettings(Settings):
-    def __init__(self):
-        super().__init__(SETTINGS_JSON_FILEPATH)

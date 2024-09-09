@@ -41,7 +41,11 @@ class Dataset:
 
     @property
     def settings(self):
-        return settings.Settings(self.path / config.SETTINGS_JSON_FILENAME)
+        settings_path = self.path / config.SETTINGS_JSON_FILENAME
+        if settings_path.exists():
+            return settings.Settings(settings_path)
+        else:
+            return None
 
     @property
     def db(self):
