@@ -1,12 +1,15 @@
 import json
 import pathlib
 
-from mecon.config import SETTINGS_JSON_FILEPATH
+from mecon.config import SETTINGS_JSON_FILENAME
 
 
 # TODO add saved links
 class Settings(dict):
-    def __init__(self, path: str | pathlib.Path):
+    def __init__(self, path: str | pathlib.Path | None = None):
+        if path is None:
+            path = SETTINGS_JSON_FILENAME
+
         self._json_path = pathlib.Path(path)
         if not self._json_path.exists():
             self._json_path.write_text('{}')
@@ -24,3 +27,5 @@ class Settings(dict):
         super().__setitem__(key, value)
         self.save()
 
+    def __str__(self):
+        return json.dumps(self, indent=4)
