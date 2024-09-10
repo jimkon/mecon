@@ -10,7 +10,6 @@ COPY ./services/main_shiny/requirements.txt ./requirements_shiny.txt
 
 RUN pip install --upgrade pip && pip install -r requirements.txt && pip install -r requirements_shiny.txt
 
-# it does not cache, why??
 WORKDIR mecon_pgk
 COPY ./mecon ./mecon
 COPY ./setup.py ./setup.py

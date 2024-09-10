@@ -2,7 +2,6 @@ import logging
 
 from mecon import config
 from mecon.etl.file_system import DatasetDir, Dataset
-# from mecon.utils.instance_management import Singleton
 
 
 class WorkingDatasetDir(DatasetDir):
@@ -18,11 +17,6 @@ class WorkingDatasetDir(DatasetDir):
     @property
     def working_dataset(self) -> Dataset:
         return self._working_dataset
-
-    # @classmethod
-    # def set_working_directory(cls, new_path):
-    #     super().set_instance(
-    #         WorkingDatasetDir(path=new_path))  # TODO what is this??? has to go, should be a singleton now
 
     def set_working_dataset(self, dataset_name) -> Dataset:
         self._working_dataset = self.get_dataset(dataset_name)
