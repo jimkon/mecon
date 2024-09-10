@@ -31,6 +31,9 @@ class Dataset:
         self._statements = self._data / 'statements'
         self._statements.mkdir(parents=True, exist_ok=True)
 
+        settings_path = self.path / config.SETTINGS_JSON_FILENAME
+        self._settings = settings.Settings(settings_path)
+
     @property
     def path(self):
         return self._path
@@ -41,11 +44,7 @@ class Dataset:
 
     @property
     def settings(self):
-        settings_path = self.path / config.SETTINGS_JSON_FILENAME
-        if settings_path.exists():
-            return settings.Settings(settings_path)
-        else:
-            return None
+        return self._settings
 
     @property
     def db(self):
@@ -84,6 +83,9 @@ class DatasetDir:
             if subpath.is_dir():
                 self._datasets.append(Dataset(subpath))
 
+        settings_path = self.path / config.SETTINGS_JSON_FILENAME
+        self._settings = settings.Settings(settings_path)
+
     @property
     def name(self):
         return self.path.name
@@ -92,10 +94,19 @@ class DatasetDir:
     def path(self):
         return self._path
 
+    @property
+    def settings(self):
+        return self._settings
+
     def datasets(self):
         return self._datasets
 
+    def is_empty(self):
+        return len(self.datasets()) == 0
+
     def get_dataset(self, dataset_name) -> Dataset:
+        if dataset_name is None or self.is_empty():
+            return None
         dataset_path = self.path / dataset_name
         return Dataset(dataset_path) if dataset_path.exists() else None
 

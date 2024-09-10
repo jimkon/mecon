@@ -1,7 +1,7 @@
 # TODO:v3 work with relative files
 import pathlib
 
-DEFAULT_DATASETS_DIR_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets"
+DEFAULT_DATASETS_DIR_PATH = pathlib.Path(r"C:\Users\dimitris\PycharmProjects\mecon\datasets")
 SETTINGS_JSON_FILENAME = r"settings.json"
 SETTINGS_JSON_FILEPATH = pathlib.Path(DEFAULT_DATASETS_DIR_PATH, SETTINGS_JSON_FILENAME)
 
