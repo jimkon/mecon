@@ -21,7 +21,6 @@ def _subfolder_csvs(path):
 class Dataset:
     def __init__(self, path: str | pathlib.Path):
         self._path = pathlib.Path(path)
-        logging.info(f"New dataset in path {self._path} #info#filesystem")
 
         self._data = self._path / 'data'
 
@@ -82,6 +81,7 @@ class DatasetDir:
         for subpath in self._path.iterdir():
             if subpath.is_dir():
                 self._datasets.append(Dataset(subpath))
+                logging.info(f"New dataset in path {self._path} #info#filesystem")
 
         settings_path = self.path / config.SETTINGS_JSON_FILENAME
         self._settings = settings.Settings(settings_path)
@@ -104,9 +104,10 @@ class DatasetDir:
     def is_empty(self):
         return len(self.datasets()) == 0
 
-    def get_dataset(self, dataset_name) -> Dataset:
+    def get_dataset(self, dataset_name) -> Dataset | None:
         if dataset_name is None or self.is_empty():
             return None
+
         dataset_path = self.path / dataset_name
         return Dataset(dataset_path) if dataset_path.exists() else None
 
