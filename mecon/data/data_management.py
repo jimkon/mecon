@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 
 from mecon import config
-from mecon.app.datasets import WorkingDatasetDir
+# from mecon.app.datasets import WorkingDatasetDir todo investigate and remove
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework
 from mecon.monitoring import tag_monitoring
@@ -199,9 +199,9 @@ class CacheDataManager:
         for tag in all_tags:
             transactions = transactions.apply_tag(tag)
 
-        if config.TAG_MONITORING:
-            tagging_report = tagging_monitor.produce_report()
-            tagging_report.store(WorkingDatasetDir.get_instance().working_dataset.path)
+        # if config.TAG_MONITORING: # todo data package should be using app package
+        #     tagging_report = tagging_monitor.produce_report()
+        #     tagging_report.store(WorkingDatasetDir.get_instance().working_dataset.path)
 
         data_df = transactions.dataframe()
         self._transactions.update_tags(data_df)

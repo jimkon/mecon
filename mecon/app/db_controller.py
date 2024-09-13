@@ -1,10 +1,11 @@
+import json
 import logging
 from typing import Any, List
 
 import pandas as pd
+from sqlalchemy.sql.expression import case
 
 from mecon.app import models
-from mecon.app.db_extension import db
 from mecon.etl import io_framework
 from mecon.etl import transformers
 from mecon.monitoring import logging_utils
@@ -12,92 +13,126 @@ from mecon.utils import currencies
 
 
 class TagsDBAccessor(io_framework.TagsIOABC):
+    def __init__(self, db):
+        super().__init__()
+        self._db = db
+
+    def _format_received_tag(self, tag):
+        conditions_json = json.loads(tag.conditions_json)
+
+        return {
+            'name': tag.name,
+            'conditions_json': conditions_json
+        }
+
     @logging_utils.codeflow_log_wrapper('#db#tags')
-    def get_tag(self, name: str) -> list[str, Any] | None:
-        tag = models.TagsDBTable.query.filter_by(name=name).first()
+    def get_tag(self, name: str) -> dict[str, Any] | None:
+        new_session = self._db.session
+        tag = new_session.query(models.TagsDBTable).filter_by(name=name).first()
 
         if tag is None:
             return None
 
-        return tag.to_dict()
+        return self._format_received_tag(tag)
+
 
     @logging_utils.codeflow_log_wrapper('#db#tags')
     def set_tag(self, name: str, conditions_json: list | dict) -> None:
         # if len(conditions_json) > 2000:  # TODO:v3 do we need this?
         #     raise ValueError(f"Tag's json string is bigger than 2000 characters ({len(conditions_json)=})."
         #                      f" Consider increasing the upper limit.")
-
-        tag = db.session.query(models.TagsDBTable).filter_by(name=name).first()
+        new_session = self._db.session
+        tag = new_session.query(models.TagsDBTable).filter_by(name=name).first()
         if tag is None:
             tag = models.TagsDBTable(
                 name=name,
-                conditions_json=str(conditions_json)
+                conditions_json=json.dumps(conditions_json)  # str(conditions_json)
             )
-            db.session.add(tag)
-            db.session.commit()
+            new_session.add(tag)
         else:
-            tag.conditions_json = str(conditions_json)
-            db.session.commit()
+            tag.conditions_json = json.dumps(conditions_json)
+
+        new_session.commit()
 
     @logging_utils.codeflow_log_wrapper('#db#tags')
     def delete_tag(self, name: str) -> bool:
-        tag = db.session.query(models.TagsDBTable).filter_by(name=name).first()
+        new_session = self._db.session
+        tag = new_session.query(models.TagsDBTable).filter_by(name=name).first()
         if tag:
-            db.session.delete(tag)
-            db.session.commit()
+            new_session.delete(tag)
+            new_session.commit()  # Make sure to commit after deleting
             return True
         return False
 
     @logging_utils.codeflow_log_wrapper('#db#tags')
     def all_tags(self) -> list[dict]:
-        tags = [tag.to_dict() for tag in models.TagsDBTable.query.all()]
+        new_session = self._db.session
+        tags = [self._format_received_tag(tag) for tag in new_session.query(models.TagsDBTable).all()]
         return tags
 
 
 class HSBCTransactionsDBAccessor(io_framework.HSBCTransactionsIOABC):
+    def __init__(self, db):
+        super().__init__()
+        self._db = db
+
     def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
-        merged_df.to_sql(models.HSBCTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
+        merged_df.to_sql(models.HSBCTransactionsDBTable.__tablename__, self._db.engine, if_exists='append', index=False)
 
     def get_transactions(self) -> pd.DataFrame:
         # TODO:v3 get and delete transactions is the same for all tables. deal with duplicated code
-        transactions = models.HSBCTransactionsDBTable.query.all()
+        new_session = self._db.session
+        transactions = new_session.query(models.HSBCTransactionsDBTable).all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df) > 0 else None
 
     def delete_all(self) -> None:
-        db.session.query(models.HSBCTransactionsDBTable).delete()
-        db.session.commit()
+        new_session = self._db.session
+        new_session.query(models.HSBCTransactionsDBTable).delete()
+        new_session.commit()
 
 
 class MonzoTransactionsDBAccessor(io_framework.MonzoTransactionsIOABC):
+    def __init__(self, db):
+        super().__init__()
+        self._db = db
+
     def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
-        merged_df.to_sql(models.MonzoTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
+        merged_df.to_sql(models.MonzoTransactionsDBTable.__tablename__, self._db.engine, if_exists='append', index=False)
 
     def get_transactions(self) -> pd.DataFrame:
-        transactions = models.MonzoTransactionsDBTable.query.all()
+        new_session = self._db.session
+        transactions = new_session.query(models.MonzoTransactionsDBTable).all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df) > 0 else None
 
     def delete_all(self) -> None:
-        db.session.query(models.MonzoTransactionsDBTable).delete()
-        db.session.commit()
+        new_session = self._db.session
+        new_session.query(models.MonzoTransactionsDBTable).delete()
+        new_session.commit()
 
 
 class RevoTransactionsDBAccessor(io_framework.RevoTransactionsIOABC):
+    def __init__(self, db):
+        super().__init__()
+        self._db = db
+
     def import_statement(self, dfs: List[pd.DataFrame] | pd.DataFrame):
         merged_df = pd.concat(dfs) if isinstance(dfs, list) else dfs
-        merged_df.to_sql(models.RevoTransactionsDBTable.__tablename__, db.engine, if_exists='append', index=False)
+        merged_df.to_sql(models.RevoTransactionsDBTable.__tablename__, self._db.engine, if_exists='append', index=False)
 
     def get_transactions(self) -> pd.DataFrame:
-        transactions = models.RevoTransactionsDBTable.query.all()
+        new_session = self._db.session
+        transactions = new_session.query(models.RevoTransactionsDBTable).all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df if len(transactions_df) > 0 else None
 
     def delete_all(self) -> None:
-        db.session.query(models.RevoTransactionsDBTable).delete()
-        db.session.commit()
+        new_session = self._db.session
+        new_session.query(models.RevoTransactionsDBTable).delete()
+        new_session.commit()
 
 
 class InvalidTransactionsDataframeColumnsException(Exception):
@@ -131,6 +166,10 @@ class InvalidTransactionsDataframeDataValueException(Exception):
 
 
 class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
+    def __init__(self, db):
+        super().__init__()
+        self._db = db
+
     @staticmethod
     def _transaction_df_validation(df):
         TransactionsDBAccessor._transaction_df_columns_validation(df)
@@ -190,20 +229,22 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
 
     @logging_utils.codeflow_log_wrapper('#db#data#io')
     def get_transactions(self) -> pd.DataFrame:
-        transactions = models.TransactionsDBTable.query.all()
+        new_session = self._db.session
+        transactions = new_session.query(models.TransactionsDBTable).all()
         transactions_df = pd.DataFrame([trans.to_dict() for trans in transactions])
         return transactions_df
 
     @logging_utils.codeflow_log_wrapper('#db#data#io')
     def delete_all(self) -> None:
-        db.session.query(models.TransactionsDBTable).delete()
-        db.session.commit()
+        new_session = self._db.session
+        new_session.query(models.TransactionsDBTable).delete()
+        new_session.commit()
 
     @logging_utils.codeflow_log_wrapper('#db#data#io')
     def load_transactions(self) -> None:
-        df_hsbc = HSBCTransactionsDBAccessor().get_transactions()
-        df_monzo = MonzoTransactionsDBAccessor().get_transactions()
-        df_revo = RevoTransactionsDBAccessor().get_transactions()
+        df_hsbc = HSBCTransactionsDBAccessor(self._db).get_transactions()
+        df_monzo = MonzoTransactionsDBAccessor(self._db).get_transactions()
+        df_revo = RevoTransactionsDBAccessor(self._db).get_transactions()
 
         currency_converter = currencies.HybridLookupCurrencyConverter()
 
@@ -231,20 +272,32 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
         df_merged = df_merged.sort_values(by='datetime')
         df_merged['tags'] = ''
 
-        df_merged.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+        df_merged.to_sql(models.TransactionsDBTable.__tablename__, self._db.engine, if_exists='replace', index=False)
 
     @logging_utils.codeflow_log_wrapper('#db#tags')
     def update_tags(self, df_tags) -> None:
         logging.info(f"Updating tags (shape: {df_tags.shape}) in DB.")
-        # transaction_ids = df_tags['id'].to_list()
-        update_values = df_tags.set_index('id')['tags'].to_dict()
 
-        for transaction_id, tags in update_values.items():
-            db.session.query(models.TransactionsDBTable).filter_by(id=transaction_id).update({'tags': tags})
+        session = self._db.session  # Access the session
 
-        # from sqlalchemy.sql.expression import case  # more efficient but uses an extra dependency (sqlalchemy)
-        # db.session.query(models.TransactionsDBTable).filter(models.TransactionsDBTable.id.in_(transaction_ids)).update(
-        #     {models.TransactionsDBTable.tags: case(update_values, value=models.TransactionsDBTable.id)},
-        #     synchronize_session=False
-        # )
-        db.session.commit()
+        try:
+            update_values = df_tags.set_index('id')['tags'].to_dict()
+            # Iterate over the dictionary and update the rows in the database
+            # for transaction_id, tags in update_values.items():
+            #     session.query(models.TransactionsDBTable).filter_by(id=transaction_id).update({'tags': tags})
+            # Use a `case` expression to perform a batch update
+            session.query(models.TransactionsDBTable).filter(
+                models.TransactionsDBTable.id.in_(update_values.keys())).update(
+                {models.TransactionsDBTable.tags: case(update_values, value=models.TransactionsDBTable.id)},
+                synchronize_session=False
+            )
+
+            # Commit the session after all updates
+            session.commit()
+
+        except Exception as e:
+            logging.error(f"Failed to update tags: {e}")
+            session.rollback()  # Rollback in case of error
+
+        finally:
+            session.close()  # Ensure the session is closed
