@@ -1,9 +1,12 @@
 # setup_logging()
+import json
 import logging
 
+import pandas as pd
+from json2html import json2html
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-from mecon.app.datasets import WorkingDatasetDir, WorkingDataManagerInfo
+from mecon.app.datasets import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo
 from mecon.settings import Settings
 
 # from mecon.monitoring.logs import setup_logging
@@ -17,18 +20,20 @@ datasets_obj = WorkingDatasetDir(path=settings['DATASETS_DIR']) if 'DATASETS_DIR
 
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 
+df = WorkingDatasetDirInfo().statement_files_info_df().to_html(classes='table table-striped', border=0)
+
 app_ui = ui.page_fluid(
     ui.navset_tab(
         ui.nav_panel("Home", 'Nothing here...'),
         ui.nav_panel("Datasets",
                      ui.card(
-                         "Working Directory",
+                         ui.h2("Working Directory"),
                          ui.output_text(id="current_dataset_directory"),
                          ui.input_action_button("change_dataset_dir_button", "Change working directory...",
                                                 disabled=True, width='300px'),
                      ),
                      ui.card(
-                         "Datasets",
+                         ui.h2("Datasets"),
                          ui.input_select(
                              id="dataset_select",
                              label="Select dataset:",
@@ -38,13 +43,15 @@ app_ui = ui.page_fluid(
                          ),
                          ui.input_action_button("import_dataset_button", "Import dataset...", disabled=True,
                                                 width='300px'),
-                     ),
-                     # ui.output_text(
-                     #     id="current_dataset_label"
-                     # ),
-                     ),
-        ui.nav_panel("DB", ui.output_text("db_info_text"),),
-        ui.nav_panel("Statements", ui.output_text("statements_info_text"),),
+                     )),
+        ui.nav_panel("DB", ui.page_fluid(
+            ui.input_action_button("reset_db_button", "Reset", disabled=True, width='300px'),
+
+        )),
+        ui.nav_panel("Statements", ui.page_fluid(
+            ui.h2("DataFrame as HTML Table"),
+            ui.HTML(df)
+        )),
     )
 )
 
@@ -59,12 +66,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def dataset_input_select_click_event():
         datasets_obj.set_working_dataset(input.dataset_select())
         datasets_obj.settings['CURRENT_DATASET'] = input.dataset_select()
-
-    @render.text
-    def statements_info_text():
-        info_json = datasets_obj.info()
-        # html_json = ui.HTML(json2html.convert(json=info_json2))
-        return info_json
 
     @render.text
     def db_info_text():

@@ -32,9 +32,6 @@ class WorkingDatasetDir(DatasetDir):
         logging.info(f"Setting new current working dataset to {dataset_name}")
         return self.working_dataset
 
-    def info(self):
-        return WorkingDatasetDirInfo(self).statement_files_info()
-
 
 class WorkingDatasetDirInfo:
     def __init__(self):
@@ -59,6 +56,20 @@ class WorkingDatasetDirInfo:
             transformed_dict[dir_name] = files_info
 
         return transformed_dict
+
+    def statement_files_info_df(self) -> pd.DataFrame:
+        info_json = self.statement_files_info()
+
+        dfs = []
+        for bank, rows in info_json.items():
+            df = pd.DataFrame(rows, columns=['path', 'filename', 'rows'])
+            df['bank'] = bank
+            dfs.append(df)
+
+        merged_df = pd.concat(dfs, ignore_index=True)[['bank', 'filename', 'stats', 'rows', ]]
+        return merged_df
+
+
 
 
 class WorkingDataManager(CachedDBDataManager):
