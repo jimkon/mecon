@@ -24,8 +24,5 @@ class DBWrapper:
     def engine(self):
         return self._engine
 
-    @property
-    def session(self):
+    def new_session(self):
         return self._session_maker()
-
-# db = None

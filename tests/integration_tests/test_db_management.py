@@ -20,7 +20,7 @@ class TestTagsDBData(unittest.TestCase):
     def tearDownClass(cls):
         # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
         models.Base.metadata.drop_all(cls.db._engine)
-        cls.db.session.close()
+        # cls.db.session.close()
 
     def test_get_non_existing_tag(self):
         returned_tag = self.accessor.get_tag('a non existing tag')
@@ -80,7 +80,7 @@ class HSBCTransactionsDBAccessorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
         models.Base.metadata.drop_all(cls.db._engine)
-        cls.db.session.close()
+        # cls.db.session.close()
 
     def test_import_statement_single_dataframe(self):
         self.accessor.delete_all()
@@ -172,7 +172,7 @@ class MonzoTransactionsDBAccessorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
         models.Base.metadata.drop_all(cls.db._engine)
-        cls.db.session.close()
+        # cls.db.session.close()
 
     def test_import_statement_single_dataframe(self):
         self.accessor.delete_all()
@@ -334,7 +334,7 @@ class RevoTransactionsDBAccessorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
         models.Base.metadata.drop_all(cls.db._engine)
-        cls.db.session.close()
+        # cls.db.session.close()
 
     def test_import_statement_single_dataframe(self):
         self.accessor.delete_all()
@@ -461,7 +461,7 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
     def tearDownClass(cls):
         # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
         models.Base.metadata.drop_all(cls.db._engine)
-        cls.db.session.close()
+        # cls.db.session.close()
 
     def _load_db(self):
         db_controller.HSBCTransactionsDBAccessor(self.db).delete_all()
@@ -523,9 +523,11 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
 
         expected_df = pd.DataFrame(
             {
-                'id': ['RVLTd20210101t000000ap13000i31', 'RVLTd20210615t123030ap24000i32', 'RVLTd20211231t235959ap30000i33',
+                'id': ['RVLTd20210101t000000ap13000i31', 'RVLTd20210615t123030ap24000i32',
+                       'RVLTd20211231t235959ap30000i33',
                        'MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3',
-                       'HSBCd20230101t000000ap100000i1', 'HSBCd20230615t000000ap200000i2', 'HSBCd20231231t000000ap300000i3'],
+                       'HSBCd20230101t000000ap100000i1', 'HSBCd20230615t000000ap200000i2',
+                       'HSBCd20231231t000000ap300000i3'],
                 'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
                              datetime(2021, 12, 31, 23, 59, 59), datetime(2022, 1, 1, 0, 0, 0),
                              datetime(2022, 6, 15, 12, 30, 30), datetime(2022, 12, 31, 23, 59, 59),
@@ -586,14 +588,12 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
             })
             db_controller.TransactionsDBAccessor._transaction_df_types_validation(test_df)
         except db_controller.InvalidTransactionsDataframeDataTypesException as inv_types_error:
-            expected_errors = [
-                "invalid type for column 'id'. expected: string, got: int64",
-                "invalid type for column 'datetime'. expected: datetime, got: int64",
-                "invalid type for column 'amount'. expected: number, got: object",
-                "invalid type for column 'currency'. expected: string, got: int64",
-                "invalid type for column 'amount_cur'. expected: number, got: object",
-                "invalid type for column 'description'. expected: string, got: int64"
-            ]
+            expected_errors = ["Invalid type for column 'id'. Expected string, got: int64",
+                               "Invalid type for column 'datetime'. Expected datetime, got: int64",
+                               "Invalid type for column 'amount'. Expected numeric, got: object",
+                               "Invalid type for column 'currency'. Expected string, got: int64",
+                               "Invalid type for column 'amount_cur'. Expected numeric, got: object",
+                               "Invalid type for column 'description'. Expected string, got: int64"]
             self.assertEqual(inv_types_error.invalid_types, expected_errors)
         else:
             self.fail(f"Expecting InvalidTransactionsDataframeDataTypesException but not raised.")
@@ -614,7 +614,8 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
             db_controller.TransactionsDBAccessor._transaction_df_values_validation(test_df)
 
     def test_get_transactions(self):
-        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
+        self.assertEqual(len(self.accessor.get_transactions()),
+                         0)  # TODO it should return the right columns even if empty
 
         # expected_df = self._load_db()
         df = pd.DataFrame({
@@ -651,7 +652,8 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
 
         self.accessor.delete_all()
 
-        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
+        self.assertEqual(len(self.accessor.get_transactions()),
+                         0)  # TODO it should return the right columns even if empty
 
     def test_load_transactions(self):
         self.accessor.delete_all()
@@ -664,7 +666,8 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
                 'GBP': 1.0
             }) * amount
 
-        with mock.patch.object(db_controller.transformers.RevoStatementTransformer, 'convert_amounts', side_effect=convert_amounts):
+        with mock.patch.object(db_controller.transformers.RevoStatementTransformer, 'convert_amounts',
+                               side_effect=convert_amounts):
             self.accessor.load_transactions()
 
         transactions = self.accessor.get_transactions()

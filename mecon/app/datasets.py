@@ -4,7 +4,6 @@ from typing import Dict
 
 import pandas as pd
 
-# from app.db_extension import DBWrapper
 from mecon.app.data_manager import CachedDBDataManager
 from mecon import config
 from mecon.etl.file_system import DatasetDir, Dataset
