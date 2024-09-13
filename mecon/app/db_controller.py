@@ -12,7 +12,7 @@ from mecon.monitoring import logging_utils
 from mecon.utils import currencies
 
 
-class TagsDBAccessor:
+class TagsDBAccessor(io_framework.TagsIOABC):
     def __init__(self, db):
         self._db = db
 
@@ -89,7 +89,7 @@ class TagsDBAccessor:
             session.close()
 
 
-class BaseTransactionsDBAccessor:
+class BaseTransactionsDBAccessor(io_framework.RawTransactionsIOABC):
     def __init__(self, db, model):
         self._db = db
         self._model = model  # Model reference passed in constructor

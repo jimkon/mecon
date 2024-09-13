@@ -10,13 +10,16 @@ from mecon.monitoring import tag_monitoring
 from mecon.tags.tagging import Tag
 
 
+# todo DataManager and CachedDataManager should have a common super class
+
+
 class DataManager:
     def __init__(self,
                  trans_io: io_framework.CombinedTransactionsIOABC,
                  tags_io: io_framework.TagsIOABC,
-                 hsbc_stats_io: io_framework.HSBCTransactionsIOABC,
-                 monzo_stats_io: io_framework.MonzoTransactionsIOABC,
-                 revo_stats_io: io_framework.RevoTransactionsIOABC):
+                 hsbc_stats_io: io_framework.RawTransactionsIOABC,
+                 monzo_stats_io: io_framework.RawTransactionsIOABC,
+                 revo_stats_io: io_framework.RawTransactionsIOABC):
         self._transactions = trans_io
         self._tags = tags_io
         self._hsbc_statements = hsbc_stats_io
@@ -97,9 +100,9 @@ class CacheDataManager:
     def __init__(self,
                  trans_io: io_framework.CombinedTransactionsIOABC,
                  tags_io: io_framework.TagsIOABC,
-                 hsbc_stats_io: io_framework.HSBCTransactionsIOABC,
-                 monzo_stats_io: io_framework.MonzoTransactionsIOABC,
-                 revo_stats_io: io_framework.RevoTransactionsIOABC):
+                 hsbc_stats_io: io_framework.RawTransactionsIOABC,
+                 monzo_stats_io: io_framework.RawTransactionsIOABC,
+                 revo_stats_io: io_framework.RawTransactionsIOABC):
         self._transactions = trans_io
         self._tags = tags_io
         self._hsbc_statements = hsbc_stats_io
