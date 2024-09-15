@@ -28,13 +28,13 @@ app_ui = ui.page_fluid(
         ui.nav_panel("Home", 'Nothing here...'),
         ui.nav_panel("Datasets",
                      ui.card(
-                         ui.h2("Working Directory"),
+                         ui.h3("Working Directory"),
                          ui.output_text(id="current_dataset_directory"),
                          ui.input_action_button("change_dataset_dir_button", "Change working directory...",
                                                 disabled=True, width='300px'),
                      ),
                      ui.card(
-                         ui.h2("Datasets"),
+                         ui.h3("Datasets"),
                          ui.input_select(
                              id="dataset_select",
                              label="Select dataset:",
@@ -46,14 +46,25 @@ app_ui = ui.page_fluid(
                                                 width='300px'),
                      )),
         ui.nav_panel("DB", ui.page_fluid(
-            ui.h2('Database content'),
+            ui.h3('Database content'),
             ui.output_text(id="db_info_text"),
             ui.input_task_button("reset_db_button", "Reset", label_busy='Might take up to a minute...', width='300px'),
         )),
         ui.nav_panel("Statements", ui.page_fluid(
-            ui.h2("DataFrame as HTML Table"),
+            ui.h3("DataFrame as HTML Table"),
             # ui.HTML(df)
             ui.output_data_frame("statements_info_dataframe")
+        )),
+        ui.nav_panel("Load statements", ui.page_fluid(
+            ui.h3("Manually"),
+            ui.card('Not implemented yet'),
+            # ui.card(ui.input_file('import_statements_button',
+            #                       button_label='Import statement',
+            #                       accept=['.csv'],
+            #                       # disabled=True,
+            #                       width='300px')),
+            ui.h3("From Monzo API"),
+            ui.card('Not implemented yet'),
         )),
     )
 )
@@ -83,5 +94,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def statements_info_dataframe():
         return WorkingDatasetDirInfo().statement_files_info_df()
+
 
 app = App(app_ui, server)
