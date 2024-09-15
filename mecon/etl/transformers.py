@@ -71,7 +71,7 @@ class MonzoStatementTransformer(DataframeTransformer):
                           'description',
                           'category_split', 'money_out', 'money_in']
 
-        df_transformed = df_monzo[['id', 'datetime', 'amount', 'currency', 'amount_cur']]
+        df_transformed = df_monzo[['id', 'datetime', 'amount', 'currency', 'amount_cur']].copy()
 
         df_transformed['description'] = df_monzo[cols_to_concat].apply(
             lambda x: ', '.join(
