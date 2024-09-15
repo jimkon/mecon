@@ -1,12 +1,13 @@
 # setup_logging()
 import json
 import logging
+import time
 
 import pandas as pd
 from json2html import json2html
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-from mecon.app.datasets import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo
+from mecon.app.datasets import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
 from mecon.settings import Settings
 
 # from mecon.monitoring.logs import setup_logging
@@ -20,7 +21,7 @@ datasets_obj = WorkingDatasetDir(path=settings['DATASETS_DIR']) if 'DATASETS_DIR
 
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 
-df = WorkingDatasetDirInfo().statement_files_info_df().to_html(classes='table table-striped', border=0)
+# df = WorkingDatasetDirInfo().statement_files_info_df()  # .to_html(classes='table table-striped', border=0)
 
 app_ui = ui.page_fluid(
     ui.navset_tab(
@@ -45,12 +46,14 @@ app_ui = ui.page_fluid(
                                                 width='300px'),
                      )),
         ui.nav_panel("DB", ui.page_fluid(
-            ui.input_action_button("reset_db_button", "Reset", disabled=True, width='300px'),
-
+            ui.h2('Database content'),
+            ui.output_text(id="db_info_text"),
+            ui.input_task_button("reset_db_button", "Reset", label_busy='Might take up to a minute...', width='300px'),
         )),
         ui.nav_panel("Statements", ui.page_fluid(
             ui.h2("DataFrame as HTML Table"),
-            ui.HTML(df)
+            # ui.HTML(df)
+            ui.output_data_frame("statements_info_dataframe")
         )),
     )
 )
@@ -70,8 +73,15 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def db_info_text():
         info_json = WorkingDataManagerInfo().db_transactions_info()
-        # html_json = ui.HTML(json2html.convert(json=info_json2))
         return info_json
 
+    @reactive.effect
+    @reactive.event(input.reset_db_button)
+    def reset_db():
+        WorkingDataManager().reset_db()
+
+    @render.data_frame
+    def statements_info_dataframe():
+        return WorkingDatasetDirInfo().statement_files_info_df()
 
 app = App(app_ui, server)

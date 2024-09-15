@@ -4,6 +4,7 @@ from typing import Dict
 
 import pandas as pd
 
+from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from mecon.app.data_manager import CachedDBDataManager
 from mecon import config
 from mecon.etl.file_system import DatasetDir, Dataset
@@ -66,10 +67,8 @@ class WorkingDatasetDirInfo:
             df['bank'] = bank
             dfs.append(df)
 
-        merged_df = pd.concat(dfs, ignore_index=True)[['bank', 'filename', 'stats', 'rows', ]]
+        merged_df = pd.concat(dfs, ignore_index=True)[['bank', 'filename', 'rows', 'path', ]]
         return merged_df
-
-
 
 
 class WorkingDataManager(CachedDBDataManager):
@@ -77,6 +76,24 @@ class WorkingDataManager(CachedDBDataManager):
         db_path = WorkingDatasetDir().working_dataset.db
         db = DBWrapper(db_path)
         super().__init__(db)
+
+    def reset_db(self):
+        logging.info(f"Resetting database")
+        self.reset_statements()
+        statements_dir = WorkingDatasetDir().working_dataset.statements
+
+        hsbc_dfs = HSBCStatementCSV.from_all_paths_in_dir(statements_dir / 'HSBC').dataframe()
+        self.add_statement(hsbc_dfs, bank='HSBC')
+
+        monzo_dfs = MonzoStatementCSV.from_all_paths_in_dir(statements_dir / 'Monzo').dataframe()
+        self.add_statement(monzo_dfs, bank='Monzo')
+
+        revo_dfs = RevoStatementCSV.from_all_paths_in_dir(statements_dir / 'Revolut').dataframe()
+        self.add_statement(revo_dfs, bank='Revolut')
+
+        self.reset_transactions()
+        logging.info(f"Resetting database finished")
+
 
 
 class WorkingDataManagerInfo:
