@@ -17,10 +17,12 @@ class TagsDBAccessor(io_framework.TagsIOABC):
         self._db = db
 
     def _format_received_tag(self, tag):
-        conditions_json = json.loads(tag.conditions_json)
+        if not isinstance(tag.conditions_json, dict) and not isinstance(tag.conditions_json, list): # TODO not necessarily needed, just in case
+            raise ValueError(f"Tag '{tag.name}' contains an invalid json object: {type(tag.conditions_json)=}, value={tag.conditions_json}")
+
         return {
             'name': tag.name,
-            'conditions_json': conditions_json
+            'conditions_json': tag.conditions_json
         }
 
     @logging_utils.codeflow_log_wrapper('#db#tags')
@@ -44,11 +46,11 @@ class TagsDBAccessor(io_framework.TagsIOABC):
             if tag is None:
                 tag = models.TagsDBTable(
                     name=name,
-                    conditions_json=json.dumps(conditions_json)
+                    conditions_json=conditions_json
                 )
                 session.add(tag)
             else:
-                tag.conditions_json = json.dumps(conditions_json)
+                tag.conditions_json = conditions_json
 
             session.commit()
         except Exception as e:

@@ -66,7 +66,7 @@ class DataManager:
         if tag_dict is None:
             return None
 
-        return Tag.from_json_string(tag_name, tag_dict['conditions_json'])
+        return Tag.from_json(tag_name, tag_dict['conditions_json'])
 
     def update_tag(self, tag: Tag, update_tags=True):
         self._tags.set_tag(tag.name, tag.rule.to_json())
@@ -82,7 +82,7 @@ class DataManager:
 
     def all_tags(self) -> List[Tag]:
         tags_dict = self._tags.all_tags()
-        tags = [Tag.from_json_string(tag_dict['name'], tag_dict['conditions_json']) for tag_dict in tags_dict]
+        tags = [Tag.from_json(tag_dict['name'], tag_dict['conditions_json']) for tag_dict in tags_dict]
         return tags
 
     def reset_transaction_tags(self):
@@ -185,8 +185,7 @@ class CacheDataManager:
             tags_dict = self._tags.all_tags()
             tags = []
             for tag_dict in tags_dict:
-                tag = Tag.from_json_string(tag_dict['name'],
-                                           tag_dict['conditions_json'])
+                tag = Tag.from_json(tag_dict['name'], tag_dict['conditions_json'])
                 tags.append(tag)
 
             self._cache.tags = {tag.name: tag for tag in tags}

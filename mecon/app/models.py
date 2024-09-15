@@ -1,4 +1,6 @@
 from sqlalchemy import Column, String, Integer, Float, DateTime
+from sqlalchemy.dialects.sqlite import JSON
+
 from sqlalchemy.orm import declarative_base
 
 
@@ -10,7 +12,7 @@ class TagsDBTable(Base):
     __tablename__ = 'tags_db_table'
 
     name = Column(String(50), primary_key=True, nullable=False)
-    conditions_json = Column(String(1000), nullable=False)
+    conditions_json = Column(JSON, nullable=False)
 
     def to_dict(self):
         tag_name = self.name
