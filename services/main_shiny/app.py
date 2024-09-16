@@ -17,7 +17,7 @@ datasets_obj = WorkingDatasetDir(path=settings['DATASETS_DIR']) if 'DATASETS_DIR
 
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 
-# df = WorkingDatasetDirInfo().statement_files_info_df()  # .to_html(classes='table table-striped', border=0)
+dataset = WorkingDatasetDir().working_dataset
 
 app_ui = ui.page_fluid(
     ui.navset_pill(
@@ -25,10 +25,14 @@ app_ui = ui.page_fluid(
         ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/")),
         ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/")),
         ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
+        ui.nav_control(ui.input_dark_mode(id="light_mode")),
     ),
     ui.card(
         ui.navset_tab(
-            ui.nav_panel("Home", 'Nothing here...'),
+            ui.nav_panel("Home",
+                         ui.h3('Menu'),
+                         ui.card(ui.output_text('links_output_text')),
+                         ),
             ui.nav_panel("Datasets",
                          ui.card(
                              ui.h3("Working Directory"),
@@ -76,6 +80,32 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    @reactive.effect
+    @reactive.event(input.make_light)
+    def _():
+        ui.update_dark_mode("light")
+
+    @reactive.effect
+    @reactive.event(input.make_dark)
+    def _():
+        ui.update_dark_mode("dark")
+
+    @render.text
+    def links_output_text():
+        # can also be a collapsable list (ui.accordion, ui.accordion_panel)
+        markdown_text = ""
+        links = dataset.settings.get('links', {})
+        for link_category, link_spec in links.items():
+            markdown_text += f"### {link_category}\n"
+            for link_name, link_url in link_spec.items():
+                markdown_text += f"* [{link_name}]({link_url})\n"
+
+        ui.insert_ui(
+            ui=ui.markdown(markdown_text),
+            selector='#links_output_text',
+            where='beforeEnd'
+        )
+
     @render.text
     def current_dataset_directory() -> object:
         return f"Current directory: " + settings['DATASETS_DIR'] if datasets_obj else 'No working directory found'
