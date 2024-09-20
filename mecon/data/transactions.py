@@ -7,6 +7,8 @@ from datetime import datetime, date
 import pandas as pd
 
 import mecon.data.datafields as fields
+from mecon.data.aggregators import CustomisableAmountTransactionAggregator
+from mecon.data.groupings import LabelGrouping
 from mecon.utils import dataframe_transformers
 
 ID_FILL_VALUE = 'filled'
@@ -94,6 +96,27 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def dataframe(self, df_transformer: AbstractTransactionsTransformer = None):
         df = super().dataframe(df_transformer=df_transformer)
         return df
+
+    def get_filtered_transactions(self, start_date, end_date, tags, grouping_key, aggregation_key,
+                                  fill_dates_before_groupagg=False,
+                                  fill_dates_after_groupagg=False) -> Transactions:
+        transactions = self.containing_tag(tags)
+
+        transactions = transactions.select_date_range(start_date, end_date)
+
+        if grouping_key != 'none':
+            if fill_dates_before_groupagg:
+                transactions = transactions.fill_values(grouping_key)
+
+            transactions = transactions.groupagg(
+                LabelGrouping.from_key(grouping_key),
+                CustomisableAmountTransactionAggregator(aggregation_key, grouping_key)
+            )
+
+            if fill_dates_after_groupagg:
+                transactions = transactions.fill_values(grouping_key)
+
+        return transactions
 
 
 # TODO:v3 move other Transaction related classes here like TransactionAggregators

@@ -12,7 +12,8 @@ from mecon.data.groupings import LabelGrouping
 from mecon.data.transactions import Transactions
 from mecon.monitoring import logging_utils
 from mecon.utils import html_pages, calendar_utils
-from services.main.blueprints.reports import graphs, graph_utils
+from services.main.blueprints.reports import graph_utils
+from data import graphs
 
 reports_bp = Blueprint('reports', __name__, template_folder='templates')
 
@@ -149,7 +150,7 @@ def amount_freq_timeline_graph():
     else:
         freq_transactions = None
 
-    graph_html = graphs.amount_and_freq_timeline_html(
+    graph_html = graphs.amount_and_freq_timeline_fig(
         total_amount_transactions.datetime,
         total_amount_transactions.amount,
         freq_transactions.amount if freq_transactions is not None else None,
@@ -170,7 +171,7 @@ def balance_graph():
 
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum',
                                             fill_dates_after_groupagg=True)
-    graph_html = graphs.balance_graph_html(
+    graph_html = graphs.balance_graph_fig(
         total_amount_transactions.datetime,
         total_amount_transactions.amount,
         fit_line=grouping != 'none'
@@ -190,7 +191,7 @@ def histogram_graph():
 
     total_amount_transactions = get_filtered_transactions(start_date, end_date, tags_str, grouping, 'sum')
 
-    graph_html = graphs.histogram_and_contributions(
+    graph_html = graphs.histogram_and_contributions_fig(
         total_amount_transactions.amount,
     )
 
@@ -288,7 +289,7 @@ def tag_info(tag_name):
     else:
         data_df = transactions.dataframe()
         table_html = transactions.to_html()
-        transactions_stats_json = json2html.convert(json=reports.transactions_stats(transactions, grouping))
+        transactions_stats_json = json2html.convert(json=reports.transactions_stats_json(transactions, grouping))
 
         html_tabs = html_pages.TabsHTML()
 

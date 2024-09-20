@@ -74,14 +74,21 @@ class Dataset:
 class DatasetDir:
     def __init__(self, path: str | pathlib.Path):
         self._path = pathlib.Path(path)
-        logging.info(f"New datasets directory in path {self._path} #info#filesystem")
+        if not self._path.exists():
+            logging.warning(f"DatasetDir.__init__: Path {self._path} does not exist and will be created.")
+
         self._path.mkdir(parents=True, exist_ok=True)
+        logging.info(f"New datasets directory in path '{path}'. #info#filesystem")
 
         self._datasets = []
-        for subpath in self._path.iterdir():
+        subpaths = list(self._path.iterdir())
+        if len(subpaths) == 0:
+            logging.warning(f"DatasetDir.__init__: Path {self._path} has no datasets inside.")
+
+        for subpath in subpaths:
             if subpath.is_dir():
                 self._datasets.append(Dataset(subpath))
-                logging.info(f"New dataset in path {self._path} #info#filesystem")
+                logging.info(f"New dataset in path '{subpath}'. #info#filesystem")
 
         settings_path = self.path / config.SETTINGS_JSON_FILENAME
         self._settings = settings.Settings(settings_path)

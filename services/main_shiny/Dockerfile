@@ -4,6 +4,8 @@ RUN apt-get update
 RUN apt-get --reinstall install bash-completion
 
 
+WORKDIR mecon_dir
+
 
 COPY ./requirements.txt ./requirements.txt
 COPY ./services/main_shiny/requirements.txt ./requirements_shiny.txt
@@ -17,8 +19,9 @@ RUN  pip install -e .
 
 WORKDIR ../main_app
 COPY ./services/main_shiny/ ./
+#COPY ./services/main_shiny/setting_docker.json ./settings.json
 
-COPY ./datasets/ ./datasets
+COPY ./datasets/ ../datasets
 
 CMD shiny run --host 0.0.0.0
 

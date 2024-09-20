@@ -9,7 +9,7 @@ from mecon.monitoring.logs import get_log_files, read_logs_as_df, HistoricalPerf
 from mecon.monitoring.tag_monitoring import TaggingReport
 from mecon.utils import html_pages
 from services.main.blueprints.monitoring.monitoring_helpers import performance_stats_dict
-from services.main.blueprints.reports import graphs
+from data import graphs
 
 monitoring_bp = Blueprint('monitoring', __name__, template_folder='templates')
 
