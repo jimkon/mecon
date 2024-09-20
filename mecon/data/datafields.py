@@ -156,7 +156,8 @@ class DateTimeColumnMixin(ColumnMixin):
             tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
             tagging.Condition.from_string_values('datetime', 'date', 'less_equal', end_date),
         ])
-        return self._df_wrapper_obj.apply_rule(rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
+        return self._df_wrapper_obj.apply_rule(
+            rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
 
 
 class AmountColumnMixin(ColumnMixin):
@@ -199,35 +200,55 @@ class TagsColumnMixin(ColumnMixin):
 
     @property
     def tags(self) -> pd.Series:
+        """ Returns the 'tags' column of the dataframe wrapper. """
         return self._df_wrapper_obj.dataframe()['tags']
 
-    def all_tags(self):
+    def all_tags(self) -> dict:
+        """ Returns all the unique tags in the dataframe wrapper along with their counts. """
         tags_split = self.tags.apply(
             lambda s: s.split(',')).to_list()
         tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
         tags_dict = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_dict
 
-    def contains_tag(self, tags):
+    def contains_tag(self, tags: str | list | None) -> pd.Series:
+        """
+        Returns a boolean pd.Series with True for each row where tags present.
+        if not tags presented, it return True for all the rows
+        """
+        if tags is None or len(tags) == 0:
+            return pd.Series(self._df_wrapper_obj.size() * [True])
+
         tags = [tags] if isinstance(tags, str) else tags
         tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
         rule = tagging.Conjunction(tag_rules)
         index_col = tagging.Tagger.get_index_for_rule(self._df_wrapper_obj.dataframe(), rule)
-
         return index_col
 
-    def containing_tag(self, tags):
+    def containing_tag(self, tags: str | list | None) -> DataframeWrapper:
+        """
+        Returns a copy of the df_wrapper with all the rows where tags are present.
+        """
+        if tags is None or len(tags) == 0:
+            return self._df_wrapper_obj.copy()
+
         tags = [tags] if isinstance(tags, str) else tags
         tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
         rule = tagging.Conjunction(tag_rules)
         return self._df_wrapper_obj.apply_rule(rule)
 
     def reset_tags(self):
+        """
+        Resets the 'tags' column of the dataframe wrapper, and therefore all the tags.
+        """
         new_df = self._df_wrapper_obj.dataframe().copy()
         new_df['tags'] = ''
         return self._df_wrapper_obj.factory(new_df)
 
     def apply_tag(self, tag: tagging.Tag) -> DataframeWrapper:
+        """
+        Calculates and sets the tag to the df_wrapper and returns it.
+        """
         logging.info(f"Applying {tag.name} tag to transaction.")
         new_df = self._df_wrapper_obj.dataframe().copy()
         tagging.Tagger.tag(tag, new_df)
@@ -261,7 +282,8 @@ class AggregatorABC(abc.ABC):  # TODO:v3 tested only through InTypeAggregator
             raise InvalidInputToAggregator(f"No DataframeWrapper object to aggregate.")
 
         aggregated_df_wrappers_list = [self.aggregation(df_wrapper) for df_wrapper in lists_of_df_wrapper]
-        df_agg = pd.concat([df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list if df_wrapper.size()>0])
+        df_agg = pd.concat(
+            [df_wrapper.dataframe() for df_wrapper in aggregated_df_wrappers_list if df_wrapper.size() > 0])
         return df_agg
 
     @abc.abstractmethod

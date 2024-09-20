@@ -295,7 +295,10 @@ class Tag:
 class Tagger(abc.ABC):
     @staticmethod
     @logging_utils.codeflow_log_wrapper('#data#tags')
-    def tag(tag: Tag, df: pd.DataFrame, remove_old_tags=False):
+    def tag(tag: Tag, df: pd.DataFrame, remove_old_tags: bool = False) -> None:
+        """
+        Applies the rule:AbstractRule to df:pandas.DataFrame changing the 'tags' of the dataframe.
+        """
         tag_name = tag.name
         if remove_old_tags:
             Tagger.remove_tag(tag_name, df)
@@ -305,14 +308,22 @@ class Tagger(abc.ABC):
 
     @staticmethod
     @logging_utils.codeflow_log_wrapper('#data#tags')
-    def get_index_for_rule(df, rule):
+    def get_index_for_rule(df: pd.DataFrame, rule: AbstractRule) -> pd.Series:
+        """
+        Calculates the rule:AbstractRule to df:pandas.DataFrame and returns the index:pd.Series
+        with the rows that satisfy the rule.
+        """
         rows = [row for index, row in df.iterrows()]
         rows_to_tag = pd.Series(rule.fit(rows), index=df.index)
         return rows_to_tag
 
     @staticmethod
     @logging_utils.codeflow_log_wrapper('#data#tags')
-    def filter_df_with_rule(df, rule):
+    def filter_df_with_rule(df: pd.DataFrame, rule: AbstractRule) -> pd.DataFrame:
+        """
+        Calculates the rule:AbstractRule to df:pandas.DataFrame and returns the rows (as a pd.Dataframe)
+        of the dataframe that satisfy the rule.
+        """
         if len(df) == 0:
             return df
 
@@ -322,7 +333,11 @@ class Tagger(abc.ABC):
 
     @staticmethod
     @logging_utils.codeflow_log_wrapper('#data#tags')
-    def filter_df_with_negated_rule(df, rule):
+    def filter_df_with_negated_rule(df: pd.DataFrame, rule: AbstractRule) -> pd.DataFrame:
+        """
+        Calculates the rule:AbstractRule to df:pandas.DataFrame and returns the rows (as a pd.Dataframe)
+        of the dataframe that do NOT satisfy the rule.
+        """
         if len(df) == 0:
             return df
 
@@ -332,13 +347,19 @@ class Tagger(abc.ABC):
 
     @staticmethod
     @logging_utils.codeflow_log_wrapper('#data#tags')
-    def _already_tagged_rows(tag_name, df):
+    def _already_tagged_rows(tag_name: str, df: pd.DataFrame) -> pd.Series:
+        """
+        Returns the rows that already contain the tag_name.
+        """
         already_tagged_rows = df['tags'].apply(lambda tags_row: tag_name in tags_row.split(','))
         return already_tagged_rows
 
     @staticmethod
     @logging_utils.codeflow_log_wrapper('#data#tags')
-    def remove_tag(tag_name, df):
+    def remove_tag(tag_name: str, df: pd.DataFrame) -> None:
+        """
+        Removes the tag for the rows of df.
+        """
         def _remove_tag_from_row(row):
             row_elements = row.split(',')
             filtered_element = [element for element in row_elements if element != tag_name]
@@ -349,7 +370,11 @@ class Tagger(abc.ABC):
 
     @staticmethod
     @logging_utils.codeflow_log_wrapper('#data#tags')
-    def add_tag(tag_name, df, to_rows):
+    def add_tag(tag_name: str, df: pd.DataFrame, to_rows: pd.Series) -> None:
+        """
+        Add the tag:tag_name to all the rows of df:pandas.DataFrame that are
+        marked True in the to_rows pandas Series.
+        """
         def _add_tag_to_row(row):
             row_elements = row.split(',')
             if tag_name not in row_elements:
