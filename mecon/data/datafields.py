@@ -156,9 +156,9 @@ class DateTimeColumnMixin(ColumnMixin):
             tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
             tagging.Condition.from_string_values('datetime', 'date', 'less_equal', end_date),
         ])
-        return self._df_wrapper_obj.apply_rule(
+        new_df_wrapper = self._df_wrapper_obj.apply_rule(
             rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
-
+        return new_df_wrapper
 
 class AmountColumnMixin(ColumnMixin):
     _required_column = ['amount', 'currency', 'amount_cur']
@@ -182,6 +182,28 @@ class AmountColumnMixin(ColumnMixin):
     def all_currencies(self):
         flattened = list(itertools.chain(*self.currency_list))
         return json.dumps(dict(sorted(Counter(flattened).items(), reverse=True)))
+
+    def positive_amounts(self, include_zero=True):
+        rule = tagging.Conjunction([
+            tagging.Condition.from_string_values(field='amount',
+                                                 transformation_op_key=None,
+                                                 compare_op_key='greater_equal' if include_zero else 'greater',
+                                                 value=.0),
+        ])
+        new_df_wrapper = self._df_wrapper_obj.apply_rule(
+            rule)
+        return new_df_wrapper
+
+    def negative_amounts(self, include_zero=False):
+        rule = tagging.Conjunction([
+            tagging.Condition.from_string_values(field='amount',
+                                                 transformation_op_key=None,
+                                                 compare_op_key='less_equal' if include_zero else 'less',
+                                                 value=.0),
+        ])
+        new_df_wrapper = self._df_wrapper_obj.apply_rule(
+            rule)
+        return new_df_wrapper
 
 
 class DescriptionColumnMixin(ColumnMixin):

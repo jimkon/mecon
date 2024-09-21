@@ -230,6 +230,54 @@ class TestAmountColumnMixin(unittest.TestCase):
         })).all_currencies()
         self.assertEqual(result_set, '{"RON": 1, "GBP": 2, "EUR": 2}')
 
+    def test_positive_amounts(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'amount': [-1, 2, -3, 4, 0],
+            'amount_cur': [1, 2, 3, 4, 0],  # only looking 'amount' column to check positivity
+            'currency': ['GBP', 'EUR,GBP', 'EUR', 'RON', 'EUR'],
+        }))
+        pos_amounts_wrapper = example_wrapper.positive_amounts(include_zero=True)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [2, 4, 0],
+            'amount_cur': [2, 4, 0],
+            'currency': ['EUR,GBP', 'RON', 'EUR'],
+        })
+        pd.testing.assert_frame_equal(pos_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+        pos_nonzero_amounts_wrapper = example_wrapper.positive_amounts(include_zero=False)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [2, 4],
+            'amount_cur': [2, 4],
+            'currency': ['EUR,GBP', 'RON'],
+        })
+        pd.testing.assert_frame_equal(pos_nonzero_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+    def test_negative_amounts(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'amount': [-1, 2, -3, 4, 0],
+            'amount_cur': [1, 2, 3, 4, 0],  # only looking 'amount' column to check negativity
+            'currency': ['GBP', 'EUR,GBP', 'EUR', 'RON', 'EUR'],
+        }))
+        pos_amounts_wrapper = example_wrapper.negative_amounts(include_zero=True)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [-1, -3, 0],
+            'amount_cur': [1, 3, 0],  # only looking 'amount' column to check positivity
+            'currency': ['GBP', 'EUR', 'EUR'],
+        })
+        pd.testing.assert_frame_equal(pos_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+        pos_nonzero_amounts_wrapper = example_wrapper.negative_amounts(include_zero=False)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [-1, -3],
+            'amount_cur': [1, 3],  # only looking 'amount' column to check positivity
+            'currency': ['GBP', 'EUR'],
+        })
+        pd.testing.assert_frame_equal(pos_nonzero_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
 
 if __name__ == '__main__':
     unittest.main()
