@@ -19,8 +19,11 @@ pio.templates.default = "plotly_dark"
 
 
 @logging_utils.codeflow_log_wrapper('#graphs')
-def amount_and_freq_timeline_fig(time: List | pd.Series,
-                                 amount: List | pd.Series,
+def amount_and_freq_timeline_fig(time_pos: List | pd.Series,
+                                 amount_pos: List | pd.Series,
+                                 time_neg: List | pd.Series,
+                                 amount_neg: List | pd.Series,
+                                 time_freg: List | pd.Series,
                                  freq: List | pd.Series,
                                  grouping='month'):
     fig = go.Figure()
@@ -33,23 +36,28 @@ def amount_and_freq_timeline_fig(time: List | pd.Series,
         'year': 1
     }.get(grouping, 1)
 
-    amount_pos = amount.clip(lower=0)
-    amount_neg = amount.clip(upper=0)
+    # amount_pos = amount.clip(lower=0)
+    # amount_neg = amount.clip(upper=0)
     amount_pos, amount_neg = amount_pos.round(2), amount_neg.round(2)
 
     amount_axis_range = [1.6 * amount_neg.min(), 1.0 * amount_pos.max()]
-    fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1), fill='tozeroy'))
-    fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1), fill='tozeroy'))
+    if grouping != 'none':
+        fig.add_trace(go.Scatter(x=time_pos, y=amount_pos, name="in", line=dict(width=1), fill='tozeroy'))
+        fig.add_trace(go.Scatter(x=time_neg, y=amount_neg, name="out", line=dict(width=1), fill='tozeroy'))
+    else:
+        fig.add_trace(go.Scatter(x=time_pos, y=amount_pos, name="in", mode='markers'))
+        fig.add_trace(go.Scatter(x=time_neg, y=amount_neg, name="out", mode='markers'))
 
-    smoothed_total = amount.rolling(rolling_window).mean()
+    amount = amount_pos + amount_neg
+    smoothed_total = amount.rolling(rolling_window, min_periods=1).mean()
     smoothed_total = smoothed_total.round(2)
-    fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5)))
-    # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
+    fig.add_trace(go.Scatter(x=time_pos, y=smoothed_total, name="total (rolling)", line=dict(width=5)))
+    # fig.add_trace(go.Scatter(x=time_pos, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     freq_axis_range = None
     if freq is not None:
         freq_axis_range = [0, 5 * freq.max()]
         fig.add_trace(go.Bar(
-            x=time,
+            x=time_freg,
             y=freq,
             name="count",
             yaxis='y2',
@@ -63,13 +71,13 @@ def amount_and_freq_timeline_fig(time: List | pd.Series,
         yaxis=dict(title='[£]', range=amount_axis_range),
         yaxis2=dict(title=f"# transactions{(' per ' + grouping) if grouping != 'None' else ''}", overlaying='y',
                     side='right', range=freq_axis_range),
-        xaxis=dict(title=f"({len(time)} points)"),
+        # xaxis=dict(title=f"({len(time_freg)} points)"),
         uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
     )
 
-    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-    # return graph_html
     return fig
+
+
 
 
 @logging_utils.codeflow_log_wrapper('#graphs')
@@ -136,6 +144,60 @@ def histogram_and_contributions_fig(amounts: pd.Series, show_bin_edges=False):
         ) if show_bin_edges else None
     )
 
+    return fig
+
+
+@logging_utils.codeflow_log_wrapper('#graphs')
+def amount_and_freq_timeline_fig_old(time: List | pd.Series,
+                                 amount: List | pd.Series,
+                                 freq: List | pd.Series,
+                                 grouping='month'):
+    fig = go.Figure()
+
+    rolling_window = {
+        'none': 10,
+        'day': 7,
+        'week': 4,
+        'month': 3,
+        'year': 1
+    }.get(grouping, 1)
+
+    amount_pos = amount.clip(lower=0)
+    amount_neg = amount.clip(upper=0)
+    amount_pos, amount_neg = amount_pos.round(2), amount_neg.round(2)
+
+    amount_axis_range = [1.6 * amount_neg.min(), 1.0 * amount_pos.max()]
+    fig.add_trace(go.Scatter(x=time, y=amount_pos, name="in", line=dict(width=1), fill='tozeroy'))
+    fig.add_trace(go.Scatter(x=time, y=amount_neg, name="out", line=dict(width=1), fill='tozeroy'))
+
+    smoothed_total = amount.rolling(rolling_window).mean()
+    smoothed_total = smoothed_total.round(2)
+    fig.add_trace(go.Scatter(x=time, y=smoothed_total, name="total", line=dict(width=5)))
+    # fig.add_trace(go.Scatter(x=time, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
+    freq_axis_range = None
+    if freq is not None:
+        freq_axis_range = [0, 5 * freq.max()]
+        fig.add_trace(go.Bar(
+            x=time,
+            y=freq,
+            name="count",
+            yaxis='y2',
+            marker={'opacity': 0.5},
+        ))
+        # fig.add_trace(go.Scatter(x=time, y=freq, name="freq", line=dict(width=1, color='black'), yaxis='y2'))
+
+    fig.update_layout(
+        autosize=True,  # Automatically adjust the size of the plot
+        hovermode='closest',  # Define hover behavior
+        yaxis=dict(title='[£]', range=amount_axis_range),
+        yaxis2=dict(title=f"# transactions{(' per ' + grouping) if grouping != 'None' else ''}", overlaying='y',
+                    side='right', range=freq_axis_range),
+        xaxis=dict(title=f"({len(time)} points)"),
+        uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
+    )
+
+    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+    # return graph_html
     return fig
 
 # -------------------------------------------------------------------

@@ -176,32 +176,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
-                                                                                   end_date,
-                                                                                   tags,
-                                                                                   grouping,
-                                                                                   aggregation_key='sum',
-                                                                                   fill_dates_after_groupagg=False)
-        total_amount_transactions = total_amount_transactions.fill_values(
-            grouping if grouping != 'none' else 'day')
-
-        if grouping != 'none':
-            freq_transactions = working_transactions.get_filtered_transactions(start_date,
-                                                                               end_date,
-                                                                               tags,
-                                                                               grouping,
-                                                                               aggregation_key='count',
-                                                                               fill_dates_after_groupagg=True)
-        else:
-            freq_transactions = None
-
-        graph = graphs.amount_and_freq_timeline_fig(
-            total_amount_transactions.datetime,
-            total_amount_transactions.amount,
-            freq_transactions.amount if freq_transactions is not None else None,
-            grouping=grouping
-        )
-        return graph
+        return reports.amount_and_frequency_graph_report(working_transactions, start_date, end_date, grouping, tags)
 
     @render_widget
     def balance_plot() -> object:
