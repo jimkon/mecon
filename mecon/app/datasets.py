@@ -4,9 +4,9 @@ from typing import Dict
 
 import pandas as pd
 
+from mecon import settings
 from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from mecon.app.data_manager import CachedDBDataManager
-from mecon import config
 from mecon.etl.file_system import DatasetDir, Dataset
 from mecon.data.datafields import InvalidInputDataFrameColumns, NullDataframeInDataframeWrapper
 from mecon.app.db_extension import DBWrapper
@@ -15,9 +15,8 @@ from mecon.app.db_extension import DBWrapper
 # todo rename to working/current and file system to datasets
 
 class WorkingDatasetDir(DatasetDir):
-    def __init__(self, path=None):
-        if path is None:
-            path = config.DEFAULT_DATASETS_DIR_PATH
+    def __init__(self):
+        path = settings.Settings()['DATASETS_DIR']
         super().__init__(path)
 
         first_dataset_name = self.datasets()[0].name if len(self.datasets()) > 0 else None

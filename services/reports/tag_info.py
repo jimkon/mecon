@@ -1,5 +1,6 @@
 # setup_logging()
 import logging
+import pathlib
 from urllib.parse import urlparse, parse_qs
 
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
@@ -15,7 +16,12 @@ from mecon.data import graphs
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
+datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+if not datasets_dir.exists():
+    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+
 settings = Settings()
+settings['DATASETS_DIR'] = str(datasets_dir)
 
 dm = WorkingDataManager()
 all_tags = dm.all_tags()
@@ -38,7 +44,7 @@ app_ui = ui.page_fluid(
             ui.input_select(
                 id='date_period_input_select',
                 label='Select date period',
-                choices=['Last 30 days', 'Last year', 'All', 'Custom']
+                choices=['Last 30 days', 'Last 90 days', 'Last year', 'All']
             ),
             ui.input_date_range(  # TODO this must appear when custom period is selected
                 id='transactions_date_range',
@@ -122,13 +128,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         reset_filter_inputs()
 
-    # @reactive.event(input.reset_filter_values_button)
-    # def reset_filter_inputs_button():
-    #     print('Reset')
-    #     start_date, end_date, time_unit, default_tags = reset_filter_inputs()
-
     @render.text
-    # @reactive.event(input.reset_filter_values_button)
     def title_output():
         start_date, end_date, time_unit, default_tags = reset_filter_inputs()
         return f"Report for tags: {','.join(default_tags)} between {start_date} to {end_date} grouped by {time_unit}"
