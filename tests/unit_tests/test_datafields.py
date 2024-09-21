@@ -221,5 +221,15 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         self.assertEqual(len(result_df), 0)
 
 
+class TestAmountColumnMixin(unittest.TestCase):
+    def test_all_currencies(self):
+        result_set = ExampleDataframeWrapper(pd.DataFrame({
+            'amount': [1, 2, 3, 4],
+            'amount_cur': [1, 2, 3, 4],
+            'currency': ['GBP', 'EUR,GBP', 'EUR', 'RON'],
+        })).all_currencies()
+        self.assertEqual(result_set, '{"RON": 1, "GBP": 2, "EUR": 2}')
+
+
 if __name__ == '__main__':
     unittest.main()
