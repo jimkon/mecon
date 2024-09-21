@@ -18,9 +18,9 @@ def calculated_histogram_and_contributions(amount):
     fill_df = pd.DataFrame({'ind': range(min(bin_indices), max(bin_indices))})
     fill_df['amount'] = 0
 
-    df_bin_totals = pd.concat([df_bin_amounts, fill_df], keys='ind').groupby('ind').agg('sum').reset_index()
+    df_bin_totals = pd.concat([df_bin_amounts, fill_df]).groupby('ind').agg('sum').reset_index()
 
-    return bin_midpoints, bin_counts, df_bin_totals['amount'], bin_width
+    return bin_midpoints, bin_counts, df_bin_totals['amount'], bin_width, bin_edges_t
 
 
 class FullLengthYearCalendarTransformer(DataframeTransformer):

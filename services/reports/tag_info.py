@@ -86,6 +86,11 @@ app_ui = ui.page_fluid(
                              output_widget(id="balance_plot"),
                              ),
                 ui.nav_panel("Histogram",
+                             ui.input_checkbox(
+                                 id='show_bin_edges_flag',
+                                 label='Show bin edges',
+                                 value=False,
+                             ),
                              output_widget(id="histogram_plot"),
                              ),
                 ui.nav_panel("Table",
@@ -231,6 +236,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         graph = graphs.histogram_and_contributions_fig(
             total_amount_transactions.amount,
+            show_bin_edges=input.show_bin_edges_flag()
         )
         return graph
 

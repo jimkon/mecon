@@ -61,7 +61,8 @@ def amount_and_freq_timeline_fig(time: List | pd.Series,
         autosize=True,  # Automatically adjust the size of the plot
         hovermode='closest',  # Define hover behavior
         yaxis=dict(title='[£]', range=amount_axis_range),
-        yaxis2=dict(title=f"# transactions{(' per '+grouping) if grouping!='None' else ''}", overlaying='y', side='right', range=freq_axis_range),
+        yaxis2=dict(title=f"# transactions{(' per ' + grouping) if grouping != 'None' else ''}", overlaying='y',
+                    side='right', range=freq_axis_range),
         xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
     )
@@ -101,9 +102,10 @@ def balance_graph_fig(time, amount: pd.Series, fit_line=False):
 
 
 @logging_utils.codeflow_log_wrapper('#graphs')
-def histogram_and_contributions_fig(amounts: pd.Series):
-    bin_centers, counts, contributions, bin_width = graph_utils.calculated_histogram_and_contributions(amounts)
+def histogram_and_contributions_fig(amounts: pd.Series, show_bin_edges=False):
+    bin_centers, counts, contributions, bin_width, edges = graph_utils.calculated_histogram_and_contributions(amounts)
     bin_centers, contributions = bin_centers.round(2), contributions.round(2)
+
 
     fig = go.Figure()
 
@@ -128,12 +130,13 @@ def histogram_and_contributions_fig(amounts: pd.Series):
         yaxis2=dict(title='cumsum [£]', overlaying='y', side='right'),
         uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
         xaxis_title=f"Bin width: £{bin_width:.2f}",
+        xaxis=dict(
+            tickmode='array',
+            tickvals=np.round(edges, decimals=1),
+        ) if show_bin_edges else None
     )
 
-    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-    # return graph_html
     return fig
-
 
 # -------------------------------------------------------------------
 
