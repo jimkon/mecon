@@ -28,7 +28,7 @@ dm = WorkingDataManager()
 all_tags = dm.all_tags()
 
 transactions = dm.get_transactions()
-working_transactions = transactions.copy()
+working_transactions = transactions
 
 app_ui = ui.page_fluid(
     ui.navset_pill(
@@ -116,6 +116,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         time_unit = params.get('time_unit', 'month')[0]
         ui.update_radio_buttons(id='time_unit_select', selected=time_unit)
+
+        global working_transactions
+        working_transactions = transactions.select_date_range(start_date, end_date)
+
         return start_date, end_date, time_unit, default_tags
 
     @reactive.effect
@@ -143,7 +147,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = transactions.get_filtered_transactions(start_date,
+        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
                                                                            end_date,
                                                                            tags,
                                                                            grouping,
@@ -158,7 +162,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = transactions.get_filtered_transactions(start_date,
+        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
                                                                            end_date,
                                                                            tags,
                                                                            grouping,
@@ -168,7 +172,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             grouping if grouping != 'none' else 'day')
 
         if grouping != 'none':
-            freq_transactions = transactions.get_filtered_transactions(start_date,
+            freq_transactions = working_transactions.get_filtered_transactions(start_date,
                                                                        end_date,
                                                                        tags,
                                                                        grouping,
@@ -190,7 +194,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = transactions.get_filtered_transactions(start_date,
+        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
                                                                            end_date,
                                                                            tags,
                                                                            grouping,
@@ -209,7 +213,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = transactions.get_filtered_transactions(start_date,
+        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
                                                                            end_date,
                                                                            tags,
                                                                            grouping,
@@ -226,7 +230,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = transactions.get_filtered_transactions(start_date,
+        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
                                                                            end_date,
                                                                            tags,
                                                                            grouping,
