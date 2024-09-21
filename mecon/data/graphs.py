@@ -12,6 +12,9 @@ import plotly.io as pio
 from mecon.monitoring import logging_utils
 from mecon.data import graph_utils
 
+import warnings
+warnings.simplefilter("ignore", category=FutureWarning)
+
 pio.templates["custom_template"] = go.layout.Template(
     layout_colorway=px.colors.qualitative.Antique
 )
