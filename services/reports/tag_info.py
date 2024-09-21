@@ -1,4 +1,5 @@
 # setup_logging()
+import datetime
 import logging
 import pathlib
 from urllib.parse import urlparse, parse_qs
@@ -44,19 +45,20 @@ app_ui = ui.page_fluid(
             ui.input_select(
                 id='date_period_input_select',
                 label='Select date period',
-                choices=['Last 30 days', 'Last 90 days', 'Last year', 'All']
+                choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'],
+                selected='Last year'
             ),
-            ui.input_date_range(  # TODO this must appear when custom period is selected
+            ui.input_date_range(
                 id='transactions_date_range',
                 label='Select date range',
-                start=transactions.date_range()[0],
-                end=transactions.date_range()[1]
+                start=datetime.date.today()-datetime.timedelta(days=365),
+                end=datetime.date.today()
             ),
             ui.input_radio_buttons(
                 id='time_unit_select',
                 label='Time unit',
                 choices=['none', 'day', 'week', 'month', 'year'],
-                selected='day'
+                selected='month'
             ),
             ui.input_selectize(
                 id='input_tags_select',
@@ -101,7 +103,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         default_tags = params.get('tags', [''])[0].split(',')
         ui.update_selectize(id='input_tags_select', selected=default_tags)
 
-        start_date, end_date = working_transactions.date_range()
+        if 'start_date' in params and 'end_date' in params:
+            start_date, end_date = params['start_date'], params['end_date']
+        else:
+            start_date, end_date = datetime.date.today()-datetime.timedelta(days=365), datetime.date.today()
         min_date, max_date = transactions.date_range()
         ui.update_date_range(id='transactions_date_range',
                              start=start_date,
