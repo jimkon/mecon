@@ -38,3 +38,15 @@ class TagHelpersTestCase(unittest.TestCase):
                               {'col1': {'greater': 1}},
                               {'col1': {'less': -1}}]
                              )
+
+    def test_add_rule_for_id_multiple_ids(self):
+        tag = tagging.Tag.from_json('test',
+                                    [{'id': {'in': 'test_id2,test_id1'}},
+                                     {'col1': {'greater': 1}},
+                                     {'col1': {'less': -1}}])
+        new_tag = tag_helpers.add_rule_for_id(tag, ['test_id1', 'test_id3', 'test_id4'])
+        self.assertListEqual(new_tag.rule.to_json(),
+                             [{'id': {'in': 'test_id3,test_id4,test_id2,test_id1'}},
+                              {'col1': {'greater': 1}},
+                              {'col1': {'less': -1}}]
+                             )
