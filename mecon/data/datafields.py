@@ -75,6 +75,13 @@ class DataframeWrapper:
         aggregated_groups = aggregator.aggregate(groups)
         return aggregated_groups
 
+    def group(self, grouper: Grouping) -> list[DataframeWrapper]:
+        if self.size() == 0:
+            return []
+
+        groups = grouper.group(self)
+        return groups
+
     @classmethod
     def factory(cls, df: pd.DataFrame):
         return cls(df)
