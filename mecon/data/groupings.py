@@ -1,6 +1,8 @@
 import abc
+import logging
 from typing import List
 
+import numpy as np
 import pandas as pd
 
 from mecon.data.datafields import DataframeWrapper, Grouping
@@ -54,6 +56,23 @@ class LabelGrouping(LabelGroupingABC, abc.ABC):
     def labels(self, df_wrapper: DataframeWrapper) -> pd.Series:
         res = self._label_function(df_wrapper)
         return res
+
+
+class IndexGrouping(Grouping):
+    def __init__(self, indices):
+        self._indices = indices
+
+    def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
+        max_index = np.max(np.concatenate(self._indices))
+        if max_index >= df_wrapper.size():
+            raise ValueError(f"Indices exceed input df_wrapper size: {max_index}>={df_wrapper.size()}")
+
+        return [pd.Series([i in index_set for i in range(df_wrapper.size())]) for index_set in self._indices]
+
+    @classmethod
+    def equal_size_groups(cls, group_size, max_len):
+        group_indices = np.array_split(np.arange(max_len), np.ceil(max_len/group_size))
+        return IndexGrouping(group_indices)
 
 
 HOUR = LabelGrouping('hour', lambda df_wrapper: df_wrapper.datetime.apply(calendar_utils.datetime_to_hour_id_str))
