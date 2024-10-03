@@ -167,6 +167,7 @@ class DateTimeColumnMixin(ColumnMixin):
             rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
         return new_df_wrapper
 
+
 class AmountColumnMixin(ColumnMixin):
     _required_column = ['amount', 'currency', 'amount_cur']
 
@@ -254,10 +255,21 @@ class TagsColumnMixin(ColumnMixin):
         index_col = tagging.Tagger.get_index_for_rule(self._df_wrapper_obj.dataframe(), rule)
         return index_col
 
+    def not_contains_tags(self, tags: str | list | None) -> pd.Series:
+        """
+        The opposite of contains_tag, it returns a boolean pd.Series with True for each row where tags present.
+        if not tags presented, it return False for all the rows
+        """
+        raise NotImplementedError
+        contains_tags_flags = self.contains_tag(tags)
+        not_contains_tags_flags = ~contains_tags_flags
+        return not_contains_tags_flags
+
     def containing_tag(self, tags: str | list | None) -> DataframeWrapper:
         """
         Returns a copy of the df_wrapper with all the rows where tags are present.
         """
+        # todo maybe use contains_tags, similar to not_containing_tag
         if tags is None or len(tags) == 0:
             return self._df_wrapper_obj.copy()
 
@@ -265,6 +277,15 @@ class TagsColumnMixin(ColumnMixin):
         tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
         rule = tagging.Conjunction(tag_rules)
         return self._df_wrapper_obj.apply_rule(rule)
+
+    def not_containing_tag(self, tags: str | list | None) -> DataframeWrapper:
+        """
+        The opposite of containing_tag, it returns a copy of the df_wrapper with all the rows where tags are NOT present.
+        """
+        raise NotImplementedError
+        not_contains_tags_flags = self.not_containing_tag(tags)
+        df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags]
+        return self._df_wrapper_obj.factory(df)
 
     def reset_tags(self):
         """
@@ -356,7 +377,8 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
             raise UnorderedDatedDataframeWrapper
 
     def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:  # TODO add to DataframeWrapper too
-        not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
+        not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if
+                         len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
         df = pd.concat(not_empty_dfs).drop_duplicates()
         df.sort_values(by='datetime', inplace=True)
         return self.factory(df)
