@@ -68,6 +68,35 @@ class TestTagsColumnMixin(unittest.TestCase):
         pd.testing.assert_frame_equal(example_wrapper.containing_tag(None).dataframe().reset_index(drop=True),
                                       example_wrapper.dataframe().reset_index(drop=True))
 
+    def test_not_contains_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        self.assertListEqual(example_wrapper.not_contains_tags('tag1').to_list(),
+                             [True, False, False, True])
+        self.assertListEqual(example_wrapper.not_contains_tags('tag2').to_list(),
+                             [True, True, False, True])
+        self.assertListEqual(example_wrapper.not_contains_tags('tag3').to_list(),
+                             [True, True, True, False])
+        self.assertListEqual(example_wrapper.not_contains_tags(['tag1', 'tag2']).to_list(),
+                             [True, True, False, True])
+
+        self.assertListEqual(example_wrapper.not_contains_tags([]).to_list(),
+                             [False, False, False, False])
+
+    def test_not_containing_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+        expected_wrapper_df = pd.DataFrame({
+            'tags': ['', 'tag3']
+        })
+        pd.testing.assert_frame_equal(example_wrapper.not_containing_tag('tag1').dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+        self.assertEqual(example_wrapper.not_containing_tag(None).size(), 0)
+
 
 class TestDateTimeColumnMixin(unittest.TestCase):
     def test_date_range(self):

@@ -260,7 +260,6 @@ class TagsColumnMixin(ColumnMixin):
         The opposite of contains_tag, it returns a boolean pd.Series with True for each row where tags present.
         if not tags presented, it return False for all the rows
         """
-        raise NotImplementedError
         contains_tags_flags = self.contains_tag(tags)
         not_contains_tags_flags = ~contains_tags_flags
         return not_contains_tags_flags
@@ -270,20 +269,23 @@ class TagsColumnMixin(ColumnMixin):
         Returns a copy of the df_wrapper with all the rows where tags are present.
         """
         # todo maybe use contains_tags, similar to not_containing_tag
-        if tags is None or len(tags) == 0:
-            return self._df_wrapper_obj.copy()
-
-        tags = [tags] if isinstance(tags, str) else tags
-        tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
-        rule = tagging.Conjunction(tag_rules)
-        return self._df_wrapper_obj.apply_rule(rule)
+        # if tags is None or len(tags) == 0:
+        #     return self._df_wrapper_obj.copy()
+        #
+        # tags = [tags] if isinstance(tags, str) else tags
+        # tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
+        # rule = tagging.Conjunction(tag_rules)
+        # return self._df_wrapper_obj.apply_rule(rule)
+        contains_tags_flags = self.contains_tag(tags)
+        df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags]
+        return self._df_wrapper_obj.factory(df)
 
     def not_containing_tag(self, tags: str | list | None) -> DataframeWrapper:
         """
         The opposite of containing_tag, it returns a copy of the df_wrapper with all the rows where tags are NOT present.
         """
-        raise NotImplementedError
-        not_contains_tags_flags = self.not_containing_tag(tags)
+
+        not_contains_tags_flags = self.not_contains_tags(tags)
         df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags]
         return self._df_wrapper_obj.factory(df)
 
