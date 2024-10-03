@@ -1,6 +1,6 @@
 from mecon.utils import calendar_utils, instance_management
 
-
+# todo convert to enum
 class TransformationFunction(instance_management.Multiton):
     """
     Transformation operation used by Condition

@@ -19,7 +19,7 @@ class CompareOperatorMustReturnBooleanResults(Exception):
 class TypesOfComparedValuesDoNotMatch(Exception):
     ...
 
-
+# todo convert to enum
 class CompareOperator(instance_management.Multiton):
     """
     Compare operators used by Condition.
