@@ -25,6 +25,8 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     Not responsible for any IO operations.
     """
 
+    fields = ['datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
+
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)
