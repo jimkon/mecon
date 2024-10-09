@@ -154,8 +154,10 @@ class Condition(AbstractRule):
     def __repr__(self):
         transf_name = self._transformation_op.name if hasattr(self._transformation_op,
                                                               'name') else self._transformation_op
+        tfield = f"{transf_name }({self._field})" if transf_name != 'none' else self._field
         comp_name = self._compare_op.name if hasattr(self._compare_op, 'name') else self._compare_op
-        return f"{transf_name}(x[{self._field}]) {comp_name} {self._value}"
+
+        return f"{tfield} {comp_name} {self._value}"
 
 
 class Conjunction(AbstractCompositeRule):
@@ -167,6 +169,9 @@ class Conjunction(AbstractCompositeRule):
             return []
 
         all_rule_results = [rule.fit(elements) for rule in self.rules]
+
+        if len(all_rule_results) == 0:
+            return [False]*len(elements)
 
         return np.bitwise_and.reduce(all_rule_results).tolist()
 
@@ -250,7 +255,7 @@ class Disjunction(AbstractCompositeRule):
         return disj
 
 
-class Tag:
+class Tag(object):
     def __init__(self, name: str, rule: AbstractRule):
         self._name = name
         if isinstance(rule, Condition):

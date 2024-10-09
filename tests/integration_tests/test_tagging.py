@@ -185,6 +185,17 @@ class TestConjunction(unittest.TestCase):
         ])
         self.assertListEqual(fit_results, [False, True, False])
 
+    def test_fit_empty_rule(self):
+        test_dict = {}
+
+        conjunction = tagging.Conjunction.from_dict(test_dict)
+        fit_results = conjunction.fit([
+            {'field1': 1.5, 'field2': '5'},
+            {'field1': 1.5, 'field2': '3.5'},
+            {'field1': 3, 'field2': '3.5'},
+        ])
+        self.assertListEqual(fit_results, [False, False, False])
+
 
 class TestDisjunction(unittest.TestCase):
     def test_init_disjunction_from_json(self):
@@ -356,6 +367,25 @@ class TestTagging(unittest.TestCase):
         expected_df = pd.DataFrame({
             'col1': [-2, -1, 0, 1, 2],
             'tags': ['test_tag', '', '', '', 'test_tag']
+        })
+        pd.testing.assert_frame_equal(df, expected_df)
+
+    def test_tagger_empty_rule(self):
+        test_json = [{}]
+
+        df = pd.DataFrame({
+            'col1': [-2, -1, 0, 1, 2],
+            'tags': ['', '', '', '', '']
+        })
+
+        tag = tagging.Tag.from_json('test_tag', test_json)
+        tagger = tagging.Tagger()
+
+        tagger.tag(tag, df)
+
+        expected_df = pd.DataFrame({
+            'col1': [-2, -1, 0, 1, 2],
+            'tags': ['', '', '', '', '']
         })
         pd.testing.assert_frame_equal(df, expected_df)
 
