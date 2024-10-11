@@ -57,8 +57,13 @@ class MonzoStatementTransformer(DataframeTransformer):
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
 
         # df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
-        df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%Y-%m-%d") + pd.to_timedelta(
-            df_monzo['time'].astype(str))
+        try:
+            df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%Y-%m-%d") + pd.to_timedelta(
+                df_monzo['time'].astype(str))
+        except ValueError as ve:
+            logging.warning(f"Unexpected date format (%d-%m-%Y): {ve}")
+            df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(
+                df_monzo['time'].astype(str))
         # df_monzo['datetime'] = pd.to_datetime(df_monzo['date'], format="%d/%m/%Y") + pd.to_timedelta(
         #     df_monzo['time'].astype(str))
         df_monzo['currency'] = df_monzo['local_currency']

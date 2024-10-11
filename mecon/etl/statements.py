@@ -7,10 +7,10 @@ import pandas as pd
 
 class StatementDFMergeStrategies:
     @staticmethod
-    def merge_last_first(dfs: List[pd.DataFrame], date_col_name: str) -> pd.DataFrame:
-        dfs.sort(key=lambda df: df[date_col_name].max())
-        merged_df = dfs[-1].copy()
-        for df in reversed(dfs[:-1]):
+    def merge_last_first(dfs_list: List[pd.DataFrame], date_col_name: str) -> pd.DataFrame:
+        dfs_sorted = sorted(dfs_list, key=lambda df: df[date_col_name].max())
+        merged_df = dfs_sorted[-1].copy()
+        for df in reversed(dfs_sorted[:-1]):
             filtered_df = df[df[date_col_name] < merged_df[date_col_name].min()]
             merged_df = pd.concat([filtered_df, merged_df], ignore_index=True)
 
