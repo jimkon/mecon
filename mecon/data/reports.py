@@ -110,14 +110,14 @@ def amount_and_frequency_graph_report(trans: transactions.Transactions, start_da
     neg_amount = neg_amount.fill_values(
         grouping if grouping != 'none' else 'day')
 
-    total_amount_transactions = trans.get_filtered_transactions(start_date,
-                                                                end_date,
-                                                                tags,
-                                                                grouping,
-                                                                aggregation_key='sum',
-                                                                fill_dates_after_groupagg=False)
-    total_amount_transactions = total_amount_transactions.fill_values(
-        grouping if grouping != 'none' else 'day')
+    # total_amount_transactions = trans.get_filtered_transactions(start_date,
+    #                                                             end_date,
+    #                                                             tags,
+    #                                                             grouping,
+    #                                                             aggregation_key='sum',
+    #                                                             fill_dates_after_groupagg=False)
+    # total_amount_transactions = total_amount_transactions.fill_values(
+    #     grouping if grouping != 'none' else 'day')
 
     if grouping != 'none':
         freq_transactions = trans.get_filtered_transactions(start_date,

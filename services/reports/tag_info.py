@@ -32,15 +32,18 @@ working_transactions = transactions
 
 DEFAULT_TIME_UNIT = 'month'
 
+
 app_ui = ui.page_fluid(
+    ui.tags.title("μEcon"),
     ui.navset_pill(
         ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/")),
+        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
+        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
         ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
         ui.nav_control(ui.input_dark_mode(id="light_mode")),
     ),
-    ui.tags.title("MEcon"),
+    ui.hr(),
+
     ui.h5(ui.output_text('title_output')),
     ui.layout_sidebar(
         ui.sidebar(
@@ -69,9 +72,10 @@ app_ui = ui.page_fluid(
                 selected=None,
                 multiple=True
             ),
-            ui.input_action_button(
+            ui.input_task_button(
                 id='reset_filter_values_button',
-                label='Reset Values'
+                label='Reset Values',
+                label_busy='Filtering...'
             )
         ),
         ui.page_fluid(
@@ -104,7 +108,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     def reset_filter_inputs():
-        urlparse_result = urlparse(input['.clientdata_url_search'].get())
+        urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func, see edit_tag
         params = parse_qs(urlparse_result.query)
 
         default_tags = params.get('tags', [''])[0].split(',')
@@ -136,15 +140,15 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return start_date, end_date, time_unit, default_tags
 
-    @reactive.effect
-    @reactive.event(input.make_light)
-    def _():
-        ui.update_dark_mode("light")
-
-    @reactive.effect
-    @reactive.event(input.make_dark)
-    def _():
-        ui.update_dark_mode("dark")
+    # @reactive.effect # TODO redundant maybe
+    # @reactive.event(input.make_light)
+    # def _():
+    #     ui.update_dark_mode("light")
+    #
+    # @reactive.effect
+    # @reactive.event(input.make_dark)
+    # def _():
+    #     ui.update_dark_mode("dark")
 
     @reactive.effect
     @reactive.event(input.reset_filter_values_button)
@@ -176,7 +180,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        return reports.amount_and_frequency_graph_report(working_transactions, start_date, end_date, grouping, tags)
+        plot = reports.amount_and_frequency_graph_report(working_transactions, start_date, end_date, grouping, tags)
+        return plot
 
     @render_widget
     def balance_plot() -> object:

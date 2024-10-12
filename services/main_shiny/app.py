@@ -1,5 +1,6 @@
 # setup_logging()
 import logging
+import pathlib
 
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
@@ -7,26 +8,38 @@ from mecon.app.datasets import WorkingDatasetDir, WorkingDatasetDirInfo, Working
 from mecon.settings import Settings
 
 # from mecon.monitoring.logs import setup_logging
+# setup_logging()
 
 logging.basicConfig()
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
+
+datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+if not datasets_dir.exists():
+    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+
 
 settings = Settings()
+settings['DATASETS_DIR'] = str(datasets_dir)
 
-datasets_obj = WorkingDatasetDir(path=settings['DATASETS_DIR']) if 'DATASETS_DIR' in settings else None
+# datasets_obj = WorkingDatasetDir(path=settings['DATASETS_DIR']) if 'DATASETS_DIR' in settings else None
+datasets_obj = WorkingDatasetDir()
 
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 
 dataset = WorkingDatasetDir().working_dataset
 
+
 app_ui = ui.page_fluid(
+    ui.tags.title("μEcon"),
     ui.navset_pill(
         ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/")),
+        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
+        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
         ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
         ui.nav_control(ui.input_dark_mode(id="light_mode")),
     ),
+    ui.hr(),
+
     ui.card(
         ui.navset_tab(
             ui.nav_panel("Home",

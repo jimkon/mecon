@@ -24,11 +24,7 @@ if not datasets_dir.exists():
 settings = Settings()
 settings['DATASETS_DIR'] = str(datasets_dir)
 
-data_manager = WorkingDataManager()
-all_tags = data_manager.all_tags()
 
-transactions = data_manager.get_transactions()
-working_transactions = transactions
 
 change_tracker = []
 added_tags, removed_tags = {}, {}
@@ -43,10 +39,12 @@ app_ui = ui.page_fluid(
     ui.navset_pill(
         ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
         ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/")),
+        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/tags/")),
         ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
         ui.nav_control(ui.input_dark_mode(id="light_mode")),
     ),
+    ui.hr(),
+
     ui.layout_sidebar(
         ui.sidebar(
             ui.input_select(
@@ -72,7 +70,7 @@ app_ui = ui.page_fluid(
             ui.input_selectize(
                 id='input_tags_select',
                 label='Select tags',
-                choices=sorted([tag.name for tag in all_tags]),
+                choices=[],
                 selected=None,
                 multiple=True
             ),
@@ -89,7 +87,7 @@ app_ui = ui.page_fluid(
 )
 
 
-def new_transaction_row(transaction):
+def new_transaction_row(transaction, all_tags):
     amount = transaction['amount']
     amount_str = f"{'⮝' if amount < 0 else '⮟'} {amount} GBP   " + \
                  (f"({transaction['amount_cur']} {transaction['currency']})" if transaction[
@@ -113,6 +111,18 @@ def new_transaction_row(transaction):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = WorkingDataManager()
+    all_tags = data_manager.all_tags()
+
+    transactions = data_manager.get_transactions()
+
+    @reactive.effect
+    def load():
+        ui.update_selectize(
+            id='input_tags_select',
+            choices=sorted([tag.name for tag in all_tags])
+        )
+
     @reactive.calc
     def tag_filtered_transactions() -> Transactions:
         logging.info(
@@ -135,7 +145,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         for i, transaction in transactions_dfs.iterrows():
             ui.insert_ui(
-                ui=new_transaction_row(transaction),
+                ui=new_transaction_row(transaction, all_tags),
                 selector='#transactions_header_text',
                 where="beforeEnd",
             )

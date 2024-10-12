@@ -1,21 +1,16 @@
 import json
 import logging
-import logging
 import pathlib
 from urllib.parse import urlparse, parse_qs
 
-import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-import utils
 from mecon.app.datasets import WorkingDataManager
+from mecon.data import reports
 from mecon.data.transactions import Transactions
 from mecon.settings import Settings
-from mecon.data import reports
-from mecon.tags import transformations, comparisons, tag_helpers
-
-from mecon.data import groupings
 from mecon.tags import tagging
+from mecon.tags import transformations, comparisons, tag_helpers
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -30,29 +25,30 @@ if not datasets_dir.exists():
 settings = Settings()
 settings['DATASETS_DIR'] = str(datasets_dir)
 
-data_manager = WorkingDataManager()
-all_tags = data_manager.all_tags()
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
     ui.navset_pill(
         ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/")),
+        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
+        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
         ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
         ui.nav_control(ui.input_dark_mode(id="light_mode")),
     ),
+    ui.hr(),
+
     ui.page_fillable(
         ui.h1(ui.output_text(id='title_output_text')),
-        ui.input_action_button(id='save_button', label='Save'),
-        ui.input_action_button(id='reset_button', label='Reset', label_busy='Loading...'),
+        ui.h3(ui.output_ui(id='tag_info_link')),
+        ui.input_task_button(id='save_button', label='Save'),
+        ui.input_task_button(id='reset_button', label='Reset', label_busy='Loading...'),
         ui.layout_columns(
             ui.card(
                 ui.navset_tab(
                     ui.nav_panel(
                         "JSON",
                         ui.card(
-                            ui.input_action_button(id='recalculate_button', label='Recalculate', width='25%'),
+                            ui.input_task_button(id='recalculate_button', label='Recalculate', width='25%'),
                             ui.input_text_area(
                                 id="tag_json_text",
                                 label=ui.markdown("Tag as a JSON file"),
@@ -75,7 +71,7 @@ app_ui = ui.page_fluid(
                                 multiple=True,
                                 width='100%'
                             ),
-                            ui.input_action_button(id='id_add_button', label='Add IDs', width='25%')
+                            ui.input_task_button(id='id_add_button', label='Add IDs', width='25%')
                         )
                     ),
                     ui.nav_panel(
@@ -100,12 +96,12 @@ app_ui = ui.page_fluid(
                                 choices=[comp.name for comp in comparisons.CompareOperator.all_instances()]
                             ),
                             ui.input_text(id='condition_value_input_text', label='Value'),
-                            ui.input_action_button(id='condition_add_button', label='Add condition', width='25%')
+                            ui.input_task_button(id='condition_add_button', label='Add condition', width='25%')
                         )
                     ),
                     ui.nav_panel(
                         "Rules",
-                        ui.input_action_button(id='acc_rules_apply_button', label='Apply', disabled=True),
+                        ui.input_task_button(id='acc_rules_apply_button', label='Apply', disabled=True),
                         ui.accordion(
                             id="rules_accordion",
                             multiple=True
@@ -229,10 +225,10 @@ def rule_to_ui(rule: tagging.AbstractRule):
         return comp_rule
 
 
-init_flag = True
-
-
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = WorkingDataManager()
+    all_tags = data_manager.all_tags()
+
     current_tag_value = reactive.Value(None)
 
     @reactive.calc
@@ -302,6 +298,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def title_output_text():
         return f"Editing tag: {fetch_tag_name()}"
+
+    @render.ui
+    def tag_info_link():
+        return ui.tags.a("Info page", href=f"http://127.0.0.1:8001/reports/tags/?tags={fetch_tag_name()}")
 
     def format_dt(dt):
         date_str, time = dt.date().strftime('%a %d %b, %y'), dt.time()
@@ -374,8 +374,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                 f"{tag_json_str}"
             ),
             title=f"Saving {fetch_tag_name()}",
-            easy_close=True,
-            footer=ui.input_action_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
+            easy_close=False,
+            footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
             size='xl'
         )
         ui.modal_show(m)
@@ -385,6 +385,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         logging.info("Saving")
         data_manager.update_tag(current_tag_value.get(), update_tags=True)
+        ui.modal_remove()
+
 
     @reactive.effect
     @reactive.event(input.id_add_button)

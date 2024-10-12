@@ -62,7 +62,7 @@ def amount_and_freq_timeline_fig(time_pos: List | pd.Series,
         fig.add_trace(go.Bar(
             x=time_freg,
             y=freq,
-            name="count",
+            name=f"count (total {freq.sum()})",
             yaxis='y2',
             marker={'opacity': 0.5},
         ))
