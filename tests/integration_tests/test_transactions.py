@@ -644,17 +644,15 @@ class TestFillTransactions(unittest.TestCase):
 
         pd.testing.assert_frame_equal(result_df, expected_df)
 
-    def test_fill_custom_dates(self):
+    def test_fill_empty_dataset(self):
         transactions = Transactions(pd.DataFrame({
-            'id': ['11', '13', '15'],
-            'datetime': [datetime(2023, 9, 2, 12, 23, 34),
-                         datetime(2023, 9, 4, 12, 23, 34),
-                         datetime(2023, 9, 6, 12, 23, 34)],
-            'amount': [100.0, 200.0, 300.0, ],
-            'currency': ['GBP', 'GBP', 'GBP'],
-            'amount_cur': [100.0, 200.0, 300.0],
-            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
-            'tags': ['', 'tag1', 'tag1,tag2']
+            'id': [],
+            'datetime': [],
+            'amount': [],
+            'currency': [],
+            'amount_cur': [],
+            'description': [],
+            'tags': []
         }))
 
         filler = TransactionDateFiller(
