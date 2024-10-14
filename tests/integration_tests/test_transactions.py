@@ -3,10 +3,11 @@ from datetime import datetime
 
 import pandas as pd
 
-from data import groupings
-from data.aggregators import CustomisableDefaultTransactionAggregator, CustomisableAmountTransactionAggregator, \
+from mecon.data import groupings
+from mecon.data.aggregators import CustomisableDefaultTransactionAggregator, CustomisableAmountTransactionAggregator, \
     ID_AGGREGATION_VALUE
-from data.transactions import Transactions, TransactionDateFiller, ID_FILL_VALUE, \
+from mecon.data.datafields import EmptyDataframeWrapper
+from mecon.data.transactions import Transactions, TransactionDateFiller, ID_FILL_VALUE, \
     TransactionsDataTransformationToHTMLTable
 
 
@@ -642,6 +643,37 @@ class TestFillTransactions(unittest.TestCase):
         })).dataframe().reset_index(drop=True)
 
         pd.testing.assert_frame_equal(result_df, expected_df)
+
+    def test_fill_custom_dates(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': ['11', '13', '15'],
+            'datetime': [datetime(2023, 9, 2, 12, 23, 34),
+                         datetime(2023, 9, 4, 12, 23, 34),
+                         datetime(2023, 9, 6, 12, 23, 34)],
+            'amount': [100.0, 200.0, 300.0, ],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        }))
+
+        filler = TransactionDateFiller(
+            fill_unit='day',
+            id_fill=ID_FILL_VALUE,
+            amount_fill=1.0,
+            currency_fill='currency_fill',
+            amount_curr=1.0,
+            description_fill='description_fill',
+            tags_fills='tags_fills'
+        )
+
+        with self.assertRaises(EmptyDataframeWrapper):
+            filler.fill(
+                transactions,
+                start_date=datetime(2023, 9, 1, 0, 0, 0),
+                end_date=datetime(2023, 9, 5, 0, 0, 0)
+            )
+
 
 
 class TestGroupAgg(unittest.TestCase):

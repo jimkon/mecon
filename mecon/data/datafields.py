@@ -368,6 +368,10 @@ class UnorderedDatedDataframeWrapper(Exception):
     pass
 
 
+class EmptyDataframeWrapper(Exception):
+    pass
+
+
 class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
@@ -403,6 +407,10 @@ class DateFiller:
              end_date: datetime | date | None = None
              ) -> DatedDataframeWrapper:
         df_start_date, df_end_date = df_wrapper.date_range()
+
+        if df_start_date is None or df_end_date is None:
+            raise EmptyDataframeWrapper('Cannot fill an empty Dataframe Wrapper')
+
         start_date = df_start_date if start_date is None else start_date
         end_date = df_end_date if end_date is None else end_date
 
