@@ -27,11 +27,10 @@ settings['DATASETS_DIR'] = str(datasets_dir)
 dm = WorkingDataManager()
 all_tags = dm.all_tags()
 
-transactions = dm.get_transactions()
-working_transactions = transactions
+all_transactions = dm.get_transactions()
 
+DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
-
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
@@ -51,13 +50,15 @@ app_ui = ui.page_fluid(
                 id='date_period_input_select',
                 label='Select date period',
                 choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'],
-                selected='Last year'
+                selected=DEFAULT_PERIOD
             ),
             ui.input_date_range(
                 id='transactions_date_range',
                 label='Select date range',
                 start=datetime.date.today() - datetime.timedelta(days=365),
-                end=datetime.date.today()
+                end=datetime.date.today(),
+                format='dd-mm-yyyy',
+                separator=':'
             ),
             ui.input_radio_buttons(
                 id='time_unit_select',
@@ -107,11 +108,42 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    def reset_filter_inputs():
-        urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func, see edit_tag
-        params = parse_qs(urlparse_result.query)
+    current_transactions = reactive.Value(None)
 
-        default_tags = params.get('tags', [''])[0].split(',')
+    @reactive.calc
+    def url_params() -> dict:
+        logging.info('Fetching URL params')
+        urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
+        _url_params = parse_qs(urlparse_result.query)
+        params = {}
+        params['tags'] = _url_params.get('tags', [''])[0].split(',')
+        params['time_unit'] = _url_params.get('time_unit', DEFAULT_TIME_UNIT)
+        logging.info(f"Input params: {params}")
+
+        return params
+
+    @reactive.effect
+    def init():
+        logging.info('Init')
+        if current_transactions.get() is None:
+            start_date, end_date, time_unit, tags = reset_filter_inputs()
+            logging.info(f"Loading transactions from DB for {tags}...")
+            current_transactions.set(
+                all_transactions.get_filtered_transactions(
+                    start_date=start_date,
+                    end_date=end_date,
+                    tags=tags
+                )
+            )
+        logging.info(f"Updating UI")
+        ui.update_select(id='date_period_input_select', selected=DEFAULT_PERIOD)
+
+    @reactive.calc
+    # @reactive.event(input.reset_filter_values_button)
+    def reset_filter_inputs():
+        logging.info('Reset filters')
+        default_params = url_params()
+        default_tags = default_params['tags']
         ui.update_selectize(id='input_tags_select', selected=default_tags)
 
         if input.date_period_input_select() == 'Last 30 days':
@@ -121,9 +153,52 @@ def server(input: Inputs, output: Outputs, session: Session):
         elif input.date_period_input_select() == 'Last year':
             start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
         else:
-            start_date, end_date = transactions.date_range()
+            start_date, end_date = all_transactions.date_range()
 
-        min_date, max_date = transactions.date_range()
+        # min_date, max_date = all_transactions.date_range()
+        #
+        # ui.update_date_range(id='transactions_date_range',
+        #                      start=start_date,
+        #                      end=min(max_date, end_date),
+        #                      min=min_date,
+        #                      max=max_date
+        #                      )
+
+        default_time_unit = default_params['time_unit']
+        ui.update_radio_buttons(id='time_unit_select', selected=default_time_unit)
+        ui.update_selectize(id='input_tags_select', selected=default_tags)
+
+        return start_date, end_date, default_time_unit, default_tags
+
+    @reactive.calc
+    def get_filter_params():
+        logging.info('Fetching filter params')
+        start_date, end_date = input.date_range()
+        time_unit = input.time_unit_select()
+        tags = input.tags_select()
+        return start_date, end_date, time_unit, tags
+
+    @reactive.effect
+    @reactive.event(input.reset_filter_values_button)
+    def _():
+        logging.info('Reset')
+        reset_filter_inputs()
+        ui.update_select(id='date_period_input_select', selected=DEFAULT_PERIOD)
+
+    @reactive.effect
+    @reactive.event(input.date_period_input_select)
+    def _():
+        logging.info(f"Changed period to '{input.date_period_input_select()}'")
+        if input.date_period_input_select() == 'Last 30 days':
+            start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
+        elif input.date_period_input_select() == 'Last 90 days':
+            start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
+        elif input.date_period_input_select() == 'Last year':
+            start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
+        else:
+            start_date, end_date = all_transactions.date_range()
+
+        min_date, max_date = all_transactions.date_range()
 
         ui.update_date_range(id='transactions_date_range',
                              start=start_date,
@@ -132,68 +207,74 @@ def server(input: Inputs, output: Outputs, session: Session):
                              max=max_date
                              )
 
-        time_unit = params.get('time_unit', DEFAULT_TIME_UNIT)[0]
-        ui.update_radio_buttons(id='time_unit_select', selected=time_unit)
-
-        global working_transactions
-        working_transactions = transactions.select_date_range(start_date, end_date)
-
-        return start_date, end_date, time_unit, default_tags
-
-    # @reactive.effect # TODO redundant maybe
-    # @reactive.event(input.make_light)
-    # def _():
-    #     ui.update_dark_mode("light")
-    #
     # @reactive.effect
-    # @reactive.event(input.make_dark)
+    # @reactive.event(input.date_period_input_select)
     # def _():
-    #     ui.update_dark_mode("dark")
+    #     logging.info('Period change')
+    #     reset_filter_inputs()
+    #     ui.update_select(id='date_period_input_select', selected=DEFAULT_PERIOD)
 
-    @reactive.effect
-    @reactive.event(input.reset_filter_values_button)
-    def _():
-        reset_filter_inputs()
+    # @reactive.effect
+    # @reactive.event(input.date_period_input_select, input.transactions_date_range, input.tags_select)
+    # def _():
+    #     input.date_period_input_select(), input.transactions_date_range(), input.tags_select()
+    #     logging.info(f"Recalculating current transactions")
+    #     start_date, end_date, time_unit, tags = get_filter_params()
+    #     current_transactions.set(
+    #         all_transactions.get_filtered_transactions(
+    #             start_date=start_date,
+    #             end_date=end_date,
+    #             tags=tags
+    #         )
+    #     )
 
     @render.text
     def title_output():
-        start_date, end_date, time_unit, default_tags = reset_filter_inputs()
-        return f"Report for tags: {','.join(default_tags)} between {start_date} to {end_date} grouped by {time_unit}"
+        logging.info('Title')
+        start_date, end_date, time_unit, tags = get_filter_params()
+        return f"Report for tags: {','.join(tags)} between {start_date} to {end_date} grouped by {time_unit}"
 
     @render.ui
     def info_stats():
-        start_date, end_date = input.transactions_date_range()
+        logging.info(f"Info stats")
         grouping = input.time_unit_select()
+        start_date, end_date = input.transactions_date_range()
         tags = input.input_tags_select()
-        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
-                                                                                   end_date,
-                                                                                   tags,
-                                                                                   grouping,
-                                                                                   aggregation_key='sum',
-                                                                                   fill_dates_after_groupagg=False)
+        total_amount_transactions = current_transactions.get().get_filtered_and_grouped_transactions(start_date,
+                                                                                                     end_date,
+                                                                                                     tags,
+                                                                                                     grouping,
+                                                                                                     aggregation_key='sum',
+                                                                                                     fill_dates_after_groupagg=True)
         transactions_stats_markdown = reports.transactions_stats_markdown(total_amount_transactions,
                                                                           input.time_unit_select().lower())
         return ui.markdown(transactions_stats_markdown)
 
     @render_widget
     def amount_freq_plot() -> object:
+        logging.info('amount_freq_plot')
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        plot = reports.amount_and_frequency_graph_report(working_transactions, start_date, end_date, grouping, tags)
+        plot = reports.amount_and_frequency_graph_report(current_transactions.get(),
+                                                         start_date,
+                                                         end_date,
+                                                         grouping,
+                                                         tags)
         return plot
 
     @render_widget
     def balance_plot() -> object:
+        logging.info('balance_plot')
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
-                                                                                   end_date,
-                                                                                   tags,
-                                                                                   grouping,
-                                                                                   aggregation_key='sum',
-                                                                                   fill_dates_after_groupagg=True)
+        total_amount_transactions = current_transactions.get().get_filtered_and_grouped_transactions(start_date,
+                                                                                                    end_date,
+                                                                                                    tags,
+                                                                                                    grouping,
+                                                                                                    aggregation_key='sum',
+                                                                                                    fill_dates_after_groupagg=True)
 
         graph = graphs.balance_graph_fig(
             total_amount_transactions.datetime,
@@ -204,15 +285,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render_widget
     def histogram_plot() -> object:
+        logging.info('histogram_plot')
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
-                                                                                   end_date,
-                                                                                   tags,
-                                                                                   grouping,
-                                                                                   aggregation_key='sum',
-                                                                                   fill_dates_after_groupagg=False)
+        total_amount_transactions = current_transactions.get().get_filtered_and_grouped_transactions(start_date,
+                                                                                                    end_date,
+                                                                                                    tags,
+                                                                                                    grouping,
+                                                                                                    aggregation_key='sum',
+                                                                                                    fill_dates_after_groupagg=False)
 
         graph = graphs.histogram_and_contributions_fig(
             total_amount_transactions.amount,
@@ -222,15 +304,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def transactions_table():
+        logging.info('transactions_table')
         start_date, end_date = input.transactions_date_range()
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
-        total_amount_transactions = working_transactions.get_filtered_transactions(start_date,
-                                                                                   end_date,
-                                                                                   tags,
-                                                                                   grouping,
-                                                                                   aggregation_key='sum',
-                                                                                   fill_dates_after_groupagg=False)
+        total_amount_transactions = current_transactions.get().get_filtered_and_grouped_transactions(start_date,
+                                                                                                    end_date,
+                                                                                                    tags,
+                                                                                                    grouping,
+                                                                                                    aggregation_key='sum',
+                                                                                                    fill_dates_after_groupagg=False)
         df = total_amount_transactions.dataframe()
         return df
 

@@ -232,7 +232,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     current_tag_value = reactive.Value(None)
 
     @reactive.calc
-    def input_params() -> dict:
+    def url_params() -> dict:
         logging.info(input['.clientdata_url_search'])
         urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
         params = parse_qs(urlparse_result.query)
@@ -241,13 +241,13 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.calc
     def fetch_tag_name():
-        params = input_params()
+        params = url_params()
         tag_name = params['tag_name'][0]
         return tag_name
 
     @reactive.calc
     def fetch_tag():
-        params = input_params()
+        params = url_params()
         tag_name = params['tag_name'][0]
         logging.info(f"Fetching tag '{tag_name}' from the DB...")
         tag = data_manager.get_tag(tag_name)
