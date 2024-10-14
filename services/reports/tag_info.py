@@ -68,8 +68,8 @@ app_ui = ui.page_fluid(
             ),
             ui.input_selectize(
                 id='input_tags_select',
-                label='Select tags',
-                choices=sorted([tag.name for tag in all_tags]),
+                label='Select tags (union rows > 0)',
+                choices=sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
@@ -139,12 +139,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         ui.update_select(id='date_period_input_select', selected=DEFAULT_PERIOD)
 
     @reactive.calc
-    # @reactive.event(input.reset_filter_values_button)
     def reset_filter_inputs():
         logging.info('Reset filters')
         default_params = url_params()
         default_tags = default_params['tags']
-        ui.update_selectize(id='input_tags_select', selected=default_tags)
 
         if input.date_period_input_select() == 'Last 30 days':
             start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
@@ -155,18 +153,13 @@ def server(input: Inputs, output: Outputs, session: Session):
         else:
             start_date, end_date = all_transactions.date_range()
 
-        # min_date, max_date = all_transactions.date_range()
-        #
-        # ui.update_date_range(id='transactions_date_range',
-        #                      start=start_date,
-        #                      end=min(max_date, end_date),
-        #                      min=min_date,
-        #                      max=max_date
-        #                      )
-
         default_time_unit = default_params['time_unit']
         ui.update_radio_buttons(id='time_unit_select', selected=default_time_unit)
-        ui.update_selectize(id='input_tags_select', selected=default_tags)
+
+        new_choices = [tag_name for tag_name, cnt in all_transactions.containing_tag(default_tags).all_tags().items() if cnt > 0]
+        ui.update_selectize(id='input_tags_select',
+                            choices=sorted(new_choices),
+                            selected=default_tags)
 
         return start_date, end_date, default_time_unit, default_tags
 
@@ -206,27 +199,6 @@ def server(input: Inputs, output: Outputs, session: Session):
                              min=min_date,
                              max=max_date
                              )
-
-    # @reactive.effect
-    # @reactive.event(input.date_period_input_select)
-    # def _():
-    #     logging.info('Period change')
-    #     reset_filter_inputs()
-    #     ui.update_select(id='date_period_input_select', selected=DEFAULT_PERIOD)
-
-    # @reactive.effect
-    # @reactive.event(input.date_period_input_select, input.transactions_date_range, input.tags_select)
-    # def _():
-    #     input.date_period_input_select(), input.transactions_date_range(), input.tags_select()
-    #     logging.info(f"Recalculating current transactions")
-    #     start_date, end_date, time_unit, tags = get_filter_params()
-    #     current_transactions.set(
-    #         all_transactions.get_filtered_transactions(
-    #             start_date=start_date,
-    #             end_date=end_date,
-    #             tags=tags
-    #         )
-    #     )
 
     @render.text
     def title_output():
@@ -270,11 +242,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
         total_amount_transactions = current_transactions.get().get_filtered_and_grouped_transactions(start_date,
-                                                                                                    end_date,
-                                                                                                    tags,
-                                                                                                    grouping,
-                                                                                                    aggregation_key='sum',
-                                                                                                    fill_dates_after_groupagg=True)
+                                                                                                     end_date,
+                                                                                                     tags,
+                                                                                                     grouping,
+                                                                                                     aggregation_key='sum',
+                                                                                                     fill_dates_after_groupagg=True)
 
         graph = graphs.balance_graph_fig(
             total_amount_transactions.datetime,
@@ -290,11 +262,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
         total_amount_transactions = current_transactions.get().get_filtered_and_grouped_transactions(start_date,
-                                                                                                    end_date,
-                                                                                                    tags,
-                                                                                                    grouping,
-                                                                                                    aggregation_key='sum',
-                                                                                                    fill_dates_after_groupagg=False)
+                                                                                                     end_date,
+                                                                                                     tags,
+                                                                                                     grouping,
+                                                                                                     aggregation_key='sum',
+                                                                                                     fill_dates_after_groupagg=False)
 
         graph = graphs.histogram_and_contributions_fig(
             total_amount_transactions.amount,
@@ -309,11 +281,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         grouping = input.time_unit_select()
         tags = input.input_tags_select()
         total_amount_transactions = current_transactions.get().get_filtered_and_grouped_transactions(start_date,
-                                                                                                    end_date,
-                                                                                                    tags,
-                                                                                                    grouping,
-                                                                                                    aggregation_key='sum',
-                                                                                                    fill_dates_after_groupagg=False)
+                                                                                                     end_date,
+                                                                                                     tags,
+                                                                                                     grouping,
+                                                                                                     aggregation_key='sum',
+                                                                                                     fill_dates_after_groupagg=False)
         df = total_amount_transactions.dataframe()
         return df
 
