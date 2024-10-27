@@ -7,7 +7,7 @@ import logging
 from collections import Counter
 from datetime import datetime, date
 from itertools import chain
-from typing import List
+from typing import List, Literal
 
 import pandas as pd
 
@@ -241,13 +241,21 @@ class TagsColumnMixin(ColumnMixin):
         tags_dict = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_dict
 
-    def contains_tag(self, tags: str | list | None) -> pd.Series:
+    def contains_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_true') -> pd.Series:
         """
         Returns a boolean pd.Series with True for each row where tags present.
         if not tags presented, it return True for all the rows
         """
-        if tags is None or len(tags) == 0:
-            return pd.Series(self._df_wrapper_obj.size() * [True])
+        tags = [] if tags is None else tags
+        if len(tags) == 0:
+            if empty_tags_strategy == 'all_true':
+                return pd.Series(self._df_wrapper_obj.size() * [True])
+            elif empty_tags_strategy == 'all_false':
+                return pd.Series(self._df_wrapper_obj.size() * [False])
+            elif empty_tags_strategy == 'raise':
+                raise ValueError(f"Invalid 'tags' value: None or empty. Either provide a value to 'tags', or set 'empty_tags_strategy' to another value than 'raise'")
+            else:
+                raise ValueError(f"Invalid 'empty_tags_strategy' value: {empty_tags_strategy}, allows values are [all_true, raise, all_false]")
 
         tags = [tags] if isinstance(tags, str) else tags
         tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
@@ -255,37 +263,32 @@ class TagsColumnMixin(ColumnMixin):
         index_col = tagging.Tagger.get_index_for_rule(self._df_wrapper_obj.dataframe(), rule)
         return index_col
 
-    def not_contains_tags(self, tags: str | list | None) -> pd.Series:
+    def not_contains_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_false') -> pd.Series:
         """
         The opposite of contains_tag, it returns a boolean pd.Series with True for each row where tags present.
         if not tags presented, it return False for all the rows
         """
-        contains_tags_flags = self.contains_tag(tags)
+        # Flip empty_tags_strategy from 'all_true' to 'all_false' and vice versa as it gets negated downstream
+        empty_tags_strategy = 'all_true' if empty_tags_strategy == 'all_false' else 'all_false' if empty_tags_strategy == 'all_true' else empty_tags_strategy
+
+        contains_tags_flags = self.contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
         not_contains_tags_flags = ~contains_tags_flags
         return not_contains_tags_flags
 
-    def containing_tag(self, tags: str | list | None) -> DataframeWrapper:
+    def containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_true') -> DataframeWrapper:
         """
         Returns a copy of the df_wrapper with all the rows where tags are present.
         """
-        # todo maybe use contains_tags, similar to not_containing_tag
-        # if tags is None or len(tags) == 0:
-        #     return self._df_wrapper_obj.copy()
-        #
-        # tags = [tags] if isinstance(tags, str) else tags
-        # tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
-        # rule = tagging.Conjunction(tag_rules)
-        # return self._df_wrapper_obj.apply_rule(rule)
-        contains_tags_flags = self.contains_tag(tags)
+        contains_tags_flags = self.contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
         df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags]
         return self._df_wrapper_obj.factory(df)
 
-    def not_containing_tag(self, tags: str | list | None) -> DataframeWrapper:
+    def not_containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_false') -> DataframeWrapper:
         """
         The opposite of containing_tag, it returns a copy of the df_wrapper with all the rows where tags are NOT present.
         """
 
-        not_contains_tags_flags = self.not_contains_tags(tags)
+        not_contains_tags_flags = self.not_contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
         df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags]
         return self._df_wrapper_obj.factory(df)
 

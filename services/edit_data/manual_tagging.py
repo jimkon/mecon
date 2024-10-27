@@ -128,7 +128,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def tag_filtered_transactions() -> Transactions:
         logging.info(
             f"Filtering transactions, order: UNKNOWN, tags subset: {','.join(input.input_tags_select())}, page: , window: ")
-        _tag_filtered_transactions = transactions.containing_tag(input.input_tags_select())
+        _tag_filtered_transactions = transactions.containing_tags(input.input_tags_select())
         return _tag_filtered_transactions
 
     @reactive.calc

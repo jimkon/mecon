@@ -156,7 +156,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         default_time_unit = default_params['time_unit']
         ui.update_radio_buttons(id='time_unit_select', selected=default_time_unit)
 
-        new_choices = [tag_name for tag_name, cnt in all_transactions.containing_tag(default_tags).all_tags().items() if cnt > 0]
+        new_choices = [tag_name for tag_name, cnt in all_transactions.containing_tags(default_tags).all_tags().items() if cnt > 0]
         ui.update_selectize(id='input_tags_select',
                             choices=sorted(new_choices),
                             selected=default_tags)

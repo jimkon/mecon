@@ -100,7 +100,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         return df
 
     def get_filtered_transactions(self, start_date, end_date, tags) -> Transactions:
-        transactions = self.containing_tag(tags)
+        transactions = self.containing_tags(tags)
 
         transactions = transactions.select_date_range(start_date, end_date)
 
@@ -133,7 +133,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def get_filtered_and_grouped_transactions(self, start_date, end_date, tags, grouping_key, aggregation_key,
                                               fill_dates_before_groupagg=False,
                                               fill_dates_after_groupagg=False) -> Transactions:
-        transactions = self.containing_tag(tags)
+        transactions = self.containing_tags(tags)
 
         transactions = transactions.select_date_range(start_date, end_date)
 
