@@ -75,7 +75,6 @@ class TestTagsColumnMixin(unittest.TestCase):
         with self.assertRaises(ValueError):
             example_wrapper.contains_tags([], empty_tags_strategy='not_a_valid_value')
 
-
     def test_containing_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
@@ -88,6 +87,18 @@ class TestTagsColumnMixin(unittest.TestCase):
 
         pd.testing.assert_frame_equal(example_wrapper.containing_tags(None).dataframe().reset_index(drop=True),
                                       example_wrapper.dataframe().reset_index(drop=True))
+
+    def test_containing_tags_empty_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        self.assertEqual(example_wrapper.containing_tags(None).size(), 4)
+        self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_true').size(), 4)
+        self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_false').size(), 0)
+
+        with self.assertRaises(ValueError):
+            example_wrapper.containing_tags(None, empty_tags_strategy='raise')
 
     def test_not_contains_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -126,7 +137,6 @@ class TestTagsColumnMixin(unittest.TestCase):
         with self.assertRaises(ValueError):
             example_wrapper.not_contains_tags([], empty_tags_strategy='not_a_valid_value')
 
-
     def test_not_containing_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
@@ -138,6 +148,18 @@ class TestTagsColumnMixin(unittest.TestCase):
                                       expected_wrapper_df.reset_index(drop=True))
 
         self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
+
+    def test_not_containing_tags_empty_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
+        self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_false').size(), 0)
+        self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_true').size(), 4)
+
+        with self.assertRaises(ValueError):
+            example_wrapper.not_containing_tags(None, empty_tags_strategy='raise')
 
 
 class TestDateTimeColumnMixin(unittest.TestCase):
