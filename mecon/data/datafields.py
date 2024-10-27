@@ -92,7 +92,7 @@ class DataframeWrapper:
             raise NullDataframeInDataframeWrapper
 
         if len(df.columns) == 0:
-            raise InvalidInputDataFrameColumns(f"No columns found in the input Dataframe.")
+            raise InvalidInputDataFrameColumns(f"No columns found in the input Dataframe. {df.shape=}")
 
 
 class MissingRequiredColumnInDataframeWrapperError(Exception):
