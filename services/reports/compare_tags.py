@@ -63,7 +63,7 @@ app_ui = ui.page_fluid(
             ui.input_radio_buttons(
                 id='time_unit_select',
                 label='Time unit',
-                choices=['none', 'day', 'week', 'month', 'year'],
+                choices=['day', 'week', 'month', 'year'], # 'none' doesn't make sense for comparisons
                 selected=DEFAULT_TIME_UNIT
             ),
             ui.input_selectize(
@@ -117,8 +117,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
         _url_params = parse_qs(urlparse_result.query)
         params = {}
-        params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0].split(',')
-        params['filter_out_tags'] = _url_params.get('filter_out_tags', [''])[0].split(',')
+        params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
+        params['filter_in_tags'] = params['filter_in_tags'].split(',') if len(params['filter_in_tags']) > 0 else []
+        params['filter_out_tags'] = _url_params.get('filter_out_tags', [''])[0]
+        params['filter_out_tags'] = params['filter_out_tags'].split(',') if len(params['filter_out_tags']) > 0 else []
         params['time_unit'] = _url_params.get('time_unit', DEFAULT_TIME_UNIT)
         params['compare_tags'] = _url_params.get('compare_tags', [''])[0].split(',')
         logging.info(f"Input params: {params}")
@@ -130,9 +132,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         params = url_params()
         filter_in_tags = params['filter_in_tags']
         filter_out_tags = params['filter_out_tags']
-        transactions = dm.get_transactions()\
-                        .containing_tags(filter_in_tags)\
-                        .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
+        transactions = dm.get_transactions() \
+            .containing_tags(filter_in_tags) \
+            .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
+        logging.info(f"URL param transactions: {transactions.size()=}")
         return transactions
 
     @reactive.effect
@@ -142,6 +145,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         params = url_params()
         transactions = default_transactions()
+        all_tags_names = [tag.name for tag in dm.all_tags()]
         new_choices = [tag_name for tag_name, cnt in transactions.all_tags().items() if
                        cnt > 0]
 
@@ -149,9 +153,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         ui.update_selectize(id='filter_in_tags_select',
                             choices=sorted(new_choices),
                             selected=params['filter_in_tags'])
-        logging.info(f"Updating filter OUT tags: {len(new_choices)} {params['filter_out_tags']}")
+        logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {params['filter_out_tags']}")
         ui.update_selectize(id='filter_out_tags_select',
-                            choices=sorted(new_choices),
+                            choices=all_tags_names,
                             selected=params['filter_out_tags'])
         logging.info(f"Updating compare tags: {len(new_choices)} {params['compare_tags']}")
         ui.update_selectize(id='compare_tags_select',
@@ -173,7 +177,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def all_ungrouped_transactions():
         start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags = get_filter_params()
         logging.info(f"Calculating all transactions for {compare_tags}...")
-        #TODO default_transactions are only using url_params, not the filters. consider removing the filters fully, or make them work
+        # TODO default_transactions are only using url_params, not the filters. consider removing the filters fully, or make them work
         transactions = default_transactions().select_date_range(start_date, end_date)
         all_trans = []
         for tag in compare_tags:
@@ -196,7 +200,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                 aggregation_key='sum',
                 fill_dates_after_groupagg=True,
             )
-            filled_trans = grouped_trans.fill_values(fill_unit=input.time_unit_select(), start_date=min_date, end_date=max_date)
+            filled_trans = grouped_trans.fill_values(fill_unit=input.time_unit_select(), start_date=min_date,
+                                                     end_date=max_date)
             synced_trans.append(filled_trans)
 
         return synced_trans, compare_tags
