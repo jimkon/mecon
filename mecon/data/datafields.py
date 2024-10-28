@@ -249,9 +249,9 @@ class TagsColumnMixin(ColumnMixin):
         tags = [] if tags is None else tags
         if len(tags) == 0:
             if empty_tags_strategy == 'all_true':
-                return pd.Series(self._df_wrapper_obj.size() * [True])
+                return pd.Series([True] * self._df_wrapper_obj.size())
             elif empty_tags_strategy == 'all_false':
-                return pd.Series(self._df_wrapper_obj.size() * [False])
+                return pd.Series([False] * self._df_wrapper_obj.size())
             elif empty_tags_strategy == 'raise':
                 raise ValueError(f"Invalid 'tags' value: None or empty. Either provide a value to 'tags', or set 'empty_tags_strategy' to another value than 'raise'")
             else:
@@ -280,7 +280,7 @@ class TagsColumnMixin(ColumnMixin):
         Returns a copy of the df_wrapper with all the rows where tags are present.
         """
         contains_tags_flags = self.contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
-        df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags]
+        df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags].reset_index(drop=True)
         return self._df_wrapper_obj.factory(df)
 
     def not_containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_false') -> DataframeWrapper:
@@ -289,7 +289,7 @@ class TagsColumnMixin(ColumnMixin):
         """
 
         not_contains_tags_flags = self.not_contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
-        df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags]
+        df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags].reset_index(drop=True)
         return self._df_wrapper_obj.factory(df)
 
     def reset_tags(self):
