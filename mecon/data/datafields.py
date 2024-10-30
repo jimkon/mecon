@@ -123,7 +123,7 @@ class IdColumnMixin(ColumnMixin):
     _required_column = 'id'
 
     @property
-    def id(self):
+    def id(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['id']
 
 
@@ -172,7 +172,7 @@ class AmountColumnMixin(ColumnMixin):
     _required_column = ['amount', 'currency', 'amount_cur']
 
     @property
-    def amount(self):
+    def amount(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['amount']
 
     @property
@@ -184,7 +184,7 @@ class AmountColumnMixin(ColumnMixin):
         return self.currency.apply(lambda s: s.split(','))
 
     @property
-    def amount_cur(self):
+    def amount_cur(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['amount_cur']
 
     def all_currencies(self):
@@ -217,7 +217,7 @@ class AmountColumnMixin(ColumnMixin):
 class DescriptionColumnMixin(ColumnMixin):
     _required_column = 'description'
 
-    def description(self):
+    def description(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['description']
 
 
