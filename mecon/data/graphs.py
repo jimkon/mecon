@@ -205,22 +205,22 @@ def amount_and_freq_timeline_fig_old(time: List | pd.Series,
 
 # -------------------------------------------------------------------
 
-@logging_utils.codeflow_log_wrapper('#graphs')
-def lines_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str]):
-    fig = go.Figure()
-
-    for time, line, name in zip(times, lines, names):
-        fig.add_trace(go.Scatter(x=time, y=line, name=name, line=dict(width=3), fill='tozeroy'))
-
-    fig.update_layout(
-        autosize=True,  # Automatically adjust the size of the plot
-        hovermode='closest',  # Define hover behavior
-        yaxis=dict(title='£'),
-        uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
-    )
-    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-    # return graph_html
-    return fig
+# @logging_utils.codeflow_log_wrapper('#graphs')
+# def lines_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str]):
+#     fig = go.Figure()
+#
+#     for time, line, name in zip(times, lines, names):
+#         fig.add_trace(go.Scatter(x=time, y=line, name=name, line=dict(width=3), fill='tozeroy'))
+#
+#     fig.update_layout(
+#         autosize=True,  # Automatically adjust the size of the plot
+#         hovermode='closest',  # Define hover behavior
+#         yaxis=dict(title='£'),
+#         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
+#     )
+#     # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+#     # return graph_html
+#     return fig
 
 
 @logging_utils.codeflow_log_wrapper('#graphs')
@@ -232,6 +232,27 @@ def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], name
 
     fig.update_layout(
         barmode='stack',  # Stacked bar mode
+        autosize=True,
+        hovermode='closest',
+        yaxis=dict(title='£'),
+        # xaxis=dict(title=f"({len(time)} points)"),
+        uirevision=str(datetime.datetime.now())
+    )
+
+    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+    # return graph_html
+    return fig
+
+
+@logging_utils.codeflow_log_wrapper('#graphs')
+def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
+    fig = go.Figure()
+
+    for amount, name in zip(amounts, names):
+        fig.add_trace(go.Histogram(x=amount, name=name, autobinx=True))
+
+    fig.update_layout(
+        # barmode='stack',  # Stacked bar mode
         autosize=True,
         hovermode='closest',
         yaxis=dict(title='£'),

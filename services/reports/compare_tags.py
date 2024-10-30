@@ -63,7 +63,7 @@ app_ui = ui.page_fluid(
             ui.input_radio_buttons(
                 id='time_unit_select',
                 label='Time unit',
-                choices=['day', 'week', 'month', 'year'], # 'none' doesn't make sense for comparisons
+                choices=['none', 'day', 'week', 'month', 'year'],
                 selected=DEFAULT_TIME_UNIT
             ),
             ui.input_selectize(
@@ -87,11 +87,11 @@ app_ui = ui.page_fluid(
                 selected=None,
                 multiple=True
             ),
-            ui.input_task_button(
-                id='reset_filter_values_button',
-                label='Reset Values',
-                label_busy='Filtering...'
-            )
+            # ui.input_task_button( # too much trouble for now, just do it manually or refresh the page
+            #     id='reset_filter_values_button',
+            #     label='Reset Values',
+            #     label_busy='Filtering...'
+            # )
         ),
         ui.page_fluid(
             ui.navset_tab(
@@ -209,11 +209,47 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render_widget
     def timelines():
         logging.info('timelines')
+
+        if input.time_unit_select() == 'none':
+            raise ValueError(f"This plot doesn't work for 'none' time unit")
+
         synced_trans, tags = all_synced_and_grouped_transactions()
 
         plot = graphs.stacked_bars_graph_html(
             times=[trans.datetime for trans in synced_trans],
             lines=[trans.amount for trans in synced_trans],
+            names=tags
+        )
+        return plot
+
+    @render_widget
+    def histograms():
+        logging.info('histograms')
+        all_trans, tags = all_ungrouped_transactions()
+
+        grouped_trans = [trans.group_and_fill_transactions(
+            grouping_key=input.time_unit_select(),
+            aggregation_key='sum',
+        ) for trans in all_trans]
+
+        plot = graphs.multiple_histograms_graph_html(
+            amounts=[trans.amount for trans in grouped_trans],
+            names=tags
+        )
+        return plot
+
+    @render_widget
+    def balances():
+        logging.info('balances')
+
+        if input.time_unit_select() == 'none':
+            raise ValueError(f"This plot doesn't work for 'none' time unit")
+
+        synced_trans, tags = all_synced_and_grouped_transactions()
+
+        plot = graphs.stacked_bars_graph_html(
+            times=[trans.datetime for trans in synced_trans],
+            lines=[trans.amount.cumsum() for trans in synced_trans],
             names=tags
         )
         return plot
