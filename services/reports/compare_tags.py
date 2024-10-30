@@ -80,13 +80,6 @@ app_ui = ui.page_fluid(
                 selected=None,
                 multiple=True
             ),
-            ui.input_selectize(
-                id='compare_tags_select',
-                label='Select tags to show',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
-                selected=None,
-                multiple=True
-            ),
             # ui.input_task_button( # too much trouble for now, just do it manually or refresh the page
             #     id='reset_filter_values_button',
             #     label='Reset Values',
@@ -94,6 +87,13 @@ app_ui = ui.page_fluid(
             # )
         ),
         ui.page_fluid(
+            ui.input_selectize(
+                id='compare_tags_select',
+                label='Select tags to show',
+                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
+                selected=None,
+                multiple=True
+            ),
             ui.navset_tab(
                 ui.nav_panel("Timelines",
                              output_widget(id="timelines"),
@@ -149,19 +149,48 @@ def server(input: Inputs, output: Outputs, session: Session):
         new_choices = [tag_name for tag_name, cnt in transactions.all_tags().items() if
                        cnt > 0]
 
-        logging.info(f"Updating filter In tags: {len(new_choices)} {params['filter_in_tags']}")
-        ui.update_selectize(id='filter_in_tags_select',
-                            choices=sorted(new_choices),
-                            selected=params['filter_in_tags'])
-        logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {params['filter_out_tags']}")
-        ui.update_selectize(id='filter_out_tags_select',
-                            choices=all_tags_names,
-                            selected=params['filter_out_tags'])
-        logging.info(f"Updating compare tags: {len(new_choices)} {params['compare_tags']}")
-        ui.update_selectize(id='compare_tags_select',
-                            choices=sorted(new_choices),
-                            selected=params['compare_tags'])
+        if len(input.filter_in_tags_select()) == 0:
+            logging.info(f"Updating filter In tags: {len(new_choices)} {params['filter_in_tags']}")
+            ui.update_selectize(id='filter_in_tags_select',
+                                choices=sorted(new_choices),
+                                selected=params['filter_in_tags'])
+
+        if len(input.filter_out_tags_select()) == 0:
+            logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {params['filter_out_tags']}")
+            ui.update_selectize(id='filter_out_tags_select',
+                                choices=all_tags_names,
+                                selected=params['filter_out_tags'])
+
+
+        if len(input.compare_tags_select()) == 0:
+            logging.info(f"Updating compare tags: {len(new_choices)} {params['compare_tags']}")
+            ui.update_selectize(id='compare_tags_select',
+                                choices=sorted(new_choices),
+                                selected=params['compare_tags'])
+
         logging.info(f"{input.filter_in_tags_select()=} {input.compare_tags_select()=}")
+
+    @reactive.effect
+    @reactive.event(input.date_period_input_select)
+    def _():
+        logging.info(f"Changed period to '{input.date_period_input_select()}'")
+        if input.date_period_input_select() == 'Last 30 days':
+            start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
+        elif input.date_period_input_select() == 'Last 90 days':
+            start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
+        elif input.date_period_input_select() == 'Last year':
+            start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
+        else:
+            start_date, end_date = all_transactions.date_range()
+
+        min_date, max_date = all_transactions.date_range()
+
+        ui.update_date_range(id='transactions_date_range',
+                             start=start_date,
+                             end=min(max_date, end_date),
+                             min=min_date,
+                             max=max_date
+                             )
 
     @reactive.calc
     def get_filter_params():
@@ -174,15 +203,29 @@ def server(input: Inputs, output: Outputs, session: Session):
         return start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags
 
     @reactive.calc
+    def filtered_transactions():
+        start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags = get_filter_params()
+        transactions = dm.get_transactions() \
+            .select_date_range(start_date, end_date) \
+            .containing_tags(filter_in_tags) \
+            .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
+        logging.info(f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags})")
+        return transactions
+
+    @reactive.calc
     def all_ungrouped_transactions():
         start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags = get_filter_params()
         logging.info(f"Calculating all transactions for {compare_tags}...")
-        # TODO default_transactions are only using url_params, not the filters. consider removing the filters fully, or make them work
-        transactions = default_transactions().select_date_range(start_date, end_date)
+        transactions = filtered_transactions()
+
         all_trans = []
         for tag in compare_tags:
             trans = transactions.containing_tags(tag)
+
             logging.info(f"Transactions for {tag}: {trans.size()}")
+            if trans.size() == 0:
+                raise ValueError(f"Transactions for {tag} is 0 for filter params=({start_date=}, {end_date=}, {filter_in_tags=}, {filter_out_tags=})")
+
             all_trans.append(trans)
 
         logging.info(f"Calculating all transactions... {len(all_trans)}")
@@ -190,8 +233,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     def all_synced_and_grouped_transactions():
         all_trans, compare_tags = all_ungrouped_transactions()
-        min_date = min([min(trans.datetime) for trans in all_trans])
-        max_date = max([max(trans.datetime) for trans in all_trans])
+        min_date = min([trans.datetime.min() for trans in all_trans])
+        max_date = max([trans.datetime.max() for trans in all_trans])
 
         synced_trans = []
         for trans in all_trans:
@@ -279,41 +322,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     #                         selected=default_tags)
     #
     #     return start_date, end_date, default_time_unit, default_tags
-
-    # @reactive.effect
-    # @reactive.event(input.reset_filter_values_button)
-    # def _():
-    #     logging.info('Reset')
-    #     reset_filter_inputs()
-    #     ui.update_select(id='date_period_input_select', selected=DEFAULT_PERIOD)
-
-    # @reactive.effect
-    # @reactive.event(input.date_period_input_select)
-    # def _():
-    #     logging.info(f"Changed period to '{input.date_period_input_select()}'")
-    #     if input.date_period_input_select() == 'Last 30 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last 90 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last year':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
-    #     else:
-    #         start_date, end_date = all_transactions.date_range()
-    #
-    #     min_date, max_date = all_transactions.date_range()
-    #
-    #     ui.update_date_range(id='transactions_date_range',
-    #                          start=start_date,
-    #                          end=min(max_date, end_date),
-    #                          min=min_date,
-    #                          max=max_date
-    #                          )
-    #
-    # @render.text
-    # def title_output():
-    #     logging.info('Title')
-    #     start_date, end_date, time_unit, tags = get_filter_params()
-    #     return f"Report for tags: {','.join(tags)} between {start_date} to {end_date} grouped by {time_unit}"
 
 
 compare_tags_app = App(app_ui, server)
