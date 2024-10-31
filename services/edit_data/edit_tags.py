@@ -285,11 +285,11 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.calc
     def tagged_transactions():
-        return current_transactions().containing_tag(current_tag_value.get().name)
+        return current_transactions().containing_tags(current_tag_value.get().name)
 
     @reactive.calc
     def untagged_transactions():
-        return current_transactions().not_containing_tag(current_tag_value.get().name)
+        return current_transactions().not_containing_tags(current_tag_value.get().name)
 
     @reactive.calc
     def get_target_tag_json():
