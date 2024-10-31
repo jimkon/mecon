@@ -304,7 +304,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return ui.tags.a("Info page", href=f"http://127.0.0.1:8001/reports/tags/?tags={fetch_tag_name()}")
 
     def format_dt(dt):
-        date_str, time = dt.date().strftime('%a %d %b, %y'), dt.time()
+        date_str, time = dt.date().strftime('%a %d %b, %Y'), dt.time()
         formatted_date_str = f"📅{date_str}\t🕑{time}"
         return formatted_date_str
 
