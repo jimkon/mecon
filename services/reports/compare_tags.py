@@ -161,7 +161,6 @@ def server(input: Inputs, output: Outputs, session: Session):
                                 choices=all_tags_names,
                                 selected=params['filter_out_tags'])
 
-
         if len(input.compare_tags_select()) == 0:
             logging.info(f"Updating compare tags: {len(new_choices)} {params['compare_tags']}")
             ui.update_selectize(id='compare_tags_select',
@@ -209,7 +208,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             .select_date_range(start_date, end_date) \
             .containing_tags(filter_in_tags) \
             .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
-        logging.info(f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags})")
+        logging.info(
+            f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags})")
         return transactions
 
     @reactive.calc
@@ -224,7 +224,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
             logging.info(f"Transactions for {tag}: {trans.size()}")
             if trans.size() == 0:
-                raise ValueError(f"Transactions for {tag} is 0 for filter params=({start_date=}, {end_date=}, {filter_in_tags=}, {filter_out_tags=})")
+                raise ValueError(
+                    f"Transactions for {tag} is 0 for filter params=({start_date=}, {end_date=}, {filter_in_tags=}, {filter_out_tags=})")
 
             all_trans.append(trans)
 
