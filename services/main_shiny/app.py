@@ -1,6 +1,6 @@
-# setup_logging()
 import logging
 import pathlib
+from urllib.parse import quote
 
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
@@ -21,7 +21,6 @@ if not datasets_dir.exists():
 settings = Settings()
 settings['DATASETS_DIR'] = str(datasets_dir)
 
-# datasets_obj = WorkingDatasetDir(path=settings['DATASETS_DIR']) if 'DATASETS_DIR' in settings else None
 datasets_obj = WorkingDatasetDir()
 
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
@@ -93,16 +92,6 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    @reactive.effect
-    @reactive.event(input.make_light)
-    def _():
-        ui.update_dark_mode("light")
-
-    @reactive.effect
-    @reactive.event(input.make_dark)
-    def _():
-        ui.update_dark_mode("dark")
-
     @render.text
     def links_output_text():
         # can also be a collapsable list (ui.accordion, ui.accordion_panel)
@@ -111,7 +100,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         for link_category, link_spec in links.items():
             markdown_text += f"### {link_category}\n"
             for link_name, link_url in link_spec.items():
-                markdown_text += f"* [{link_name}]({link_url})\n"
+                encode_url = quote(link_url)
+                markdown_text += f"* [{link_name}]({encode_url})\n"
 
         ui.insert_ui(
             ui=ui.markdown(markdown_text),
