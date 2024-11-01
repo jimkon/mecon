@@ -55,7 +55,7 @@ app_ui = ui.page_fluid(
 def tag_to_ui(tag: tagging.Tag):
     _id = f"{tag.name.replace(' ', '_')}_value_box"
     res_ui = ui.value_box(
-        ui.tags.a(f"{tag.name}", href=f"http://127.0.0.1:8002/edit_data/tags/edit/?tag_name={tag.name}"),
+        ui.tags.a(f"{tag.name}", href=f"http://127.0.0.1:8002/edit_data/tags/edit/?filter_in_tags={tag.name}"),
         "[# transactions tagged] [total money in] [total money out] [date created]",
         showcase=shinywidgets.output_widget(_id + "_sparkline"),
         showcase_layout="bottom",
