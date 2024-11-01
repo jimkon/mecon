@@ -112,7 +112,7 @@ app_ui = ui.page_fluid(
 
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.calc
-    def url_params() -> dict:
+    def url_params():
         logging.info('Fetching URL params')
         urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
         _url_params = parse_qs(urlparse_result.query)
@@ -169,6 +169,32 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         logging.info(f"{input.filter_in_tags_select()=} {input.compare_tags_select()=}")
 
+    # @reactive.calc
+    # def reset_filter_inputs():
+    #     logging.info('Reset filters')
+    #     default_params = url_params()
+    #     default_tags = default_params['tags']
+    #
+    #     if input.date_period_input_select() == 'Last 30 days':
+    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
+    #     elif input.date_period_input_select() == 'Last 90 days':
+    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
+    #     elif input.date_period_input_select() == 'Last year':
+    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
+    #     else:
+    #         start_date, end_date = all_transactions.date_range()
+    #
+    #     default_time_unit = default_params['time_unit']
+    #     ui.update_radio_buttons(id='time_unit_select', selected=default_time_unit)
+    #
+    #     new_choices = [tag_name for tag_name, cnt in all_transactions.containing_tag(default_tags).all_tags().items() if
+    #                    cnt > 0]
+    #     ui.update_selectize(id='filter_in_tags_select',
+    #                         choices=sorted(new_choices),
+    #                         selected=default_tags)
+    #
+    #     return start_date, end_date, default_time_unit, default_tags
+
     @reactive.effect
     @reactive.event(input.date_period_input_select)
     def _():
@@ -198,23 +224,23 @@ def server(input: Inputs, output: Outputs, session: Session):
         time_unit = input.time_unit_select()
         filter_in_tags = input.filter_in_tags_select()
         filter_out_tags = input.filter_out_tags_select()
-        compare_tags = input.compare_tags_select() if len(input.compare_tags_select()) > 0 else ['All']
-        return start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags
+        return start_date, end_date, time_unit, filter_in_tags, filter_out_tags
 
     @reactive.calc
     def filtered_transactions():
-        start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags = get_filter_params()
+        start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params()
         transactions = dm.get_transactions() \
             .select_date_range(start_date, end_date) \
             .containing_tags(filter_in_tags) \
             .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
         logging.info(
-            f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags})")
+            f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
         return transactions
 
     @reactive.calc
     def all_ungrouped_transactions():
-        start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags = get_filter_params()
+        start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params()
+        compare_tags = input.compare_tags_select() if len(input.compare_tags_select()) > 0 else ['All']
         logging.info(f"Calculating all transactions for {compare_tags}...")
         transactions = filtered_transactions()
 
@@ -297,32 +323,6 @@ def server(input: Inputs, output: Outputs, session: Session):
             names=tags
         )
         return plot
-
-    # @reactive.calc
-    # def reset_filter_inputs():
-    #     logging.info('Reset filters')
-    #     default_params = url_params()
-    #     default_tags = default_params['tags']
-    #
-    #     if input.date_period_input_select() == 'Last 30 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last 90 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last year':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
-    #     else:
-    #         start_date, end_date = all_transactions.date_range()
-    #
-    #     default_time_unit = default_params['time_unit']
-    #     ui.update_radio_buttons(id='time_unit_select', selected=default_time_unit)
-    #
-    #     new_choices = [tag_name for tag_name, cnt in all_transactions.containing_tag(default_tags).all_tags().items() if
-    #                    cnt > 0]
-    #     ui.update_selectize(id='filter_in_tags_select',
-    #                         choices=sorted(new_choices),
-    #                         selected=default_tags)
-    #
-    #     return start_date, end_date, default_time_unit, default_tags
 
 
 compare_tags_app = App(app_ui, server)
