@@ -2,6 +2,7 @@ import unittest
 from datetime import datetime
 
 import pandas as pd
+from pandas import Timestamp
 
 from mecon.data import groupings
 from mecon.data.aggregators import CustomisableDefaultTransactionAggregator, CustomisableAmountTransactionAggregator, \
@@ -665,13 +666,29 @@ class TestFillTransactions(unittest.TestCase):
             tags_fills='tags_fills'
         )
 
-        with self.assertRaises(EmptyDataframeWrapper):
-            filler.fill(
-                transactions,
-                start_date=datetime(2023, 9, 1, 0, 0, 0),
-                end_date=datetime(2023, 9, 5, 0, 0, 0)
-            )
+        result_df = filler.fill(
+            transactions,
+            start_date=datetime(2023, 9, 1, 0, 0, 0),
+            end_date=datetime(2023, 9, 5, 0, 0, 0)
+        ).dataframe()
 
+        expected_df = pd.DataFrame([{'datetime': Timestamp('2023-09-01 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-02 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-03 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-04 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-05 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'}])
+
+        pd.testing.assert_frame_equal(result_df, expected_df)
 
 
 class TestGroupAgg(unittest.TestCase):
