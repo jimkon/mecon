@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 import pandas as pd
 
-from data import datafields
+from mecon.data import datafields
 
 
 # TODO:v3 merge with test_dataframe_wrappers maybe
