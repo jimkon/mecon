@@ -239,6 +239,10 @@ def server(input: Inputs, output: Outputs, session: Session):
             .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
         logging.info(
             f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
+
+        if transactions.size() == 0:
+            raise Exception(f"Filtering resulted in zero transactions: params=({start_date=}, {end_date=}, {time_unit=}, {filter_in_tags=}, {filter_out_tags})")
+
         return transactions
 
     # @render.text
