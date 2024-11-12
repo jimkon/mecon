@@ -1,11 +1,13 @@
 # TODO:v3 work with relative files
-import pathlib
+from pathlib import Path
 
-DEFAULT_DATASETS_DIR_PATH = pathlib.Path(r"../datasets")
+MECON_ROOT_DIRPATH = Path(__file__).parent.parent
+
+DEFAULT_DATASETS_DIR_PATH = MECON_ROOT_DIRPATH / "datasets"
 SETTINGS_JSON_FILENAME = r"settings.json"
-SETTINGS_JSON_FILEPATH = pathlib.Path(DEFAULT_DATASETS_DIR_PATH, SETTINGS_JSON_FILENAME)
+SETTINGS_JSON_FILEPATH = Path(DEFAULT_DATASETS_DIR_PATH, SETTINGS_JSON_FILENAME)
 
-CURRENCY_LOOKUP_RATES_JSON_PATH = r"C:\Users\dimitris\PycharmProjects\mecon\datasets\currency_rates.json"
+CURRENCY_LOOKUP_RATES_JSON_PATH = DEFAULT_DATASETS_DIR_PATH / "currency_rates.json"
 
 CONDITION_JSON_MAX_SIZE = 2000
 TAG_MONITORING = True
@@ -16,9 +18,9 @@ DATETIME_STRING_FORMAT = f"{DATE_STRING_FORMAT} {TIME_STRING_FORMAT}"
 
 # DEFAULT_DATASET_NAME = 'v2'
 
-CREDS_DIRECTORY_PATH = pathlib.Path(r"C:\Users\dimitris\PycharmProjects\mecon\creds")
+CREDS_DIRECTORY_PATH = MECON_ROOT_DIRPATH / "creds"
 
-LOGS_DIRECTORY_PATH = pathlib.Path(r"C:\Users\dimitris\PycharmProjects\mecon\logs")
+LOGS_DIRECTORY_PATH = MECON_ROOT_DIRPATH / "logs"
 LOGS_DIRECTORY_PATH.mkdir(exist_ok=True)
 
 CURRENT_LOG_FILENAME = "logs_raw.csv"
