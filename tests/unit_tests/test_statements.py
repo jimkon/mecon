@@ -1,15 +1,12 @@
 import pathlib
 import unittest
 from io import StringIO
+from unittest.mock import Mock, call, patch
 
 import pandas as pd
-from unittest.mock import patch, Mock, call
-
 from pandas import Timestamp
 
-from mecon.etl.statements import StatementCSV, HSBCStatementCSV, \
-    MonzoStatementCSV, RevoStatementCSV, \
-    StatementDFMergeStrategies
+from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV, StatementCSV, StatementDFMergeStrategies
 
 
 class TestMerge(unittest.TestCase):
@@ -368,6 +365,8 @@ class TestRevoStatementCSV(unittest.TestCase):
 class TestDatasetStatements(unittest.TestCase):
     from mecon import config
     statements_dir = pathlib.Path(config.DEFAULT_DATASETS_DIR_PATH) / 'test/data/mock_statements_source_dir'
+    if not statements_dir.exists():
+        raise Exception(f"For this tests to run 'test' dataset has to be present.")
 
     def test_hsbc(self):
         dfs = HSBCStatementCSV.from_all_paths_in_dir(self.statements_dir)._df
