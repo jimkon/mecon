@@ -70,13 +70,10 @@ class DatasetTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
         self.temp_path = Path(self.temp_dir)
-        self.dataset = fs.Dataset(self.temp_path)
+        self.dataset = fs.Dataset.from_dirpath(self.temp_path)
 
     def tearDown(self):
         shutil.rmtree(self.temp_path)
-
-    def test_data_path(self):
-        self.assertEqual(self.dataset._data, self.temp_path / 'data')
 
     def test_db_path(self):
         self.assertEqual(self.dataset.db, self.temp_path / 'data/db/sqlite3')

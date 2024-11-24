@@ -1,5 +1,5 @@
 import logging
-import pathlib
+from pathlib import Path
 from typing import Dict
 
 import pandas as pd
@@ -19,27 +19,36 @@ def _subfolder_csvs(path):
 
 
 class Dataset:
-    def __init__(self, path: str | pathlib.Path):
-        self._path = pathlib.Path(path)
-
-        self._data = self._path / 'data'
-
-        self._sqlite = self._data / 'db'
-        self._sqlite.mkdir(parents=True, exist_ok=True)
-
-        self._statements = self._data / 'statements'
-        self._statements.mkdir(parents=True, exist_ok=True)
-
-        settings_path = self.path / config.SETTINGS_JSON_FILENAME
+    def __init__(self,
+                 name: str,
+                 db_path: Path,
+                 statements_path: Path,
+                 settings_path: Path):
+        self._name = name
+        self._sqlite = db_path
+        self._statements = statements_path
         self._settings = settings.Settings(settings_path)
 
-    @property
-    def path(self):
-        return self._path
+    @classmethod
+    def from_dirpath(self, dir_path: Path):
+        data_data = dir_path / 'data'
+
+        db_path = data_data / 'db'
+        db_path.mkdir(parents=True, exist_ok=True)
+
+        statements_path = data_data / 'statements'
+        statements_path.mkdir(parents=True, exist_ok=True)
+
+        settings_path = dir_path / config.SETTINGS_JSON_FILENAME
+
+        return Dataset(name=dir_path.name,
+                       db_path=db_path,
+                       statements_path=statements_path,
+                       settings_path=settings_path)
 
     @property
     def name(self):
-        return self._path.name
+        return self._name
 
     @property
     def settings(self):
@@ -56,15 +65,15 @@ class Dataset:
     def statement_files(self) -> Dict:
         return _subfolder_csvs(self.statements)
 
-    def add_statement(self, bank_name: str, statement_path: str | pathlib.Path):
-        statement_path = pathlib.Path(statement_path)
+    def add_statement(self, bank_name: str, statement_path: str | Path):
+        statement_path = Path(statement_path)
         filename = statement_path.name
         new_statement_path = self.statements / bank_name / filename
         new_statement_path.parent.mkdir(parents=True, exist_ok=True)
         new_statement_path.write_bytes(statement_path.read_bytes())
         logging.info(f"Added Monzo statement file to {new_statement_path}")
 
-    def add_df_statement(self, bank_name: str | pathlib.Path, df: pd.DataFrame, filename: str):
+    def add_df_statement(self, bank_name: str | Path, df: pd.DataFrame, filename: str):
         new_statement_path = self.statements / bank_name / filename
         new_statement_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(new_statement_path, index=False)
@@ -72,8 +81,8 @@ class Dataset:
 
 
 class DatasetDir:
-    def __init__(self, path: str | pathlib.Path):
-        self._path = pathlib.Path(path)
+    def __init__(self, path: str | Path):
+        self._path = Path(path)
         if not self._path.exists():
             logging.warning(f"DatasetDir.__init__: Path {self._path} does not exist and will be created.")
 
@@ -87,7 +96,7 @@ class DatasetDir:
 
         for subpath in subpaths:
             if subpath.is_dir():
-                self._datasets.append(Dataset(subpath))
+                self._datasets.append(Dataset.from_dirpath(subpath))
                 logging.info(f"New dataset in path '{subpath}'. #info#filesystem")
 
         settings_path = self.path / config.SETTINGS_JSON_FILENAME
@@ -116,5 +125,4 @@ class DatasetDir:
             return None
 
         dataset_path = self.path / dataset_name
-        return Dataset(dataset_path) if dataset_path.exists() else None
-
+        return Dataset.from_dirpath(dataset_path) if dataset_path.exists() else None
