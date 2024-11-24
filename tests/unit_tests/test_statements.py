@@ -237,10 +237,14 @@ class TestHSBCStatementCSV(unittest.TestCase):
         statement.to_path(mock_csv_file)
         mock_csv_file.seek(0)
         csv_file_text = mock_csv_file.read()
-        self.assertEqual(csv_file_text, "24/12/2020,desc1,-100.0\r\n22/12/2020,desc2,100.0\r\n")
+        self.assertEqual(csv_file_text, """24/12/2020,desc1,-100.0
+22/12/2020,desc2,100.0
+""")
 
     def test_compatibility_of_from_path_and_to_path(self):
-        input_csv_file_text = "24/12/2020,desc1,-100.0\r\n22/12/2020,desc2,100.0\r\n"
+        input_csv_file_text = """24/12/2020,desc1,-100.0
+22/12/2020,desc2,100.0
+"""
         mock_csv_file = StringIO(input_csv_file_text)
         statement = HSBCStatementCSV.from_path(mock_csv_file)
         mock_csv_file = StringIO()
@@ -253,9 +257,15 @@ class TestHSBCStatementCSV(unittest.TestCase):
         with patch.object(HSBCStatementCSV, 'load_many_from_dir') as mock_load_stats:
             mock_load_stats.return_value = [
                 HSBCStatementCSV.from_path(
-                    StringIO("20/12/2020,desc1,0.00\r\n22/12/2020,desc2,2.00\r\n23/12/2020,desc3,3.00\r\n")),
+                    StringIO("""20/12/2020,desc1,0.00
+22/12/2020,desc2,2.00
+23/12/2020,desc3,3.00
+""")),
                 HSBCStatementCSV.from_path(
-                    StringIO("21/12/2020,desc4,-1.00\r\n23/12/2020,desc5,-3.00\r\n25/12/2020,desc6,-5.00\n"))
+                    StringIO("""21/12/2020,desc4,-1.00
+23/12/2020,desc5,-3.00
+25/12/2020,desc6,-5.00
+"""))
             ]
             df = HSBCStatementCSV.from_all_paths_in_dir('example_path').dataframe()
             pd.testing.assert_frame_equal(
