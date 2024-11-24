@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-from mecon.app.datasets import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
+from mecon.app.file_system import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
 from mecon.settings import Settings
 
 # from mecon.monitoring.logs import setup_logging

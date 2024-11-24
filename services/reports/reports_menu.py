@@ -7,7 +7,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
 from mecon.data import reports
-from mecon.app.datasets import WorkingDataManager
+from mecon.app.file_system import WorkingDataManager
 from mecon.settings import Settings
 from mecon.data import graphs
 

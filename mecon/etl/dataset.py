@@ -47,7 +47,7 @@ class Dataset:
 
     @property
     def db(self):
-        return self._sqlite / 'sqlite3'
+        return self._sqlite / config.DB_FILENAME
 
     @property
     def statements(self):

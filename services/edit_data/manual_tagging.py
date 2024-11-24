@@ -6,7 +6,7 @@ import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 import utils
-from mecon.app.datasets import WorkingDataManager
+from mecon.app.file_system import WorkingDataManager
 from mecon.data.transactions import Transactions
 from mecon.settings import Settings
 from mecon.data import groupings

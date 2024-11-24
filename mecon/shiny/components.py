@@ -2,7 +2,7 @@ import datetime
 
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-from mecon.app.datasets import WorkingDataManager
+from mecon.app.file_system import WorkingDataManager
 from mecon.settings import Settings
 
 DEFAULT_PERIOD = 'Last year'

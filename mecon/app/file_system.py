@@ -7,7 +7,7 @@ import pandas as pd
 from mecon import settings
 from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 from mecon.app.data_manager import CachedDBDataManager
-from mecon.etl.file_system import DatasetDir, Dataset
+from mecon.etl.dataset import DatasetDir, Dataset
 from mecon.data.datafields import InvalidInputDataFrameColumns, NullDataframeInDataframeWrapper
 from mecon.app.db_extension import DBWrapper
 
