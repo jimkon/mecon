@@ -2,15 +2,14 @@
 import datetime
 import logging
 import pathlib
+from shinywidgets import output_widget, render_widget
 from urllib.parse import urlparse, parse_qs
 
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
-from shinywidgets import output_widget, render_widget
-
-from mecon.data import reports
 from mecon.app.file_system import WorkingDataManager
-from mecon.settings import Settings
 from mecon.data import graphs
+from mecon.data import reports
+from mecon.settings import Settings
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 # from mecon.monitoring.logs import setup_logging
 
@@ -18,8 +17,9 @@ logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
 datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+
 if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+    raise ValueError(f"Unable to locate Datasets directory from {__file__}: {datasets_dir} does not exists")
 
 settings = Settings()
 settings['DATASETS_DIR'] = str(datasets_dir)

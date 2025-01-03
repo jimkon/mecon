@@ -1,7 +1,13 @@
 # TODO:v3 work with relative files
+import logging
+from os import getenv
 from pathlib import Path
 
-MECON_ROOT_DIRPATH = Path(__file__).parent.parent
+logging.basicConfig()
+logging.getLogger().setLevel(logging.INFO)
+
+MECON_ROOT_DIRPATH = Path(getenv("MECON_ROOT_DIRPATH")) if getenv("MECON_ROOT_DIRPATH") else Path(__file__).parent.parent
+logging.info(f"{MECON_ROOT_DIRPATH=}")
 
 DEFAULT_DATASETS_DIR_PATH = MECON_ROOT_DIRPATH / "datasets"
 SETTINGS_JSON_FILENAME = r"settings.json"

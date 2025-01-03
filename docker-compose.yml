@@ -10,4 +10,9 @@ services:
       dockerfile: services/reports/Dockerfile
     ports:
       - 8001:8000
+  edit_data_app:
+    build:
+      dockerfile: services/edit_data/Dockerfile
+    ports:
+      - 8002:8000
 
