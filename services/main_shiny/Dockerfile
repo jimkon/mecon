@@ -15,4 +15,4 @@ RUN  pip install -e .
 
 COPY ./services/main_shiny/ ./services/main_shiny/
 
-CMD ["shiny", "run", "--host","0.0.0.0", "--port","8000", "./services/main_shiny/app.py"]
+CMD ["shiny", "run", "--host", "0.0.0.0", "--port", "8000", "./services/main_shiny/app.py"]
