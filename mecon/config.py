@@ -1,12 +1,29 @@
 # TODO:v3 work with relative files
 import logging
+import pathlib
 from os import getenv
 from pathlib import Path
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-MECON_ROOT_DIRPATH = Path(getenv("MECON_ROOT_DIRPATH")) if getenv("MECON_ROOT_DIRPATH") else Path(__file__).parent.parent
+logging.info(f"Searching for MECON_ROOT_DIRPATH in environment variables.")
+MECON_ROOT_DIRPATH = getenv("MECON_ROOT_DIRPATH")
+if MECON_ROOT_DIRPATH is None or MECON_ROOT_DIRPATH == "":
+    logging.info(f"MECON_ROOT_DIRPATH not found in environment variables. Using default value relative to {__file__=}.")
+
+    _file_path = Path(__file__)
+    final_path_parts = []
+    if 'mecon' in _file_path.parts:
+        for part in _file_path.parts:
+            final_path_parts.append(part)
+            if part == 'mecon':
+                break
+        MECON_ROOT_DIRPATH = pathlib.Path(*final_path_parts)
+        logging.info(f"MECON_ROOT_DIRPATH set to: {MECON_ROOT_DIRPATH}")
+    else:
+        raise ValueError(f"Cannot find 'mecon' in path: {_file_path}")
+
 logging.info(f"{MECON_ROOT_DIRPATH=}")
 
 DEFAULT_DATASETS_DIR_PATH = MECON_ROOT_DIRPATH / "datasets"

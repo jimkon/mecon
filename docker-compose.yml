@@ -5,6 +5,8 @@ services:
       dockerfile: services/main_shiny/Dockerfile
     ports:
       - 8000:8000
+    volumes:
+      - ./datasets:/mecon/datasets
   reports_app:
     build:
       dockerfile: services/reports/Dockerfile
