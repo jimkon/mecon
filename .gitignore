@@ -14,3 +14,5 @@ mecon.egg-info
 example_path
 /templates/
 /static/
+settings.json
+/misc_scripts/
