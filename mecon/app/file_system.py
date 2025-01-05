@@ -4,20 +4,21 @@ from typing import Dict
 
 import pandas as pd
 
-from mecon import settings
-from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
+from mecon import config
 from mecon.app.data_manager import CachedDBDataManager
-from mecon.etl.dataset import DatasetDir, Dataset
-from mecon.data.datafields import InvalidInputDataFrameColumns, NullDataframeInDataframeWrapper
 from mecon.app.db_extension import DBWrapper
+from mecon.data.datafields import InvalidInputDataFrameColumns, NullDataframeInDataframeWrapper
+from mecon.etl.dataset import CustomisedDatasetDir, Dataset
+from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 
 
 # todo rename to working/current and file system to datasets
 
-class WorkingDatasetDir(DatasetDir):
+class WorkingDatasetDir(CustomisedDatasetDir):
     def __init__(self):
-        path = settings.Settings()['DATASETS_DIR']
+        path = config.DEFAULT_DATASETS_DIR_PATH
         super().__init__(path)
+        self._working_dataset = None
 
         first_dataset_name = self.datasets()[0].name if len(self.datasets()) > 0 else None
         curr_dataset_name = self.settings.get('CURRENT_DATASET', first_dataset_name)
@@ -27,9 +28,9 @@ class WorkingDatasetDir(DatasetDir):
     def working_dataset(self) -> Dataset:
         return self._working_dataset
 
-    def set_working_dataset(self, dataset_name) -> Dataset:
+    def set_working_dataset(self, dataset_name: str) -> Dataset:
+        logging.info(f"Setting new current working dataset to '{dataset_name}'")
         self._working_dataset = self.get_dataset(dataset_name)
-        logging.info(f"Setting new current working dataset to {dataset_name}")
         return self.working_dataset
 
 
@@ -92,7 +93,6 @@ class WorkingDataManager(CachedDBDataManager):
 
         self.reset_transactions()
         logging.info(f"Resetting database finished")
-
 
 
 class WorkingDataManagerInfo:

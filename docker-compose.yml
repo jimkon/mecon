@@ -6,19 +6,22 @@ services:
     ports:
       - 8000:8000
     volumes:
-      - ./datasets:/mecon/datasets
+#      - ./datasets:/mecon/datasets
+      - "${DATASETS_DIR}:/mecon/datasets"
   reports_app:
     build:
       dockerfile: services/reports/Dockerfile
     ports:
       - 8001:8000
     volumes:
-      - ./datasets:/mecon/datasets
+#      - ./datasets:/mecon/datasets
+      - "${DATASETS_DIR}:/mecon/datasets"
   edit_data_app:
     build:
       dockerfile: services/edit_data/Dockerfile
     ports:
       - 8002:8000
     volumes:
-      - ./datasets:/mecon/datasets
+#      - ./datasets:/mecon/datasets
+      - "${DATASETS_DIR}:/mecon/datasets"
 

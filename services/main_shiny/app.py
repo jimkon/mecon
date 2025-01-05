@@ -1,11 +1,9 @@
 import logging
-import pathlib
 from urllib.parse import quote
 
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
-
+from mecon import config
 from mecon.app.file_system import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
-from mecon.settings import Settings
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -13,20 +11,16 @@ from mecon.settings import Settings
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 
-
-settings = Settings()
-settings['DATASETS_DIR'] = str(datasets_dir)
-
 datasets_obj = WorkingDatasetDir()
-
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+dataset = datasets_obj.working_dataset
 
-dataset = WorkingDatasetDir().working_dataset
-
+if dataset is None:
+    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
@@ -111,7 +105,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def current_dataset_directory() -> object:
-        return f"Current directory: " + settings['DATASETS_DIR'] if datasets_obj else 'No working directory found'
+        return f"Current directory: " + str(datasets_dir) if datasets_dir else 'No working directory found'
 
     @reactive.effect
     @reactive.event(input.dataset_select)

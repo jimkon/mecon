@@ -1,6 +1,7 @@
 import logging
+import pathlib
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Literal
 
 import pandas as pd
 
@@ -46,6 +47,9 @@ class Dataset:
                        statements_path=statements_path,
                        settings_path=settings_path)
 
+    def __repr__(self):
+        return f"Dataset({self.name}): {self.db}, {self.statements}"
+
     @property
     def name(self):
         return self._name
@@ -81,26 +85,48 @@ class Dataset:
 
 
 class DatasetDir:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, exist_ok: bool = False):
         self._path = Path(path)
         if not self._path.exists():
-            logging.warning(f"DatasetDir.__init__: Path {self._path} does not exist and will be created.")
+            if exist_ok:
+                logging.warning(f"DatasetDir.__init__: Path {self._path} does not exist and will be created.")
+                self._path.mkdir(parents=True, exist_ok=True)
+            else:
+                raise FileNotFoundError(f"DatasetDir.__init__: Path {self._path} does not exist.")
 
-        self._path.mkdir(parents=True, exist_ok=True)
-        logging.info(f"New datasets directory in path '{path}'. #info#filesystem")
+        # logging.info(f"New datasets directory in path '{path}'. #info#filesystem")
 
-        self._datasets = []
+        self._datasets = {}
         subpaths = list(self._path.iterdir())
         if len(subpaths) == 0:
             logging.warning(f"DatasetDir.__init__: Path {self._path} has no datasets inside.")
 
-        for subpath in subpaths:
-            if subpath.is_dir():
-                self._datasets.append(Dataset.from_dirpath(subpath))
-                logging.info(f"New dataset in path '{subpath}'. #info#filesystem")
+        logging.info(f"Adding {len(subpaths)} datasets from {path}. #info#filesystem")
+        self.add_datasets_from_paths(subpaths)
 
-        settings_path = self.path / config.SETTINGS_JSON_FILENAME
-        self._settings = settings.Settings(settings_path)
+    def add_datasets_from_paths(self,
+                                paths: list[Path],
+                                ignore_not_dir: bool = False,
+                                invalid_dataset: Literal['ignore', 'raise', 'warn'] = 'warn'):
+        for path in paths:
+            if ignore_not_dir and not path.is_dir():
+                logging.warning(f"DatasetDir.add_datasets_from_paths: Path {path} is not a directory.")
+            else:
+                logging.info(f"New dataset in path '{path}'. #info#filesystem")
+                try:
+                    new_dataset = Dataset.from_dirpath(path)
+                except Exception as e:
+                    if invalid_dataset == 'raise':
+                        raise e
+                    elif invalid_dataset == 'warn':
+                        logging.warning(f"DatasetDir.add_datasets_from_paths: Error creating dataset from {path}: {e}")
+                    continue
+
+                if new_dataset.name in self._datasets:
+                    logging.info(
+                        f"DatasetDir.add_datasets_from_paths: Dataset {new_dataset.name} already exists and it will be overwritten.")
+
+                self._datasets[new_dataset.name] = new_dataset
 
     @property
     def name(self):
@@ -110,19 +136,34 @@ class DatasetDir:
     def path(self):
         return self._path
 
-    @property
-    def settings(self):
-        return self._settings
-
     def datasets(self):
-        return self._datasets
+        return list(self._datasets.values())
+
+    def dataset_names(self):
+        return list(self._datasets.keys())
 
     def is_empty(self):
         return len(self.datasets()) == 0
 
-    def get_dataset(self, dataset_name) -> Dataset | None:
+    def get_dataset(self, dataset_name: str) -> Dataset | None:
         if dataset_name is None or self.is_empty():
             return None
 
-        dataset_path = self.path / dataset_name
-        return Dataset.from_dirpath(dataset_path) if dataset_path.exists() else None
+        # dataset_path = self.path / dataset_name
+        # return Dataset.from_dirpath(dataset_path) if dataset_path.exists() else None
+        return self._datasets.get(dataset_name)
+
+
+class CustomisedDatasetDir(DatasetDir):
+    def __init__(self, path: str | Path):
+        super().__init__(path)
+        settings_path = self.path / config.SETTINGS_JSON_FILENAME
+        self._settings = settings.Settings(settings_path)
+
+        external_datasets = [pathlib.Path(p) for p in self.settings.get('EXTERNAL_DATASETS_PATHS', [])]
+        logging.info(f"Adding {len(external_datasets)} external datasets. #info#filesystem")
+        self.add_datasets_from_paths(external_datasets)
+
+    @property
+    def settings(self):
+        return self._settings
