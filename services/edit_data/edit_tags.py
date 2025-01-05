@@ -1,12 +1,11 @@
 import json
 import logging
-import pathlib
 from urllib.parse import urlparse, parse_qs
 
-from mecon.app.file_system import WorkingDataManager
+from mecon import config
+from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
 from mecon.data import reports
 from mecon.data.transactions import Transactions
-from mecon.settings import Settings
 from mecon.tags import tagging
 from mecon.tags import transformations, comparisons, tag_helpers
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
@@ -16,14 +15,16 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
-
-datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 
-settings = Settings()
-settings['DATASETS_DIR'] = str(datasets_dir)
+datasets_obj = WorkingDatasetDir()
+datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+dataset = datasets_obj.working_dataset
 
+if dataset is None:
+    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
