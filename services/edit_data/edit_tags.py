@@ -15,6 +15,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
+
 datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")

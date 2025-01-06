@@ -1,19 +1,19 @@
 import datetime
 
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
-
-from mecon.app.file_system import WorkingDataManager
-from mecon.settings import Settings
+from mecon import config
+from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+from shiny import ui
 
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
 
-datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 
-settings = Settings()
-settings['DATASETS_DIR'] = str(datasets_dir)
+datasets_obj = WorkingDatasetDir()
+datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+dataset = datasets_obj.working_dataset
 
 dm = WorkingDataManager()
 all_tags = dm.all_tags()
