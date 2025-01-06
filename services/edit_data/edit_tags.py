@@ -243,17 +243,17 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.calc
     def fetch_tag_name():
         params = url_params()
-        tag_name = params['tag_name'][0]
+        tag_name = params['filter_in_tags'][0]
         return tag_name
 
     @reactive.calc
     def fetch_tag():
         params = url_params()
-        tag_name = params['tag_name'][0]
+        tag_name = params['filter_in_tags'][0]
         logging.info(f"Fetching tag '{tag_name}' from the DB...")
         tag = data_manager.get_tag(tag_name)
         if tag is None:
-            ValueError(f"Tag {params['tag_name']} does not exists")
+            ValueError(f"Tag {params['filter_in_tags']} does not exists")
 
         return tag
 
