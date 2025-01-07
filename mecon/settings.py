@@ -18,6 +18,7 @@ class DictFile(dict):
     def __init__(self,
                  path: str | pathlib.Path,
                  default_dict: dict | None = None):
+
         self._path = pathlib.Path(path)
         if not self.path.exists():
             default_dict = default_dict or self._default_dict
@@ -44,7 +45,7 @@ class DictFile(dict):
         return json.dumps(self, **JSON_FILE_FORMATING_KWARGS)
 
 
-class Settings(dict):
+class Settings(DictFile):
     def __init__(self, path: str | pathlib.Path | None = None):
         if path is None:
             path = config.SETTINGS_JSON_FILENAME

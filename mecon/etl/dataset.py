@@ -28,7 +28,7 @@ class Dataset:
         self._name = name
         self._sqlite = db_path
         self._statements = statements_path
-        self._settings = settings.Settings(settings_path)
+        self._settings = settings.Settings(path=settings_path)
 
     @classmethod
     def from_dirpath(self, dir_path: Path):
