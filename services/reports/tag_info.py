@@ -1,14 +1,14 @@
 # setup_logging()
 import datetime
 import logging
-import pathlib
-from shinywidgets import output_widget, render_widget
 from urllib.parse import urlparse, parse_qs
 
-from mecon.app.file_system import WorkingDataManager
+from shinywidgets import output_widget, render_widget
+
+from mecon import config
+from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
 from mecon.data import graphs
 from mecon.data import reports
-from mecon.settings import Settings
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 # from mecon.monitoring.logs import setup_logging
@@ -16,13 +16,16 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
-
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory from {__file__}: {datasets_dir} does not exists")
+    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 
-settings = Settings()
-settings['DATASETS_DIR'] = str(datasets_dir)
+datasets_obj = WorkingDatasetDir()
+datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+dataset = datasets_obj.working_dataset
+
+if dataset is None:
+    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
 
 dm = WorkingDataManager()
 all_tags = dm.all_tags()
@@ -91,9 +94,28 @@ app_ui = ui.page_fluid(
                 ui.nav_panel("Info",
                              ui.output_ui(id="info_stats"),
                              ),
-                ui.nav_panel("Timeline",
-                             output_widget(id="amount_freq_plot"),
-                             ),
+                ui.nav_panel(
+                    "Time",
+                    ui.accordion(
+                        ui.accordion_panel(
+                            f"Timeline",
+                            output_widget(id="amount_freq_plot")
+                        ),
+                        ui.accordion_panel(
+                            f"Aggregated",
+                            ui.card(
+                                ui.input_radio_buttons(
+                                            id='total_amount_or_count_radio',
+                                    label='Aggregate on:',
+                                    choices={'sum': 'Amount', 'count': 'Count'},
+                                ),
+                                output_widget(id="agg_amount_freq_plot"),
+                            )
+                        ),
+                        id="total_amount_or_count_acc",
+                        multiple=True
+                    ),
+                ),
                 ui.nav_panel("Balance",
                              output_widget(id="balance_plot"),
                              ),
@@ -241,7 +263,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
 
         if transactions.size() == 0:
-            raise Exception(f"Filtering resulted in zero transactions: params=({start_date=}, {end_date=}, {time_unit=}, {filter_in_tags=}, {filter_out_tags})")
+            raise Exception(
+                f"Filtering resulted in zero transactions: params=({start_date=}, {end_date=}, {time_unit=}, {filter_in_tags=}, {filter_out_tags})")
 
         return transactions
 
@@ -276,6 +299,16 @@ def server(input: Inputs, output: Outputs, session: Session):
                                                          end_date,
                                                          grouping,
                                                          tags)
+        return plot
+
+    @render_widget
+    def agg_amount_freq_plot() -> object:
+        logging.info('agg_amount_freq_plot')
+        trans = filtered_transactions()
+        plot = graphs.time_aggregated_amount_and_frequency_fig(
+            trans.datetime,
+            trans.amount if input.total_amount_or_count_radio() == 'sum' else None,
+        )
         return plot
 
     @render_widget
