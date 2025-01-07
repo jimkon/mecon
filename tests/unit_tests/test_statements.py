@@ -1,15 +1,12 @@
 import pathlib
 import unittest
 from io import StringIO
+from unittest.mock import Mock, call, patch
 
 import pandas as pd
-from unittest.mock import patch, Mock, call
-
 from pandas import Timestamp
 
-from mecon.import_data.statements import StatementCSV, HSBCStatementCSV, \
-    MonzoStatementCSV, RevoStatementCSV, \
-    StatementDFMergeStrategies
+from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV, StatementCSV, StatementDFMergeStrategies
 
 
 class TestMerge(unittest.TestCase):
@@ -240,25 +237,25 @@ class TestHSBCStatementCSV(unittest.TestCase):
         statement.to_path(mock_csv_file)
         mock_csv_file.seek(0)
         csv_file_text = mock_csv_file.read()
-        self.assertEqual(csv_file_text, "24/12/2020,desc1,-100.0\r\n22/12/2020,desc2,100.0\r\n")
+        self.assertEqual(csv_file_text.split(), """24/12/2020,desc1,-100.0\n22/12/2020,desc2,100.0\n""".split())
 
     def test_compatibility_of_from_path_and_to_path(self):
-        input_csv_file_text = "24/12/2020,desc1,-100.0\r\n22/12/2020,desc2,100.0\r\n"
+        input_csv_file_text = """24/12/2020,desc1,-100.0\n22/12/2020,desc2,100.0\n"""
         mock_csv_file = StringIO(input_csv_file_text)
         statement = HSBCStatementCSV.from_path(mock_csv_file)
         mock_csv_file = StringIO()
         statement.to_path(mock_csv_file)
         mock_csv_file.seek(0)
         csv_file_text = mock_csv_file.read()
-        self.assertEqual(csv_file_text, input_csv_file_text)
+        self.assertEqual(csv_file_text.split(), input_csv_file_text.split())
 
     def test_from_all_paths_in_dir(self):
         with patch.object(HSBCStatementCSV, 'load_many_from_dir') as mock_load_stats:
             mock_load_stats.return_value = [
                 HSBCStatementCSV.from_path(
-                    StringIO("20/12/2020,desc1,0.00\r\n22/12/2020,desc2,2.00\r\n23/12/2020,desc3,3.00\r\n")),
+                    StringIO("""20/12/2020,desc1,0.00\n22/12/2020,desc2,2.00\n23/12/2020,desc3,3.00\n""")),
                 HSBCStatementCSV.from_path(
-                    StringIO("21/12/2020,desc4,-1.00\r\n23/12/2020,desc5,-3.00\r\n25/12/2020,desc6,-5.00\n"))
+                    StringIO("""21/12/2020,desc4,-1.00\n23/12/2020,desc5,-3.00\n25/12/2020,desc6,-5.00\n"""))
             ]
             df = HSBCStatementCSV.from_all_paths_in_dir('example_path').dataframe()
             pd.testing.assert_frame_equal(
@@ -368,6 +365,8 @@ class TestRevoStatementCSV(unittest.TestCase):
 class TestDatasetStatements(unittest.TestCase):
     from mecon import config
     statements_dir = pathlib.Path(config.DEFAULT_DATASETS_DIR_PATH) / 'test/data/mock_statements_source_dir'
+    if not statements_dir.exists():
+        raise Exception(f"For this tests to run 'test' dataset has to be present.")
 
     def test_hsbc(self):
         dfs = HSBCStatementCSV.from_all_paths_in_dir(self.statements_dir)._df

@@ -2,21 +2,24 @@ from typing import List
 
 import pandas as pd
 
-from mecon.app import WorkingDatasetDir
-from mecon.data.transactions import Transactions
-from mecon.import_data import io_framework
-from mecon.tag_tools.tagging import Tag
-from mecon.monitoring import tag_monitoring
 from mecon import config
+# from mecon.app.datasets import WorkingDatasetDir todo investigate and remove
+from mecon.data.transactions import Transactions
+from mecon.etl import io_framework
+from mecon.monitoring import tag_monitoring
+from mecon.tags.tagging import Tag
+
+
+# todo DataManager and CachedDataManager should have a common super class
 
 
 class DataManager:
     def __init__(self,
                  trans_io: io_framework.CombinedTransactionsIOABC,
                  tags_io: io_framework.TagsIOABC,
-                 hsbc_stats_io: io_framework.HSBCTransactionsIOABC,
-                 monzo_stats_io: io_framework.MonzoTransactionsIOABC,
-                 revo_stats_io: io_framework.RevoTransactionsIOABC):
+                 hsbc_stats_io: io_framework.RawTransactionsIOABC,
+                 monzo_stats_io: io_framework.RawTransactionsIOABC,
+                 revo_stats_io: io_framework.RawTransactionsIOABC):
         self._transactions = trans_io
         self._tags = tags_io
         self._hsbc_statements = hsbc_stats_io
@@ -63,7 +66,7 @@ class DataManager:
         if tag_dict is None:
             return None
 
-        return Tag.from_json_string(tag_name, tag_dict['conditions_json'])
+        return Tag.from_json(tag_name, tag_dict['conditions_json'])
 
     def update_tag(self, tag: Tag, update_tags=True):
         self._tags.set_tag(tag.name, tag.rule.to_json())
@@ -79,7 +82,7 @@ class DataManager:
 
     def all_tags(self) -> List[Tag]:
         tags_dict = self._tags.all_tags()
-        tags = [Tag.from_json_string(tag_dict['name'], tag_dict['conditions_json']) for tag_dict in tags_dict]
+        tags = [Tag.from_json(tag_dict['name'], tag_dict['conditions_json']) for tag_dict in tags_dict]
         return tags
 
     def reset_transaction_tags(self):
@@ -97,9 +100,9 @@ class CacheDataManager:
     def __init__(self,
                  trans_io: io_framework.CombinedTransactionsIOABC,
                  tags_io: io_framework.TagsIOABC,
-                 hsbc_stats_io: io_framework.HSBCTransactionsIOABC,
-                 monzo_stats_io: io_framework.MonzoTransactionsIOABC,
-                 revo_stats_io: io_framework.RevoTransactionsIOABC):
+                 hsbc_stats_io: io_framework.RawTransactionsIOABC,
+                 monzo_stats_io: io_framework.RawTransactionsIOABC,
+                 revo_stats_io: io_framework.RawTransactionsIOABC):
         self._transactions = trans_io
         self._tags = tags_io
         self._hsbc_statements = hsbc_stats_io
@@ -182,8 +185,7 @@ class CacheDataManager:
             tags_dict = self._tags.all_tags()
             tags = []
             for tag_dict in tags_dict:
-                tag = Tag.from_json_string(tag_dict['name'],
-                                           tag_dict['conditions_json'])
+                tag = Tag.from_json(tag_dict['name'], tag_dict['conditions_json'])
                 tags.append(tag)
 
             self._cache.tags = {tag.name: tag for tag in tags}
@@ -199,9 +201,9 @@ class CacheDataManager:
         for tag in all_tags:
             transactions = transactions.apply_tag(tag)
 
-        if config.TAG_MONITORING:
-            tagging_report = tagging_monitor.produce_report()
-            tagging_report.store(WorkingDatasetDir.get_instance().working_dataset.path)
+        # if config.TAG_MONITORING: # todo data package should be using app package
+        #     tagging_report = tagging_monitor.produce_report()
+        #     tagging_report.store(WorkingDatasetDir.get_instance().working_dataset.path)
 
         data_df = transactions.dataframe()
         self._transactions.update_tags(data_df)

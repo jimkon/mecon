@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pandas as pd
 
-from data.datafields import DataframeWrapper
-from data.groupings import LabelGroupingABC, TagGrouping
-from data import groupings as gp, datafields
+from mecon.data.datafields import DataframeWrapper
+from mecon.data.groupings import LabelGroupingABC, TagGrouping
+from mecon.data import groupings as gp, datafields
 
 
 class TestGrouping(unittest.TestCase):
@@ -65,6 +65,7 @@ class TestGrouping(unittest.TestCase):
                                       pd.DataFrame({'A': [2, 3, 4],
                                                     'B': [7, 8, 9],
                                                     'tags': ['a,b', 'a,b,c', 'b,c']}))
+
 
 class TestLabelGrouping(unittest.TestCase):
     def test_group(self):
@@ -264,6 +265,120 @@ class TestDatetimeGrouping(unittest.TestCase):
         pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
                                       pd.DataFrame({'datetime': [datetime(2023, 3, 15, 0, 0, 0)],
                                                     'B': [9]}))
+
+
+class TestIndexGrouping(unittest.TestCase):
+    def test_index_grouping(self):
+        class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
+            def __init__(self, df):
+                super().__init__(df=df)
+                datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+
+        data = {
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                         datetime(2021, 1, 2, 12, 30, 30),
+                         datetime(2021, 1, 8, 23, 59, 59),
+                         datetime(2021, 1, 15, 0, 0, 0),
+                         datetime(2021, 10, 15, 0, 0, 0),
+                         ],
+            'B': [0, 1, 2, 3, 4]
+        }
+        df = pd.DataFrame(data)
+        wrapper = CustomDataframeWrapper(df)
+        grouper = gp.IndexGrouping([[0, 3], [1], [2, 4]])
+
+        grouped_wrappers = grouper.group(wrapper)
+
+        self.assertEqual(len(grouped_wrappers), 3)
+        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                                                                 datetime(2021, 1, 15, 0, 0, 0)],
+                                                    'B': [0, 3]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 2, 12, 30, 30)],
+                                                    'B': [1]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 8, 23, 59, 59),
+                                                                 datetime(2021, 10, 15, 0, 0, 0)],
+                                                    'B': [2, 4]}))
+
+    def test_index_grouping_invalid_index(self):
+        class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
+            def __init__(self, df):
+                super().__init__(df=df)
+                datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+
+        data = {
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                         datetime(2021, 1, 2, 12, 30, 30),
+                         datetime(2021, 1, 8, 23, 59, 59),
+                         datetime(2021, 1, 15, 0, 0, 0),
+                         datetime(2021, 10, 15, 0, 0, 0),
+                         ],
+            'B': [0, 1, 2, 3, 4]
+        }
+        df = pd.DataFrame(data)
+        wrapper = CustomDataframeWrapper(df)
+        grouper = gp.IndexGrouping([[0, 3], [1], [2, 5]])
+
+        with self.assertRaises(ValueError):
+            grouper.group(wrapper)
+
+    def test_equal_size_groups(self):
+        class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
+            def __init__(self, df):
+                super().__init__(df=df)
+                datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+
+        data = {
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                         datetime(2021, 1, 2, 12, 30, 30),
+                         datetime(2021, 1, 8, 23, 59, 59),
+                         datetime(2021, 1, 15, 0, 0, 0),
+                         datetime(2021, 10, 15, 0, 0, 0),
+                         ],
+            'B': [0, 1, 2, 3, 4]
+        }
+        df = pd.DataFrame(data)
+        wrapper = CustomDataframeWrapper(df)
+        grouper = gp.IndexGrouping.equal_size_groups(2, 5)
+
+        grouped_wrappers = grouper.group(wrapper)
+
+        self.assertEqual(len(grouped_wrappers), 3)
+        pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                                                                 datetime(2021, 1, 2, 12, 30, 30)],
+                                                    'B': [0, 1]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 1, 8, 23, 59, 59),
+                                                                 datetime(2021, 1, 15, 0, 0, 0)],
+                                                    'B': [2, 3]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2021, 10, 15, 0, 0, 0)],
+                                                    'B': [4]}))
+
+    def test_equal_size_groups_invalid_max_len(self):
+        class CustomDataframeWrapper(datafields.DataframeWrapper, datafields.DateTimeColumnMixin):
+            def __init__(self, df):
+                super().__init__(df=df)
+                datafields.DateTimeColumnMixin.__init__(self, df_wrapper=self)
+
+        data = {
+            'datetime': [datetime(2021, 1, 1, 0, 0, 0),
+                         datetime(2021, 1, 2, 12, 30, 30),
+                         datetime(2021, 1, 8, 23, 59, 59),
+                         datetime(2021, 1, 15, 0, 0, 0),
+                         datetime(2021, 10, 15, 0, 0, 0),
+                         ],
+            'B': [0, 1, 2, 3, 4]
+        }
+        df = pd.DataFrame(data)
+        wrapper = CustomDataframeWrapper(df)
+
+        with self.assertRaises(ValueError):
+            grouper = gp.IndexGrouping.equal_size_groups(2, 8)
+            grouper.group(wrapper)
 
 
 if __name__ == '__main__':

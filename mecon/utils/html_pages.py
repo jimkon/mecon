@@ -2,8 +2,9 @@ import abc
 import base64
 import os
 import tempfile
-import matplotlib.pyplot as plt
 import uuid
+
+import matplotlib.pyplot as plt
 
 _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 

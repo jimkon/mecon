@@ -3,7 +3,7 @@ from datetime import datetime, date
 
 import pandas as pd
 
-from data import datafields
+from mecon.data import datafields
 
 
 # TODO:v3 merge with test_dataframe_wrappers maybe
@@ -43,14 +43,36 @@ class TestTagsColumnMixin(unittest.TestCase):
             'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
         }))
 
-        self.assertListEqual(example_wrapper.contains_tag('tag1').to_list(),
-                             [False, True, True, False])
-        self.assertListEqual(example_wrapper.contains_tag('tag2').to_list(),
-                             [False, False, True, False])
-        self.assertListEqual(example_wrapper.contains_tag('tag3').to_list(),
-                             [False, False, False, True])
-        self.assertListEqual(example_wrapper.contains_tag(['tag1', 'tag2']).to_list(),
-                             [False, False, True, False])
+        pd.testing.assert_series_equal(example_wrapper.contains_tags('tag1'),
+                                       pd.Series([False, True, True, False]))
+        pd.testing.assert_series_equal(example_wrapper.contains_tags('tag2'),
+                                       pd.Series([False, False, True, False]))
+        pd.testing.assert_series_equal(example_wrapper.contains_tags('tag3'),
+                                       pd.Series([False, False, False, True]))
+        pd.testing.assert_series_equal(example_wrapper.contains_tags(['tag1', 'tag2']),
+                                       pd.Series([False, False, True, False]))
+        pd.testing.assert_series_equal(example_wrapper.contains_tags([]),
+                                       pd.Series([True, True, True, True]))
+
+    def test_contains_tags_empty_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        pd.testing.assert_series_equal(example_wrapper.contains_tags([]),
+                                       pd.Series([True, True, True, True]))
+
+        pd.testing.assert_series_equal(example_wrapper.contains_tags([], empty_tags_strategy='all_true'),
+                                       pd.Series([True, True, True, True]))
+
+        pd.testing.assert_series_equal(example_wrapper.contains_tags([], empty_tags_strategy='all_false'),
+                                       pd.Series([False, False, False, False]))
+
+        with self.assertRaises(ValueError):
+            example_wrapper.contains_tags([], empty_tags_strategy='raise')
+
+        with self.assertRaises(ValueError):
+            example_wrapper.contains_tags([], empty_tags_strategy='not_a_valid_value')
 
     def test_containing_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -59,8 +81,84 @@ class TestTagsColumnMixin(unittest.TestCase):
         expected_wrapper_df = pd.DataFrame({
             'tags': ['tag1', 'tag1,tag2']
         })
-        pd.testing.assert_frame_equal(example_wrapper.containing_tag('tag1').dataframe().reset_index(drop=True),
-                                      expected_wrapper_df.reset_index(drop=True))
+        pd.testing.assert_frame_equal(example_wrapper.containing_tags('tag1').dataframe(),
+                                      expected_wrapper_df)
+
+        pd.testing.assert_frame_equal(example_wrapper.containing_tags(None).dataframe(),
+                                      example_wrapper.dataframe())
+
+    def test_containing_tags_empty_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        self.assertEqual(example_wrapper.containing_tags(None).size(), 4)
+        self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_true').size(), 4)
+        self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_false').size(), 0)
+
+        with self.assertRaises(ValueError):
+            example_wrapper.containing_tags(None, empty_tags_strategy='raise')
+
+    def test_not_contains_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags('tag1'),
+                                       pd.Series([True, False, False, True]))
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags('tag2'),
+                                       pd.Series([True, True, False, True]))
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags('tag3'),
+                                       pd.Series([True, True, True, False]))
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags(['tag1', 'tag2']),
+                                       pd.Series([True, True, False, True]))
+
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags([]),
+                                       pd.Series([False, False, False, False]))
+
+    def test_not_contains_tags_empty_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags([]),
+                                       pd.Series([False, False, False, False]))
+
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags([], empty_tags_strategy='all_true'),
+                                       pd.Series([True, True, True, True]))
+
+        pd.testing.assert_series_equal(example_wrapper.not_contains_tags([], empty_tags_strategy='all_false'),
+                                       pd.Series([False, False, False, False]))
+
+        with self.assertRaises(ValueError):
+            example_wrapper.not_contains_tags([], empty_tags_strategy='raise')
+
+        with self.assertRaises(ValueError):
+            example_wrapper.not_contains_tags([], empty_tags_strategy='not_a_valid_value')
+
+    def test_not_containing_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+        expected_wrapper_df = pd.DataFrame({
+            'tags': ['', 'tag3']
+        })
+        pd.testing.assert_frame_equal(example_wrapper.not_containing_tags('tag1').dataframe(),
+                                      expected_wrapper_df)
+
+        self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
+
+    def test_not_containing_tags_empty_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+        }))
+
+        self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
+        self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_false').size(), 0)
+        self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_true').size(), 4)
+
+        with self.assertRaises(ValueError):
+            example_wrapper.not_containing_tags(None, empty_tags_strategy='raise')
 
 
 class TestDateTimeColumnMixin(unittest.TestCase):
@@ -213,6 +311,64 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         # pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
         #                               expected_wrapper_df.reset_index(drop=True))
         self.assertEqual(len(result_df), 0)
+
+
+class TestAmountColumnMixin(unittest.TestCase):
+    def test_all_currencies(self):
+        result_set = ExampleDataframeWrapper(pd.DataFrame({
+            'amount': [1, 2, 3, 4],
+            'amount_cur': [1, 2, 3, 4],
+            'currency': ['GBP', 'EUR,GBP', 'EUR', 'RON'],
+        })).all_currencies()
+        self.assertEqual(result_set, '{"RON": 1, "GBP": 2, "EUR": 2}')
+
+    def test_positive_amounts(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'amount': [-1, 2, -3, 4, 0],
+            'amount_cur': [1, 2, 3, 4, 0],  # only looking 'amount' column to check positivity
+            'currency': ['GBP', 'EUR,GBP', 'EUR', 'RON', 'EUR'],
+        }))
+        pos_amounts_wrapper = example_wrapper.positive_amounts(include_zero=True)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [2, 4, 0],
+            'amount_cur': [2, 4, 0],
+            'currency': ['EUR,GBP', 'RON', 'EUR'],
+        })
+        pd.testing.assert_frame_equal(pos_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+        pos_nonzero_amounts_wrapper = example_wrapper.positive_amounts(include_zero=False)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [2, 4],
+            'amount_cur': [2, 4],
+            'currency': ['EUR,GBP', 'RON'],
+        })
+        pd.testing.assert_frame_equal(pos_nonzero_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+    def test_negative_amounts(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'amount': [-1, 2, -3, 4, 0],
+            'amount_cur': [1, 2, 3, 4, 0],  # only looking 'amount' column to check negativity
+            'currency': ['GBP', 'EUR,GBP', 'EUR', 'RON', 'EUR'],
+        }))
+        pos_amounts_wrapper = example_wrapper.negative_amounts(include_zero=True)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [-1, -3, 0],
+            'amount_cur': [1, 3, 0],  # only looking 'amount' column to check positivity
+            'currency': ['GBP', 'EUR', 'EUR'],
+        })
+        pd.testing.assert_frame_equal(pos_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+        pos_nonzero_amounts_wrapper = example_wrapper.negative_amounts(include_zero=False)
+        expected_wrapper_df = pd.DataFrame({
+            'amount': [-1, -3],
+            'amount_cur': [1, 3],  # only looking 'amount' column to check positivity
+            'currency': ['GBP', 'EUR'],
+        })
+        pd.testing.assert_frame_equal(pos_nonzero_amounts_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
 
 
 if __name__ == '__main__':

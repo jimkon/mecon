@@ -3,8 +3,8 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from mecon.tag_tools import tagging
 from mecon.data import groupings, datafields
+from mecon.tags import tagging
 
 
 def _extract_tags(string):
@@ -130,8 +130,8 @@ class PerformanceDataAggregator(datafields.AggregatorABC):  # TODO legacy code, 
 
         df_logs['datetime_ms'] = pd.to_datetime(df_logs['datetime'], unit='ms')
         df_logs['execution_time'] = -df_logs['datetime_ms'].diff(periods=-1).dt.total_seconds() * 1000
-        df_logs['started'] = df_wrapper.contains_tag('start')
-        df_logs['finished'] = df_wrapper.contains_tag('end').shift(periods=-1, fill_value=False)
+        df_logs['started'] = df_wrapper.contains_tags('start')
+        df_logs['finished'] = df_wrapper.contains_tags('end').shift(periods=-1, fill_value=False)
 
         df_started_finished = df_logs[(df_logs['started']) & (df_logs['finished'])]
         df_started_not_finished = df_logs[(df_logs['started']) & (~df_logs['finished'])]
@@ -154,7 +154,7 @@ class PerformanceDataAggregator(datafields.AggregatorABC):  # TODO legacy code, 
 
 class PerformanceDataAggregatorV2(datafields.AggregatorABC):
     def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
-        df_logs = df_wrapper.containing_tag(['end']).dataframe()
+        df_logs = df_wrapper.containing_tags(['end']).dataframe()
         df_logs.sort_values('datetime', inplace=True)
 
         df_logs['execution_time'] = df_logs['description'].apply(self._extract_execution_duration) * 1000
@@ -190,7 +190,7 @@ class PerformanceData(datafields.DatedDataframeWrapper,
 
     @classmethod
     def from_log_data(cls, log_data: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
-        codeflow_logs = log_data.containing_tag('codeflow')
+        codeflow_logs = log_data.containing_tags('codeflow')
         # maybe add tags for level, module, funcName
         # tags_list = sorted(list(set(codeflow_logs.all_tags().keys()) - {'codeflow', 'start', 'end'}))
         tags_list = _distinct_function_tags(codeflow_logs.tags)

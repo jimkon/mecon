@@ -2,8 +2,17 @@
 /statements/
 /notebooks/
 /clipboard.py
-/reports_history/report.html
+/reports_history/
 
-reports_history/report.html
 /datasets/
 /creds/
+/.env
+/.idea/
+mecon.egg-info
+
+/TODO.md
+example_path
+/templates/
+/static/
+settings.json
+/misc_scripts/

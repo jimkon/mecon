@@ -87,7 +87,7 @@ class TestDataManager(unittest.TestCase):
             mock_revo_delete.assert_called_once()
 
     def test_get_tag(self):
-        with patch('mecon.data.data_management.Tag.from_json_string') as mock_tag_factory:
+        with patch('mecon.data.data_management.Tag.from_json') as mock_tag_factory:
             tag_name = 'tag1'
             tag_conditions_str = "{'a.str': {'equal': '1'}}"
             self.tags_io.get_tag.return_value = {'name': tag_name, 'conditions_json': tag_conditions_str}
@@ -130,7 +130,7 @@ class TestDataManager(unittest.TestCase):
         mock_reset_tags.assert_not_called()
 
     def test_all_tags(self):
-        with patch('mecon.data.data_management.Tag.from_json_string') as mock_tag_factory:
+        with patch('mecon.data.data_management.Tag.from_json') as mock_tag_factory:
             tags = [{'name': 'tag1', 'conditions_json': {}}, {'name': 'tag2', 'conditions_json': []}]
             self.tags_io.all_tags.return_value = tags
             result = self.data_manager.all_tags()
@@ -242,7 +242,7 @@ class TestCacheDataManager(unittest.TestCase):
 
     def test_all_tags(self):
         self.data_manager._cache.tags = None
-        tags = [{'name': 'tag1', 'conditions_json': '{}'}, {'name': 'tag2', 'conditions_json': '[]'}]
+        tags = [{'name': 'tag1', 'conditions_json': {}}, {'name': 'tag2', 'conditions_json': []}]
         self.tags_io.all_tags.return_value = tags
         tags = self.data_manager.all_tags()
         self.assertEqual(tags[0].name, 'tag1')
@@ -256,7 +256,7 @@ class TestCacheDataManager(unittest.TestCase):
 
     def test_get_tag(self):
         self.data_manager._cache.tags = None
-        tags = [{'name': 'tag1', 'conditions_json': '{}'}, {'name': 'tag2', 'conditions_json': '[]'}]
+        tags = [{'name': 'tag1', 'conditions_json': {}}, {'name': 'tag2', 'conditions_json': []}]
         self.tags_io.all_tags.return_value = tags
         tag = self.data_manager.get_tag('tag1')
         self.assertEqual(tag.name, 'tag1')

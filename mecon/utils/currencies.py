@@ -1,8 +1,8 @@
 import abc
 import json
+import logging
 import pathlib
 from datetime import timedelta
-import logging
 
 import forex_python
 import requests

@@ -2,11 +2,14 @@ import unittest
 from datetime import datetime
 
 import pandas as pd
+from pandas import Timestamp
 
-from data import groupings
-from data.aggregators import CustomisableDefaultTransactionAggregator, CustomisableAmountTransactionAggregator, \
+from mecon.data import groupings
+from mecon.data.aggregators import CustomisableDefaultTransactionAggregator, CustomisableAmountTransactionAggregator, \
     ID_AGGREGATION_VALUE
-from data.transactions import Transactions, TransactionDateFiller, ID_FILL_VALUE, TransactionsDataTransformationToHTMLTable
+from mecon.data.datafields import EmptyDataframeWrapper
+from mecon.data.transactions import Transactions, TransactionDateFiller, ID_FILL_VALUE, \
+    TransactionsDataTransformationToHTMLTable
 
 
 class TestTransactionAggregator(unittest.TestCase):
@@ -642,6 +645,51 @@ class TestFillTransactions(unittest.TestCase):
 
         pd.testing.assert_frame_equal(result_df, expected_df)
 
+    def test_fill_empty_dataset(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': [],
+            'datetime': [],
+            'amount': [],
+            'currency': [],
+            'amount_cur': [],
+            'description': [],
+            'tags': []
+        }))
+
+        filler = TransactionDateFiller(
+            fill_unit='day',
+            id_fill=ID_FILL_VALUE,
+            amount_fill=1.0,
+            currency_fill='currency_fill',
+            amount_curr=1.0,
+            description_fill='description_fill',
+            tags_fills='tags_fills'
+        )
+
+        result_df = filler.fill(
+            transactions,
+            start_date=datetime(2023, 9, 1, 0, 0, 0),
+            end_date=datetime(2023, 9, 5, 0, 0, 0)
+        ).dataframe()
+
+        expected_df = pd.DataFrame([{'datetime': Timestamp('2023-09-01 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-02 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-03 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-04 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'},
+                                    {'datetime': Timestamp('2023-09-05 00:00:00'), 'id': 'filled', 'amount': 1.0,
+                                     'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+                                     'tags': 'tags_fills'}])
+
+        pd.testing.assert_frame_equal(result_df, expected_df)
+
 
 class TestGroupAgg(unittest.TestCase):
     def test_group_agg(self):
@@ -674,7 +722,7 @@ class TestGroupAgg(unittest.TestCase):
         pd.testing.assert_frame_equal(result_trans_df.reset_index(drop=True),
                                       expected_trans_df.reset_index(drop=True))
 
-    def test_group_agg__empyt_group(self):
+    def test_group_agg__empty_group(self):
         transactions = Transactions(pd.DataFrame({
             'id': [],
             'datetime': [],
@@ -692,6 +740,47 @@ class TestGroupAgg(unittest.TestCase):
         pd.testing.assert_frame_equal(transactions.dataframe().reset_index(drop=True),
                                       new_transactions.dataframe().reset_index(drop=True))
 
+    def test_group(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': ['11', '12', '13'],
+            'datetime': [datetime(2021, 2, 1, 4, 5, 6), datetime(2021, 2, 3, 4, 5, 6),
+                         datetime(2021, 12, 31, 23, 59, 59)],
+            'amount': [100.0, 200.0, 300.0],
+            'currency': ['GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
+            'tags': ['', 'tag1', 'tag1,tag2']
+        }))
+
+        expected_trans_week_1_df = pd.DataFrame({
+            'id': ['11', '12'],
+            'datetime': [datetime(2021, 2, 1, 4, 5, 6), datetime(2021, 2, 3, 4, 5, 6)],
+            'amount': [100.0, 200.0],
+            'currency': ['GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0],
+            'description': ['Transaction 1', 'Transaction 2'],
+            'tags': ['', 'tag1']
+        })
+
+        expected_trans_week_2_df = pd.DataFrame({
+            'id': ['13'],
+            'datetime': [datetime(2021, 12, 31, 23, 59, 59)],
+            'amount': [300.0],
+            'currency': ['GBP'],
+            'amount_cur': [300.0],
+            'description': ['Transaction 3'],
+            'tags': ['tag1,tag2']
+        })
+
+        grouper = groupings.WEEK
+        result_trans_week_1, result_trans_week_2 = transactions.group(grouper=grouper)
+
+        pd.testing.assert_frame_equal(result_trans_week_1.dataframe().reset_index(drop=True),
+                                      expected_trans_week_1_df.reset_index(drop=True))
+
+        pd.testing.assert_frame_equal(result_trans_week_2.dataframe().reset_index(drop=True),
+                                      expected_trans_week_2_df.reset_index(drop=True))
+
 
 class TransactionsDataTransformationToHTMLTableTestCase(unittest.TestCase):
     def test__format_local_amount(self):
@@ -707,7 +796,6 @@ class TransactionsDataTransformationToHTMLTableTestCase(unittest.TestCase):
                          '<h6 style="color: green">10.12(£,€)</h6>')
         self.assertEqual(class_abr._format_local_amount("10.1203", 'GBP,EUR,HUF'),
                          '<h6 style="color: green">10.12(£,€,HUF)</h6>')
-
 
 
 if __name__ == '__main__':

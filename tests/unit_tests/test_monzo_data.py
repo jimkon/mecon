@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pandas import Timestamp
 
-from mecon.import_data import monzo_data
+from mecon.etl import monzo_data
 
 example_json = [{
     "id": "transaction_id_1",

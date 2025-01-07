@@ -3,51 +3,39 @@ from datetime import datetime
 from unittest import mock
 
 import pandas as pd
-from flask import Flask
-from flask_testing import TestCase
 
-from mecon.app import db, models
+from mecon.app import db_extension
+from mecon.app import models
 from mecon.app import db_controller
 
 
-def _create_app():
-    app = Flask(__name__, instance_relative_config=False)
+class TestTagsDBData(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db = db_extension.DBWrapper(':memory:')
+        models.Base.metadata.create_all(cls.db._engine)  # Create all tables
+        cls.accessor = db_controller.TagsDBAccessor(cls.db)  # Initialize the accessor
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///:memory:"
-    app.config['TESTING'] = True
-
-    db.init_app(app)
-    with app.app_context():
-        db.create_all()
-    return app
-
-
-class TestTagsDBData(TestCase):
-    def create_app(self):
-        return _create_app()
-
-    def setUp(self):
-        self.accessor = db_controller.TagsDBAccessor()
-
-    def tearDown(self):
-        with self.app.app_context():
-            db.session.remove()
-            db.drop_all()
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
+        models.Base.metadata.drop_all(cls.db._engine)
+        # cls.db.session.close()
 
     def test_get_non_existing_tag(self):
         returned_tag = self.accessor.get_tag('a non existing tag')
         self.assertIsNone(returned_tag)
 
     def test_set_and_get_tag(self):
-        expected_tag = {'name': 'test_tag1', 'conditions_json': "{'a': 1}"}
+        expected_tag = {'name': 'test_tag1', 'conditions_json': {'a': 1}}
         self.accessor.set_tag(**expected_tag)
         returned_tag = self.accessor.get_tag(expected_tag['name'])
         self.assertEqual(expected_tag, returned_tag)
 
     def test_update_tag(self):
-        tag = {'name': 'test_tag2', 'conditions_json': "{'a': 1}"}
+        tag = {'name': 'test_tag2', 'conditions_json': {'a': 1}}
         self.accessor.set_tag(**tag)
-        updated_tag = {'name': 'test_tag2', 'conditions_json': "{'a': 2}"}
+        updated_tag = {'name': 'test_tag2', 'conditions_json': {'a': 2}}
         self.accessor.set_tag(**updated_tag)
         returned_tag = self.accessor.get_tag('test_tag2')
         self.assertEqual(updated_tag, returned_tag)
@@ -63,15 +51,15 @@ class TestTagsDBData(TestCase):
         self.assertEqual(returned_tag, None)
 
     def test_all_tags(self):
-        self.accessor.delete_tag('test_tag1')
-        self.accessor.delete_tag('test_tag2')
-        self.accessor.delete_tag('test_tag3')
-        self.accessor.delete_tag('test_tag4')
+        # self.accessor.delete_tag('test_tag1')
+        # self.accessor.delete_tag('test_tag2')
+        # self.accessor.delete_tag('test_tag3')
+        # self.accessor.delete_tag('test_tag4')
 
         expected_tags = [
-            {'name': 'test_tag5', 'conditions_json': "{'a': 1}"},
-            {'name': 'test_tag6', 'conditions_json': "{'a': 2}"},
-            {'name': 'test_tag7', 'conditions_json': "{'a': 3}"},
+            {'name': 'test_tag5', 'conditions_json': {'a': 1}},
+            {'name': 'test_tag6', 'conditions_json': {'a': 2}},
+            {'name': 'test_tag7', 'conditions_json': {'a': 3}},
         ]
         self.accessor.set_tag(**expected_tags[0])
         self.accessor.set_tag(**expected_tags[1])
@@ -81,19 +69,21 @@ class TestTagsDBData(TestCase):
         self.assertEqual(expected_tags, returned_tags)
 
 
-class HSBCTransactionsDBAccessorTestCase(TestCase):
-    def create_app(self):
-        return _create_app()
+class HSBCTransactionsDBAccessorTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db = db_extension.DBWrapper(':memory:')
+        models.Base.metadata.create_all(cls.db._engine)  # Create all tables
+        cls.accessor = db_controller.HSBCTransactionsDBAccessor(cls.db)  # Initialize the accessor
 
-    def setUp(self):
-        self.accessor = db_controller.HSBCTransactionsDBAccessor()
-
-    def tearDown(self):
-        with self.app.app_context():
-            db.session.remove()
-            db.drop_all()
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
+        models.Base.metadata.drop_all(cls.db._engine)
+        # cls.db.session.close()
 
     def test_import_statement_single_dataframe(self):
+        self.accessor.delete_all()
         # Create a sample DataFrame
         data = {
             'id': [1, 2, 3],
@@ -112,6 +102,7 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         pd.testing.assert_frame_equal(transactions, df)
 
     def test_import_statement_multiple_dataframes(self):
+        self.accessor.delete_all()
         # Create sample DataFrames
         data1 = {
             'id': [1, 2, 3],
@@ -170,19 +161,21 @@ class HSBCTransactionsDBAccessorTestCase(TestCase):
         self.assertEqual(transactions, None)
 
 
-class MonzoTransactionsDBAccessorTestCase(TestCase):
-    def create_app(self):
-        return _create_app()
+class MonzoTransactionsDBAccessorTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db = db_extension.DBWrapper(':memory:')
+        models.Base.metadata.create_all(cls.db._engine)  # Create all tables
+        cls.accessor = db_controller.MonzoTransactionsDBAccessor(cls.db)  # Initialize the accessor
 
-    def setUp(self):
-        self.accessor = db_controller.MonzoTransactionsDBAccessor()
-
-    def tearDown(self):
-        with self.app.app_context():
-            db.session.remove()
-            db.drop_all()
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
+        models.Base.metadata.drop_all(cls.db._engine)
+        # cls.db.session.close()
 
     def test_import_statement_single_dataframe(self):
+        self.accessor.delete_all()
         # Create a sample DataFrame
         data = {
             'id': [1, 2, 3],
@@ -215,6 +208,7 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         pd.testing.assert_frame_equal(transactions, df)
 
     def test_import_statement_multiple_dataframes(self):
+        self.accessor.delete_all()
         # Create sample DataFrames
         data1 = {
             'id': [1, 2, 3],
@@ -329,19 +323,21 @@ class MonzoTransactionsDBAccessorTestCase(TestCase):
         self.assertEqual(transactions, None)
 
 
-class RevoTransactionsDBAccessorTestCase(TestCase):
-    def create_app(self):
-        return _create_app()
+class RevoTransactionsDBAccessorTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db = db_extension.DBWrapper(':memory:')
+        models.Base.metadata.create_all(cls.db._engine)  # Create all tables
+        cls.accessor = db_controller.RevoTransactionsDBAccessor(cls.db)  # Initialize the accessor
 
-    def setUp(self):
-        self.accessor = db_controller.RevoTransactionsDBAccessor()
-
-    def tearDown(self):
-        with self.app.app_context():
-            db.session.remove()
-            db.drop_all()
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
+        models.Base.metadata.drop_all(cls.db._engine)
+        # cls.db.session.close()
 
     def test_import_statement_single_dataframe(self):
+        self.accessor.delete_all()
         # Create a sample DataFrame
         data = {
             'id': [1, 2, 3],
@@ -367,6 +363,7 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
         pd.testing.assert_frame_equal(transactions, df)
 
     def test_import_statement_multiple_dataframes(self):
+        self.accessor.delete_all()
         # Create sample DataFrames
         data1 = {
             'id': [1, 2, 3],
@@ -453,21 +450,22 @@ class RevoTransactionsDBAccessorTestCase(TestCase):
         self.assertEqual(transactions, None)
 
 
-class TransactionsDBAccessorssorTestCase(TestCase):
-    def create_app(self):
-        return _create_app()
+class TransactionsDBAccessorssorTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db = db_extension.DBWrapper(':memory:')
+        models.Base.metadata.create_all(cls.db._engine)  # Create all tables
+        cls.accessor = db_controller.TransactionsDBAccessor(cls.db)  # Initialize the accessor
 
-    def setUp(self):
-        self.accessor = db_controller.TransactionsDBAccessor()
-
-    def tearDown(self):
-        with self.app.app_context():
-            db.session.remove()
-            db.drop_all()
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup database after each test (optional, you could rely on the in-memory DB being wiped)
+        models.Base.metadata.drop_all(cls.db._engine)
+        # cls.db.session.close()
 
     def _load_db(self):
-        db_controller.HSBCTransactionsDBAccessor().delete_all()
-        db_controller.HSBCTransactionsDBAccessor().import_statement(
+        db_controller.HSBCTransactionsDBAccessor(self.db).delete_all()
+        db_controller.HSBCTransactionsDBAccessor(self.db).import_statement(
             pd.DataFrame(
                 {
                     'id': [1, 2, 3],
@@ -478,8 +476,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             )
         )
 
-        db_controller.MonzoTransactionsDBAccessor().delete_all()
-        db_controller.MonzoTransactionsDBAccessor().import_statement(
+        db_controller.MonzoTransactionsDBAccessor(self.db).delete_all()
+        db_controller.MonzoTransactionsDBAccessor(self.db).import_statement(
             pd.DataFrame(
                 {
                     'id': [1, 2, 3],
@@ -504,8 +502,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             )
         )
 
-        db_controller.RevoTransactionsDBAccessor().delete_all()
-        db_controller.RevoTransactionsDBAccessor().import_statement(
+        db_controller.RevoTransactionsDBAccessor(self.db).delete_all()
+        db_controller.RevoTransactionsDBAccessor(self.db).import_statement(
             pd.DataFrame(
                 {
                     'id': [1, 2, 3],
@@ -525,9 +523,11 @@ class TransactionsDBAccessorssorTestCase(TestCase):
 
         expected_df = pd.DataFrame(
             {
-                'id': ['RVLTd20210101t000000ap13000i31', 'RVLTd20210615t123030ap24000i32', 'RVLTd20211231t235959ap30000i33',
+                'id': ['RVLTd20210101t000000ap13000i31', 'RVLTd20210615t123030ap24000i32',
+                       'RVLTd20211231t235959ap30000i33',
                        'MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3',
-                       'HSBCd20230101t000000ap100000i1', 'HSBCd20230615t000000ap200000i2', 'HSBCd20231231t000000ap300000i3'],
+                       'HSBCd20230101t000000ap100000i1', 'HSBCd20230615t000000ap200000i2',
+                       'HSBCd20231231t000000ap300000i3'],
                 'datetime': [datetime(2021, 1, 1, 0, 0, 0), datetime(2021, 6, 15, 12, 30, 30),
                              datetime(2021, 12, 31, 23, 59, 59), datetime(2022, 1, 1, 0, 0, 0),
                              datetime(2022, 6, 15, 12, 30, 30), datetime(2022, 12, 31, 23, 59, 59),
@@ -588,14 +588,12 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             })
             db_controller.TransactionsDBAccessor._transaction_df_types_validation(test_df)
         except db_controller.InvalidTransactionsDataframeDataTypesException as inv_types_error:
-            expected_errors = [
-                "invalid type for column 'id'. expected: string, got: int64",
-                "invalid type for column 'datetime'. expected: datetime, got: int64",
-                "invalid type for column 'amount'. expected: number, got: object",
-                "invalid type for column 'currency'. expected: string, got: int64",
-                "invalid type for column 'amount_cur'. expected: number, got: object",
-                "invalid type for column 'description'. expected: string, got: int64"
-            ]
+            expected_errors = ["Invalid type for column 'id'. Expected string, got: int64",
+                               "Invalid type for column 'datetime'. Expected datetime, got: int64",
+                               "Invalid type for column 'amount'. Expected numeric, got: object",
+                               "Invalid type for column 'currency'. Expected string, got: int64",
+                               "Invalid type for column 'amount_cur'. Expected numeric, got: object",
+                               "Invalid type for column 'description'. Expected string, got: int64"]
             self.assertEqual(inv_types_error.invalid_types, expected_errors)
         else:
             self.fail(f"Expecting InvalidTransactionsDataframeDataTypesException but not raised.")
@@ -616,7 +614,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             db_controller.TransactionsDBAccessor._transaction_df_values_validation(test_df)
 
     def test_get_transactions(self):
-        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
+        self.assertEqual(len(self.accessor.get_transactions()),
+                         0)  # TODO it should return the right columns even if empty
 
         # expected_df = self._load_db()
         df = pd.DataFrame({
@@ -629,7 +628,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
             'tags': ['', 'tag1', 'tag1,tag2']
         })
-        df.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+        df.to_sql(models.TransactionsDBTable.__tablename__, self.db.engine, if_exists='replace', index=False)
 
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
@@ -646,14 +645,15 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
             'tags': ['', 'tag1', 'tag1,tag2']
         })
-        df.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+        df.to_sql(models.TransactionsDBTable.__tablename__, self.db.engine, if_exists='replace', index=False)
 
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
 
         self.accessor.delete_all()
 
-        self.assertEqual(len(self.accessor.get_transactions()), 0)  # TODO it should return the right columns even if empty
+        self.assertEqual(len(self.accessor.get_transactions()),
+                         0)  # TODO it should return the right columns even if empty
 
     def test_load_transactions(self):
         self.accessor.delete_all()
@@ -666,7 +666,8 @@ class TransactionsDBAccessorssorTestCase(TestCase):
                 'GBP': 1.0
             }) * amount
 
-        with mock.patch.object(db_controller.etl.RevoStatementTransformer, 'convert_amounts', side_effect=convert_amounts):
+        with mock.patch.object(db_controller.transformers.RevoStatementTransformer, 'convert_amounts',
+                               side_effect=convert_amounts):
             self.accessor.load_transactions()
 
         transactions = self.accessor.get_transactions()
@@ -684,7 +685,7 @@ class TransactionsDBAccessorssorTestCase(TestCase):
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3'],
             'tags': ['', 'tag1', 'tag1,tag2']
         })
-        df.to_sql(models.TransactionsDBTable.__tablename__, db.engine, if_exists='replace', index=False)
+        df.to_sql(models.TransactionsDBTable.__tablename__, self.db.engine, if_exists='replace', index=False)
 
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)

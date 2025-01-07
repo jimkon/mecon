@@ -3,7 +3,7 @@ import pathlib
 
 import pandas as pd
 
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 
 
 # TODO test all

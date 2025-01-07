@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from mecon.tag_tools import tagging
+from mecon.tags import tagging
 
 
 class ConditionTestCase(unittest.TestCase):
