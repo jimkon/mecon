@@ -302,7 +302,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.ui
     def tag_info_link():
-        return ui.tags.a("Info page", href=f"http://127.0.0.1:8001/reports/tags/?tags={fetch_tag_name()}")
+        return ui.tags.a("Info page", href=f"http://127.0.0.1:8001/reports/tags/?filter_in_tags={fetch_tag_name()}")
 
     def format_dt(dt):
         date_str, time = dt.date().strftime('%a %d %b, %Y'), dt.time()

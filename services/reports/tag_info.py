@@ -46,7 +46,7 @@ app_ui = ui.page_fluid(
     ),
     ui.hr(),
 
-    # ui.h5(ui.output_text('title_output')),
+    ui.h5(ui.output_text('title_output')),
     ui.layout_sidebar(
         ui.sidebar(
             ui.input_select(
@@ -139,8 +139,8 @@ app_ui = ui.page_fluid(
 def server(input: Inputs, output: Outputs, session: Session):
     @reactive.calc
     def url_params():
-        logging.info('Fetching URL params')
         urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
+        logging.info(f"Fetched URL params: {urlparse_result=}")
         _url_params = parse_qs(urlparse_result.query)
         params = {}
         params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
@@ -268,11 +268,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         return transactions
 
-    # @render.text
-    # def title_output():
-    #     logging.info('Title')
-    #     start_date, end_date, time_unit, filter_in_tags, filter_out_tags, compare_tags = get_filter_params()
-    #     return f"Report for tags: {','.join(tags)} between {start_date} to {end_date} grouped by {time_unit}"
+    @render.text
+    def title_output():
+        return f"Tags: {url_params()['filter_in_tags']}"
 
     @render.ui
     def info_stats():
