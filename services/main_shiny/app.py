@@ -1,5 +1,4 @@
 import logging
-from urllib.parse import quote
 
 from mecon import config
 from mecon.app.file_system import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
@@ -91,10 +90,15 @@ def server(input: Inputs, output: Outputs, session: Session):
         # can also be a collapsable list (ui.accordion, ui.accordion_panel)
         markdown_text = ""
         links = dataset.settings.get('links', {})
+
+        if len(links)==0:
+            return "No links found in dataset settings"
+
         for link_category, link_spec in links.items():
             markdown_text += f"### {link_category}\n"
             for link_name, link_url in link_spec.items():
-                encode_url = quote(link_url)
+                encode_url = link_url.replace(' ', '%20')
+                logging.info(f"Link: {link_name} -> {encode_url}")
                 markdown_text += f"* [{link_name}]({encode_url})\n"
 
         ui.insert_ui(
@@ -102,6 +106,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             selector='#links_output_text',
             where='beforeEnd'
         )
+        return 'links'
 
     @render.text
     def current_dataset_directory() -> object:
