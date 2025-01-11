@@ -402,13 +402,13 @@ class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
 
 
 class CustomRule(AbstractRule, abc.ABC, instance_management.Multiton):
-    def __init__(self):
-        super().__init__(self.name)
-
-    @property
-    @abc.abstractmethod
-    def name(self) -> str:
-        pass
+    # def __init__(self):
+    #     super().__init__(self.name)
+    #
+    # @property
+    # @abc.abstractmethod
+    # def name(self) -> str:
+    #     pass
 
     @classmethod
     def from_dict(cls, _dict):
