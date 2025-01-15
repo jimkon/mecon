@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterable
 from itertools import chain
 
@@ -20,22 +21,34 @@ class TagGraph:
         df = pd.DataFrame(tags)
         return df
 
-    def tags_levels(self):
+    def hierarchy(self):
         mapping = self._dependency_mapping.copy()
 
-        def _calc_level_rec(tag, level):
-            info = mapping[tag]
+        def _calc_level_rec(tag):
+            if tag not in mapping:
+                logging.warning(f"{tag} not in dependency mapping while calculating hierarchy. Will be replaced with 0")
+                return 0
 
-            if len(info['depends_on']) == 0:
+            if 'level' in mapping[tag]:
+                return mapping[tag]['level']
+
+            if len(mapping[tag]['depends_on']) == 0:
+                mapping[tag]['level'] = 0
                 return 0
 
             dep_levels = []
-            for dep_tag in info['depends_on']:
-                 dep_levels.append(_calc_level_rec(dep_tag, level + 1))
+            for dep_tag in mapping[tag]['depends_on']:
+                 dep_levels.append(_calc_level_rec(dep_tag))
+
+            tag_level = max(dep_levels)+1
+            mapping[tag]['level'] = tag_level
+            return tag_level
+
 
         for tag, info in mapping.items():
-            if len(info['depends_on']) == 0:
-                info['level'] = 0
+            _calc_level_rec(tag)
+        #     if len(info['depends_on']) == 0:
+        #         info['level'] = 0
 
 
     @classmethod
@@ -70,3 +83,23 @@ class TagGraph:
         mapping = pd.concat([df_tags_agg, df_tags_l0]).set_index('tag').to_dict('index')
 
         return mapping
+
+
+if __name__ == '__main__':
+    from mecon import config
+    from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+    datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
+    if not datasets_dir.exists():
+        raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+
+    datasets_obj = WorkingDatasetDir()
+    datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+    dataset = datasets_obj.working_dataset
+    data_manager = WorkingDataManager()
+
+    transaction = data_manager.get_transactions()
+    print(transaction.size())
+
+    tags = data_manager.all_tags()
+    tg = TagGraph.from_tags(tags)
+    tg.hierarchy()
