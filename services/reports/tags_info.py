@@ -60,7 +60,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def title_output():
         return f"Tags: {len(all_tags)}"
 
-    @u
+    # @u
 
     @render_widget
     def tags_graph() -> object:
