@@ -5,7 +5,6 @@ from typing import List
 import networkx as nx
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
@@ -13,15 +12,49 @@ from plotly.subplots import make_subplots
 from mecon.data import graph_utils
 from mecon.monitoring import logging_utils
 
-# from plotly.offline import plot
-# from plotly.subplots import make_subplots
-
 warnings.simplefilter("ignore", category=FutureWarning)
 
-pio.templates["custom_template"] = go.layout.Template(
-    layout_colorway=px.colors.qualitative.Antique
+# -----
+# pio.templates["custom_template"] = go.layout.Template(
+#     layout_colorway=px.colors.qualitative.Antique
+# )
+# pio.templates.default = "plotly_dark"
+
+# -----
+# Define a custom dark theme template
+dark_theme = pio.templates["plotly_dark"]  # Start with built-in dark theme
+
+# Customize the theme
+dark_theme.layout.update(
+    font=dict(color="white"),           # White text for better contrast
+    paper_bgcolor="black",              # Black background
+    plot_bgcolor="black",               # Black plot area
+    title=dict(x=0.5, font=dict(size=18)),  # Centered titles with adjusted size
+    xaxis=dict(showgrid=False, zeroline=False),  # Remove gridlines
+    yaxis=dict(showgrid=False, zeroline=False),
 )
-pio.templates.default = "plotly_dark"
+
+# Set the template as the default globally
+pio.templates["custom_dark"] = dark_theme
+pio.templates.default = "custom_dark"
+
+# -----
+# Define a custom dark theme template
+dark_theme = pio.templates["plotly_dark"]  # Start with built-in dark theme
+
+# Customize the theme
+dark_theme.layout.update(
+    font=dict(color="white"),           # White text for better contrast
+    paper_bgcolor="black",              # Black background
+    plot_bgcolor="black",               # Black plot area
+    title=dict(x=0.5, font=dict(size=18)),  # Centered titles with adjusted size
+    xaxis=dict(showgrid=False, zeroline=False),  # Remove gridlines
+    yaxis=dict(showgrid=False, zeroline=False),
+)
+
+# Set the template as the default globally
+pio.templates["custom_dark"] = dark_theme
+pio.templates.default = "custom_dark"
 
 
 @logging_utils.codeflow_log_wrapper('#graphs')
@@ -333,7 +366,7 @@ def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
     return fig
 
 
-def create_plotly_graph(df, from_col=None, to_col=None, info_col=None):
+def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5):
     """
     Generate an interactive directed graph using Plotly and networkx.
 
@@ -368,7 +401,7 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None):
 
     # Compute positions for nodes
     try:
-        pos = nx.spring_layout(G, k=0.5, seed=42)  # Adjust `k` for spacing
+        pos = nx.spring_layout(G, k=k, seed=42)  # Adjust `k` for spacing
     except Exception as e:
         raise ValueError("Error generating graph layout: " + str(e))
 
