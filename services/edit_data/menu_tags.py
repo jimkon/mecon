@@ -2,11 +2,11 @@ import logging
 import pathlib
 
 import shinywidgets
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon.app.file_system import WorkingDataManager
 from mecon.settings import Settings
 from mecon.tags import tagging
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()

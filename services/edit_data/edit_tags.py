@@ -2,13 +2,14 @@ import json
 import logging
 from urllib.parse import urlparse, parse_qs
 
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+
 from mecon import config
 from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
 from mecon.data import reports
 from mecon.data.transactions import Transactions
 from mecon.tags import tagging
 from mecon.tags import transformations, comparisons, tag_helpers
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
