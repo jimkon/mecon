@@ -22,21 +22,21 @@ warnings.simplefilter("ignore", category=FutureWarning)
 
 # -----
 # Define a custom dark theme template
-dark_theme = pio.templates["plotly_dark"]  # Start with built-in dark theme
-
-# Customize the theme
-dark_theme.layout.update(
-    font=dict(color="white"),           # White text for better contrast
-    paper_bgcolor="black",              # Black background
-    plot_bgcolor="black",               # Black plot area
-    title=dict(x=0.5, font=dict(size=18)),  # Centered titles with adjusted size
-    xaxis=dict(showgrid=False, zeroline=False),  # Remove gridlines
-    yaxis=dict(showgrid=False, zeroline=False),
-)
-
-# Set the template as the default globally
-pio.templates["custom_dark"] = dark_theme
-pio.templates.default = "custom_dark"
+# dark_theme = pio.templates["plotly_dark"]  # Start with built-in dark theme
+#
+# # Customize the theme
+# dark_theme.layout.update(
+#     font=dict(color="white"),           # White text for better contrast
+#     paper_bgcolor="black",              # Black background
+#     plot_bgcolor="black",               # Black plot area
+#     title=dict(x=0.5, font=dict(size=18)),  # Centered titles with adjusted size
+#     xaxis=dict(showgrid=False, zeroline=False),  # Remove gridlines
+#     yaxis=dict(showgrid=False, zeroline=False),
+# )
+#
+# # Set the template as the default globally
+# pio.templates["custom_dark"] = dark_theme
+# pio.templates.default = "custom_dark"
 
 # -----
 # Define a custom dark theme template
@@ -44,12 +44,18 @@ dark_theme = pio.templates["plotly_dark"]  # Start with built-in dark theme
 
 # Customize the theme
 dark_theme.layout.update(
-    font=dict(color="white"),           # White text for better contrast
-    paper_bgcolor="black",              # Black background
-    plot_bgcolor="black",               # Black plot area
-    title=dict(x=0.5, font=dict(size=18)),  # Centered titles with adjusted size
-    xaxis=dict(showgrid=False, zeroline=False),  # Remove gridlines
-    yaxis=dict(showgrid=False, zeroline=False),
+    font=dict(color="white"),                 # White text for better contrast
+    paper_bgcolor="black",                    # Black background
+    plot_bgcolor="black",                     # Black plot area
+    title=dict(x=0.5, font=dict(size=18)),    # Center title and adjust size
+    xaxis=dict(showgrid=False, zeroline=False),  # Remove x-axis gridlines
+    yaxis=dict(showgrid=False, zeroline=False),  # Remove y-axis gridlines
+    legend=dict(
+        font=dict(color="white", size=12),    # White text for the legend
+        bgcolor="rgba(0, 0, 0, 0.5)",         # Semi-transparent black background
+        bordercolor="white",                  # White border for the legend box
+        borderwidth=1                         # Thickness of the legend border
+    )
 )
 
 # Set the template as the default globally
