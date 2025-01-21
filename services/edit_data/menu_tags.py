@@ -1,12 +1,11 @@
 import logging
-import pathlib
 
 import shinywidgets
-
-from mecon.app.file_system import WorkingDataManager
-from mecon.settings import Settings
-from mecon.tags import tagging
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+
+from mecon import config
+from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+from mecon.tags import tagging
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -14,13 +13,20 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 
-settings = Settings()
-settings['DATASETS_DIR'] = str(datasets_dir)
+datasets_obj = WorkingDatasetDir()
+datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+dataset = datasets_obj.working_dataset
 
+if dataset is None:
+    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
+
+
+data_manager = WorkingDataManager()
+all_tags = data_manager.all_tags()
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
@@ -69,9 +75,6 @@ def tag_to_ui(tag: tagging.Tag):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    data_manager = WorkingDataManager()
-    all_tags = data_manager.all_tags()
-
     @render.text
     def menu_title_text():
         return f"All tags: {len(all_tags)}"

@@ -1,5 +1,4 @@
 import logging
-import logging
 import pathlib
 
 import pandas as pd
@@ -7,9 +6,9 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 import utils
 from mecon.app.file_system import WorkingDataManager
+from mecon.data import groupings
 from mecon.data.transactions import Transactions
 from mecon.settings import Settings
-from mecon.data import groupings
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
