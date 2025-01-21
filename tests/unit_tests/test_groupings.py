@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pandas as pd
 
+from mecon.data import groupings as gp, datafields
 from mecon.data.datafields import DataframeWrapper
 from mecon.data.groupings import LabelGroupingABC, TagGrouping
-from mecon.data import groupings as gp, datafields
 
 
 class TestGrouping(unittest.TestCase):
@@ -103,7 +103,7 @@ class TestDatetimeGrouping(unittest.TestCase):
         data = {
             'datetime': [datetime(2021, 1, 1, 0, 0, 0),
                          datetime(2021, 1, 1, 0, 20, 0),
-                         datetime(2021, 1, 1, 0, 40, 0),
+                         datetime(2022, 1, 1, 0, 40, 0),
                          datetime(2021, 1, 1, 12, 30, 30),
                          datetime(2021, 1, 1, 23, 59, 59),
                          ],
@@ -115,18 +115,21 @@ class TestDatetimeGrouping(unittest.TestCase):
 
         grouped_wrappers = grouper.group(wrapper)
 
-        self.assertEqual(len(grouped_wrappers), 3)
+        self.assertEqual(len(grouped_wrappers), 4)
         pd.testing.assert_frame_equal(grouped_wrappers[0].dataframe().reset_index(drop=True),
                                       pd.DataFrame({'datetime': [datetime(2021, 1, 1, 0, 0, 0),
                                                                  datetime(2021, 1, 1, 0, 20, 0),
-                                                                 datetime(2021, 1, 1, 0, 40, 0),
                                                                  ],
-                                                    'B': [6, 7, 8]}))
+                                                    'B': [6, 7]}))
         pd.testing.assert_frame_equal(grouped_wrappers[1].dataframe().reset_index(drop=True),
+                                      pd.DataFrame({'datetime': [datetime(2022, 1, 1, 0, 40, 0),
+                                                                 ],
+                                                    'B': [8]}))
+        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
                                       pd.DataFrame({'datetime': [datetime(2021, 1, 1, 12, 30, 30),
                                                                  ],
                                                     'B': [9]}))
-        pd.testing.assert_frame_equal(grouped_wrappers[2].dataframe().reset_index(drop=True),
+        pd.testing.assert_frame_equal(grouped_wrappers[3].dataframe().reset_index(drop=True),
                                       pd.DataFrame({'datetime': [datetime(2021, 1, 1, 23, 59, 59)],
                                                     'B': [10]}))
 

@@ -1,4 +1,5 @@
 import datetime
+import warnings
 from typing import List
 
 import numpy as np
@@ -6,13 +7,14 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
+from plotly.subplots import make_subplots
+
+from mecon.data import graph_utils
+from mecon.monitoring import logging_utils
+
 # from plotly.offline import plot
 # from plotly.subplots import make_subplots
 
-from mecon.monitoring import logging_utils
-from mecon.data import graph_utils
-
-import warnings
 warnings.simplefilter("ignore", category=FutureWarning)
 
 pio.templates["custom_template"] = go.layout.Template(
@@ -81,8 +83,6 @@ def amount_and_freq_timeline_fig(time_pos: List | pd.Series,
     return fig
 
 
-
-
 @logging_utils.codeflow_log_wrapper('#graphs')
 def balance_graph_fig(time, amount: pd.Series, fit_line=False):
     amount = amount.round(2)
@@ -116,7 +116,6 @@ def balance_graph_fig(time, amount: pd.Series, fit_line=False):
 def histogram_and_contributions_fig(amounts: pd.Series, show_bin_edges=False):
     bin_centers, counts, contributions, bin_width, edges = graph_utils.calculated_histogram_and_contributions(amounts)
     bin_centers, contributions = bin_centers.round(2), contributions.round(2)
-
 
     fig = go.Figure()
 
@@ -152,9 +151,9 @@ def histogram_and_contributions_fig(amounts: pd.Series, show_bin_edges=False):
 
 @logging_utils.codeflow_log_wrapper('#graphs')
 def amount_and_freq_timeline_fig_old(time: List | pd.Series,
-                                 amount: List | pd.Series,
-                                 freq: List | pd.Series,
-                                 grouping='month'):
+                                     amount: List | pd.Series,
+                                     freq: List | pd.Series,
+                                     grouping='month'):
     fig = go.Figure()
 
     rolling_window = {
@@ -202,6 +201,74 @@ def amount_and_freq_timeline_fig_old(time: List | pd.Series,
     # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     # return graph_html
     return fig
+
+
+@logging_utils.codeflow_log_wrapper('#graphs')
+def time_aggregated_amount_and_frequency_fig(time: pd.Series, amount: pd.Series = None):
+    if amount is None:
+        amount = pd.Series(np.ones(time.size))
+
+    # Group data for each plot
+    hourly_data = amount.groupby(time.dt.hour).sum()
+    weekly_data = amount.groupby(time.dt.dayofweek).sum()
+    daily_data = amount.groupby(time.dt.day).sum()
+    monthly_data = amount.groupby(time.dt.month).sum()
+
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=[
+            "Hourly Totals", "Daily Totals by Weekday",
+            "Daily Totals by Day of Month", "Monthly Totals"
+        ]
+    )
+
+    # Hourly plot
+    fig.add_trace(go.Bar(
+        x=hourly_data.index,
+        y=hourly_data.values,
+        name="Hourly Totals"
+    ), row=1, col=1)
+
+    # Weekly plot
+    fig.add_trace(go.Bar(
+        x=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        y=weekly_data.values,
+        name="Daily Totals by Weekday"
+    ), row=1, col=2)
+
+    # Daily of month plot
+    fig.add_trace(go.Bar(
+        x=daily_data.index,
+        y=daily_data.values,
+        name="Daily Totals by Day of Month"
+    ), row=2, col=1)
+
+    # Monthly plot
+    fig.add_trace(go.Bar(
+        x=['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November',
+           'December'],
+        y=monthly_data.values,
+        name="Monthly Totals"
+    ), row=2, col=2)
+
+    # Update layout with titles and settings
+    fig.update_layout(
+        title="Aggregated Amounts by Time Period",
+        autosize=True,
+        hovermode='closest',
+        uirevision=str(pd.Timestamp.now()),  # To preserve UI state on updates
+        showlegend=False
+    )
+
+    # Set axis labels
+    fig.update_yaxes(title_text="£", row=1, col=1)
+    fig.update_yaxes(title_text="£", row=1, col=2)
+    fig.update_yaxes(title_text="£", row=2, col=1)
+    fig.update_yaxes(title_text="£", row=2, col=2)
+
+    # Return the figure
+    return fig
+
 
 # -------------------------------------------------------------------
 

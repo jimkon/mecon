@@ -2,11 +2,11 @@ import logging
 import pathlib
 
 import shinywidgets
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon.app.file_system import WorkingDataManager
 from mecon.settings import Settings
 from mecon.tags import tagging
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -55,7 +55,9 @@ app_ui = ui.page_fluid(
 def tag_to_ui(tag: tagging.Tag):
     _id = f"{tag.name.replace(' ', '_')}_value_box"
     res_ui = ui.value_box(
-        ui.tags.a(f"{tag.name}", href=f"http://127.0.0.1:8002/edit_data/tags/edit/?filter_in_tags={tag.name}"),
+        ui.h3(f"{tag.name}"),
+        ui.tags.a(f"Edit", href=f"http://127.0.0.1:8002/edit_data/tags/edit/?filter_in_tags={tag.name}"),
+        ui.tags.a(f"Info", href=f"http://127.0.0.1:8001/reports/tags/?filter_in_tags={tag.name}"),
         "[# transactions tagged] [total money in] [total money out] [date created]",
         showcase=shinywidgets.output_widget(_id + "_sparkline"),
         showcase_layout="bottom",
