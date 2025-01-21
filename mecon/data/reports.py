@@ -1,5 +1,5 @@
-import json
 import datetime
+import json
 
 import pandas as pd
 
@@ -29,7 +29,7 @@ def transactions_stats_json(trans: transactions.Transactions, grouping='none'):
             'max': trans.date.max(),
             '# unique': trans.date.nunique(),
         },
-        'All tags': trans.all_tags(),
+        'All tags': trans.all_tags_count(),
         'Currencies': trans.all_currencies()
     }
 
