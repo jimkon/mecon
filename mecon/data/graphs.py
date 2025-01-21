@@ -12,6 +12,7 @@ from plotly.subplots import make_subplots
 from mecon.data import graph_utils
 from mecon.monitoring import logging_utils
 
+
 warnings.simplefilter("ignore", category=FutureWarning)
 
 # -----
