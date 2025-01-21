@@ -19,3 +19,24 @@ def add_rule_for_id(tag: tagging.Tag, ids_to_add: str | list[str]) -> tagging.Ta
         id_condition = tagging.Condition.from_string_values('id', 'none', 'in_csv', merged_ids_str)
         tag = tagging.Tag(tag.name, tag.rule.append(tagging.Conjunction([id_condition])))
     return tag
+
+
+def expand_rule_to_subrules(rule: tagging.AbstractRule) -> list[tagging.AbstractRule]:
+    expanded_rules = []
+    rule_to_expand = [rule]
+    while len(rule_to_expand) > 0:
+        rule = rule_to_expand.pop(0)
+        expanded_rules.append(rule)
+
+        if isinstance(rule, tagging.Disjunction):
+            subrules = rule.rules
+        elif isinstance(rule, tagging.Conjunction):
+            subrules = rule.rules
+        elif isinstance(rule, tagging.Condition):
+            continue
+        else:
+            raise ValueError(f"Unexpected rule type: {type(rule)}")
+
+        rule_to_expand.extend(subrules)
+
+    return expanded_rules

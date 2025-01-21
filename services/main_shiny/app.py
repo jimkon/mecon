@@ -1,8 +1,9 @@
 import logging
 
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+
 from mecon import config
 from mecon.app.file_system import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()

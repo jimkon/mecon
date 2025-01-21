@@ -51,6 +51,31 @@ class TagHelpersTestCase(unittest.TestCase):
                               {'col1': {'less': -1}}]
                              )
 
+    def test_expand_rule_to_subrules(self):
+        rule1 = tagging.Condition.from_string_values('col1', 'str', 'greater', 1)
+        rule2 = tagging.Condition.from_string_values('col1', None, 'less', -1)
+        rule3 = tagging.Condition.from_string_values('col2', 'abs', 'equal', 0)
+        rule4 = tagging.Conjunction([rule2, rule3])
+        rule5 = tagging.Disjunction([rule1, rule4])
+
+
+        expanded_rules = tag_helpers.expand_rule_to_subrules(rule5)
+        expected_rules = [rule5, rule1, rule4, rule2, rule3]
+        self.assertListEqual(expanded_rules, expected_rules)
+
+    def test_expand_rule_to_subrules_unexpected_rule_error(self):
+        rule1 = tagging.Condition.from_string_values('col1', 'str', 'greater', 1)
+        rule2 = tagging.Condition.from_string_values('col1', None, 'less', -1)
+        rule3 = tagging.Condition.from_string_values('col2', 'abs', 'equal', 0)
+        rule4 = tagging.Conjunction([rule2, rule3])
+        rule5 = tagging.Disjunction([rule1, rule4])
+
+        rules = rule5.rules
+        rules.append('not_a_rule_type')
+
+        with self.assertRaises(ValueError):
+            expanded_rules = tag_helpers.expand_rule_to_subrules(rule5)
+
 
 if __name__ == '__main__':
     unittest.main()

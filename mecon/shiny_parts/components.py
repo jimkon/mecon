@@ -1,8 +1,9 @@
 import datetime
 
+from shiny import ui
+
 from mecon import config
 from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
-from shiny import ui
 
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'

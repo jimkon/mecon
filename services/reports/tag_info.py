@@ -3,13 +3,16 @@ import datetime
 import logging
 from urllib.parse import urlparse, parse_qs
 
+
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+
 from shinywidgets import output_widget, render_widget
 
 from mecon import config
 from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
 from mecon.data import graphs
 from mecon.data import reports
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+
 
 # from mecon.monitoring.logs import setup_logging
 

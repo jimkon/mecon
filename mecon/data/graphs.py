@@ -2,9 +2,9 @@ import datetime
 import warnings
 from typing import List
 
+import networkx as nx
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
@@ -12,15 +12,56 @@ from plotly.subplots import make_subplots
 from mecon.data import graph_utils
 from mecon.monitoring import logging_utils
 
-# from plotly.offline import plot
-# from plotly.subplots import make_subplots
 
 warnings.simplefilter("ignore", category=FutureWarning)
 
-pio.templates["custom_template"] = go.layout.Template(
-    layout_colorway=px.colors.qualitative.Antique
+# -----
+# pio.templates["custom_template"] = go.layout.Template(
+#     layout_colorway=px.colors.qualitative.Antique
+# )
+# pio.templates.default = "plotly_dark"
+
+# -----
+# Define a custom dark theme template
+# dark_theme = pio.templates["plotly_dark"]  # Start with built-in dark theme
+#
+# # Customize the theme
+# dark_theme.layout.update(
+#     font=dict(color="white"),           # White text for better contrast
+#     paper_bgcolor="black",              # Black background
+#     plot_bgcolor="black",               # Black plot area
+#     title=dict(x=0.5, font=dict(size=18)),  # Centered titles with adjusted size
+#     xaxis=dict(showgrid=False, zeroline=False),  # Remove gridlines
+#     yaxis=dict(showgrid=False, zeroline=False),
+# )
+#
+# # Set the template as the default globally
+# pio.templates["custom_dark"] = dark_theme
+# pio.templates.default = "custom_dark"
+
+# -----
+# Define a custom dark theme template
+dark_theme = pio.templates["plotly_dark"]  # Start with built-in dark theme
+
+# Customize the theme
+dark_theme.layout.update(
+    font=dict(color="white"),                 # White text for better contrast
+    paper_bgcolor="black",                    # Black background
+    plot_bgcolor="black",                     # Black plot area
+    title=dict(x=0.5, font=dict(size=18)),    # Center title and adjust size
+    xaxis=dict(showgrid=False, zeroline=False),  # Remove x-axis gridlines
+    yaxis=dict(showgrid=False, zeroline=False),  # Remove y-axis gridlines
+    legend=dict(
+        font=dict(color="white", size=12),    # White text for the legend
+        bgcolor="rgba(0, 0, 0, 0.5)",         # Semi-transparent black background
+        bordercolor="white",                  # White border for the legend box
+        borderwidth=1                         # Thickness of the legend border
+    )
 )
-pio.templates.default = "plotly_dark"
+
+# Set the template as the default globally
+pio.templates["custom_dark"] = dark_theme
+pio.templates.default = "custom_dark"
 
 
 @logging_utils.codeflow_log_wrapper('#graphs')
@@ -330,199 +371,138 @@ def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
     # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
     # return graph_html
     return fig
-#
-#
-# @logging_utils.codeflow_log_wrapper('#graphs')
-# def histogram_and_cumsum_graph_html(amount: pd.Series):
-#     fig = go.Figure()
-#
-#     hist = go.Histogram(x=amount, name="balance")
-#     fig.add_trace(hist)
-#
-#     amount_sorted = amount.sort_values()
-#     amount_cumsum = amount_sorted.cumsum()
-#
-#     fig.add_trace(go.Scatter(x=amount_sorted, y=-amount_cumsum, name="total", yaxis='y2'))
-#
-#     fig.update_layout(
-#         autosize=True,  # Automatically adjust the size of the plot
-#         hovermode='closest',  # Define hover behavior
-#         yaxis=dict(title='#'),
-#         yaxis2=dict(title='total [£]', overlaying='y', side='right'),
-#         uirevision=str(datetime.datetime.now())  # Set a unique value to trigger the layout change
-#     )
-#     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-#     return graph_html
-#
-#
-# @logging_utils.codeflow_log_wrapper('#graphs')
-# def codeflow_timeline_graph_html(functions, start_datetime, end_datetime):
-#     data = list(zip(functions, start_datetime, end_datetime))
-#
-#     non_zero_data = [(f, s, e) for f, s, e in data if s != e]
-#     # Convert data to a DataFrame
-#     df = pd.DataFrame(non_zero_data, columns=['Task', 'Start', 'Finish'])
-#
-#     # Convert 'Start' and 'Finish' columns to datetime
-#     df['Start'] = pd.to_datetime(df['Start'])
-#     df['Finish'] = pd.to_datetime(df['Finish'])
-#
-#     # Create a Gantt chart
-#     fig = px.timeline(df, x_start='Start', x_end='Finish', y='Task', color='Task')
-#
-#     # Update axis labels
-#     fig.update_xaxes(title_text='Timeline')
-#     fig.update_yaxes(title_text='Task')
-#
-#     # Set chart title
-#     fig.update_layout(title='Task Execution Timeline',
-#                       autosize=True,
-#                       )
-#
-#     # Show the plot
-#     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-#     return graph_html
-#
-#
-# @logging_utils.codeflow_log_wrapper('#graphs')
-# def performance_stats_barplot_graph_html(perf_data_stats: dict):
-#     stats = perf_data_stats
-#
-#     # Create a subplots figure with two y-axes
-#     fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
-#
-#     # Create bars for each function
-#     funcs = [func for func, times in stats.items()]
-#     mins = [data['Min'] for func, data in stats.items()]
-#     avgs = [data['Average'] for func, data in stats.items()]
-#     maxs = [data['Max'] for func, data in stats.items()]
-#     percs = [data['Percentage'] for func, data in stats.items()]
-#
-#     bar = go.Bar(
-#         x=funcs,
-#         y=mins,
-#         name='Min',
-#     )
-#     fig.add_trace(bar)
-#
-#     bar = go.Bar(
-#         x=funcs,
-#         y=avgs,
-#         name='Average',
-#     )
-#     fig.add_trace(bar)
-#
-#     bar = go.Bar(
-#         x=funcs,
-#         y=maxs,
-#         name='Max',
-#     )
-#     fig.add_trace(bar)
-#
-#     bar = go.Bar(
-#         x=funcs,
-#         y=percs,
-#         name='Percentage',
-#         yaxis='y2',  # Use the second y-axis
-#         marker=dict(color='rgba(100, 100, 100, 0.5)'),  # Set the color to transparent
-#         showlegend=False,  # Hide the legend for this bar
-#         legendgroup='Percentage',  # Group the Percentage bars together
-#         # offsetgroup=func,  # Offset bars by function name
-#     )
-#     fig.add_trace(bar)
-#
-#     # Define layout
-#     layout = {
-#         'autosize': True,  # TODO:v3 it does not autosize
-#         'title': 'Function Execution Statistics',
-#         'xaxis': {
-#             'title': 'Functions',
-#             'showticklabels': True,
-#         },
-#         'yaxis': {
-#             'title': 'Time (milliseconds)',
-#             # 'type': 'log',  # Set the y-axis to log scale
-#         },
-#         'yaxis2': {
-#             'title': 'Total perc (%)',
-#             # 'type': 'log',  # Set the y-axis to log scale
-#             'overlaying': 'y',
-#             'side': 'right',
-#             'showticklabels': True,
-#             'range': [0, 100],  # Set the percentage y-axis range to [0, 100]
-#         },
-#     }
-#
-#     # Update layout
-#     fig.update_layout(layout,
-#                       updatemenus=[
-#                           dict(
-#                               type="buttons",
-#                               direction="left",
-#                               buttons=list([
-#                                   dict(
-#                                       args=[{'yaxis': {'type': 'linear'}}],
-#                                       label="Linear Scale",
-#                                       method="relayout"
-#                                   ),
-#                                   dict(
-#                                       args=[{'yaxis': {'type': 'log'}}],
-#                                       label="Log Scale",
-#                                       method="relayout"
-#                                   )
-#                               ])
-#                           ),
-#                       ])
-#
-#     graph_html = plot(fig, output_type='div',
-#                       include_plotlyjs='cdn')  # , config={'autosizable': True, 'responsive': True})
-#     return graph_html
-#
-#
-# @logging_utils.codeflow_log_wrapper('#graphs')
-# def performance_stats_scatterplot_graph_html(perf_data_stats: dict):
-#     fig = go.Figure()
-#
-#     for tag_name, tag_data in perf_data_stats.items():
-#         fig.add_trace(go.Scatter(x=tag_data['datetime'], y=tag_data['execution_time'], name=tag_name, mode='markers'))
-#
-#     layout = {
-#         'autosize': True,  # TODO:v3 it does not autosize
-#         'title': 'Function Execution Statistics',
-#         'xaxis': {
-#             'title': 'Functions',
-#             'showticklabels': True,
-#         },
-#         'yaxis': {
-#             'title': 'Time (milliseconds)',
-#             # 'type': 'log',  # Set the y-axis to log scale
-#         },
-#     }
-#     fig.update_layout(layout,
-#                       updatemenus=[
-#                           dict(
-#                               type="buttons",
-#                               direction="left",
-#                               buttons=list([
-#                                   dict(
-#                                       args=[{'yaxis': {'type': 'linear'}}],
-#                                       label="Linear Scale",
-#                                       method="relayout"
-#                                   ),
-#                                   dict(
-#                                       args=[{'yaxis': {'type': 'log'}}],
-#                                       label="Log Scale",
-#                                       method="relayout"
-#                                   )
-#                               ])
-#                           ),
-#                       ])
-#
-#     fig.update_layout(
-#         autosize=True,  # Automatically adjust the size of the plot
-#         hovermode='closest',  # Define hover behavior
-#         yaxis=dict(title='Total time [ms]'),
-#         uirevision=str(datetime.datetime.now()),  # Set a unique value to trigger the layout change
-#     )
-#     graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-#     return graph_html
+
+
+def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, levels_col=None):
+    """
+    https://chatgpt.com/c/678aa579-efac-8006-a2db-beba6dedb7e3
+    Generate an interactive directed graph using Plotly and networkx, with optional node coloring by levels.
+
+    Args:
+        df (pd.DataFrame): A DataFrame with columns for nodes and edges.
+        from_col (str): Column representing the source nodes.
+        to_col (str): Column representing the target nodes.
+        info_col (str): Optional column for custom hover text.
+        k (float): Spring layout spacing parameter.
+        levels_col (str): Optional column for node levels (0 or positive integer values).
+    """
+    from_col = df.columns[0] if from_col is None else from_col
+    to_col = df.columns[1] if to_col is None else to_col
+
+    # Create a directed graph
+    G = nx.DiGraph()
+
+    # Add nodes and edges based on the DataFrame
+    for _, row in df.iterrows():
+        tag = row[from_col]
+        depends_on = row[to_col]
+
+        # Add the tag node even if it has no dependencies
+        G.add_node(tag)
+
+        # Add edge if there is a dependency
+        if pd.notna(depends_on):
+            G.add_edge(depends_on, tag)
+
+    # Compute positions for nodes
+    try:
+        pos = nx.spring_layout(G, k=k, seed=42)  # Adjust `k` for spacing
+    except Exception as e:
+        raise ValueError("Error generating graph layout: " + str(e))
+
+    # Extract node positions
+    x_nodes = [pos[node][0] for node in G.nodes()]
+    y_nodes = [pos[node][1] for node in G.nodes()]
+
+    # Extract edge positions
+    edge_x = []
+    edge_y = []
+    for edge in G.edges():
+        x0, y0 = pos[edge[0]]
+        x1, y1 = pos[edge[1]]
+        edge_x.extend([x0, x1, None])  # None separates edges
+        edge_y.extend([y0, y1, None])
+
+    # Determine node colors and hover text
+    node_colors = []
+    node_hover_text = []
+    if levels_col and levels_col in df.columns:
+        levels = df[[from_col, levels_col]].drop_duplicates()
+        levels[levels_col] = levels[levels_col].fillna(0).astype(int)
+
+        # Determine color mapping
+        unique_levels = sorted(levels[levels_col].unique())
+        min_level, max_level = min(unique_levels), max(unique_levels)
+        start_color = "ffdf69"  # Light blue
+        end_color = "8b008b"    # Dark blue
+
+        def interpolate_color(value):
+            ratio = (value - min_level) / (max_level - min_level) if max_level > min_level else 0
+            start_rgb = [int(start_color[i:i + 2], 16) for i in (0, 2, 4)]
+            end_rgb = [int(end_color[i:i + 2], 16) for i in (0, 2, 4)]
+            interp_rgb = [int(start + ratio * (end - start)) for start, end in zip(start_rgb, end_rgb)]
+            return f"#{''.join(f'{c:02x}' for c in interp_rgb)}"
+
+        color_mapping = {level: interpolate_color(level) for level in unique_levels}
+
+        # Assign colors and hover text
+        for node in G.nodes():
+            level_row = levels.loc[levels[from_col] == node]
+            if not level_row.empty:
+                level = level_row[levels_col].iloc[0]
+                color = color_mapping[level]
+                hover_text = f"{node} (Level: {level})"
+            else:
+                color = "#cccccc"  # Default gray for nodes without levels
+                hover_text = f"{node} (No level)"
+            node_colors.append(color)
+            node_hover_text.append(hover_text)
+    else:
+        # Default colors and hover text if no levels_col provided
+        node_colors = ["skyblue"] * len(G.nodes())
+        node_hover_text = [f"{node}" for node in G.nodes()]
+
+    # Create the edge trace
+    edge_trace = go.Scatter(
+        x=edge_x,
+        y=edge_y,
+        line=dict(width=1, color="#888"),
+        hoverinfo="none",
+        mode="lines"
+    )
+
+    # Create the node trace
+    node_trace = go.Scatter(
+        x=x_nodes,
+        y=y_nodes,
+        mode="markers+text",
+        text=[str(node) for node in G.nodes()],
+        textposition="top center",
+        marker=dict(
+            size=20,
+            color=node_colors,
+            line=dict(width=2, color="darkblue")
+        ),
+        hoverinfo="text",
+        hovertext=node_hover_text,
+        # hoverlabel=dict(
+        #     bgcolor="black",  # Background color of the hover label
+        #     # font=dict(
+        #     #     color="black"  # Font color
+        #     # )
+        # )
+    )
+
+    # Create the figure
+    fig = go.Figure(data=[edge_trace, node_trace],
+                    layout=go.Layout(
+                        title="Interactive Dependency Graph",
+                        title_x=0.5,
+                        showlegend=False,
+                        hovermode="closest",
+                        margin=dict(b=0, l=0, r=0, t=40),
+                        xaxis=dict(showgrid=False, zeroline=False),
+                        yaxis=dict(showgrid=False, zeroline=False),
+                    ))
+
+    return fig
