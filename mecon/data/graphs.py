@@ -372,23 +372,21 @@ def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
     return fig
 
 
-def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5):
+def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, levels_col=None):
     """
-    Generate an interactive directed graph using Plotly and networkx.
+    https://chatgpt.com/c/678aa579-efac-8006-a2db-beba6dedb7e3
+    Generate an interactive directed graph using Plotly and networkx, with optional node coloring by levels.
 
     Args:
         df (pd.DataFrame): A DataFrame with columns for nodes and edges.
         from_col (str): Column representing the source nodes.
         to_col (str): Column representing the target nodes.
         info_col (str): Optional column for custom hover text.
+        k (float): Spring layout spacing parameter.
+        levels_col (str): Optional column for node levels (0 or positive integer values).
     """
     from_col = df.columns[0] if from_col is None else from_col
     to_col = df.columns[1] if to_col is None else to_col
-
-    # Create hover text
-    node_hover_text = (
-        df[info_col] if info_col is not None else df[from_col] + " depends on " + df[to_col].fillna("nothing")
-    )
 
     # Create a directed graph
     G = nx.DiGraph()
@@ -411,10 +409,6 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5):
     except Exception as e:
         raise ValueError("Error generating graph layout: " + str(e))
 
-    # Handle missing or invalid positions
-    pos = {node: (coords[0] if not pd.isna(coords[0]) else 0, coords[1] if not pd.isna(coords[1]) else 0)
-           for node, coords in pos.items()}
-
     # Extract node positions
     x_nodes = [pos[node][0] for node in G.nodes()]
     y_nodes = [pos[node][1] for node in G.nodes()]
@@ -427,6 +421,45 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5):
         x1, y1 = pos[edge[1]]
         edge_x.extend([x0, x1, None])  # None separates edges
         edge_y.extend([y0, y1, None])
+
+    # Determine node colors and hover text
+    node_colors = []
+    node_hover_text = []
+    if levels_col and levels_col in df.columns:
+        levels = df[[from_col, levels_col]].drop_duplicates()
+        levels[levels_col] = levels[levels_col].fillna(0).astype(int)
+
+        # Determine color mapping
+        unique_levels = sorted(levels[levels_col].unique())
+        min_level, max_level = min(unique_levels), max(unique_levels)
+        start_color = "ffdf69"  # Light blue
+        end_color = "8b008b"    # Dark blue
+
+        def interpolate_color(value):
+            ratio = (value - min_level) / (max_level - min_level) if max_level > min_level else 0
+            start_rgb = [int(start_color[i:i + 2], 16) for i in (0, 2, 4)]
+            end_rgb = [int(end_color[i:i + 2], 16) for i in (0, 2, 4)]
+            interp_rgb = [int(start + ratio * (end - start)) for start, end in zip(start_rgb, end_rgb)]
+            return f"#{''.join(f'{c:02x}' for c in interp_rgb)}"
+
+        color_mapping = {level: interpolate_color(level) for level in unique_levels}
+
+        # Assign colors and hover text
+        for node in G.nodes():
+            level_row = levels.loc[levels[from_col] == node]
+            if not level_row.empty:
+                level = level_row[levels_col].iloc[0]
+                color = color_mapping[level]
+                hover_text = f"{node} (Level: {level})"
+            else:
+                color = "#cccccc"  # Default gray for nodes without levels
+                hover_text = f"{node} (No level)"
+            node_colors.append(color)
+            node_hover_text.append(hover_text)
+    else:
+        # Default colors and hover text if no levels_col provided
+        node_colors = ["skyblue"] * len(G.nodes())
+        node_hover_text = [f"{node}" for node in G.nodes()]
 
     # Create the edge trace
     edge_trace = go.Scatter(
@@ -446,11 +479,17 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5):
         textposition="top center",
         marker=dict(
             size=20,
-            color="skyblue",
+            color=node_colors,
             line=dict(width=2, color="darkblue")
         ),
         hoverinfo="text",
-        hovertext=node_hover_text
+        hovertext=node_hover_text,
+        # hoverlabel=dict(
+        #     bgcolor="black",  # Background color of the hover label
+        #     # font=dict(
+        #     #     color="black"  # Font color
+        #     # )
+        # )
     )
 
     # Create the figure

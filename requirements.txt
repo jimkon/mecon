@@ -6,3 +6,5 @@ plotly~=5.20.0
 monzo-api==0.3.0
 monzo~=0.10.0
 forex-python==1.8
+networkx==3.4.2
+matplotlib==3.10.0

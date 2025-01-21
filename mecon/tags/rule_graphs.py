@@ -2,6 +2,7 @@ import logging
 from collections.abc import Iterable
 from itertools import chain
 
+import networkx as nx
 import pandas as pd
 
 from mecon.tags import tagging, tag_helpers
@@ -12,19 +13,38 @@ class TagGraph:
         self._tags = tags
         self._dependency_mapping = dependency_mapping
 
-    def tidy_table(self):
+        # if not self.has_cycles():
+        if not self.find_all_cycles():
+            self.add_hierarchy_levels()
+
+    def tidy_table(self, ignore_tags_with_no_dependencies=False):
         tags = []
         for tag, info in self._dependency_mapping.items():
+            row_dict = {'tag': tag}
+            if 'level' in info:
+                row_dict['level'] = info['level']
+
             depends_on = info['depends_on']
-            for dep_tag in depends_on:
-                tags.append({'tag': tag, 'depends_on': dep_tag})
+            if len(depends_on) == 0 and not ignore_tags_with_no_dependencies:
+                row_dict['depends_on'] = None
+                tags.append(row_dict)
+            else:
+                for dep_tag in depends_on:
+                    tags.append(dict(**row_dict, depends_on=dep_tag))
+
         df = pd.DataFrame(tags)
         return df
 
-    def hierarchy(self):
+    def add_hierarchy_levels(self):
+        if self.has_cycles():
+            raise ValueError("Cannot calculate hierarchy on a graph with cycles")
+
         mapping = self._dependency_mapping.copy()
 
+        cnt = 0
         def _calc_level_rec(tag):
+            print(f"{'>'*cnt}: rec for {tag}")
+
             if tag not in mapping:
                 logging.warning(f"{tag} not in dependency mapping while calculating hierarchy. Will be replaced with 0")
                 return 0
@@ -47,9 +67,9 @@ class TagGraph:
 
         for tag, info in mapping.items():
             _calc_level_rec(tag)
-        #     if len(info['depends_on']) == 0:
-        #         info['level'] = 0
 
+        # levels_dict = {tag: info['level'] for tag, info in mapping.items()}
+        self._dependency_mapping = mapping
 
     @classmethod
     def from_tags(cls, tags: Iterable[tagging.Tag]):
@@ -84,6 +104,67 @@ class TagGraph:
 
         return mapping
 
+    def has_cycles(self):
+        df = self.tidy_table()
+        # Create a directed graph
+        G = nx.DiGraph()
+
+        # Add edges to the graph based on the DataFrame
+        for _, row in df.iterrows():
+            tag = row['tag']
+            depends_on = row['depends_on']
+
+            if depends_on is None:
+                continue
+
+            for dependency in depends_on:
+                G.add_edge(dependency, tag)
+
+        # Check for cycles in the graph
+        try:
+            # networkx will throw an exception if a cycle exists
+            nx.find_cycle(G, orientation="original")
+            return True
+        except nx.NetworkXNoCycle:
+            return False
+
+    def find_all_cycles(self):
+        df = self.tidy_table()
+        # Create a directed graph
+        G = nx.DiGraph()
+
+        # Add edges based on the DataFrame
+        for _, row in df.iterrows():
+            tag = row['tag']
+            depends_on = row['depends_on']
+            if pd.notna(depends_on):
+                G.add_edge(depends_on, tag)
+
+        # Find all simple cycles
+        cycles = list(nx.simple_cycles(G))
+
+        return cycles
+
+    def create_plotly_graph(self, k=.5, levels_col=None):
+        from mecon.data.graphs import create_plotly_graph
+        df = self.tidy_table()
+        return create_plotly_graph(df, from_col='tag', to_col='depends_on', k=k, levels_col=levels_col)
+
+    def remove_cycles(self) -> 'TagGraph':
+        edges = self.tidy_table().values.tolist()
+        cycles = self.find_all_cycles()
+
+        cleaned_edges = [edge for edge in edges if edge not in cycles]
+
+        new_df = pd.DataFrame(cleaned_edges, columns=['tag', 'depends_on']).groupby('tag').agg({'depends_on': list}).reset_index()
+        new_df['depends_on'] = new_df['depends_on'].apply(lambda arr: arr if arr is not None and len(arr) > 0 and arr[0] is not None else list())
+
+        # new_dep_mapping = {k: v['depends_on'] for k, v in new_df.set_index('tag').to_dict('index').items()}
+        new_dep_mapping = new_df.set_index('tag').to_dict('index')
+
+        new_tg = TagGraph(self._tags, new_dep_mapping)
+        return new_tg
+
 
 if __name__ == '__main__':
     from mecon import config
@@ -102,4 +183,9 @@ if __name__ == '__main__':
 
     tags = data_manager.all_tags()
     tg = TagGraph.from_tags(tags)
-    tg.hierarchy()
+    # tg.hierarchy()
+    print(f"{tg.find_all_cycles()=}")
+    tg2 = tg.remove_cycles()
+    tg2.create_plotly_graph(k=.5, levels_col='level')
+
+    t = 0
