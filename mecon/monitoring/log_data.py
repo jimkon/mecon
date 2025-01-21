@@ -116,7 +116,7 @@ class ExecutionInfoMixin(datafields.ColumnMixin):
         return groups
 
     def group_by_tags(self):
-        tags_list = self._df_wrapper_obj.all_tags().keys()  # TODO:v3 resolve all_tags for df_wrapper
+        tags_list = self._df_wrapper_obj.all_tags()  # TODO:v3 resolve all_tags for df_wrapper
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(self._df_wrapper_obj)
         return groups
@@ -192,7 +192,7 @@ class PerformanceData(datafields.DatedDataframeWrapper,
     def from_log_data(cls, log_data: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
         codeflow_logs = log_data.containing_tags('codeflow')
         # maybe add tags for level, module, funcName
-        # tags_list = sorted(list(set(codeflow_logs.all_tags().keys()) - {'codeflow', 'start', 'end'}))
+        # tags_list = sorted(list(set(codeflow_logs.all_tags()) - {'codeflow', 'start', 'end'}))
         tags_list = _distinct_function_tags(codeflow_logs.tags)
 
         grouper = groupings.TagGrouping(tags_list=tags_list)

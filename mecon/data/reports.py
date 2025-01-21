@@ -29,7 +29,7 @@ def transactions_stats_json(trans: transactions.Transactions, grouping='none'):
             'max': trans.date.max(),
             '# unique': trans.date.nunique(),
         },
-        'All tags': trans.all_tags_count(),
+        'All tags': trans.all_tag_counts(),
         'Currencies': trans.all_currencies()
     }
 

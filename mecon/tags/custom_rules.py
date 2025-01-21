@@ -32,8 +32,9 @@ class TransferBetweenMyBanksRule(tagging.CustomRule):
 
 
 class ZeroSumTransactionsRule(IdMatchingCustomRule):
-    def __init__(self, time_diff: float = .5):
+    def __init__(self, time_diff: float = 1., amount_diff: float = 0.):
         self.time_diff = time_diff
+        self.amount_diff = amount_diff
         super().__init__()
 
     # @property
@@ -45,14 +46,17 @@ class ZeroSumTransactionsRule(IdMatchingCustomRule):
         t = 0
 
         df = df_wrapper.dataframe()
-        df['time_diff'] = df['datetime'].diff()
-        df['time_diff_secs'] = df['time_diff'].dt.total_seconds()
-        df['time_diff_flag'] = df['time_diff_secs'] < self.time_diff
+        df['time_diff_forward'] = df['datetime'].diff(periods=1).dt.total_seconds()
+        df['time_diff_backward'] = df['datetime'].diff(periods=-1).dt.total_seconds()
 
-        df['amount_diff'] = df['amount'].diff()
-        df['amount_diff_flag'] = df['amount_diff'] == 0
+        df['time_diff_flag'] = (df['time_diff_forward'].abs() < self.time_diff) | (df['time_diff_backward'].abs() < self.time_diff)
+
+        df['amount_diff_forward'] = df['amount'].diff(periods=1)
+        df['amount_diff_backward'] = df['amount'].diff(periods=-1)
+        df['amount_diff_flag'] = (df['amount_diff_forward'].abs() < self.amount_diff) | (df['amount_diff_backward'].abs() < self.amount_diff)
 
         df_flagged = df[(df['time_diff_flag'] == True) & (df['amount_diff_flag'] == True)]
+        t = 0
 
 
 class NightOutRule(IdMatchingCustomRule):

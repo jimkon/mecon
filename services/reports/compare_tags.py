@@ -4,13 +4,12 @@ import logging
 import pathlib
 from urllib.parse import urlparse, parse_qs
 
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+from shiny import App, Inputs, Outputs, Session, ui, reactive
 from shinywidgets import output_widget, render_widget
 
-from mecon.data import reports
 from mecon.app.file_system import WorkingDataManager
-from mecon.settings import Settings
 from mecon.data import graphs
+from mecon.settings import Settings
 
 # from mecon.monitoring.logs import setup_logging
 
@@ -69,14 +68,14 @@ app_ui = ui.page_fluid(
             ui.input_selectize(
                 id='filter_in_tags_select',
                 label='Select tags to filter IN',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
+                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
             ui.input_selectize(
                 id='filter_out_tags_select',
                 label='Select tags to filter OUT',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
+                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
@@ -90,7 +89,7 @@ app_ui = ui.page_fluid(
             ui.input_selectize(
                 id='compare_tags_select',
                 label='Select tags to show',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
+                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
@@ -146,7 +145,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         params = url_params()
         transactions = default_transactions()
         all_tags_names = [tag.name for tag in dm.all_tags()]
-        new_choices = [tag_name for tag_name, cnt in transactions.all_tags().items() if
+        new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
                        cnt > 0]
 
         if len(input.filter_in_tags_select()) == 0:

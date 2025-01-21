@@ -1,5 +1,4 @@
 import abc
-import logging
 from typing import List
 
 import numpy as np
@@ -18,7 +17,7 @@ class TagGrouping(Grouping):
     def compute_group_indexes(self, df_wrapper: DataframeWrapper) -> List[pd.Series]:
         # TODO:v3 check df_wrapper is TagColumMixin
         res_indexes = []
-        tags_list = self._tags_list if self._tags_list is not None else df_wrapper.all_tags().keys()
+        tags_list = self._tags_list if self._tags_list is not None else df_wrapper.all_tag_counts().keys()
 
         for tag in tags_list:
             rule = TagMatchCondition(tag)
