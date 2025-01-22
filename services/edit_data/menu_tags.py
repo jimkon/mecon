@@ -4,7 +4,6 @@ from shiny import App, Inputs, Outputs, Session, render, ui
 
 from mecon import config
 from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
-from mecon.tags import tag_helpers
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -66,12 +65,22 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def menu_tags_table():
-        transactions = data_manager.get_transactions()
-        tag_stats_df = tag_helpers.tag_stats_from_transactions(transactions)
+        tag_stats_df = data_manager.get_tags_metadata()
+        tag_stats_df.columns = [col.capitalize().replace('_', ' ') for col in tag_stats_df.columns]
         tag_stats_df['i'] = tag_stats_df.index
-        tag_stats_df['Actions'] = tag_stats_df['Tag'].apply(lambda tag_name: tag_actions(tag_name))
+        tag_stats_df['Actions'] = tag_stats_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
 
-        cols_to_show = ['i', 'Tag', 'Count', 'Total money in', 'Total money out', 'Date created', 'Actions']
+        tag_stats_df['Total money in'] = tag_stats_df['Total money in'].apply(lambda x: f"£ {x:.2f}")
+        tag_stats_df['Total money out'] = tag_stats_df['Total money out'].apply(lambda x: f"£ {x:.2f}")
+
+        cols_to_show = ['i',
+                        'Name',
+                        'Count',
+                        'Total money in',
+                        'Total money out',
+                        # 'Date created',
+                        'Date modified',
+                        'Actions']
         return tag_stats_df[cols_to_show]
 
     # @reactive.effect

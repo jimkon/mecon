@@ -47,14 +47,36 @@ def expand_rule_to_subrules(rule: tagging.AbstractRule) -> list[tagging.Abstract
     return expanded_rules
 
 
-def tag_stats_from_transactions(transactions: Transactions) -> pd.DataFrame:
-    logging.info(f"Calculating tag stats from {transactions.size()} transactions.")
-    from pandarallel import pandarallel
-    pandarallel.initialize(progress_bar=True, use_memory_fs=False)
-
+def aggregate_data_for_each_tagged_row(transactions: Transactions,
+                                       operation_func: callable,
+                                        operation_func_name: str
+                                       ) -> pd.DataFrame:
     tag_stats = transactions.all_tag_counts()
-    tag_stats_df = pd.DataFrame({'Tag': list(tag_stats.keys()), 'Count': list(tag_stats.values())})
-    tag_stats_df['Total money in'] = tag_stats_df['Tag'].parallel_apply(lambda tag_name: transactions.containing_tags(tag_name).positive_amounts().amount.sum())
-    tag_stats_df['Total money out'] = tag_stats_df['Tag'].parallel_apply(lambda tag_name: transactions.containing_tags(tag_name).negative_amounts().amount.sum())
-    tag_stats_df['Date created'] = tag_stats_df['Tag'].apply(lambda tag_name: 'TODO')
-    return tag_stats_df
+    df = transactions.dataframe()
+
+    res_dict = {}
+    for tag in tag_stats.keys():
+        res_dict[tag] = operation_func(df[df['tags'].apply(lambda tags: tag in tags)])
+
+    df_res = pd.DataFrame({'name': list(res_dict.keys()), operation_func_name: list(res_dict.values())})
+    return df_res
+
+
+
+def tag_stats_from_transactions(transactions: Transactions) -> pd.DataFrame:
+    import numpy as np
+    logging.info(f"Calculating tag stats from {transactions.size()} transactions.")
+
+    df_count = aggregate_data_for_each_tagged_row(transactions,
+                                       operation_func = len,
+                                       operation_func_name='count')
+    df_money_in = aggregate_data_for_each_tagged_row(transactions,
+                                       operation_func = lambda _df: np.sum(n for n in _df['amount'] if n>0),
+                                       operation_func_name='total_money_in')
+    df_money_out = aggregate_data_for_each_tagged_row(transactions,
+                                                     operation_func=lambda _df: np.sum(
+                                                         -n for n in _df['amount'] if n < 0),
+                                                     operation_func_name='total_money_out')
+
+    df_merged = df_count.merge(df_money_in.merge(df_money_out, on='name'), on='name')
+    return df_merged
