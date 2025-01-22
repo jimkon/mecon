@@ -7,6 +7,7 @@ class DBDataManager(data_management.DataManager):
         super().__init__(
             trans_io=db_controller.TransactionsDBAccessor(db),
             tags_io=db_controller.TagsDBAccessor(db),
+            tags_metadata_io=db_controller.TagsMetadataDBAccessor(db),
             hsbc_stats_io=db_controller.HSBCTransactionsDBAccessor(db),
             monzo_stats_io=db_controller.MonzoTransactionsDBAccessor(db),
             revo_stats_io=db_controller.RevoTransactionsDBAccessor(db),
@@ -18,6 +19,7 @@ class CachedDBDataManager(data_management.CachedDataManager):
         super().__init__(
             trans_io=db_controller.TransactionsDBAccessor(db),
             tags_io=db_controller.TagsDBAccessor(db),
+            tags_metadata_io=db_controller.TagsMetadataDBAccessor(db),
             hsbc_stats_io=db_controller.HSBCTransactionsDBAccessor(db),
             monzo_stats_io=db_controller.MonzoTransactionsDBAccessor(db),
             revo_stats_io=db_controller.RevoTransactionsDBAccessor(db),

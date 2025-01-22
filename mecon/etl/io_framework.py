@@ -41,6 +41,32 @@ class TagsIOABC(abc.ABC):
         pass
 
 
+class TagsMetadataIOABC(abc.ABC):
+    """
+    The interface of tags metadata io operations used by the app
+    """
+
+    @abc.abstractmethod
+    def replace_all_metadata(self, metadata_df: pd.DataFrame) -> None:
+        """
+        Replace all data in the tags_metadata_table with the provided DataFrame.
+
+        Args:
+            metadata_df (pd.DataFrame): A DataFrame with columns matching the table schema.
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_all_metadata(self) -> pd.DataFrame:
+        """
+        Retrieve all tag metadata as a DataFrame.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing all metadata.
+        """
+        pass
+
+
 class TransactionsIOABC(abc.ABC):
     @abc.abstractmethod
     def get_transactions(self) -> pd.DataFrame:

@@ -4,6 +4,7 @@ import pandas as pd
 
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework
+from mecon.tags.tag_helpers import tag_stats_from_transactions
 from mecon.tags.tagging import Tag
 
 
@@ -11,17 +12,19 @@ class BaseDataManager:
     def __init__(self,
                  trans_io: io_framework.CombinedTransactionsIOABC,
                  tags_io: io_framework.TagsIOABC,
+                 tags_metadata_io: io_framework.TagsMetadataIOABC,
                  hsbc_stats_io: io_framework.RawTransactionsIOABC,
                  monzo_stats_io: io_framework.RawTransactionsIOABC,
                  revo_stats_io: io_framework.RawTransactionsIOABC):
         self._transactions = trans_io
         self._tags = tags_io
+        self._tags_metadata = tags_metadata_io
         self._hsbc_statements = hsbc_stats_io
         self._monzo_statements = monzo_stats_io
         self._revo_statements = revo_stats_io
 
     def get_transactions(self) -> Transactions:
-        raise NotImplementedError
+        return Transactions(self._transactions.get_transactions())
 
     def reset_transactions(self):
         self._transactions.delete_all()
@@ -85,20 +88,38 @@ class BaseDataManager:
         data_df = transactions.dataframe()
         self._transactions.update_tags(data_df)
 
+        tags_metadata = tag_stats_from_transactions(transactions)
+        self.replace_tags_metadata(tags_metadata)
+
+    def get_tags_metadata(self):
+        tags_metadata_df = self._tags_metadata.get_all_metadata()
+        # TODO date_created currently not returned by the tags_io
+        # tags_df = pd.DataFrame(self._tags.all_tags())
+        # tags_metadata_df = tags_df[['name', 'date_created']].merge(tags_metadata_df, on='name', how='left')
+        return tags_metadata_df
+
+    def replace_tags_metadata(self, metadata_df: pd.DataFrame):
+        self._tags_metadata.replace_all_metadata(metadata_df)
+
 
 class DataManager(BaseDataManager):
-    def get_transactions(self) -> Transactions:
-        return Transactions(self._transactions.get_transactions())
+    pass
 
 
 class CachedDataManager(BaseDataManager):
     def __init__(self,
                  trans_io: io_framework.CombinedTransactionsIOABC,
                  tags_io: io_framework.TagsIOABC,
+                 tags_metadata_io: io_framework.TagsMetadataIOABC,
                  hsbc_stats_io: io_framework.RawTransactionsIOABC,
                  monzo_stats_io: io_framework.RawTransactionsIOABC,
                  revo_stats_io: io_framework.RawTransactionsIOABC):
-        super().__init__(trans_io, tags_io, hsbc_stats_io, monzo_stats_io, revo_stats_io)
+        super().__init__(trans_io=trans_io,
+                         tags_io=tags_io,
+                         tags_metadata_io=tags_metadata_io,
+                         hsbc_stats_io=hsbc_stats_io,
+                         monzo_stats_io=monzo_stats_io,
+                         revo_stats_io=revo_stats_io)
         self._cache = DataCache()
 
     def get_transactions(self) -> Transactions:
@@ -159,11 +180,21 @@ class CachedDataManager(BaseDataManager):
         super().reset_transaction_tags()
         self._cache.reset_transactions()
 
+    def get_tags_metadata(self):
+        if self._cache.tags_metadata is None:
+            self._cache.tags_metadata = super().get_tags_metadata()
+        return self._cache.tags_metadata
+
+    def replace_tags_metadata(self, metadata_df: pd.DataFrame):
+        super().replace_tags_metadata(metadata_df)
+        self._cache.reset_tags_metadata()
+
 
 class DataCache:
     def __init__(self):
         self.transaction = None
         self.tags = {}
+        self.tags_metadata = None
         self.hsbc_statements = None
         self.monzo_statements = None
         self.revo_statements = None
@@ -174,6 +205,9 @@ class DataCache:
     def reset_tags(self):
         self.tags = {}
 
+    def reset_tags_metadata(self):
+        self.tags_metadata = None
+
     def reset_statements(self):
         self.hsbc_statements = None
         self.monzo_statements = None
@@ -183,3 +217,4 @@ class DataCache:
         self.reset_statements()
         self.reset_tags()
         self.reset_transactions()
+        self.reset_tags_metadata()

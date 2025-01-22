@@ -4,9 +4,9 @@ from unittest import mock
 
 import pandas as pd
 
+from mecon.app import db_controller
 from mecon.app import db_extension
 from mecon.app import models
-from mecon.app import db_controller
 
 
 class TestTagsDBData(unittest.TestCase):
@@ -67,6 +67,101 @@ class TestTagsDBData(unittest.TestCase):
 
         returned_tags = self.accessor.all_tags()
         self.assertEqual(expected_tags, returned_tags)
+
+
+class TestTagsMetadataDBData(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db = db_extension.DBWrapper(':memory:')  # Using in-memory database for testing
+        models.Base.metadata.create_all(cls.db._engine)  # Create all tables
+        cls.accessor = db_controller.TagsMetadataDBAccessor(cls.db)  # Initialize the accessor
+
+    @classmethod
+    def tearDownClass(cls):
+        # Cleanup database after each test (optional, as in-memory DB will be wiped)
+        models.Base.metadata.drop_all(cls.db._engine)
+        # cls.db.session.close()
+
+    def test_replace_all_metadata(self):
+        metadata_df = pd.DataFrame({
+            'name': ['tag1', 'tag2'],
+            'date_modified': [datetime.now(), datetime.now()],
+            'total_money_in': [100.0, 200.0],
+            'total_money_out': [50.0, 75.0],
+            'count': [10, 20]
+        })
+
+        # Replace existing metadata with the new dataframe
+        self.accessor.replace_all_metadata(metadata_df)
+
+        # Fetch the data back and verify it
+        returned_metadata = self.accessor.get_all_metadata()
+        pd.testing.assert_frame_equal(metadata_df, returned_metadata)
+
+    def test_get_all_metadata_empty(self):
+        # Initially, the metadata table should be empty
+        metadata_df = self.accessor.get_all_metadata()
+        self.assertTrue(metadata_df.empty)
+
+    def test_insert_single_metadata(self):
+        metadata_df = pd.DataFrame({
+            'name': ['tag3'],
+            'date_modified': [datetime.now()],
+            'total_money_in': [150.0],
+            'total_money_out': [80.0],
+            'count': [5]
+        })
+
+        # Replace metadata, which will insert this row
+        self.accessor.replace_all_metadata(metadata_df)
+
+        # Fetch and verify the inserted metadata
+        returned_metadata = self.accessor.get_all_metadata()
+        expected_metadata = pd.DataFrame({
+            'name': ['tag3'],
+            'date_modified': [metadata_df['date_modified'].iloc[0]],
+            'total_money_in': [150.0],
+            'total_money_out': [80.0],
+            'count': [5]
+        })
+
+        pd.testing.assert_frame_equal(returned_metadata, expected_metadata)
+
+    def test_update_metadata(self):
+        metadata_df = pd.DataFrame({
+            'name': ['tag4'],
+            'date_modified': [datetime.now()],
+            'total_money_in': [300.0],
+            'total_money_out': [150.0],
+            'count': [15]
+        })
+
+        # Replace metadata initially
+        self.accessor.replace_all_metadata(metadata_df)
+
+        # Update the data for tag4
+        updated_metadata_df = pd.DataFrame({
+            'name': ['tag4'],
+            'date_modified': [datetime.now()],
+            'total_money_in': [500.0],
+            'total_money_out': [200.0],
+            'count': [25]
+        })
+
+        # Replace metadata, which will update the existing row
+        self.accessor.replace_all_metadata(updated_metadata_df)
+
+        # Fetch and verify the updated metadata
+        returned_metadata = self.accessor.get_all_metadata()
+        expected_metadata = pd.DataFrame({
+            'name': ['tag4'],
+            'date_modified': [updated_metadata_df['date_modified'].iloc[0]],
+            'total_money_in': [500.0],
+            'total_money_out': [200.0],
+            'count': [25]
+        })
+
+        pd.testing.assert_frame_equal(returned_metadata, expected_metadata)
 
 
 class HSBCTransactionsDBAccessorTestCase(unittest.TestCase):

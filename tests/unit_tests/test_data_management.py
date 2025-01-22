@@ -25,6 +25,7 @@ class TestDataManager(unittest.TestCase):
         # self.transactions_io.load_transactions = Mock()
 
         self.tags_io = Mock()
+        self.tags_metadata_io = Mock()
         self.hsbc_stats_io = Mock()
         self.monzo_stats_io = Mock()
         self.revo_stats_io = Mock()
@@ -32,6 +33,7 @@ class TestDataManager(unittest.TestCase):
         self.data_manager = DataManager(
             trans_io=self.transactions_io,
             tags_io=self.tags_io,
+            tags_metadata_io=self.tags_metadata_io,
             hsbc_stats_io=self.hsbc_stats_io,
             monzo_stats_io=self.monzo_stats_io,
             revo_stats_io=self.revo_stats_io
@@ -136,7 +138,8 @@ class TestDataManager(unittest.TestCase):
             result = self.data_manager.all_tags()
             mock_tag_factory.assert_has_calls([call('tag1', {}), call('tag2', [])])
 
-    def test_reset_transaction_tags(self):
+    @patch('mecon.data.data_management.tag_stats_from_transactions')
+    def test_reset_transaction_tags(self, tag_stats_mck):
         transactions_mock = Mock()
         transactions_mock.reset_tags = Mock(return_value=transactions_mock)
         transactions_mock.apply_tag = Mock(return_value=transactions_mock)
@@ -149,6 +152,76 @@ class TestDataManager(unittest.TestCase):
                 self.data_manager.all_tags.assert_called_once()
                 transactions_mock.apply_tag.assert_has_calls([call('tag1'), call('tag2')])
                 mock_update_tags.assert_called_once_with('dataframe')
+
+    def test_get_tags_metadata(self):
+        # Mock the return values for dependencies
+        tags_data = [
+            {'name': 'tag1', 'date_created': '2023-01-01'},
+            {'name': 'tag2', 'date_created': '2023-01-02'}
+        ]
+        metadata_data = [
+            {'name': 'tag1', 'total_money_in': 100.0, 'total_money_out': 50.0, 'count': 10},
+            {'name': 'tag2', 'total_money_in': 200.0, 'total_money_out': 100.0, 'count': 20}
+        ]
+
+        self.tags_io.all_tags.return_value = tags_data
+        self.tags_metadata_io.get_all_metadata.return_value = pd.DataFrame(metadata_data)
+
+        # Expected result
+        expected_df = pd.DataFrame([
+            {'name': 'tag1', 'date_created': '2023-01-01', 'total_money_in': 100.0, 'total_money_out': 50.0,
+             'count': 10},
+            {'name': 'tag2', 'date_created': '2023-01-02', 'total_money_in': 200.0, 'total_money_out': 100.0,
+             'count': 20}
+        ])
+
+        # Call the method
+        result_df = self.data_manager.get_tags_metadata()
+
+        # Assert
+        pd.testing.assert_frame_equal(result_df, expected_df)
+        self.tags_io.all_tags.assert_called_once()
+        self.tags_metadata_io.get_all_metadata.assert_called_once()
+
+    def test_get_tags_metadata_no_metadata(self):
+        # Mock the return values for dependencies
+        tags_data = [
+            {'name': 'tag1', 'date_created': '2023-01-01'},
+            {'name': 'tag2', 'date_created': '2023-01-02'}
+        ]
+
+        self.tags_io.all_tags.return_value = tags_data
+        self.tags_metadata_io.get_all_metadata.return_value = pd.DataFrame(
+            columns=['name', 'total_money_in', 'total_money_out', 'count'])
+
+        # Expected result (tags with no metadata)
+        expected_df = pd.DataFrame([
+            {'name': 'tag1', 'date_created': '2023-01-01', 'total_money_in': None, 'total_money_out': None,
+             'count': None},
+            {'name': 'tag2', 'date_created': '2023-01-02', 'total_money_in': None, 'total_money_out': None,
+             'count': None}
+        ])
+
+        # Call the method
+        result_df = self.data_manager.get_tags_metadata()
+
+        # Assert
+        pd.testing.assert_frame_equal(result_df, expected_df)
+        self.tags_io.all_tags.assert_called_once()
+        self.tags_metadata_io.get_all_metadata.assert_called_once()
+
+    def test_replace_tags_metadata(self):
+        # Mock the input DataFrame
+        metadata_df = pd.DataFrame([
+            {'name': 'tag1', 'total_money_in': 100.0, 'total_money_out': 50.0, 'count': 10},
+            {'name': 'tag2', 'total_money_in': 200.0, 'total_money_out': 100.0, 'count': 20}
+        ])
+
+        # Call the method
+        self.data_manager.replace_tags_metadata(metadata_df)
+
+        # Assert
+        self.tags_metadata_io.replace_all_metadata.assert_called_once_with(metadata_df)
 
 
 class TestCachedDataManager(unittest.TestCase):
@@ -169,6 +242,7 @@ class TestCachedDataManager(unittest.TestCase):
         # self.transactions_io.load_transactions = Mock()
 
         self.tags_io = Mock()
+        self.tags_metadata_io = Mock()
         self.hsbc_stats_io = Mock()
         self.monzo_stats_io = Mock()
         self.revo_stats_io = Mock()
@@ -176,6 +250,7 @@ class TestCachedDataManager(unittest.TestCase):
         self.data_manager = CachedDataManager(
             trans_io=self.transactions_io,
             tags_io=self.tags_io,
+            tags_metadata_io=self.tags_metadata_io,
             hsbc_stats_io=self.hsbc_stats_io,
             monzo_stats_io=self.monzo_stats_io,
             revo_stats_io=self.revo_stats_io
@@ -303,7 +378,8 @@ class TestCachedDataManager(unittest.TestCase):
 
     # @patch('mecon.data.data_management.tag_monitoring.TaggingStatsMonitoringSystem')
     # def test_reset_transaction_tags(self, mock_monitoring):
-    def test_reset_transaction_tags(self):
+    @patch('mecon.data.data_management.tag_stats_from_transactions')
+    def test_reset_transaction_tags(self, tag_stats_mck):
         transactions_mock = Mock()
         transactions_mock.reset_tags = Mock(return_value=transactions_mock)
         transactions_mock.apply_tag = Mock(return_value=transactions_mock)
@@ -317,6 +393,26 @@ class TestCachedDataManager(unittest.TestCase):
                 self.data_manager._cache.reset_transactions.assert_called_once()
                 transactions_mock.apply_tag.assert_has_calls([call('tag1'), call('tag2')])
                 mock_update_tags.assert_called_once_with('dataframe')
+
+    def test_get_tags_metadata_with_cache(self):
+        mock_metadata = Mock()
+        self.data_manager._cache.tags_metadata = mock_metadata
+        result = self.data_manager.get_tags_metadata()
+        self.assertEqual(result, mock_metadata)
+        self.tags_metadata_io.get_all_metadata.assert_not_called()
+
+    def test_get_tags_metadata_without_cache(self):
+        self.data_manager._cache.tags_metadata = None
+        with patch.object(self.tags_metadata_io, 'get_all_metadata', return_value='mock_metadata') as mock_func:
+            result = self.data_manager.get_tags_metadata()
+            mock_func.assert_called_once()
+            self.assertEqual(result, 'mock_metadata')
+
+    def test_replace_tags_metadata(self):
+        metadata_df = pd.DataFrame()
+        self.data_manager.replace_tags_metadata(metadata_df)
+        self.tags_metadata_io.replace_all_metadata.assert_called_once_with(metadata_df)
+        self.data_manager._cache.reset_tags_metadata.assert_called_once()
 
 
 if __name__ == '__main__':

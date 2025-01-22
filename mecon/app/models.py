@@ -23,6 +23,24 @@ class TagsDBTable(Base):
         }
 
 
+class TagsMetadataTable(Base):
+    __tablename__ = 'tags_metadata_table'
+
+    name = Column(String(50), primary_key=True, nullable=False)
+    date_modified = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    total_money_in = Column(Float, nullable=False, default=0.0)
+    total_money_out = Column(Float, nullable=False, default=0.0)
+    count = Column(Integer, nullable=False, default=0)
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'date_modified': self.date_modified,
+            'total_money_in': self.total_money_in,
+            'total_money_out': self.total_money_out,
+            'count': self.count,
+        }
+
 
 class HSBCTransactionsDBTable(Base):
     __tablename__ = 'hsbc_transactions_db_table'

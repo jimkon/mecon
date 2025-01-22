@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, List
 
@@ -17,12 +16,14 @@ class TagsDBAccessor(io_framework.TagsIOABC):
         self._db = db
 
     def _format_received_tag(self, tag):
-        if not isinstance(tag.conditions_json, dict) and not isinstance(tag.conditions_json, list): # TODO not necessarily needed, just in case
-            raise ValueError(f"Tag '{tag.name}' contains an invalid json object: {type(tag.conditions_json)=}, value={tag.conditions_json}")
+        if not isinstance(tag.conditions_json, dict) and not isinstance(tag.conditions_json,
+                                                                        list):  # TODO not necessarily needed, just in case
+            raise ValueError(
+                f"Tag '{tag.name}' contains an invalid json object: {type(tag.conditions_json)=}, value={tag.conditions_json}")
 
         return {
             'name': tag.name,
-            'conditions_json': tag.conditions_json
+            'conditions_json': tag.conditions_json,
         }
 
     @logging_utils.codeflow_log_wrapper('#db#tags')
@@ -85,6 +86,60 @@ class TagsDBAccessor(io_framework.TagsIOABC):
             return [self._format_received_tag(tag) for tag in tags]
         except Exception as e:
             logging.error(f"Failed to retrieve all tags: {e}")
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
+class TagsMetadataDBAccessor(io_framework.TagsMetadataIOABC):
+    def __init__(self, db):
+        self._db = db
+
+    def _format_received_metadata(self, metadata):
+        return {
+            'name': metadata.name,
+            'date_modified': metadata.date_modified,
+            'total_money_in': metadata.total_money_in,
+            'total_money_out': metadata.total_money_out,
+            'count': metadata.count,
+        }
+
+    @logging_utils.codeflow_log_wrapper('#db#tags_metadata')
+    def replace_all_metadata(self, metadata_df: pd.DataFrame) -> None:
+        session = self._db.new_session()
+        try:
+            # Clear existing metadata
+            session.query(models.TagsMetadataTable).delete()
+
+            # Insert new metadata
+            for _, row in metadata_df.iterrows():
+                metadata = models.TagsMetadataTable(
+                    name=row['name'],
+                    date_modified=row.get('date_modified'),  # Will use the current timestamp if not provided
+                    total_money_in=row['total_money_in'],
+                    total_money_out=row['total_money_out'],
+                    count=row['count']
+                )
+                session.add(metadata)
+
+            session.commit()
+        except Exception as e:
+            logging.error(f"Failed to replace all metadata: {e}")
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    @logging_utils.codeflow_log_wrapper('#db#tags_metadata')
+    def get_all_metadata(self) -> pd.DataFrame:
+        session = self._db.new_session()
+        try:
+            metadata_records = session.query(models.TagsMetadataTable).all()
+            metadata_list = [self._format_received_metadata(record) for record in metadata_records]
+            return pd.DataFrame(metadata_list)
+        except Exception as e:
+            logging.error(f"Failed to retrieve all metadata: {e}")
             session.rollback()
             raise
         finally:
@@ -216,9 +271,11 @@ class TransactionsDBAccessor(io_framework.CombinedTransactionsIOABC):
         if not pd.api.types.is_string_dtype(df['currency']):
             invalid_types.append(f"Invalid type for column 'currency'. Expected string, got: {df['currency'].dtype}")
         if not pd.api.types.is_numeric_dtype(df['amount_cur']):
-            invalid_types.append(f"Invalid type for column 'amount_cur'. Expected numeric, got: {df['amount_cur'].dtype}")
+            invalid_types.append(
+                f"Invalid type for column 'amount_cur'. Expected numeric, got: {df['amount_cur'].dtype}")
         if not pd.api.types.is_string_dtype(df['description']):
-            invalid_types.append(f"Invalid type for column 'description'. Expected string, got: {df['description'].dtype}")
+            invalid_types.append(
+                f"Invalid type for column 'description'. Expected string, got: {df['description'].dtype}")
 
         # Raise exception if any type errors are found
         if invalid_types:
