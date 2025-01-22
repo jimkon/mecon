@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime
+from sqlalchemy import Column, String, Integer, Float, DateTime, func
 from sqlalchemy.dialects.sqlite import JSON
 
 from sqlalchemy.orm import declarative_base
@@ -13,10 +13,15 @@ class TagsDBTable(Base):
 
     name = Column(String(50), primary_key=True, nullable=False)
     conditions_json = Column(JSON, nullable=False)
+    date_created = Column(DateTime, nullable=False, default=func.now())
 
     def to_dict(self):
-        tag_name = self.name
-        return {'name': tag_name, 'conditions_json': self.conditions_json}
+        return {
+            'name': self.name,
+            'conditions_json': self.conditions_json,
+            'date_created': self.date_created
+        }
+
 
 
 class HSBCTransactionsDBTable(Base):
