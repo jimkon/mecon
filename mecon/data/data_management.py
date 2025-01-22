@@ -4,6 +4,7 @@ import pandas as pd
 
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework
+from mecon.tags.runners import LinearTagging
 from mecon.tags.tag_helpers import tag_stats_from_transactions
 from mecon.tags.tagging import Tag
 
@@ -82,8 +83,8 @@ class BaseDataManager:
         transactions = self.get_transactions().reset_tags()
         all_tags = self.all_tags()
 
-        for tag in all_tags:
-            transactions = transactions.apply_tag(tag)
+        sess = LinearTagging(all_tags)
+        transactions = sess.tag(transactions)
 
         data_df = transactions.dataframe()
         self._transactions.update_tags(data_df)
