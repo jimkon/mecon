@@ -1,5 +1,3 @@
-import pandas as pd
-
 from mecon.app import db_controller
 from mecon.data import data_management
 
@@ -15,7 +13,7 @@ class DBDataManager(data_management.DataManager):
         )
 
 
-class CachedDBDataManager(data_management.CacheDataManager):
+class CachedDBDataManager(data_management.CachedDataManager):
     def __init__(self, db):
         super().__init__(
             trans_io=db_controller.TransactionsDBAccessor(db),

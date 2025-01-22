@@ -1,10 +1,10 @@
 import unittest
+from datetime import datetime
 from unittest.mock import Mock, patch, call
 
-from datetime import datetime
 import pandas as pd
 
-from mecon.data.data_management import DataManager, CacheDataManager
+from mecon.data.data_management import DataManager, CachedDataManager
 
 
 class TestDataManager(unittest.TestCase):
@@ -151,7 +151,7 @@ class TestDataManager(unittest.TestCase):
                 mock_update_tags.assert_called_once_with('dataframe')
 
 
-class TestCacheDataManager(unittest.TestCase):
+class TestCachedDataManager(unittest.TestCase):
     def setUp(self):
         self.transactions_io = Mock()
         self.transactions_io.get_transactions = Mock()
@@ -173,7 +173,7 @@ class TestCacheDataManager(unittest.TestCase):
         self.monzo_stats_io = Mock()
         self.revo_stats_io = Mock()
 
-        self.data_manager = CacheDataManager(
+        self.data_manager = CachedDataManager(
             trans_io=self.transactions_io,
             tags_io=self.tags_io,
             hsbc_stats_io=self.hsbc_stats_io,
@@ -301,8 +301,9 @@ class TestCacheDataManager(unittest.TestCase):
             self.data_manager._cache.reset_tags.assert_called_once()
             mock_reset_tags.assert_not_called()
 
-    @patch('mecon.data.data_management.tag_monitoring.TaggingStatsMonitoringSystem')
-    def test_reset_transaction_tags(self, mock_monitoring):
+    # @patch('mecon.data.data_management.tag_monitoring.TaggingStatsMonitoringSystem')
+    # def test_reset_transaction_tags(self, mock_monitoring):
+    def test_reset_transaction_tags(self):
         transactions_mock = Mock()
         transactions_mock.reset_tags = Mock(return_value=transactions_mock)
         transactions_mock.apply_tag = Mock(return_value=transactions_mock)
