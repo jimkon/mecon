@@ -1,3 +1,8 @@
+import logging
+
+import pandas as pd
+
+from mecon.data.transactions import Transactions
 from mecon.tags import tagging
 
 
@@ -40,3 +45,38 @@ def expand_rule_to_subrules(rule: tagging.AbstractRule) -> list[tagging.Abstract
         rule_to_expand.extend(subrules)
 
     return expanded_rules
+
+
+def aggregate_data_for_each_tagged_row(transactions: Transactions,
+                                       operation_func: callable,
+                                        operation_func_name: str
+                                       ) -> pd.DataFrame:
+    tag_stats = transactions.all_tag_counts()
+    df = transactions.dataframe()
+
+    res_dict = {}
+    for tag in tag_stats.keys():
+        res_dict[tag] = operation_func(df[df['tags'].apply(lambda tags: tag in tags)])
+
+    df_res = pd.DataFrame({'name': list(res_dict.keys()), operation_func_name: list(res_dict.values())})
+    return df_res
+
+
+
+def tag_stats_from_transactions(transactions: Transactions) -> pd.DataFrame:
+    import numpy as np
+    logging.info(f"Calculating tag stats from {transactions.size()} transactions.")
+
+    df_count = aggregate_data_for_each_tagged_row(transactions,
+                                       operation_func = len,
+                                       operation_func_name='count')
+    df_money_in = aggregate_data_for_each_tagged_row(transactions,
+                                       operation_func = lambda _df: np.sum(n for n in _df['amount'] if n>0),
+                                       operation_func_name='total_money_in')
+    df_money_out = aggregate_data_for_each_tagged_row(transactions,
+                                                     operation_func=lambda _df: np.sum(
+                                                         -n for n in _df['amount'] if n < 0),
+                                                     operation_func_name='total_money_out')
+
+    df_merged = df_count.merge(df_money_in.merge(df_money_out, on='name'), on='name')
+    return df_merged

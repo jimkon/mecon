@@ -54,14 +54,14 @@ filter_menu = ui.sidebar(
     ui.input_selectize(
         id='filter_in_tags_select',
         label='Select tags to filter IN',
-        choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
+        choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
         selected=None,
         multiple=True
     ),
     ui.input_selectize(
         id='filter_out_tags_select',
         label='Select tags to filter OUT',
-        choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tags().items() if cnt > 0]),
+        choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
         selected=None,
         multiple=True
     ),

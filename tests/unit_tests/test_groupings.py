@@ -15,7 +15,7 @@ class TestGrouping(unittest.TestCase):
                 super().__init__(df=df)
                 datafields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
-            def all_tags(self):  # mock all_tags to ensure order
+            def all_tag_counts(self):  # mock all_tags to ensure order
                 return {'a': None, 'b': None, 'c': None}
 
         data = {'A': [1, 2, 3, 4, 5],

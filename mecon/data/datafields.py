@@ -233,13 +233,16 @@ class TagsColumnMixin(ColumnMixin):
         """ Returns the 'tags' column of the dataframe wrapper. """
         return self._df_wrapper_obj.dataframe()['tags']
 
-    def all_tags(self) -> dict:
+    def all_tag_counts(self) -> dict:
         """ Returns all the unique tags in the dataframe wrapper along with their counts. """
         tags_split = self.tags.apply(
             lambda s: s.split(',')).to_list()
         tags_list = [tag for tag in chain.from_iterable(tags_split) if len(tag) > 0]
         tags_dict = dict(sorted(Counter(tags_list).items(), key=lambda item: item[1], reverse=True))
         return tags_dict
+
+    def all_tags(self) -> list:
+        return list(self.all_tag_counts().keys())
 
     def contains_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_true') -> pd.Series:
         """
