@@ -8,3 +8,4 @@ monzo~=0.10.0
 forex-python==1.8
 networkx==3.4.2
 matplotlib==3.10.0
+pandarallel==1.6.5

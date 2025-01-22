@@ -1,3 +1,8 @@
+import logging
+
+import pandas as pd
+
+from mecon.data.transactions import Transactions
 from mecon.tags import tagging
 
 
@@ -40,3 +45,16 @@ def expand_rule_to_subrules(rule: tagging.AbstractRule) -> list[tagging.Abstract
         rule_to_expand.extend(subrules)
 
     return expanded_rules
+
+
+def tag_stats_from_transactions(transactions: Transactions) -> pd.DataFrame:
+    logging.info(f"Calculating tag stats from {transactions.size()} transactions.")
+    from pandarallel import pandarallel
+    pandarallel.initialize(progress_bar=True, use_memory_fs=False)
+
+    tag_stats = transactions.all_tag_counts()
+    tag_stats_df = pd.DataFrame({'Tag': list(tag_stats.keys()), 'Count': list(tag_stats.values())})
+    tag_stats_df['Total money in'] = tag_stats_df['Tag'].parallel_apply(lambda tag_name: transactions.containing_tags(tag_name).positive_amounts().amount.sum())
+    tag_stats_df['Total money out'] = tag_stats_df['Tag'].parallel_apply(lambda tag_name: transactions.containing_tags(tag_name).negative_amounts().amount.sum())
+    tag_stats_df['Date created'] = tag_stats_df['Tag'].apply(lambda tag_name: 'TODO')
+    return tag_stats_df
