@@ -1,5 +1,5 @@
 from mecon.tags.rule_graphs import TagGraph
-from tags.runners import ExtendedRuleTagging
+from mecon.tags.runners import ExtendedRuleTagging
 
 if __name__ == '__main__':
     from mecon import config
