@@ -14,8 +14,13 @@ class TagGraph:
         self._dependency_mapping = dependency_mapping
 
         # if not self.has_cycles():
-        if not self.find_all_cycles():
+        if len(self.find_all_cycles()) == 0:
             self.add_hierarchy_levels()
+
+    def levels(self):
+        if len(self.find_all_cycles()) > 0:
+            raise ValueError("Cannot calculate hierarchy on a graph with cycles")
+        return {tag: info['level'] for tag, info in self._dependency_mapping.items()}
 
     def tidy_table(self, ignore_tags_with_no_dependencies=False):
         tags = []
@@ -36,15 +41,12 @@ class TagGraph:
         return df
 
     def add_hierarchy_levels(self):
-        if self.has_cycles():
+        if len(self.find_all_cycles()) > 0:
             raise ValueError("Cannot calculate hierarchy on a graph with cycles")
 
         mapping = self._dependency_mapping.copy()
 
-        cnt = 0
         def _calc_level_rec(tag):
-            print(f"{'>'*cnt}: rec for {tag}")
-
             if tag not in mapping:
                 logging.warning(f"{tag} not in dependency mapping while calculating hierarchy. Will be replaced with 0")
                 return 0
@@ -104,29 +106,30 @@ class TagGraph:
 
         return mapping
 
-    def has_cycles(self):
-        df = self.tidy_table()
-        # Create a directed graph
-        G = nx.DiGraph()
-
-        # Add edges to the graph based on the DataFrame
-        for _, row in df.iterrows():
-            tag = row['tag']
-            depends_on = row['depends_on']
-
-            if depends_on is None:
-                continue
-
-            for dependency in depends_on:
-                G.add_edge(dependency, tag)
-
-        # Check for cycles in the graph
-        try:
-            # networkx will throw an exception if a cycle exists
-            nx.find_cycle(G, orientation="original")
-            return True
-        except nx.NetworkXNoCycle:
-            return False
+    # @deprecated
+    # def has_cycles(self):
+    #     df = self.tidy_table()
+    #     # Create a directed graph
+    #     G = nx.DiGraph()
+    #
+    #     # Add edges to the graph based on the DataFrame
+    #     for _, row in df.iterrows():
+    #         tag = row['tag']
+    #         depends_on = row['depends_on']
+    #
+    #         if depends_on is None:
+    #             continue
+    #
+    #         for dependency in depends_on:
+    #             G.add_edge(dependency, tag)
+    #
+    #     # Check for cycles in the graph
+    #     try:
+    #         # networkx will throw an exception if a cycle exists
+    #         nx.find_cycle(G, orientation="original")
+    #         return True
+    #     except nx.NetworkXNoCycle:
+    #         return False
 
     def find_all_cycles(self):
         df = self.tidy_table()
