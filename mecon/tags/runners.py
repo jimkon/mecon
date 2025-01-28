@@ -6,6 +6,7 @@ from itertools import chain
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from mecon.data.transactions import Transactions
 from mecon.tags import tagging
@@ -37,26 +38,26 @@ class TaggingSession(abc.ABC):
 class LinearTagging(TaggingSession):
     @timeit
     def tag(self, transactions: Transactions) -> Transactions:
-        for tag in self.tags:
+        for tag in tqdm(self.tags, desc='Applying tag'):
             transactions = transactions.apply_tag(tag)
         return transactions
 
 
-Transformation = namedtuple('Transformation', ['field', 'trans'])
 
 
-class TagApplicator:
-    def __init__(self, tag_name: str, depends_on: tagging.AbstractRule):
-        self.tag_name = tag_name
-        self.depends_on = depends_on
+class RuleExecutionPlanTagging(TaggingSession):
+    Transformation = namedtuple('Transformation', ['field', 'trans'])
 
-    # def to_column_rule(self, rule):
-    #     return lambda df_in: df_in[str(rule)].apply(lambda b: [self.tag_name] if b else [])
+    class TagApplicator:
+        def __init__(self, tag_name: str, depends_on: tagging.AbstractRule):
+            self.tag_name = tag_name
+            self.depends_on = depends_on
 
-    def __repr__(self):
-        return f"TagApplicator({self.tag_name})"
+        def __repr__(self):
+            return f"TagApplicator({self.tag_name})"
 
-class ExtendedRuleTagging(TaggingSession):
+
+
     def __init__(self, tags: list[Tag], remove_cycles: bool = True):
         super().__init__(tags)
 
@@ -68,48 +69,123 @@ class ExtendedRuleTagging(TaggingSession):
             # tg = tg.remove_cycles()
             raise ValueError("Cannot run ExtendedRuleTagging on a graph with cycles")
         self._levels_dict = tg.levels()
+        self._rule_aliases = {}
+
+        self._op_monitoring = []
+        self.seperated_transformations=False
+
+    def operation_monitoring_table(self):
+        return pd.DataFrame(self._op_monitoring) if self._op_monitoring else None
+
+    def convert_rule_to_df_rule(self, rule) -> callable(pd.DataFrame):
+        rule_alias = self._rule_aliases.get(rule)
+        if isinstance(rule, self.Transformation):
+            field, trans_op = rule
+            def tranform_op(df_in) -> pd.Series:
+                res = df_in[field].apply(trans_op).rename(
+                    f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
+                self._op_monitoring.append({'tag': rule.parent_tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
+                return res
+
+            return tranform_op
+        elif isinstance(rule, tagging.Condition):
+            if self.seperated_transformations:
+                def condition_op(df_in) -> pd.Series:
+                    comp_f = lambda df_value: rule.compare_operation(df_value, rule.value)
+                    res = df_in[f"{rule.field}.{rule.transformation_operation.name}"].apply(comp_f).rename(
+                            f"{str(rule)}")  # TODO optimise, np.vectorise maybe
+                    self._op_monitoring.append({'tag': rule.parent_tag, 'in': f"{rule.field}.{rule.transformation_operation.name}", 'out': f"{str(rule)}", 'allias': rule_alias})
+                    return res
+                return condition_op
+            else:
+                def condition_op(df_in) -> pd.Series:
+                    comp_f = lambda df_value: rule.compare_operation(rule.transformation_operation(df_value), rule.value)
+                    res = df_in[f"{rule.field}"].apply(comp_f).rename(
+                        f"{str(rule)}")  # TODO optimise, np.vectorise maybe
+                    self._op_monitoring.append({'tag': rule.parent_tag, 'in': f"{rule.field}", 'out': f"{str(rule)}", 'allias': rule_alias})
+                    return res
+                return condition_op
+        elif isinstance(rule, tagging.Conjunction):
+            def conjunction_op(df_in) -> pd.Series:
+                in_cols = [str(subrule) for subrule in rule.rules]
+                res = df_in[in_cols].all(axis=1).rename(f"{str(rule)}")
+                self._op_monitoring.append({'tag': rule.parent_tag, 'in': in_cols, 'out': f"{str(rule)}", 'allias': rule_alias})
+                return res
+            return conjunction_op
+        elif isinstance(rule, tagging.Disjunction):
+            def disjunction_op(df_in) -> pd.Series:
+                in_cols = [str(subrule) for subrule in rule.rules]
+                res = df_in[in_cols].any(axis=1).rename(f"{str(rule)}")
+                self._op_monitoring.append({'tag': rule.parent_tag, 'in': in_cols, 'out': f"{str(rule)}", 'allias': rule_alias})
+                return res
+            return disjunction_op
+        elif isinstance(rule, self.TagApplicator):
+            def tag_application_op(df_in) -> pd.Series:
+                res = df_in[str(rule.depends_on)].apply(lambda b: [rule.tag_name] if b else [])
+                self._op_monitoring.append({'tag': rule.parent_tag, 'in': str(rule.depends_on), 'out': "tags", 'allias': rule_alias})
+                return res
+            return tag_application_op
+        else:
+            raise ValueError(f"Unexpected rule type: {type(rule)}")
 
 
     @timeit
-    def rule_priority_table(self, separate_transformations: bool = True) -> pd.DataFrame:
+    def create_rule_execution_plan(self) -> pd.DataFrame:
         rules = {tag.name: expand_rule_to_subrules(tag.rule) for tag in self.tags}
         expanded_rules = []
         for tag_name, tag_rules in rules.items():
-            tag_rules.insert(0, TagApplicator(tag_name, depends_on=tag_rules[0]))
+            tag_rules.insert(0, self.TagApplicator(tag_name, depends_on=tag_rules[0]))
             for rule in tag_rules:
+                if hasattr(rule, 'parent_tag'):
+                    raise ValueError(f"Unexpected 'parent_tag' attribute on '{rule=}'")
+                else:
+                    rule.parent_tag = tag_name
+
                 expanded_rules.append({'tag': tag_name, 'rule': rule})
 
-        df = pd.DataFrame(expanded_rules)
-        df['type'] = df['rule'].apply(lambda rule: type(rule).__name__)
-        df['tag_level'] = df['tag'].map(self._levels_dict)
-        df['rule_level'] = df['rule'].apply(lambda rule:
-                                            .8 if isinstance(rule, TagApplicator) else
+        df_plan = pd.DataFrame(expanded_rules)
+        df_plan['type'] = df_plan['rule'].apply(lambda rule: type(rule).__name__)
+        df_plan['tag_level'] = df_plan['tag'].map(self._levels_dict)
+        df_plan['rule_level'] = df_plan['rule'].apply(lambda rule:
+                                            .8 if isinstance(rule, self.TagApplicator) else
                                             .4 if isinstance(rule, tagging.Disjunction) else
                                             .2 if isinstance(rule, tagging.Conjunction) else
                                             .1 if rule.field == 'tags' else
                                             0)
-        df['priority'] = df.apply(lambda row: 0 if row['rule_level'] == 0 else row['tag_level'] + row['rule_level'],
+        df_plan['priority'] = df_plan.apply(lambda row: 0 if row['rule_level'] == 0 else row['tag_level'] + row['rule_level'],
                                   axis=1)
 
+        del df_plan['tag_level'], df_plan['rule_level']
+
+        self._rule_aliases = {rule: str(rule) for rule in df_plan['rule'].to_list()}
+
+        logging.info(f"Created {len(df_plan)} rules using {len(self._rule_aliases)} aliases.")
+
+        return df_plan
+
+    @timeit
+    def optimised_rule_execution_plan(self,
+                                     df_plan: pd.DataFrame,
+                                     separate_transformations: bool = False) -> pd.DataFrame:
         # TODO maybe remove composite rules with zero or one subrules
         # df['n_subrules'] = df['rule'].apply(lambda rule: len(rule.rules) if isinstance(rule, tagging.AbstractCompositeRule) else -1)
 
         if separate_transformations:
-            df_trans = self._extract_transformation_operations(df)
-            df = pd.concat([df, df_trans])
+            df_trans = self.transformations_execution_plan(df_plan)
+            df_plan = pd.concat([df_plan, df_trans])
 
-        df['rule_id'] = df['rule'].astype(str)
-        df_dedup = df.groupby('rule_id').agg({'type': 'first', 'rule': 'first', 'priority': 'min'}).reset_index()
-        logging.info(f"Reduce {len(df)} rules to {len(df_dedup)} unique rules")
+        df_plan['rule_id'] = df_plan['rule'].astype(str)
+        df_dedup = df_plan.groupby('rule_id').agg({'type': 'first', 'rule': 'first', 'priority': 'min'}).reset_index()
+        logging.info(f"Reduce {len(df_plan)} rules to {len(df_dedup)} unique rules and {len(self._rule_aliases)} aliases.")
 
         return df_dedup
 
-    @timeit
-    def _extract_rule_groups(self, rule_priority_table: pd.DataFrame) -> dict:
+    @staticmethod
+    def _split_in_rules_groups(rule_priority_table: pd.DataFrame) -> dict:
         return rule_priority_table.groupby('priority').agg({'rule': list}).to_dict('index')
 
     @timeit
-    def _extract_transformation_operations(self, rule_priority_table: pd.DataFrame) -> pd.DataFrame:
+    def transformations_execution_plan(self, rule_priority_table: pd.DataFrame) -> pd.DataFrame:
         non_tag_conditions = rule_priority_table[rule_priority_table['type'] == 'Condition'].copy()
 
         non_tag_conditions[
@@ -122,87 +198,53 @@ class ExtendedRuleTagging(TaggingSession):
             f"Reduce {len(non_tag_conditions)} conditions to {len(filtered_conditions)} unique transformation operations")
 
         filtered_conditions['rule'] = filtered_conditions['rule'].apply(
-            lambda rule: Transformation(field=rule.field, trans=rule.transformation_operation))
+            lambda rule: self.Transformation(field=rule.field, trans=rule.transformation_operation))
         filtered_conditions['type'] = 'Transformation'
         filtered_conditions['priority'] = -1
 
-        del filtered_conditions['tag_level'], filtered_conditions['rule_level'], filtered_conditions['is_trans'], \
-        filtered_conditions['trans_id']
+        del filtered_conditions['is_trans'], filtered_conditions['trans_id']
         return filtered_conditions
 
-    # def _calculate_priorities(self, rule):
-    #     if isinstance(rule, tagging.Condition):
-    #         if rule.field == 'tags':
-    #             if rule.value not in self._levels_dict:
-    #                 logging.warning(f"{rule.value} not in dependency mapping while calculating hierarchy. Will be replaced with 0")
-    #                 return 0
-    #             return self._levels_dict[rule.value]
-    #         else:
-    #             return 0
-    #
-    #     priority = 0
-    #     if isinstance(rule, tagging.Disjunction):
-    #         priority = .1
-    #     elif isinstance(rule, tagging.Conjunction):
-    #         priority = .05
-    #
-    #     # subrules = expand_rule_to_subrules(rule)
-    #     subrules = rule.rules
-    #     if len(subrules) == 0:
-    #         logging.warning(f"Composite rule {rule} is empty. Will be replaced with 0")
-    #         return 0
-    #
-    #     subrule_priorities = [self._calculate_priorities(subrule) for subrule in subrules]
-    #     subrule_max_priority = max(subrule_priorities)
-    #     total_priority = subrule_max_priority+priority
-    #
-    #     return total_priority
-
-    def _to_column_rule(self, rule):
-        if isinstance(rule, Transformation):
-            field, trans_op = rule
-            return lambda df_in: df_in[field].apply(trans_op).rename(
-                f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
-        elif isinstance(rule, tagging.Condition):
-            comp_f = lambda a: rule.compare_operation(a, rule.value)
-            return lambda df_in: df_in[f"{rule.field}.{rule.transformation_operation.name}"].apply(comp_f).rename(
-                f"{str(rule)}")  # TODO optimise, np.vectorise maybe
-        elif isinstance(rule, tagging.Conjunction):
-            return lambda df_in: df_in[[str(subrule) for subrule in rule.rules]].all(axis=1).rename(f"{str(rule)}")
-        elif isinstance(rule, tagging.Disjunction):
-            return lambda df_in: df_in[[str(subrule) for subrule in rule.rules]].any(axis=1).rename(f"{str(rule)}")
-        elif isinstance(rule, TagApplicator):
-            def _(df_in):
-                res = df_in[str(rule.depends_on)].apply(lambda b: [rule.tag_name] if b else [])
-                return res
-            return _
-            # return lambda df_in: df_in[str(rule)].apply(lambda b: [rule.tag_name] if b else [])
-        else:
-            raise ValueError(f"Unexpected rule type: {type(rule)}")
-
-    @timeit
-    def tag(self, transactions: Transactions) -> Transactions:
-        from tqdm import tqdm
-        rule_priority_table = self.rule_priority_table()
-        rule_groups = self._extract_rule_groups(rule_priority_table)
-        all_priorities = sorted(rule_groups.keys(), reverse=False)
+    @staticmethod
+    def prepare_transactions(transactions: Transactions) -> pd.DataFrame:
         df = transactions.dataframe().copy()
         df['old_tags'] = df['tags']
         df['tags'] = ''
         df['new_tags_list'] = np.empty((len(df), 0)).tolist()
+
+        return df
+
+    @timeit
+    def tag(self, transactions: Transactions) -> Transactions:
+        rule_priority_table = self.create_rule_execution_plan()
+
+        rule_groups = self._split_in_rules_groups(rule_priority_table)
+        all_priorities = sorted(rule_groups.keys(), reverse=False)
+
+        df_trans = self.prepare_transactions(transactions)
+
         for priority in all_priorities:
             rules = rule_groups[priority]['rule']
-            column_rules = [self._to_column_rule(rule) for rule in rules]  # TODO use unique rules
+            column_rules = [self.convert_rule_to_df_rule(rule) for rule in rules]
             logging.info(f"Applying {len(rules)} rules, with priority {priority}")
-            group_results = [col_rule(df) for col_rule in tqdm(column_rules, desc=f"Priority {priority}")]
+            group_results = [col_rule(df_trans) for col_rule in tqdm(column_rules, desc=f"Priority {priority}")]
 
-
-            if priority-int(priority) == .8:
+            if priority - int(priority) == .8:
                 df_temp = pd.concat(group_results, axis=1)
-                df_temp['new_tags_list'] = df['new_tags_list']
-                df['new_tags_list'] = df_temp.apply(lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1)
-                df['tags'] = df['new_tags_list'].apply(lambda tags: ','.join(tags))
+                df_temp['new_tags_list'] = df_trans['new_tags_list']
+                df_trans['new_tags_list'] = df_temp.apply(
+                    lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1)
+                df_trans['tags'] = df_trans['new_tags_list'].apply(lambda tags: ','.join(tags))
             else:
-                df = pd.concat([df, *group_results], axis=1)
+                df_trans = pd.concat([df_trans, *group_results], axis=1)
 
-        return Transactions(df)
+        new_transactions = Transactions(df_trans[transactions.dataframe().columns])
+        # TODO to remove
+        self.operation_monitoring_table().to_csv('op_monitoring.csv', index=False)
+        df_trans.to_csv('transactions_with_rules.csv', index=False)
+        transactions.dataframe().to_csv('transactions.csv', index=False)
+        return new_transactions
+
+
+class REPTagging(RuleExecutionPlanTagging):
+    pass

@@ -1,5 +1,5 @@
 from mecon.tags.rule_graphs import TagGraph
-from mecon.tags.runners import ExtendedRuleTagging
+from mecon.tags.runners import RuleExecutionPlanTagging, LinearTagging
 
 if __name__ == '__main__':
     from mecon import config
@@ -15,7 +15,8 @@ if __name__ == '__main__':
     data_manager = WorkingDataManager()
 
     tags = data_manager.all_tags()
-    ExtendedRuleTagging(tags).tag(data_manager.get_transactions())
+    # LinearTagging(tags).tag(data_manager.get_transactions().copy())
+    RuleExecutionPlanTagging(tags).tag(data_manager.get_transactions().copy())
     tg = TagGraph.from_tags(tags)
     #
     # tt = tg.tidy_table()
