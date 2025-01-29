@@ -1,4 +1,3 @@
-# setup_logging()
 import logging
 
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
@@ -9,6 +8,7 @@ from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
 from mecon.tags.rule_graphs import TagGraph, AcyclicTagGraph
 
 # from mecon.monitoring.logs import setup_logging
+# setup_logging()
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
@@ -29,15 +29,9 @@ all_tags = dm.all_tags()
 
 tag_graph_all = TagGraph.from_tags(all_tags).remove_cycles()
 tag_roots = tag_graph_all.find_all_root_tags()
-tag_root_groups = {f"root:{tag.name}": f"{tag.name} ({len(tag_graph_all.all_tags_affected_by(tag))})" for tag in tag_roots} # TODO numbers are wrong sometimes
-
-# # tags_group_key = 'Transfers'
-# tags_group_key = 'Train tickets'
-# logging.info(f"{tags_group_key=}", )
-# tg_all = TagGraph.from_tags(all_tags).remove_cycles()
-# subgraph_tags = tg_all.all_tags_affected_by(tags_group_key)
-# logging.info(f"{[tag for tag in subgraph_tags]=}")
-# tg_sub = TagGraph.from_tags(subgraph_tags)
+tag_root_groups = {f"root:{tag.name}": f"{tag.name} ({len(tag_graph_all.all_tags_affected_by(tag))})" for tag in tag_roots}
+# TODO numbers in tag_root_groups are wrong sometimes
+# TODO could sort from largest to smallest
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
