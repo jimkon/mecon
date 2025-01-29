@@ -100,7 +100,7 @@ class TagGraph:
         return len(self.find_all_cycles()) > 0
 
     def remove_cycles(self) -> 'AcyclicTagGraph':
-        edges = self.tidy_table().values.tolist()
+        edges = self.tidy_table()[['tag', 'depends_on']].values.tolist()
         cycles = self.find_all_cycles()
 
         edges_to_remove = []
@@ -152,6 +152,13 @@ class AcyclicTagGraph(TagGraph):
 
 
         # self.add_hierarchy_levels()
+
+    def levels(self):
+        if len(self.find_all_cycles()) > 0:
+            raise ValueError("Cannot calculate hierarchy on a graph with cycles")
+        if 'level' not in self._dependency_mapping[list(self._dependency_mapping.keys())[0]]:
+            self.add_hierarchy_levels()
+        return {tag: info['level'] for tag, info in self._dependency_mapping.items()}
 
     @classmethod
     def from_cyclic_tag_graph(cls, tag_graph: TagGraph) -> 'AcyclicTagGraph':
