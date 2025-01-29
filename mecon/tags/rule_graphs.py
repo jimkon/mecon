@@ -21,6 +21,10 @@ class TagGraph:
         # if not self.find_all_cycles():
         #     self.add_hierarchy_levels()
 
+    @property
+    def tags(self):
+        return self._tags
+
     def tidy_table(self, ignore_tags_with_no_dependencies=False):
         # TODO maybe cache result
         tags = []
@@ -115,6 +119,8 @@ class TagGraph:
         new_dep_mapping = new_df.set_index('tag').to_dict('index')
 
         new_tg = AcyclicTagGraph(self._tags, new_dep_mapping)
+        logging.info(f"Removed cycles from the graph. {cycles=}, {edges_to_remove=}, {len(edges)=}, {len(cleaned_edges)=}, {len(new_tg.find_all_cycles())=}")
+        logging.info(f"{[edge in cleaned_edges for edge in edges_to_remove]=}")
         return new_tg
 
 
@@ -136,7 +142,11 @@ class AcyclicTagGraph(TagGraph):
             if if_has_cycles == 'raise':
                 raise ValueError(f"Input tags contain cycles!")
             elif if_has_cycles == 'remove':
-                self.remove_cycles()
+                logging.warning(f"WARNING: Input tags contain cycles! Removing cycles...")
+                new_atg = self.remove_cycles()
+                self._tags = new_atg._tags
+                self._dependency_mapping = new_atg._dependency_mapping
+                self._quick_lookup = new_atg._quick_lookup
             else:
                 raise ValueError(f"Invalid if_has_cycles value: {if_has_cycles}!")
 
@@ -152,7 +162,7 @@ class AcyclicTagGraph(TagGraph):
             return
 
         if self.has_cycles():
-            raise ValueError("Cannot calculate hierarchy on a graph with cycles")
+            raise ValueError(f"Cannot calculate hierarchy on a graph with cycles: {self.has_cycles()=}, {self.find_all_cycles()=}")
 
         mapping = self._dependency_mapping.copy()
 
@@ -229,7 +239,9 @@ class AcyclicTagGraph(TagGraph):
         return res
 
 
-    def all_tags_affected_by(self, tag: tagging.Tag) -> Iterable[tagging.Tag]:
+    def all_tags_affected_by(self, tag: tagging.Tag | str) -> Iterable[tagging.Tag]:
+        if isinstance(tag, str):
+            tag = self._quick_lookup[tag]
         affected_root_tags = self.tags_that_depends_on(tag)
         if len(affected_root_tags) == 0:
             return set([tag]+self.all_tag_dependencies(tag))
