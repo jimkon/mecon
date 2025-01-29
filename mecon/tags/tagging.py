@@ -273,6 +273,9 @@ class Tag(object):
     def rule(self) -> Disjunction:
         return self._rule
 
+    def __repr__(self):
+        return f"Tag('{self.name}')"
+
     # @property
     # def affected_columns(self):  # TODO:v3 it may be needed later
     #     def _get_fields_rec(rule):
