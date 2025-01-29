@@ -87,49 +87,70 @@ class TestRuleGraphs(unittest.TestCase):
         self.assertTrue(rg.has_cycles())
 
     def test_find_all_cycles(self):
-        rule1 = tagging.Condition.from_string_values('col1', 'str', 'greater', 1)
-        rule2 = tagging.Condition.from_string_values('col1', None, 'less', -1)
-        rule3 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['dep_tag'])
-        rule4 = tagging.Conjunction([rule2, rule3])
-        rule5 = tagging.Disjunction([rule1, rule4])
-        rule7 = tagging.Conjunction([rule1])
-        rule8 = tagging.Disjunction([rule7])
+        rule1 = tagging.Condition.from_string_values('tags', 'str', 'greater', ['test3'])
+        rule2 = tagging.Condition.from_string_values('tags', None, 'less', ['test1'])
+        rule3 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test2'])
+        rule4 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test3'])
+        rule5 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['dep_tag'])
+        rule6 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test7'])
+        rule7 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test6'])
 
         tags = [
-            tagging.Tag('test1', rule5),
-            tagging.Tag('test2', rule8),
+            tagging.Tag('test1', rule1),
+            tagging.Tag('test2', rule2),
+            # tagging.Tag('test3', rule3),  # break the cycle
+            tagging.Tag('test4', rule4),
+            tagging.Tag('test5', rule5),
+            # tagging.Tag('test6', rule6),
+            tagging.Tag('test7', rule7),
         ]
         rg = rule_graphs.TagGraph.from_tags(tags)
         self.assertEquals(rg.find_all_cycles(), [])
 
-        rule9 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test1'])
-        tags.append(tagging.Tag('dep_tag', rule9))
-
-        rg2 = rule_graphs.TagGraph.from_tags(tags)
-        cycles = rg2.find_all_cycles()
-        self.assertEquals(len(cycles), 1)
-        self.assertSetEqual(set(cycles[0]), {'test1', 'dep_tag'})
-
-    def test_remove_cycles(self):
-        rule1 = tagging.Condition.from_string_values('col1', 'str', 'greater', 1)
-        rule2 = tagging.Condition.from_string_values('col1', None, 'less', -1)
-        rule3 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['dep_tag'])
-        rule4 = tagging.Conjunction([rule2, rule3])
-        rule5 = tagging.Disjunction([rule1, rule4])
-        rule7 = tagging.Conjunction([rule1])
-        rule8 = tagging.Disjunction([rule7])
-        rule9 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test1'])
-
         tags = [
-            tagging.Tag('test1', rule5),
-            tagging.Tag('test2', rule8),
-            tagging.Tag('dep_tag', rule9)
+            tagging.Tag('test1', rule1),
+            tagging.Tag('test2', rule2),
+            tagging.Tag('test3', rule3),
+            tagging.Tag('test4', rule4),
+            tagging.Tag('test5', rule5),
+            tagging.Tag('test6', rule6),
+            tagging.Tag('test7', rule7),
         ]
 
         rg2 = rule_graphs.TagGraph.from_tags(tags)
-        arg = rg2.remove_cycles()
-        expected_df = pd.DataFrame([{'tag': 'test1', 'depends_on': 'dep_tag'},
-                                    {'tag': 'test2', 'depends_on': None}])
+        cycles = rg2.find_all_cycles()
+        self.assertEquals(len(cycles), 2)
+        self.assertSetEqual(set(cycles[0]), {'test1', 'test2', 'test3'})
+        self.assertSetEqual(set(cycles[1]), {'test6', 'test7'})
+
+    def test_remove_cycles(self):
+        rule1 = tagging.Condition.from_string_values('tags', 'str', 'greater', ['test3'])
+        rule2 = tagging.Condition.from_string_values('tags', None, 'less', ['test1'])
+        rule3 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test2'])
+        rule4 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test3'])
+        rule5 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['dep_tag'])
+        rule6 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test7'])
+        rule7 = tagging.Condition.from_string_values('tags', 'abs', 'equal', ['test6'])
+
+        tags = [
+            tagging.Tag('test1', rule1),
+            tagging.Tag('test2', rule2),
+            tagging.Tag('test3', rule3),
+            tagging.Tag('test4', rule4),
+            tagging.Tag('test5', rule5),
+            tagging.Tag('test6', rule6),
+            tagging.Tag('test7', rule7),
+        ]
+
+        rg = rule_graphs.TagGraph.from_tags(tags)
+        cycles = rg.find_all_cycles()
+        self.assertEquals(len(cycles), 2)
+        arg = rg.remove_cycles()
+        cycles = arg.find_all_cycles()
+        self.assertEquals(len(cycles), 0)
+        expected_df = pd.DataFrame([{'depends_on': 'test3', 'tag': 'test1'}, {'depends_on': 'test1', 'tag': 'test2'},
+                                     {'depends_on': 'test3', 'tag': 'test4'}, {'depends_on': 'dep_tag', 'tag': 'test5'},
+                                     {'depends_on': 'test7', 'tag': 'test6'}])[['tag', 'depends_on']]
         pd.testing.assert_frame_equal(arg.tidy_table(), expected_df)
 
 
@@ -181,10 +202,12 @@ class TestAcyclicTagGraph(unittest.TestCase):
         ]
         arg = rule_graphs.AcyclicTagGraph.from_tags(tags)
 
-        self.assertListEqual(arg.all_tag_dependencies(tags[0]), []) # 'dep_tag' is not there because it does not exist as a tag
-        self.assertListEqual(arg.all_tag_dependencies(tags[1]), []) # no direct dependencies
-        self.assertListEqual(arg.all_tag_dependencies(tags[2]), [tags[0]]) # 'dep_tag' is not there because it does not exist as a tag
-        self.assertListEqual(arg.all_tag_dependencies(tags[3]), []) # no direct dependencies
+        self.assertListEqual(arg.all_tag_dependencies(tags[0]),
+                             [])  # 'dep_tag' is not there because it does not exist as a tag
+        self.assertListEqual(arg.all_tag_dependencies(tags[1]), [])  # no direct dependencies
+        self.assertListEqual(arg.all_tag_dependencies(tags[2]),
+                             [tags[0]])  # 'dep_tag' is not there because it does not exist as a tag
+        self.assertListEqual(arg.all_tag_dependencies(tags[3]), [])  # no direct dependencies
 
     def test_tags_that_depends_on(self):
         rule1 = tagging.Condition.from_string_values('col1', 'str', 'greater', 1)

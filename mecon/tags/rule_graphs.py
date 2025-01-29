@@ -89,7 +89,8 @@ class TagGraph:
         # Find all simple cycles
         cycles = list(nx.simple_cycles(G))
 
-        return cycles
+        sizewise_sorted_cycles = sorted(cycles, key=len, reverse=True)
+        return sizewise_sorted_cycles
 
     def has_cycles(self):
         return len(self.find_all_cycles()) > 0
@@ -98,10 +99,14 @@ class TagGraph:
         edges = self.tidy_table().values.tolist()
         cycles = self.find_all_cycles()
 
+        edges_to_remove = []
+        for cycle in cycles:
+            cyclic_tags_ordered_based_on_insertion = [tag.name for tag in self._tags if tag.name in cycle]
+            tag_link_to_remove = cyclic_tags_ordered_based_on_insertion[-1]
+            edges_with_this_tag = [edge for edge in edges if edge[0] == tag_link_to_remove and edge[1] in cycle]
+            edges_to_remove.extend(edges_with_this_tag)
 
-        inverted_cycles = [[c[1], c[0]] for c in cycles]
-
-        cleaned_edges = [edge for edge in edges if edge not in inverted_cycles]
+        cleaned_edges = [edge for edge in edges if edge not in edges_to_remove]
 
         new_df = pd.DataFrame(cleaned_edges, columns=['tag', 'depends_on']).groupby('tag').agg({'depends_on': list}).reset_index()
         new_df['depends_on'] = new_df['depends_on'].apply(lambda arr: arr if arr is not None and len(arr) > 0 and arr[0] is not None else list())
