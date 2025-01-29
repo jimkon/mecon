@@ -12,7 +12,6 @@ from plotly.subplots import make_subplots
 from mecon.data import graph_utils
 from mecon.monitoring import logging_utils
 
-
 warnings.simplefilter("ignore", category=FutureWarning)
 
 # -----
@@ -389,6 +388,9 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, le
     from_col = df.columns[0] if from_col is None else from_col
     to_col = df.columns[1] if to_col is None else to_col
 
+    if levels_col is not None and levels_col not in df.columns:
+        raise ValueError(f"Level information not found in the DataFrame. {levels_col} does not exist: {df.columns=}.")
+
     # Create a directed graph
     G = nx.DiGraph()
 
@@ -396,48 +398,62 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, le
     for _, row in df.iterrows():
         tag = row[from_col]
         depends_on = row[to_col]
-
-        # Add the tag node even if it has no dependencies
         G.add_node(tag)
-
-        # Add edge if there is a dependency
         if pd.notna(depends_on):
             G.add_edge(depends_on, tag)
 
-    # Compute positions for nodes
-    try:
-        pos = nx.spring_layout(G, k=k, seed=42)  # Adjust `k` for spacing
-    except Exception as e:
-        raise ValueError("Error generating graph layout: " + str(e))
+    if levels_col and levels_col in df.columns:
+        # Compute node positions manually based on levels
+        levels = df[[from_col, levels_col]].drop_duplicates()
+        levels[levels_col] = levels[levels_col].fillna(0).astype(int)
+
+        # Sort levels and invert so the highest level is on top
+        unique_levels = sorted(levels[levels_col].unique(), reverse=True)
+        level_mapping = {level: i for i, level in enumerate(unique_levels)}
+
+        # Assign y-coordinates based on levels
+        pos = {}
+        x_offsets = {level: 0 for level in unique_levels}  # Track x positions per level
+        for node in G.nodes():
+            level_row = levels.loc[levels[from_col] == node]
+            level = level_row[levels_col].iloc[0] if not level_row.empty else 0
+            y = level_mapping[level]  # Higher levels have higher y-values
+            x = x_offsets[level]
+            pos[node] = (x, y)
+            x_offsets[level] += 1  # Spread nodes horizontally
+    else:
+        # Use networkx spring layout if no levels_col is provided
+        pos = nx.spring_layout(G, k=k, seed=42)
 
     # Extract node positions
     x_nodes = [pos[node][0] for node in G.nodes()]
     y_nodes = [pos[node][1] for node in G.nodes()]
 
-    # Extract edge positions
+    # Extract edge positions and arrows
     edge_x = []
     edge_y = []
+    arrow_x = []
+    arrow_y = []
     for edge in G.edges():
         x0, y0 = pos[edge[0]]
         x1, y1 = pos[edge[1]]
-        edge_x.extend([x0, x1, None])  # None separates edges
+        edge_x.extend([x0, x1, None])
         edge_y.extend([y0, y1, None])
+
+        # Calculate arrowhead position
+        arrow_x.append((x0 + x1 * 2) / 3)
+        arrow_y.append((y0 + y1 * 2) / 3)
 
     # Determine node colors and hover text
     node_colors = []
     node_hover_text = []
     if levels_col and levels_col in df.columns:
-        levels = df[[from_col, levels_col]].drop_duplicates()
-        levels[levels_col] = levels[levels_col].fillna(0).astype(int)
-
-        # Determine color mapping
-        unique_levels = sorted(levels[levels_col].unique())
-        min_level, max_level = min(unique_levels), max(unique_levels)
-        start_color = "ffdf69"  # Light blue
-        end_color = "8b008b"    # Dark blue
+        start_color = "ffdf69"
+        end_color = "8b008b"
 
         def interpolate_color(value):
-            ratio = (value - min_level) / (max_level - min_level) if max_level > min_level else 0
+            ratio = (value - min(unique_levels)) / (max(unique_levels) - min(unique_levels)) if max(
+                unique_levels) > min(unique_levels) else 0
             start_rgb = [int(start_color[i:i + 2], 16) for i in (0, 2, 4)]
             end_rgb = [int(end_color[i:i + 2], 16) for i in (0, 2, 4)]
             interp_rgb = [int(start + ratio * (end - start)) for start, end in zip(start_rgb, end_rgb)]
@@ -445,20 +461,14 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, le
 
         color_mapping = {level: interpolate_color(level) for level in unique_levels}
 
-        # Assign colors and hover text
         for node in G.nodes():
             level_row = levels.loc[levels[from_col] == node]
-            if not level_row.empty:
-                level = level_row[levels_col].iloc[0]
-                color = color_mapping[level]
-                hover_text = f"{node} (Level: {level})"
-            else:
-                color = "#cccccc"  # Default gray for nodes without levels
-                hover_text = f"{node} (No level)"
+            level = level_row[levels_col].iloc[0] if not level_row.empty else 0
+            color = color_mapping.get(level, "#cccccc")
+            hover_text = f"{node} (Level: {level})"
             node_colors.append(color)
             node_hover_text.append(hover_text)
     else:
-        # Default colors and hover text if no levels_col provided
         node_colors = ["skyblue"] * len(G.nodes())
         node_hover_text = [f"{node}" for node in G.nodes()]
 
@@ -469,6 +479,19 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, le
         line=dict(width=1, color="#888"),
         hoverinfo="none",
         mode="lines"
+    )
+
+    # Create the arrow markers
+    arrow_trace = go.Scatter(
+        x=arrow_x,
+        y=arrow_y,
+        mode="markers",
+        marker=dict(
+            size=10,
+            color="#888",
+            symbol="triangle-down"
+        ),
+        hoverinfo="none"
     )
 
     # Create the node trace
@@ -485,16 +508,10 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, le
         ),
         hoverinfo="text",
         hovertext=node_hover_text,
-        # hoverlabel=dict(
-        #     bgcolor="black",  # Background color of the hover label
-        #     # font=dict(
-        #     #     color="black"  # Font color
-        #     # )
-        # )
     )
 
     # Create the figure
-    fig = go.Figure(data=[edge_trace, node_trace],
+    fig = go.Figure(data=[edge_trace, arrow_trace, node_trace],
                     layout=go.Layout(
                         title="Interactive Dependency Graph",
                         title_x=0.5,
@@ -502,7 +519,7 @@ def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, le
                         hovermode="closest",
                         margin=dict(b=0, l=0, r=0, t=40),
                         xaxis=dict(showgrid=False, zeroline=False),
-                        yaxis=dict(showgrid=False, zeroline=False),
+                        yaxis=dict(showgrid=False, zeroline=False, autorange="reversed"),
                     ))
 
     return fig
