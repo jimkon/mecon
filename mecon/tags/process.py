@@ -75,18 +75,19 @@ class RuleExecutionPlanTagging(TaggingSession):
 
     def convert_rule_to_df_rule(self, rule) -> callable(pd.DataFrame):
         rule_alias = self._rule_aliases.get(rule)
-        if isinstance(rule, self.Transformation):
-            field, trans_op = rule
-
-            def tranform_op(df_in) -> pd.Series:
-                res = df_in[field].apply(trans_op).rename(
-                    f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
-                self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
-                return res
-
-            return tranform_op
-        elif isinstance(rule, tagging.Condition):
+        # if isinstance(rule, RuleExecutionPlanTagging.Transformation):
+        #     field, trans_op = rule
+        #
+        #     def tranform_op(df_in) -> pd.Series:
+        #         res = df_in[field].apply(trans_op).rename(
+        #             f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
+        #         self._op_monitoring.append(
+        #             {'tag': rule.parent_tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
+        #         return res
+        #
+        #     return tranform_op
+        # el
+        if isinstance(rule, tagging.Condition):
             if self.seperated_transformations:
                 def condition_op(df_in) -> pd.Series:
                     comp_f = lambda df_value: rule.compare_operation(df_value, rule.value)
@@ -163,7 +164,8 @@ class RuleExecutionPlanTagging(TaggingSession):
                                                       0)
         df_plan['priority'] = df_plan.apply(
             lambda row: 0 if row['rule_level'] == 0 else row['tag_level'] + row['rule_level'],
-            axis=1)
+            axis=1).astype(str)
+
 
         del df_plan['tag_level'], df_plan['rule_level']
 
@@ -175,13 +177,13 @@ class RuleExecutionPlanTagging(TaggingSession):
 
     def split_in_batches(self) -> dict:
         df_plan = self.create_rule_execution_plan()
-        batches = {priority: batch['rule'] for priority, batch in
+        batches = {str(priority): batch['rule'] for priority, batch in
                    df_plan.groupby('priority').agg({'rule': list}).to_dict('index').items()}
         return batches
 
     @staticmethod
     def prepare_transactions(transactions: Transactions) -> pd.DataFrame:
-        df = transactions.dataframe().copy()
+        df = transactions.dataframe().copy()[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']]
         df['old_tags'] = df['tags']
         df['tags'] = ''
         df['new_tags_list'] = np.empty((len(df), 0)).tolist()
@@ -203,14 +205,19 @@ class RuleExecutionPlanTagging(TaggingSession):
             logging.info(f"Applying {len(rules)} rules, with priority {priority}")
             group_results = [col_rule(df_trans) for col_rule in tqdm(column_rules, desc=f"Priority {priority}")]
 
-            if priority - int(priority) == .8:
+            if priority.endswith('.8'):
                 df_temp = pd.concat(group_results, axis=1)
-                df_temp['new_tags_list'] = df_trans['new_tags_list']
-                df_trans['new_tags_list'] = df_temp.apply(
+
+                new_tags_col = f"tags_added_{priority}"
+                df_trans[new_tags_col] = df_temp.apply(
                     lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1)
+                df_trans['new_tags_list'] = df_trans.apply(lambda row: row['new_tags_list']+row[new_tags_col], axis=1)
+
                 df_trans['tags'] = df_trans['new_tags_list'].apply(lambda tags: ','.join(tags))
+                df_trans[f"tags_list_{priority}"] = df_trans['new_tags_list']
             else:
                 df_trans = pd.concat([df_trans, *group_results], axis=1)
+            continue
 
         new_transactions = Transactions(df_trans[transactions.dataframe().columns])
         # TODO to remove
