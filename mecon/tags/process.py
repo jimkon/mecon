@@ -83,33 +83,33 @@ class RuleExecutionPlanTagging(TaggingSession):
             def condition_op(df_in) -> pd.Series:
                 comp_f = lambda df_value: rule.compare_operation(rule.transformation_operation(df_value),
                                                                  rule.value)
-                res = df_in[f"{rule.field}"].apply(comp_f).rename(f"{str(rule)}")  # TODO optimise, np.vectorise maybe
+                res = df_in[f"{rule.field}"].apply(comp_f).rename(rule_alias)  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': f"{rule.field}", 'out': f"{str(rule)}", 'allias': rule_alias})
+                    {'tag': rule.parent_tag, 'in': f"{rule.field}", 'out': rule_alias, 'allias': rule_alias})
                 return res
 
             return condition_op
         elif isinstance(rule, tagging.Conjunction):
             def conjunction_op(df_in) -> pd.Series:
-                in_cols = [str(subrule) for subrule in rule.rules]
-                res = df_in[in_cols].all(axis=1).rename(f"{str(rule)}")
+                in_cols = [self._rule_aliases.get(subrule) for subrule in rule.rules]
+                res = df_in[in_cols].all(axis=1).rename(rule_alias)
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': in_cols, 'out': f"{str(rule)}", 'allias': rule_alias})
+                    {'tag': rule.parent_tag, 'in': in_cols, 'out': rule_alias, 'allias': rule_alias})
                 return res
 
             return conjunction_op
         elif isinstance(rule, tagging.Disjunction):
             def disjunction_op(df_in) -> pd.Series:
-                in_cols = [str(subrule) for subrule in rule.rules]
-                res = df_in[in_cols].any(axis=1).rename(f"{str(rule)}")
+                in_cols = [self._rule_aliases.get(subrule) for subrule in rule.rules]
+                res = df_in[in_cols].any(axis=1).rename(rule_alias)
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': in_cols, 'out': f"{str(rule)}", 'allias': rule_alias})
+                    {'tag': rule.parent_tag, 'in': in_cols, 'out': rule_alias, 'allias': rule_alias})
                 return res
 
             return disjunction_op
         elif isinstance(rule, self.TagApplicator):
             def tag_application_op(df_in) -> pd.Series:
-                res = df_in[str(rule.depends_on)].apply(lambda b: [rule.tag_name] if b else [])
+                res = df_in[self._rule_aliases.get(rule.depends_on)].apply(lambda b: [rule.tag_name] if b else [])
                 self._op_monitoring.append(
                     {'tag': rule.parent_tag, 'in': str(rule.depends_on), 'out': "tags", 'allias': rule_alias})
                 return res
@@ -269,10 +269,10 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
             def condition_op(df_in) -> pd.Series:
                 comp_f = lambda df_value: rule.compare_operation(df_value, rule.value)
                 res = df_in[f"{rule.field}.{rule.transformation_operation.name}"].apply(comp_f).rename(
-                    f"{str(rule)}")  # TODO optimise, np.vectorise maybe
+                    rule_alias)  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
                     {'tag': rule.parent_tag, 'in': f"{rule.field}.{rule.transformation_operation.name}",
-                     'out': f"{str(rule)}", 'allias': rule_alias})
+                     'out': rule_alias, 'allias': rule_alias})
                 return res
 
             return condition_op
