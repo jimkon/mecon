@@ -4,7 +4,7 @@ import pandas as pd
 
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework
-from mecon.tags.runners import LinearTagging
+from mecon.tags.process import LinearTagging
 from mecon.tags.tag_helpers import tag_stats_from_transactions
 from mecon.tags.tagging import Tag
 

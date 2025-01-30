@@ -1,5 +1,5 @@
+from mecon.tags.process import RuleExecutionPlanTagging
 from mecon.tags.rule_graphs import TagGraph
-from mecon.tags.runners import RuleExecutionPlanTagging, LinearTagging
 
 if __name__ == '__main__':
     from mecon import config
