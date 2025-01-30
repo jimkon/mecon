@@ -151,6 +151,32 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
 
         return transactions
 
+    def diff(self, transactions: Transactions,
+               columns=None):
+        if columns is None:
+            columns = ['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
+
+        df_this, df_other = self.dataframe(), transactions.dataframe()
+        diffs = {}
+        for column in columns:
+            if column == 'tags':
+                diff = [set(tags_this.split(','))!=set(tags_other.split(',')) for tags_this, tags_other in zip(df_this[column], df_other[column])]
+            else:
+                diff = df_this[column] != df_other[column]
+            diffs[column] = diff
+        df_diffs = pd.DataFrame(diffs)
+        the_other_minus_this = df_other[df_diffs.any(axis=1)]
+        return the_other_minus_this
+
+    def equals(self,
+               transactions: Transactions,
+               columns=None) -> bool:
+        diff = self.diff(transactions=transactions, columns=columns)
+        res = diff.shape[0] == 0
+        return res
+
+
+
 
 # TODO:v3 move other Transaction related classes here like TransactionAggregators
 class TransactionDateFiller(fields.DateFiller):
