@@ -48,6 +48,11 @@ class LinearTagging(TaggingSession):
         return transactions
 
 
+class RuleExecutionPlanCalculationMonitor:
+    def append_calculation_table(self, df_calc: pd.DataFrame):
+        pass
+
+
 class RuleExecutionPlanTagging(TaggingSession):
     """
     Expands the tag rules in subrules and apply them in a Pandas.DataFrame oriented way to take advantage of its performance optimizations.
@@ -183,7 +188,7 @@ class RuleExecutionPlanTagging(TaggingSession):
         return df
 
     @timeit
-    def tag(self, transactions: Transactions) -> Transactions:
+    def tag(self, transactions: Transactions, calc_monitor:RuleExecutionPlanCalculationMonitor=None) -> Transactions:
         rule_groups = self.split_in_batches()
         all_priorities = sorted(rule_groups.keys(), reverse=False)
 
@@ -211,8 +216,11 @@ class RuleExecutionPlanTagging(TaggingSession):
 
         new_transactions = Transactions(df_in[transactions.dataframe().columns])
 
-        self.operation_monitoring_table().to_csv('op_monitoring.csv', index=False)
-        df_in.to_csv('transactions_with_rules.csv', index=False)
+        if calc_monitor:
+            # self.operation_monitoring_table().to_csv('op_monitoring.csv', index=False)
+            # df_in.to_csv('transactions_with_rules.csv', index=False)
+            calc_monitor.append_calculation_table(df_in)
+
         transactions.dataframe().to_csv('transactions.csv', index=False)
         return new_transactions
 
