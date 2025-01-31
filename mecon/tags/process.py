@@ -3,10 +3,12 @@ import logging
 import time
 from collections import namedtuple
 from itertools import chain
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from typing_extensions import override
 
 from mecon.data.transactions import Transactions
 from mecon.tags import tagging
@@ -44,7 +46,6 @@ class LinearTagging(TaggingSession):
 
 
 class RuleExecutionPlanTagging(TaggingSession):
-
     class TagApplicator:
         def __init__(self, tag_name: str, depends_on: tagging.AbstractRule):
             self.tag_name = tag_name
@@ -69,10 +70,14 @@ class RuleExecutionPlanTagging(TaggingSession):
         self._op_monitoring = []
         self._df_plan = None
 
-    def get_plan(self):
-        if self._df_plan is None:
-            self._df_plan = self.create_rule_execution_plan()
+    @property
+    def plan(self):
         return self._df_plan
+
+    # def get_plan(self):
+    #     if self._df_plan is None:
+    #         self._df_plan = self.create_rule_execution_plan()
+    #     return self._df_plan
 
     def operation_monitoring_table(self):
         return pd.DataFrame(self._op_monitoring) if self._op_monitoring else None
@@ -119,16 +124,16 @@ class RuleExecutionPlanTagging(TaggingSession):
             raise ValueError(f"Unexpected rule type: {type(rule)}")
 
     @timeit
-    def create_rule_execution_plan(self) -> pd.DataFrame:
+    def create_rule_execution_plan(self) -> 'RuleExecutionPlanTagging':
         rules = {tag.name: expand_rule_to_subrules(tag.rule) for tag in self.tags}
         expanded_rules = []
         for tag_name, tag_rules in rules.items():
             tag_rules.insert(0, RuleExecutionPlanTagging.TagApplicator(tag_name, depends_on=tag_rules[0]))
             for rule in tag_rules:
-                if hasattr(rule, 'parent_tag'):
-                    raise ValueError(f"Unexpected 'parent_tag' attribute on '{rule=}'")
-                else:
-                    rule.parent_tag = tag_name
+                # if hasattr(rule, 'parent_tag'):
+                #     raise ValueError(f"Unexpected 'parent_tag' attribute on '{rule=}'")
+                # else:
+                rule.parent_tag = tag_name
 
                 expanded_rules.append({'tag': tag_name, 'rule': rule})
 
@@ -145,23 +150,25 @@ class RuleExecutionPlanTagging(TaggingSession):
             lambda row: 0 if row['rule_level'] == 0 else row['tag_level'] + row['rule_level'],
             axis=1).astype(str)
 
-
         del df_plan['tag_level'], df_plan['rule_level']
 
         self._rule_aliases = {rule: str(rule) for rule in df_plan['rule'].to_list()}
 
         logging.info(f"Created {len(df_plan)} rules using {len(self._rule_aliases)} aliases.")
 
-        return df_plan
+        self._df_plan = df_plan
+
+        return self
 
     def split_in_batches(self) -> dict:
         batches = {str(priority): batch['rule'] for priority, batch in
-                   self.get_plan().groupby('priority').agg({'rule': list}).to_dict('index').items()}
+                   self.plan.groupby('priority').agg({'rule': list}).to_dict('index').items()}
         return batches
 
     @staticmethod
     def prepare_transactions(transactions: Transactions) -> pd.DataFrame:
-        df = transactions.dataframe().copy()[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']]
+        df = transactions.dataframe().copy()[
+            ['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']]
         df['old_tags'] = df['tags']
         df['tags'] = ''
         df['new_tags_list'] = np.empty((len(df), 0)).tolist()
@@ -170,8 +177,6 @@ class RuleExecutionPlanTagging(TaggingSession):
 
     @timeit
     def tag(self, transactions: Transactions) -> Transactions:
-        # df_plan = self.create_rule_execution_plan()
-
         rule_groups = self.split_in_batches()
         all_priorities = sorted(rule_groups.keys(), reverse=False)
 
@@ -189,7 +194,7 @@ class RuleExecutionPlanTagging(TaggingSession):
                 new_tags_col = f"tags_added_{priority}"
                 df_trans[new_tags_col] = df_temp.apply(
                     lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1)
-                df_trans['new_tags_list'] = df_trans.apply(lambda row: row['new_tags_list']+row[new_tags_col], axis=1)
+                df_trans['new_tags_list'] = df_trans.apply(lambda row: row['new_tags_list'] + row[new_tags_col], axis=1)
 
                 df_trans['tags'] = df_trans['new_tags_list'].apply(lambda tags: ','.join(tags))
                 df_trans[f"tags_list_{priority}"] = df_trans['new_tags_list']
@@ -210,9 +215,11 @@ class REPTagging(RuleExecutionPlanTagging):
 
 
 class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
-    Transformation = namedtuple('Transformation', ['field', 'trans'])
+    Transformation = namedtuple('Transformation', ['field', 'trans', 'parent_tag'])
 
-    @timeit
+    def __init__(self, tags: list[Tag], remove_cycles: bool = True):
+        super().__init__(tags, remove_cycles)
+
     @staticmethod
     def transformations_execution_plan(df_plan) -> pd.DataFrame:
         non_tag_conditions = df_plan[df_plan['type'] == 'Condition'].copy()
@@ -226,42 +233,61 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
         logging.info(
             f"Reduce {len(non_tag_conditions)} conditions to {len(filtered_conditions)} unique transformation operations")
 
-        filtered_conditions['rule'] = filtered_conditions['rule'].apply(
-            lambda rule: OptimisedRuleExecutionPlanTagging.Transformation(field=rule.field, trans=rule.transformation_operation))
+        filtered_conditions['rule'] = filtered_conditions.apply(
+            lambda row: OptimisedRuleExecutionPlanTagging.Transformation(field=row['rule'].field,
+                                                                         trans=row['rule'].transformation_operation,
+                                                                         parent_tag=row['tag']), axis=1)
         filtered_conditions['type'] = 'Transformation'
-        filtered_conditions['priority'] = -1
+        filtered_conditions['priority'] = '-1'
+
+        logging.info(f"Expanded the plan with {len(filtered_conditions)} transformations")
 
         del filtered_conditions['is_trans'], filtered_conditions['trans_id']
         return filtered_conditions
 
-    @timeit
     @staticmethod
-    def remove_unnecessary_composite_rules(df_plan, current_alias_mapping) -> pd.DataFrame:
+    def remove_unnecessary_composite_rules(df_plan, alias_dict) -> tuple[pd.DataFrame, dict[Any, Any]]:
         # TODO maybe remove composite rules with zero or one subrules
-        # df['n_subrules'] = df['rule'].apply(lambda rule: len(rule.rules) if isinstance(rule, tagging.AbstractCompositeRule) else -1)
+        df_plan['n_subrules'] = df_plan['rule'].apply(
+            lambda rule: len(rule.rules) if isinstance(rule, tagging.AbstractCompositeRule) else -1)
 
-        return df_plan
+        conjunctions = df_plan[(df_plan['type'] == 'Conjunction') & (df_plan['n_subrules'] == 1)]['rule'].to_list()
+        for composite_rule in conjunctions:
+            alias_dict[composite_rule] = alias_dict[composite_rule.rules[0]]
 
-    @timeit
+        disjunctions = df_plan[(df_plan['type'] == 'Disjunction') & (df_plan['n_subrules'] == 1)]['rule'].to_list()
+        for composite_rule in disjunctions:
+            alias_dict[composite_rule] = alias_dict[composite_rule.rules[0]]
+
+        df_plan_reduced = df_plan[df_plan['n_subrules'] != 1]
+        del df_plan_reduced['n_subrules']
+        logging.info(
+            f"Removed {len(conjunctions)} redundant Conjunctions and {len(disjunctions)} Disjunctions, going from {len(df_plan)} to {len(df_plan_reduced)} rules (reduced to {100*len(df_plan_reduced)/len(df_plan):.0f}% of the original size).")
+
+        # df_plan_reduced['alias'] = df_plan_reduced.apply(lambda row: alias_dict[row['rule']], axis=1)
+        return df_plan_reduced, alias_dict
+
     @staticmethod
     def deduplicate_rule_execution_plan(df_plan) -> pd.DataFrame:
-
+        df_plan = df_plan.copy()
         df_plan['rule_id'] = df_plan['rule'].astype(str)
-        df_dedup = df_plan.groupby('rule_id').agg({'type': 'first', 'rule': 'first', 'priority': 'min'}).reset_index()
+        df_dedup = df_plan.groupby('rule_id').agg({'type': 'first', 'tag':'first', 'rule': 'first', 'priority': 'min'}).reset_index()
 
+        logging.info(f"Deduplicated {len(df_plan)} rules down to {len(df_dedup)} rules")
+        del df_dedup['rule_id']
 
         return df_dedup
 
     def convert_rule_to_df_rule(self, rule) -> callable(pd.DataFrame):
         rule_alias = self._rule_aliases.get(rule)
         if isinstance(rule, OptimisedRuleExecutionPlanTagging.Transformation):
-            field, trans_op = rule
+            field, trans_op, parent_tag = rule
 
             def tranform_op(df_in) -> pd.Series:
                 res = df_in[field].apply(trans_op).rename(
                     f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
+                    {'tag': rule.tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
                 return res
 
             return tranform_op
@@ -279,17 +305,23 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
         else:
             return super().convert_rule_to_df_rule(rule)
 
+    @timeit
+    def create_optimised_rule_execution_plan(self) -> 'OptimisedRuleExecutionPlanTagging':
+        df_plan, alias_dict = self.plan, self._rule_aliases
+        df_trans = self.transformations_execution_plan(df_plan)
+        df_plan_rules_and_trans = pd.concat([df_plan, df_trans])
 
-    # def create_rule_execution_plan(self) -> pd.DataFrame:
-    #     df_plan = super().create_rule_execution_plan()
-    #     df_trans = self.transformations_execution_plan(df_plan)
-    #     df_plan_rules_and_trans = pd.concat([df_plan, df_trans])
-    #
-    #     df_plan_opt = self.deduplicate_rule_execution_plan(df_plan_rules_and_trans)
-    #     logging.info(
-    #         f"Reduce {len(df_plan_rules_and_trans)} rules to {len(df_plan_opt)} unique rules and {len(self._rule_aliases)} aliases.")
-    #
-    #     return df_plan_opt
+        df_plan_reduced, reduced_alias_dict = self.remove_unnecessary_composite_rules(df_plan_rules_and_trans, alias_dict)
+
+        df_plan_opt = self.deduplicate_rule_execution_plan(df_plan_reduced)
+        logging.info(
+            f"Reduce {len(df_plan)} rules to {len(df_plan_opt)} unique rules and {len(set(self._rule_aliases))} aliases.")
+
+        self._df_plan = df_plan_opt
+        self._rule_aliases = reduced_alias_dict
+
+        return self
+
 
 class OptREPTagging(OptimisedRuleExecutionPlanTagging):
     pass
