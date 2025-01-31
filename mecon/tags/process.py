@@ -180,32 +180,32 @@ class RuleExecutionPlanTagging(TaggingSession):
         rule_groups = self.split_in_batches()
         all_priorities = sorted(rule_groups.keys(), reverse=False)
 
-        df_trans = self.prepare_transactions(transactions)
+        df_in = self.prepare_transactions(transactions)
 
         for priority in all_priorities:
             rules = rule_groups[priority]
             column_rules = [self.convert_rule_to_df_rule(rule) for rule in rules]
             logging.info(f"Applying {len(rules)} rules, with priority {priority}")
-            group_results = [col_rule(df_trans) for col_rule in tqdm(column_rules, desc=f"Priority {priority}")]
+            group_results = [col_rule(df_in) for col_rule in tqdm(column_rules, desc=f"Priority {priority}")]
 
             if priority.endswith('.8'):
                 df_temp = pd.concat(group_results, axis=1)
 
                 new_tags_col = f"tags_added_{priority}"
-                df_trans[new_tags_col] = df_temp.apply(
+                df_in[new_tags_col] = df_temp.apply(
                     lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1)
-                df_trans['new_tags_list'] = df_trans.apply(lambda row: row['new_tags_list'] + row[new_tags_col], axis=1)
+                df_in['new_tags_list'] = df_in.apply(lambda row: row['new_tags_list'] + row[new_tags_col], axis=1)
 
-                df_trans['tags'] = df_trans['new_tags_list'].apply(lambda tags: ','.join(tags))
-                df_trans[f"tags_list_{priority}"] = df_trans['new_tags_list']
+                df_in['tags'] = df_in['new_tags_list'].apply(lambda tags: ','.join(tags))
+                df_in[f"tags_list_{priority}"] = df_in['new_tags_list']
             else:
-                df_trans = pd.concat([df_trans, *group_results], axis=1)
+                df_in = pd.concat([df_in, *group_results], axis=1)
             continue
 
-        new_transactions = Transactions(df_trans[transactions.dataframe().columns])
+        new_transactions = Transactions(df_in[transactions.dataframe().columns])
         # TODO to remove
         self.operation_monitoring_table().to_csv('op_monitoring.csv', index=False)
-        df_trans.to_csv('transactions_with_rules.csv', index=False)
+        df_in.to_csv('transactions_with_rules.csv', index=False)
         transactions.dataframe().to_csv('transactions.csv', index=False)
         return new_transactions
 
@@ -222,16 +222,15 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
 
     @staticmethod
     def transformations_execution_plan(df_plan) -> pd.DataFrame:
-        non_tag_conditions = df_plan[df_plan['type'] == 'Condition'].copy()
+        df_condition = df_plan[df_plan['type'] == 'Condition']
+        df_non_tag_condition = df_condition[df_condition['rule'].apply(lambda rule: rule.field != 'tags')].copy()
 
-        non_tag_conditions[
-            'is_trans'] = True  # non_tag_conditions['rule'].apply(lambda rule: rule.transformation_operation.name != 'none')
-        non_tag_conditions['trans_id'] = non_tag_conditions['rule'].apply(lambda
-                                                                              rule: f"{rule.field}.{rule.transformation_operation.name}")  # if rule.transformation_operation.name != 'none' else rule.field)
+        df_non_tag_condition['trans_id'] = df_non_tag_condition['rule'].apply(lambda
+                                                                                  rule: f"{rule.field}.{rule.transformation_operation.name}")  # if rule.transformation_operation.name != 'none' else rule.field)
 
-        filtered_conditions = non_tag_conditions[non_tag_conditions['is_trans']].drop_duplicates(subset=['trans_id'])
+        filtered_conditions = df_non_tag_condition.drop_duplicates(subset=['trans_id']).copy()
         logging.info(
-            f"Reduce {len(non_tag_conditions)} conditions to {len(filtered_conditions)} unique transformation operations")
+            f"Reduce {len(df_non_tag_condition)} conditions to {len(filtered_conditions)} unique transformation operations")
 
         filtered_conditions['rule'] = filtered_conditions.apply(
             lambda row: OptimisedRuleExecutionPlanTagging.Transformation(field=row['rule'].field,
@@ -242,12 +241,13 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
 
         logging.info(f"Expanded the plan with {len(filtered_conditions)} transformations")
 
-        del filtered_conditions['is_trans'], filtered_conditions['trans_id']
+        del filtered_conditions['trans_id']
         return filtered_conditions
 
     @staticmethod
     def remove_unnecessary_composite_rules(df_plan, alias_dict) -> tuple[pd.DataFrame, dict[Any, Any]]:
-        # TODO maybe remove composite rules with zero or one subrules
+        alias_dict = alias_dict.copy()
+
         df_plan['n_subrules'] = df_plan['rule'].apply(
             lambda rule: len(rule.rules) if isinstance(rule, tagging.AbstractCompositeRule) else -1)
 
@@ -262,7 +262,7 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
         df_plan_reduced = df_plan[df_plan['n_subrules'] != 1]
         del df_plan_reduced['n_subrules']
         logging.info(
-            f"Removed {len(conjunctions)} redundant Conjunctions and {len(disjunctions)} Disjunctions, going from {len(df_plan)} to {len(df_plan_reduced)} rules (reduced to {100*len(df_plan_reduced)/len(df_plan):.0f}% of the original size).")
+            f"Removed {len(conjunctions)} redundant Conjunctions and {len(disjunctions)} Disjunctions, going from {len(df_plan)} to {len(df_plan_reduced)} rules (reduced to {100 * len(df_plan_reduced) / len(df_plan):.0f}% of the original size).")
 
         # df_plan_reduced['alias'] = df_plan_reduced.apply(lambda row: alias_dict[row['rule']], axis=1)
         return df_plan_reduced, alias_dict
@@ -271,7 +271,8 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
     def deduplicate_rule_execution_plan(df_plan) -> pd.DataFrame:
         df_plan = df_plan.copy()
         df_plan['rule_id'] = df_plan['rule'].astype(str)
-        df_dedup = df_plan.groupby('rule_id').agg({'type': 'first', 'tag':'first', 'rule': 'first', 'priority': 'min'}).reset_index()
+        df_dedup = df_plan.groupby('rule_id').agg(
+            {'type': 'first', 'tag': 'first', 'rule': 'first', 'priority': 'min'}).reset_index()
 
         logging.info(f"Deduplicated {len(df_plan)} rules down to {len(df_dedup)} rules")
         del df_dedup['rule_id']
@@ -292,6 +293,9 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
 
             return tranform_op
         elif isinstance(rule, tagging.Condition):
+            if rule.field == 'tags':
+                return super().convert_rule_to_df_rule(rule)
+
             def condition_op(df_in) -> pd.Series:
                 comp_f = lambda df_value: rule.compare_operation(df_value, rule.value)
                 res = df_in[f"{rule.field}.{rule.transformation_operation.name}"].apply(comp_f).rename(
@@ -311,7 +315,8 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
         df_trans = self.transformations_execution_plan(df_plan)
         df_plan_rules_and_trans = pd.concat([df_plan, df_trans])
 
-        df_plan_reduced, reduced_alias_dict = self.remove_unnecessary_composite_rules(df_plan_rules_and_trans, alias_dict)
+        df_plan_reduced, reduced_alias_dict = self.remove_unnecessary_composite_rules(df_plan_rules_and_trans,
+                                                                                      alias_dict)
 
         df_plan_opt = self.deduplicate_rule_execution_plan(df_plan_reduced)
         logging.info(

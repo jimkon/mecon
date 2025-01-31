@@ -192,20 +192,23 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
         df_trans = self.orep.transformations_execution_plan(self.orep.plan)
         df_trans['rule'] = df_trans['rule'].apply(str)
         expected_df = pd.DataFrame([
-            {'priority': -1, 'rule': "Transformation(field='description', trans=TransformationFunction(lower))",
+            {'priority': '-1',
+             'rule': "Transformation(field='description', trans=TransformationFunction(lower), parent_tag='Online payments')",
              'tag': 'Online payments', 'type': 'Transformation'},
-            {'priority': -1, 'rule': "Transformation(field='tags', trans=TransformationFunction(none))",
-             'tag': 'Online payments', 'type': 'Transformation'},
-            {'priority': -1, 'rule': "Transformation(field='amount', trans=TransformationFunction(abs))",
+            # {'priority': '-1', 'rule': "Transformation(field='tags', trans=TransformationFunction(none))",
+            #  'tag': 'Online payments', 'type': 'Transformation'},
+            {'priority': '-1',
+             'rule': "Transformation(field='amount', trans=TransformationFunction(abs), parent_tag='Accommodation')",
              'tag': 'Accommodation', 'type': 'Transformation'},
-            {'priority': -1, 'rule': "Transformation(field='description', trans=TransformationFunction(none))",
+            {'priority': '-1',
+             'rule': "Transformation(field='description', trans=TransformationFunction(none), parent_tag='Rent')",
              'tag': 'Rent', 'type': 'Transformation'}
         ])
         pd.testing.assert_frame_equal(df_trans[['priority', 'rule', 'tag', 'type']].reset_index(drop=True),
                                       expected_df[['priority', 'rule', 'tag', 'type']])
 
     def test_remove_unnecessary_composite_rules(self):
-        df_plan, alias_dict = self.orep.remove_unnecessary_composite_rules(self.orep.plan)
+        df_plan, alias_dict = self.orep.remove_unnecessary_composite_rules(self.orep.plan, self.orep._rule_aliases)
         df_plan['rule'] = df_plan['rule'].apply(str)
 
         expected_df = pd.DataFrame([{'priority': '2.8', 'rule': 'TagApplicator(Online payments)',
@@ -263,22 +266,35 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
         df_plan = new_orep.plan
         df_plan['rule'] = df_plan['rule'].apply(str)
         expected_df = pd.DataFrame([
-            {'priority': '1.2', 'rule': '<mecon.tags.tagging.Conjunction object at 0x30950fd90>', 'tag': 'Accommodation', 'type': 'Conjunction'},
-            {'priority': '2.4', 'rule': '<mecon.tags.tagging.Disjunction object at 0x30950fa90>', 'tag': 'Online payments', 'type': 'Disjunction'},
-            {'priority': '1.4', 'rule': '<mecon.tags.tagging.Disjunction object at 0x309514110>', 'tag': 'Accommodation', 'type': 'Disjunction'},
-            {'priority': '1.8', 'rule': 'TagApplicator(Accommodation)', 'tag': 'Accommodation', 'type': 'TagApplicator'},
+            {'priority': '1.2', 'rule': '<mecon.tags.tagging.Conjunction object at 0x30950fd90>',
+             'tag': 'Accommodation', 'type': 'Conjunction'},
+            {'priority': '2.4', 'rule': '<mecon.tags.tagging.Disjunction object at 0x30950fa90>',
+             'tag': 'Online payments', 'type': 'Disjunction'},
+            {'priority': '1.4', 'rule': '<mecon.tags.tagging.Disjunction object at 0x309514110>',
+             'tag': 'Accommodation', 'type': 'Disjunction'},
+            {'priority': '1.8', 'rule': 'TagApplicator(Accommodation)', 'tag': 'Accommodation',
+             'type': 'TagApplicator'},
             {'priority': '0.8', 'rule': 'TagApplicator(Airbnb)', 'tag': 'Airbnb', 'type': 'TagApplicator'},
-            {'priority': '2.8', 'rule': 'TagApplicator(Online payments)', 'tag': 'Online payments', 'type': 'TagApplicator'},
+            {'priority': '2.8', 'rule': 'TagApplicator(Online payments)', 'tag': 'Online payments',
+             'type': 'TagApplicator'},
             {'priority': '0.8', 'rule': 'TagApplicator(Rent)', 'tag': 'Rent', 'type': 'TagApplicator'},
-            {'priority': '-1', 'rule': "Transformation(field='amount', trans=TransformationFunction(abs), parent_tag='Accommodation')", 'tag': 'Accommodation', 'type': 'Transformation'},
-            {'priority': '-1', 'rule': "Transformation(field='description', trans=TransformationFunction(lower), parent_tag='Online payments')", 'tag': 'Online payments', 'type': 'Transformation'},
-            {'priority': '-1', 'rule': "Transformation(field='description', trans=TransformationFunction(none), parent_tag='Rent')", 'tag': 'Rent', 'type': 'Transformation'},
-            {'priority': '-1', 'rule': "Transformation(field='tags', trans=TransformationFunction(none), parent_tag='Online payments')", 'tag': 'Online payments', 'type': 'Transformation'},
+            {'priority': '-1',
+             'rule': "Transformation(field='amount', trans=TransformationFunction(abs), parent_tag='Accommodation')",
+             'tag': 'Accommodation', 'type': 'Transformation'},
+            {'priority': '-1',
+             'rule': "Transformation(field='description', trans=TransformationFunction(lower), parent_tag='Online payments')",
+             'tag': 'Online payments', 'type': 'Transformation'},
+            {'priority': '-1',
+             'rule': "Transformation(field='description', trans=TransformationFunction(none), parent_tag='Rent')",
+             'tag': 'Rent', 'type': 'Transformation'},
+            # {'priority': '-1', 'rule': "Transformation(field='tags', trans=TransformationFunction(none), parent_tag='Online payments')", 'tag': 'Online payments', 'type': 'Transformation'},
             {'priority': '0.0', 'rule': 'abs(amount) greater 30', 'tag': 'Accommodation', 'type': 'Condition'},
             {'priority': '0.0', 'rule': 'description contains landlord', 'tag': 'Rent', 'type': 'Condition'},
             {'priority': '0.0', 'rule': 'lower(description) contains airbnb', 'tag': 'Airbnb', 'type': 'Condition'},
-            {'priority': '0.0', 'rule': 'lower(description) contains hotel', 'tag': 'Accommodation', 'type': 'Condition'},
-            {'priority': '0.0', 'rule': 'lower(description) contains paypal', 'tag': 'Online payments', 'type': 'Condition'},
+            {'priority': '0.0', 'rule': 'lower(description) contains hotel', 'tag': 'Accommodation',
+             'type': 'Condition'},
+            {'priority': '0.0', 'rule': 'lower(description) contains paypal', 'tag': 'Online payments',
+             'type': 'Condition'},
             {'priority': '2.1', 'rule': 'tags contains Accommodation', 'tag': 'Online payments', 'type': 'Condition'},
             {'priority': '1.1', 'rule': 'tags contains Airbnb', 'tag': 'Accommodation', 'type': 'Condition'},
             {'priority': '1.1', 'rule': 'tags contains Rent', 'tag': 'Accommodation', 'type': 'Condition'}
@@ -295,6 +311,7 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
         self.assertEqual(len(batches), 10)
         self.assertListEqual(list(batches.keys()),
                              ['-1', '0.0', '0.8', '1.1', '1.2', '1.4', '1.8', '2.1', '2.4', '2.8'])
+        self.assertEqual(len(batches['-1']), 3)
         self.assertEqual(len(batches['0.0']), 5)
         self.assertEqual(len(batches['0.8']), 2)
         self.assertEqual(len(batches['1.1']), 2)
@@ -328,7 +345,8 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
         # Online payments tags contains Accommodation
         res = converted_rules[2](mock_df)
         res._mock_new_parent.assert_called_with(alias[self.tag_0.rule.rules[1]])
-        mock_df.__getitem__.assert_called_with(f"{rules[17].field}.{rules[17].trans.name}")
+        # mock_df.__getitem__.assert_called_with(f"{rules[17].field}.{rules[17].trans.name}")
+        mock_df.__getitem__.assert_called_with(self.tag_0.rule.rules[1].rules[0].field)
 
         # Online payments lower(description) contains paypal
         res = converted_rules[14](mock_df)
@@ -337,7 +355,7 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
 
         # Online payments Transformation(field='description', trans=TransformationFunction(lower), parent_tag='Online payments')
         res = converted_rules[15](mock_df)
-        res._mock_new_parent.assert_called_with(f"{rules[15].field}.{rules[15].trans.name}")# rename
+        res._mock_new_parent.assert_called_with(f"{rules[15].field}.{rules[15].trans.name}")  # rename
         mock_df.__getitem__.assert_called_with(f"{rules[15].field}")
 
         # Online payments Transformation(field='tags', trans=TransformationFunction(none), parent_tag='Online payments')
@@ -374,7 +392,11 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
              'id': 'id_6',
              'tags': 'Online payments'}
         ]))
-        new_transactions = self.orep.tag(transactions)
+        optimised_rep = OptREPTagging(self.orep.tags)
+        optimised_rep.create_rule_execution_plan()
+        optimised_rep.create_optimised_rule_execution_plan()
+
+        new_transactions = optimised_rep.tag(transactions)
         self.assertTrue(transactions.equals(new_transactions))
 
 
