@@ -317,33 +317,33 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
         mock_df = MagicMock()  # (spec=pd.DataFrame)
 
         # TagApplicator(Online payments)
-        # converted_rules[0](mock_df)
-        # mock_df.__getitem__.assert_called_with(alias[self.tag_0.rule])
-        #
-        # # Online payments Disjunction
-        # res = converted_rules[1](mock_df)
-        # res._mock_new_parent.assert_called_with(alias[self.tag_0.rule])
-        # mock_df.__getitem__.assert_called_with([alias[self.tag_0.rule.rules[0]], alias[self.tag_0.rule.rules[1]]])
+        converted_rules[0](mock_df)
+        mock_df.__getitem__.assert_called_with(alias[self.tag_0.rule])
+
+        # Online payments Disjunction
+        res = converted_rules[1](mock_df)
+        res._mock_new_parent.assert_called_with(alias[self.tag_0.rule])
+        mock_df.__getitem__.assert_called_with([alias[self.tag_0.rule.rules[0]], alias[self.tag_0.rule.rules[1]]])
 
         # Online payments tags contains Accommodation
         res = converted_rules[2](mock_df)
         res._mock_new_parent.assert_called_with(alias[self.tag_0.rule.rules[1]])
-        mock_df.__getitem__.assert_called_with([alias[self.tag_0.rule.rules[1].rules[0]]])
+        mock_df.__getitem__.assert_called_with(f"{rules[17].field}.{rules[17].trans.name}")
 
         # Online payments lower(description) contains paypal
-        # res = converted_rules[14](mock_df)
-        # res._mock_new_parent.assert_called_with(alias[self.tag_0.rule.rules[1]])
-        # mock_df.__getitem__.assert_called_with([alias[self.tag_0.rule.rules[1].rules[0]]])
+        res = converted_rules[14](mock_df)
+        res._mock_new_parent.assert_called_with(alias[self.tag_0.rule.rules[0]])
+        mock_df.__getitem__.assert_called_with(f"{rules[15].field}.{rules[15].trans.name}")
 
         # Online payments Transformation(field='description', trans=TransformationFunction(lower), parent_tag='Online payments')
-        # res = converted_rules[15](mock_df)
-        # res._mock_new_parent.assert_called_with(alias[self.tag_0.rule.rules[0].rules[0]])
-        # mock_df.__getitem__.assert_called_with(self.tag_0.rule.rules[0].rules[0].field)  # no alias
-        #
-        # # Online payments Transformation(field='tags', trans=TransformationFunction(none), parent_tag='Online payments')
-        # res = converted_rules[17](mock_df)
-        # res._mock_new_parent.assert_called_with(alias[self.tag_0.rule.rules[1].rules[0]])
-        # mock_df.__getitem__.assert_called_with(self.tag_0.rule.rules[1].rules[0].field)  # no alias
+        res = converted_rules[15](mock_df)
+        res._mock_new_parent.assert_called_with(f"{rules[15].field}.{rules[15].trans.name}")# rename
+        mock_df.__getitem__.assert_called_with(f"{rules[15].field}")
+
+        # Online payments Transformation(field='tags', trans=TransformationFunction(none), parent_tag='Online payments')
+        res = converted_rules[17](mock_df)
+        res._mock_new_parent.assert_called_with(f"{rules[17].field}.{rules[17].trans.name}")
+        mock_df.__getitem__.assert_called_with(f"{rules[17].field}")  # no alias
 
     def test_tag(self):
         # the tags col will be reset, just keeping it for reference

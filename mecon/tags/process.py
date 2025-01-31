@@ -287,7 +287,7 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
                 res = df_in[field].apply(trans_op).rename(
                     f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
+                    {'tag': rule.parent_tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
                 return res
 
             return tranform_op
