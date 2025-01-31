@@ -8,7 +8,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from typing_extensions import override
 
 from mecon.data.transactions import Transactions
 from mecon.tags import tagging
@@ -38,6 +37,10 @@ class TaggingSession(abc.ABC):
 
 
 class LinearTagging(TaggingSession):
+    """
+    Applying one tag after the other to the transactions, in the order that they are provided on LinearTagging.__init__
+    """
+
     @timeit
     def tag(self, transactions: Transactions) -> Transactions:
         for tag in tqdm(self.tags, desc='Applying tag'):
@@ -46,6 +49,15 @@ class LinearTagging(TaggingSession):
 
 
 class RuleExecutionPlanTagging(TaggingSession):
+    """
+    Expands the tag rules in subrules and apply them in a Pandas.DataFrame oriented way to take advantage of its performance optimizations.
+    Key features:
+    * on initialisation, it creates a plan on what operations and in which order to be applied.
+    * rule operations are applied in an order based on the tag dependency level. This means that the provided tags will be checked for cyclic dependencies,
+    and if any are found they will be removed.
+    * the subrules are applied in the order of their parent tag's dependency level, or in first priority if there is no dependecy.
+    """
+
     class TagApplicator:
         def __init__(self, tag_name: str, depends_on: tagging.AbstractRule):
             self.tag_name = tag_name
@@ -73,11 +85,6 @@ class RuleExecutionPlanTagging(TaggingSession):
     @property
     def plan(self):
         return self._df_plan
-
-    # def get_plan(self):
-    #     if self._df_plan is None:
-    #         self._df_plan = self.create_rule_execution_plan()
-    #     return self._df_plan
 
     def operation_monitoring_table(self):
         return pd.DataFrame(self._op_monitoring) if self._op_monitoring else None
@@ -203,7 +210,7 @@ class RuleExecutionPlanTagging(TaggingSession):
             continue
 
         new_transactions = Transactions(df_in[transactions.dataframe().columns])
-        # TODO to remove
+
         self.operation_monitoring_table().to_csv('op_monitoring.csv', index=False)
         df_in.to_csv('transactions_with_rules.csv', index=False)
         transactions.dataframe().to_csv('transactions.csv', index=False)
@@ -211,10 +218,21 @@ class RuleExecutionPlanTagging(TaggingSession):
 
 
 class REPTagging(RuleExecutionPlanTagging):
+    """
+    abv for RuleExecutionPlanTagging
+    """
     pass
 
 
 class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
+    """
+    An optimised version of RuleExecutionPlanTagging.
+    Key optimisations:
+    * Condition rules are broken even further in transformation operations and comparison operations (except conditions referring to 'tags')
+    * Redundant Composite rules like Conjunctions and Disjunctions that have only one subrule are removed to further reduce the number of rules that are applies in total.
+    * Identical rules/subrules are applies only once
+    """
+
     Transformation = namedtuple('Transformation', ['field', 'trans', 'parent_tag'])
 
     def __init__(self, tags: list[Tag], remove_cycles: bool = True):
@@ -329,4 +347,7 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
 
 
 class OptREPTagging(OptimisedRuleExecutionPlanTagging):
+    """
+    abv for OptimisedRuleExecutionPlanTagging
+    """
     pass
