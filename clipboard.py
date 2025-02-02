@@ -1,4 +1,4 @@
-from mecon.tags.process import RuleExecutionPlanTagging
+from mecon.tags.process import *
 from mecon.tags.rule_graphs import TagGraph
 
 if __name__ == '__main__':
@@ -15,8 +15,17 @@ if __name__ == '__main__':
     data_manager = WorkingDataManager()
 
     tags = data_manager.all_tags()
+    transactions = data_manager.get_transactions()
     # LinearTagging(tags).tag(data_manager.get_transactions().copy())
-    RuleExecutionPlanTagging(tags).tag(data_manager.get_transactions().copy())
-    tg = TagGraph.from_tags(tags)
-    #
-    # tt = tg.tidy_table()
+    # proc = RuleExecutionPlanTagging(tags)
+    # proc.create_rule_execution_plan()
+    # proc.tag(transactions)
+
+    monitor = RuleExecutionPlanMonitor(dataset)
+    proc = OptimisedRuleExecutionPlanTagging(tags)
+    proc.create_rule_execution_plan()
+    proc.create_optimised_rule_execution_plan()
+    new_transactions = proc.tag(transactions, monitor=monitor)
+
+    monitor.get_tag_calculations('Afternoon')
+    pass

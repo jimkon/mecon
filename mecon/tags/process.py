@@ -10,6 +10,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from mecon.data.transactions import Transactions
+from mecon.etl.dataset import Dataset
 from mecon.tags import tagging
 from mecon.tags.rule_graphs import AcyclicTagGraph
 from mecon.tags.tag_helpers import expand_rule_to_subrules
@@ -48,9 +49,45 @@ class LinearTagging(TaggingSession):
         return transactions
 
 
-class RuleExecutionPlanCalculationMonitor:
-    def append_calculation_table(self, df_calc: pd.DataFrame):
-        pass
+class RuleExecutionPlanMonitor:
+    def __init__(self, dataset: Dataset, df_calculations=None, df_operations=None):
+        self.df_calculations = df_calculations
+        self.df_operations = df_operations
+        self.path = dataset.statements.parent / 'monitoring'
+        self.calc_path = self.path / 'calc_monitoring.csv'
+        self.op_path = self.path / 'op_monitoring.csv'
+        self.path.mkdir(parents=True, exist_ok=True)
+
+    def populate(self, df_calculations: pd.DataFrame, df_operations: pd.DataFrame):
+        self.df_calculations = df_calculations
+        self.df_operations = df_operations
+        self.save()
+        self.load()
+
+    def get_tag_calculations(self, tag_name: str) -> pd.DataFrame:
+        ops = self.df_operations[self.df_operations['tag']==tag_name]
+        in_and_out_ops = ops['in'].to_list()+ops['out'].to_list()
+        valid_cols = [col for col in self.df_calculations.columns.to_list() if col in in_and_out_ops]
+        all_valid_cols = Transactions.columns+valid_cols
+        ordered_cols = list(dict.fromkeys(all_valid_cols))
+        calcs = self.df_calculations[ordered_cols]
+        return calcs
+
+    def all_monitored_tag_names(self) -> list[str]:
+        return self.df_operations['tag'].unique().tolist()
+
+    def save(self):
+        if self.df_calculations is not None:
+            logging.info(f"Saving calculation stats at {self.calc_path}")
+            self.df_calculations.to_csv(self.calc_path, index=False)
+
+        if self.df_operations is not None:
+            logging.info(f"Saving operation stats at {self.op_path}")
+            self.df_operations.to_csv(self.op_path, index=False)
+
+    def load(self):
+        self.df_calculations = pd.read_csv(self.calc_path, index_col=None)
+        self.df_operations = pd.read_csv(self.op_path, index_col=None)
 
 
 class RuleExecutionPlanTagging(TaggingSession):
@@ -188,7 +225,7 @@ class RuleExecutionPlanTagging(TaggingSession):
         return df
 
     @timeit
-    def tag(self, transactions: Transactions, calc_monitor:RuleExecutionPlanCalculationMonitor=None) -> Transactions:
+    def tag(self, transactions: Transactions, monitor: RuleExecutionPlanMonitor = None) -> Transactions:
         rule_groups = self.split_in_batches()
         all_priorities = sorted(rule_groups.keys(), reverse=False)
 
@@ -205,6 +242,7 @@ class RuleExecutionPlanTagging(TaggingSession):
 
                 new_tags_col = f"tags_added_{priority}"
                 df_in[new_tags_col] = df_temp.apply(
+                    # DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
                     lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1)
                 df_in['new_tags_list'] = df_in.apply(lambda row: row['new_tags_list'] + row[new_tags_col], axis=1)
 
@@ -216,12 +254,9 @@ class RuleExecutionPlanTagging(TaggingSession):
 
         new_transactions = Transactions(df_in[transactions.dataframe().columns])
 
-        if calc_monitor:
-            # self.operation_monitoring_table().to_csv('op_monitoring.csv', index=False)
-            # df_in.to_csv('transactions_with_rules.csv', index=False)
-            calc_monitor.append_calculation_table(df_in)
+        if monitor:
+            monitor.populate(df_in, self.operation_monitoring_table())
 
-        transactions.dataframe().to_csv('transactions.csv', index=False)
         return new_transactions
 
 
