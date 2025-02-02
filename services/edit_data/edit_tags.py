@@ -8,8 +8,9 @@ from mecon import config
 from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
 from mecon.data import reports
 from mecon.data.transactions import Transactions
-from mecon.tags import tagging
+from mecon.tags import tagging, process
 from mecon.tags import transformations, comparisons, tag_helpers
+from mecon.tags.process import RuleExecutionPlanMonitor
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -50,10 +51,18 @@ app_ui = ui.page_fluid(
                     ui.nav_panel(
                         "JSON",
                         ui.card(
-                            ui.input_task_button(id='recalculate_button', label='Recalculate', width='25%'),
+                            ui.row(
+                                ui.input_task_button(id='recalculate_button', label='Recalculate', width='25%'),
+                                ui.tooltip(ui.input_task_button(
+                                    id='check_diffs_button',
+                                    label='Check differences... (!!)',
+                                    width='25%',
+                                    style="color: #fff; background-color: #aaa; border-color: #000"),
+                                    'It will recalculate all tags for the current version of the tag and the last save.')
+                            ),
                             ui.input_text_area(
                                 id="tag_json_text",
-                                label=ui.markdown("Tag as a JSON file"),
+                                label=ui.markdown("JSON text"),
                                 value="{}",
                                 # autoresize=True,
                                 # resize='both',
@@ -82,7 +91,7 @@ app_ui = ui.page_fluid(
                             ui.input_select(
                                 id='condition_field_select',
                                 label='Field',
-                                choices=Transactions.fields,
+                                choices=Transactions.columns,
                                 multiple=False
                             ),
                             ui.input_select(
@@ -130,8 +139,7 @@ app_ui = ui.page_fluid(
                         ui.output_data_frame(
                             id='untagged_transactions_output_df',
                         )
-                    ),
-
+                    )
                 ),
                 height='100%'
             ),
@@ -293,6 +301,28 @@ def server(input: Inputs, output: Outputs, session: Session):
     def untagged_transactions():
         return current_transactions().not_containing_tags(current_tag_value.get().name)
 
+    def new_transactions_and_monitor():
+        transactions = data_manager.get_transactions()
+        monitor = RuleExecutionPlanMonitor(dataset)
+        tag_name, tag_json_str = fetch_tag_name(), input.tag_json_text()
+        new_tag = tagging.Tag.from_json_string(tag_name, tag_json_str)
+        new_tags = [new_tag] + [tag for tag in all_tags if tag.name != tag_name]
+
+        orep = process.OptimisedRuleExecutionPlanTagging(new_tags)
+        orep.create_rule_execution_plan()
+        orep.create_optimised_rule_execution_plan()
+        new_trans = orep.tag(transactions, monitor=monitor)
+
+        return new_trans, monitor
+
+    @reactive.calc
+    def changed_transactions():
+        transactions = data_manager.get_transactions()
+        new_trans, monitor = new_transactions_and_monitor()
+
+        diff = transactions.tags_diff(new_trans, target_tags=[fetch_tag_name()])
+        return diff, monitor
+
     @reactive.calc
     def get_target_tag_json():
         return json.dumps(current_tag_value.get().rule.to_json(), indent=4)
@@ -389,7 +419,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         data_manager.update_tag(current_tag_value.get(), update_tags=True)
         ui.modal_remove()
 
-
     @reactive.effect
     @reactive.event(input.id_add_button)
     def _():
@@ -417,6 +446,59 @@ def server(input: Inputs, output: Outputs, session: Session):
         new_rule = current_tag_value.get().rule.append(condition_to_add)
         new_tag = tagging.Tag(fetch_tag_name(), new_rule)
         current_tag_value.set(new_tag)
+
+    @reactive.effect
+    @reactive.event(input.check_diffs_button)
+    def _():
+        diff, monitor = changed_transactions()
+        all_monitored_tags = sorted(monitor.all_monitored_tag_names())
+        diff_df = diff.dataframe()
+        logging.info(f"Diff: {diff_df.shape=}")
+        m = ui.modal(
+            ui.navset_tab(
+                ui.nav_panel('Calcs',
+                             ui.input_select(
+                                 id='tag_select_for_calc_monitor',
+                                 label='Tags',
+                                 choices=all_monitored_tags
+                             ),
+                             ui.output_data_frame(id='calculation_monitor_output_df')),
+                ui.nav_panel(f"{len(diff_df)} rows changed (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_output_df')),
+            ),
+            # ui.HTML(diff_df.to_html()),
+            title=f"Recalculated transaction tags",
+            easy_close=True,
+            # footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
+            size='xl'
+        )
+        ui.modal_show(m)
+
+    @render.data_frame
+    def calculation_monitor_output_df():
+        tag_name = input.tag_select_for_calc_monitor()
+        new_trans, monitor = new_transactions_and_monitor()
+        df = monitor.get_tag_calculations(tag_name).copy()
+        df.replace([False, True], value=['False', 'True'], inplace=True)
+        logging.info(f"{df.columns=}")
+        return render.DataTable(
+            df,
+            selection_mode='none',
+            filters=True,
+            styles=styles
+        )
+
+    @render.data_frame
+    def transactions_diff_output_df():
+        diff, monitor = changed_transactions()
+        diff_df = diff.dataframe()
+        logging.info(f"Diff: {diff_df.shape=}")
+        return render.DataTable(
+            diff_df,
+            selection_mode="none",
+            filters=True,
+            styles=styles
+        )
+
 
 
 edit_tags_app = App(app_ui, server)
