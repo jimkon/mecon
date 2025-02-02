@@ -30,6 +30,7 @@ class Dataset:
         self._statements = statements_path
         self._settings = settings.Settings(path=settings_path)
 
+
     @classmethod
     def from_dirpath(self, dir_path: Path):
         data_data = dir_path / 'data'

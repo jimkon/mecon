@@ -25,7 +25,8 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     Not responsible for any IO operations.
     """
 
-    fields = ['datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
+    # fields = ['datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
+    columns = ['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
 
     def __init__(self, df: pd.DataFrame):
         super().__init__(df=df)
@@ -128,8 +129,6 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
 
         return transactions
 
-
-
     def get_filtered_and_grouped_transactions(self, start_date, end_date, tags, grouping_key, aggregation_key,
                                               fill_dates_before_groupagg=False,
                                               fill_dates_after_groupagg=False) -> Transactions:
@@ -151,8 +150,9 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
 
         return transactions
 
-    def diff(self, transactions: Transactions,
-               columns=None):
+    def diff(self,
+             transactions: Transactions,
+             columns=None) -> Transactions:
         if columns is None:
             columns = ['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
 
@@ -160,22 +160,42 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         diffs = {}
         for column in columns:
             if column == 'tags':
-                diff = [set(tags_this.split(','))!=set(tags_other.split(',')) for tags_this, tags_other in zip(df_this[column], df_other[column])]
+                diff = [set(tags_this.split(',')) != set(tags_other.split(',')) for tags_this, tags_other in
+                        zip(df_this[column], df_other[column])]
             else:
                 diff = df_this[column] != df_other[column]
             diffs[column] = diff
         df_diffs = pd.DataFrame(diffs)
         the_other_minus_this = df_other[df_diffs.any(axis=1)]
-        return the_other_minus_this
+        diff_trans = Transactions(the_other_minus_this)
+        return diff_trans
+
+    def tags_diff(self,
+                  transactions: Transactions,
+                  target_tags: list[str] | str | None = None,
+                  # comparison: Literal['']
+                  ) -> Transactions:
+        # TODO decide if this is in transactions or fields.TagsColumn
+        target_tags = [target_tags] if target_tags is not None and isinstance(target_tags, str) else target_tags
+        df_this, df_other = self.dataframe(), transactions.dataframe()
+        comparison_results = []
+        for tags_this, tags_other in zip(df_this['tags'], df_other['tags']):
+            tags_this_set, tags_other_set = set(tags_this.split(',')), set(tags_other.split(','))
+            tags_this_focused = tags_this_set.intersection(target_tags) if target_tags is not None else tags_this_set
+            tags_other_focused = tags_other_set.intersection(target_tags) if target_tags is not None else tags_other_set
+            is_different = tags_this_focused != tags_other_focused#len(this_tags_focused.intersection(tags_other_set)) != len(this_tags_focused)
+            comparison_results.append(is_different)
+
+        the_other_minus_this = df_other[comparison_results]
+        diff_trans = Transactions(the_other_minus_this)
+        return diff_trans
 
     def equals(self,
                transactions: Transactions,
                columns=None) -> bool:
         diff = self.diff(transactions=transactions, columns=columns)
-        res = diff.shape[0] == 0
+        res = diff.size() == 0
         return res
-
-
 
 
 # TODO:v3 move other Transaction related classes here like TransactionAggregators
@@ -202,7 +222,7 @@ class TransactionDateFiller(fields.DateFiller):
 class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransformer, abc.ABC):
     def validate_input_df(self, df_in: pd.DataFrame, **kwargs):
         missing_cols = []
-        for col in ['id', 'amount', 'currency', 'amount_cur', 'description', 'tags']:
+        for col in Transactions.columns:
             if col not in df_in.columns:
                 missing_cols.append(col)
 
@@ -210,6 +230,7 @@ class AbstractTransactionsTransformer(dataframe_transformers.DataframeTransforme
             raise ValueError(f"Missing required columns for Transaction Transformer: {missing_cols}")
 
 
+# TODO remove this and any other html table code, unless I use it as shiny.ui.HTML elements
 class TransactionsDataTransformationToHTMLTable(AbstractTransactionsTransformer):
     def _transform(self, df_in: pd.DataFrame, **kwargs) -> pd.DataFrame:
         df_in = df_in.copy().iloc[::-1].reset_index(drop=True)
