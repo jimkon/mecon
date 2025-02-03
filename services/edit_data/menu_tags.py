@@ -1,7 +1,8 @@
 import logging
 
-from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+import pandas as pd
 from htmltools import HTML
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
 from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
@@ -60,19 +61,33 @@ def tag_actions(tag_name):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    all_tags_reactive = reactive.Value(data_manager.all_tags())
+    tags_metadata_reactive = reactive.Value(value=data_manager.get_tags_metadata().copy())
+
+
     @render.text
     def menu_title_text():
-        return f"Tag menu: {len(all_tags)} tags"
+        return f"Tag menu: {len(all_tags_reactive.get())} tags"
+
 
     @render.data_frame
     def menu_tags_table():
-        tag_stats_df = data_manager.get_tags_metadata().copy()
+        tags = data_manager.all_tags()
+        tags_df = pd.DataFrame([tag.name for tag in tags], columns=['Name'])
+
+        tag_stats_df = tags_metadata_reactive.get()
         tag_stats_df.columns = [col.capitalize().replace('_', ' ') for col in tag_stats_df.columns]
+        tag_stats_df = tags_df.merge(tag_stats_df, on='Name', how='left')
+
         tag_stats_df['i'] = tag_stats_df.index
         tag_stats_df['Actions'] = tag_stats_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
 
         tag_stats_df['Total money in'] = tag_stats_df['Total money in'].apply(lambda x: f"£ {float(x):.2f}")
         tag_stats_df['Total money out'] = tag_stats_df['Total money out'].apply(lambda x: f"£ {float(x):.2f}")
+
+
+        # tags_df['Actions'] = tags_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
+        # tag_stats_df = tags_df.merge(tag_stats_df, on='Name', how='left')
 
         cols_to_show = ['i',
                         'Name',
@@ -102,6 +117,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.info(f"Creating new tag.")
         new_tag = tagging.Tag.from_json_string(input.name_of_new_tag_text(), '{}')
         data_manager.update_tag(new_tag, update_tags=False)
+        all_tags_reactive.set(data_manager.all_tags())
+        tags_metadata_reactive.set(value=data_manager.get_tags_metadata().copy())
         ui.modal_remove()
         # load_menu()
 
@@ -110,7 +127,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         m = ui.modal(
             ui.input_select(id='name_of_tag_to_delete_select', label='New tag name',
-                            choices={tag.name: tag.name for tag in all_tags}),
+                            choices={tag.name: tag.name for tag in all_tags_reactive.get()}),
             title=f"Delete a new tag",
             easy_close=False,
             footer=ui.input_task_button(id='confirm_delete_button',
@@ -126,6 +143,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         logging.info(f"Deleting tag {input.name_of_tag_to_delete_select()}")
         data_manager.delete_tag(input.name_of_tag_to_delete_select())
+        all_tags_reactive.set(data_manager.all_tags())
+        tags_metadata_reactive.set(value=data_manager.get_tags_metadata().copy())
         ui.modal_remove()
         # load_menu()
 
@@ -134,6 +153,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         logging.info(f"Recalculating all tags.")
         data_manager.reset_transaction_tags()
+        all_tags_reactive.set(data_manager.all_tags())
+        tags_metadata_reactive.set(value=data_manager.get_tags_metadata().copy())
 
 
 menu_tags_app = App(app_ui, server)
