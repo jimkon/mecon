@@ -1,9 +1,11 @@
 import logging
 
-from shiny import App, Inputs, Outputs, Session, render, ui
+from shiny import App, Inputs, Outputs, Session, render, ui, reactive
+from htmltools import HTML
 
 from mecon import config
 from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+from mecon.tags import tagging
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -46,7 +48,6 @@ app_ui = ui.page_fluid(
 )
 
 
-from htmltools import HTML
 
 def tag_actions(tag_name):
     return HTML(
@@ -65,13 +66,13 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def menu_tags_table():
-        tag_stats_df = data_manager.get_tags_metadata()
+        tag_stats_df = data_manager.get_tags_metadata().copy()
         tag_stats_df.columns = [col.capitalize().replace('_', ' ') for col in tag_stats_df.columns]
         tag_stats_df['i'] = tag_stats_df.index
         tag_stats_df['Actions'] = tag_stats_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
 
-        tag_stats_df['Total money in'] = tag_stats_df['Total money in'].apply(lambda x: f"£ {x:.2f}")
-        tag_stats_df['Total money out'] = tag_stats_df['Total money out'].apply(lambda x: f"£ {x:.2f}")
+        tag_stats_df['Total money in'] = tag_stats_df['Total money in'].apply(lambda x: f"£ {float(x):.2f}")
+        tag_stats_df['Total money out'] = tag_stats_df['Total money out'].apply(lambda x: f"£ {float(x):.2f}")
 
         cols_to_show = ['i',
                         'Name',
@@ -83,56 +84,56 @@ def server(input: Inputs, output: Outputs, session: Session):
                         'Actions']
         return tag_stats_df[cols_to_show]
 
-    # @reactive.effect
-    # @reactive.event(input.create_button)
-    # def _():
-    #     m = ui.modal(
-    #         ui.input_text(id='name_of_new_tag_text', label='New tag name'),
-    #         title=f"Create a new tag",
-    #         easy_close=False,
-    #         footer=ui.input_task_button(id='confirm_create_button', label='Confirm', label_buzy='Creating...'),
-    #         size='l'
-    #     )
-    #     ui.modal_show(m)
-    #
-    # @reactive.effect
-    # @reactive.event(input.confirm_create_button)
-    # def _():
-    #     logging.info(f"Creating new tag.")
-    #     new_tag = tagging.Tag.from_json_string(input.name_of_new_tag_text(), '{}')
-    #     data_manager.update_tag(new_tag, update_tags=False)
-    #     ui.modal_remove()
-    #     load_menu()
-    #
-    # @reactive.effect
-    # @reactive.event(input.delete_button)
-    # def _():
-    #     m = ui.modal(
-    #         ui.input_select(id='name_of_tag_to_delete_select', label='New tag name',
-    #                         choices={tag.name: tag.name for tag in all_tags}),
-    #         title=f"Delete a new tag",
-    #         easy_close=False,
-    #         footer=ui.input_task_button(id='confirm_delete_button',
-    #                                     label='Confirm',
-    #                                     label_buzy='Deleting...',
-    #                                     type='danger'),
-    #         size='l'
-    #     )
-    #     ui.modal_show(m)
-    #
-    # @reactive.effect
-    # @reactive.event(input.confirm_delete_button)
-    # def _():
-    #     logging.info(f"Deleting tag {input.name_of_tag_to_delete_select()}")
-    #     data_manager.delete_tag(input.name_of_tag_to_delete_select())
-    #     ui.modal_remove()
-    #     load_menu()
-    #
-    # @reactive.effect
-    # @reactive.event(input.recalculate_button)
-    # def _():
-    #     logging.info(f"Recalculating all tags.")
-    #     data_manager.reset_transaction_tags()
+    @reactive.effect
+    @reactive.event(input.create_button)
+    def _():
+        m = ui.modal(
+            ui.input_text(id='name_of_new_tag_text', label='New tag name'),
+            title=f"Create a new tag",
+            easy_close=False,
+            footer=ui.input_task_button(id='confirm_create_button', label='Confirm', label_buzy='Creating...'),
+            size='l'
+        )
+        ui.modal_show(m)
+
+    @reactive.effect
+    @reactive.event(input.confirm_create_button)
+    def _():
+        logging.info(f"Creating new tag.")
+        new_tag = tagging.Tag.from_json_string(input.name_of_new_tag_text(), '{}')
+        data_manager.update_tag(new_tag, update_tags=False)
+        ui.modal_remove()
+        # load_menu()
+
+    @reactive.effect
+    @reactive.event(input.delete_button)
+    def _():
+        m = ui.modal(
+            ui.input_select(id='name_of_tag_to_delete_select', label='New tag name',
+                            choices={tag.name: tag.name for tag in all_tags}),
+            title=f"Delete a new tag",
+            easy_close=False,
+            footer=ui.input_task_button(id='confirm_delete_button',
+                                        label='Confirm',
+                                        label_buzy='Deleting...',
+                                        type='danger'),
+            size='l'
+        )
+        ui.modal_show(m)
+
+    @reactive.effect
+    @reactive.event(input.confirm_delete_button)
+    def _():
+        logging.info(f"Deleting tag {input.name_of_tag_to_delete_select()}")
+        data_manager.delete_tag(input.name_of_tag_to_delete_select())
+        ui.modal_remove()
+        # load_menu()
+
+    @reactive.effect
+    @reactive.event(input.recalculate_button)
+    def _():
+        logging.info(f"Recalculating all tags.")
+        data_manager.reset_transaction_tags()
 
 
 menu_tags_app = App(app_ui, server)
