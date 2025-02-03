@@ -1,8 +1,10 @@
+from mecon.tags.process import *
 from mecon.tags.rule_graphs import TagGraph
 
 if __name__ == '__main__':
     from mecon import config
     from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+
     datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
     if not datasets_dir.exists():
         raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
@@ -12,14 +14,18 @@ if __name__ == '__main__':
     dataset = datasets_obj.working_dataset
     data_manager = WorkingDataManager()
 
-    transaction = data_manager.get_transactions()
-    print(transaction.size())
-
     tags = data_manager.all_tags()
-    tg = TagGraph.from_tags(tags)
-    # tg.hierarchy()
-    print(f"{tg.find_all_cycles()=}")
-    tg2 = tg.remove_cycles()
-    tg2.create_plotly_graph(k=.5, levels_col='level')
+    transactions = data_manager.get_transactions()
+    # LinearTagging(tags).tag(data_manager.get_transactions().copy())
+    # proc = RuleExecutionPlanTagging(tags)
+    # proc.create_rule_execution_plan()
+    # proc.tag(transactions)
 
-    t = 0
+    monitor = RuleExecutionPlanMonitor(dataset)
+    proc = OptimisedRuleExecutionPlanTagging(tags)
+    proc.create_rule_execution_plan()
+    proc.create_optimised_rule_execution_plan()
+    new_transactions = proc.tag(transactions, monitor=monitor)
+
+    monitor.get_tag_calculations('Afternoon')
+    pass
