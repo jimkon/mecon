@@ -1,5 +1,6 @@
 import logging
 
+import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
@@ -21,6 +22,8 @@ dataset = datasets_obj.working_dataset
 
 if dataset is None:
     raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
+
+# TODO settings are not refreshed if i change something manually. maybe shiny is caching stuff, because something similar happens to the data in the reports
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
@@ -131,7 +134,31 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def statements_info_dataframe():
-        return WorkingDatasetDirInfo().statement_files_info_df()
+        df = WorkingDatasetDirInfo().statement_files_info_df()
+        res = render.DataGrid(df, selection_mode="row")
+        return res
+
+    @reactive.effect
+    def selected_statement():
+        statements_selected = statements_info_dataframe.data_view(selected=True).to_dict('records')
+        logging.info(f"Selected statement: {statements_selected}")
+
+        if len(statements_selected) > 0:
+            statement_dict = statements_selected[0]
+            m = ui.modal(
+                ui.output_data_frame(id='showing_statement_output_df'),
+                title=f"Statement {statement_dict['filename']}",
+                easy_close=True,
+                size='xl'
+            )
+            ui.modal_show(m)
+
+            @render.data_frame
+            def showing_statement_output_df():
+                df_stat = pd.read_csv(statement_dict['path'], index_col=None)
+                return df_stat
+
+
 
 
 app = App(app_ui, server)
