@@ -288,6 +288,30 @@ def server(input: Inputs, output: Outputs, session: Session):
         ui.update_selectize(id='id_add_selectize',
                             choices={_id: _id for _id in untagged_transactions().dataframe()['id']})
 
+        transactions = data_manager.get_transactions()
+        invalid_transactions = transactions.invalid_transactions()
+        if invalid_transactions is not None:
+            m = ui.modal(
+                ui.output_data_frame(id='invalid_transactions_output_df'),
+                # ui.HTML(diff_df.to_html()),
+                title=f"Warning: Invalid transactions",
+                easy_close=True,
+                # footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
+                size='xl'
+            )
+            ui.modal_show(m)
+
+    @render.data_frame
+    def invalid_transactions_output_df():
+        transactions = data_manager.get_transactions()
+        invalid_transactions = transactions.invalid_transactions()
+        return render.DataTable(
+            invalid_transactions.dataframe(),
+            selection_mode="none",
+            filters=True,
+            styles=styles
+        )
+
     @reactive.calc
     def current_transactions():
         new_transactions = calculate_transaction_for_tag(current_tag_value.get())
@@ -364,6 +388,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def tagged_transactions_stats():
+        _tagged_transactions = tagged_transactions()
+        if _tagged_transactions.size() == 0:
+            raise ValueError(f"Empty tagged_transactions")
         return ui.markdown(reports.transactions_stats_markdown(tagged_transactions()))
 
     @reactive.effect
@@ -432,6 +459,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.condition_add_button)
     def _():
+        # TODO it doesn;t remove the empty disjunctions
         value_str = input.condition_value_input_text()
         value = value_str if not value_str.isnumeric() else int(value_str) if value_str.isdigit() else float(value_str)
 
