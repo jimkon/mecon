@@ -488,7 +488,8 @@ def server(input: Inputs, output: Outputs, session: Session):
                              ui.input_select(
                                  id='tag_select_for_calc_monitor',
                                  label='Tags',
-                                 choices=all_monitored_tags
+                                 choices=all_monitored_tags,
+                                 selected=fetch_tag_name()
                              ),
                              ui.output_data_frame(id='calculation_monitor_output_df')),
                 ui.nav_panel(f"{len(diff_df)} rows changed (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_output_df')),
