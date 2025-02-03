@@ -1,6 +1,7 @@
 from __future__ import annotations  # TODO:v2 upgrade to python 3.11
 
 import abc
+import logging
 from collections import Counter
 from datetime import datetime, date
 
@@ -34,6 +35,31 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         fields.AmountColumnMixin.__init__(self, df_wrapper=self)
         fields.DescriptionColumnMixin.__init__(self, df_wrapper=self)
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
+
+    def invalid_transactions(self):
+        invalid_ids = self.invalid_ids()
+        invalid_dts = self.invalid_datetimes()
+        invalid_amounts = self.invalid_amounts()
+        invalid_currencies = self.invalid_currencies()
+        invalid_amount_curs = self.invalid_amount_curs()
+        invalid_amount_descrs = self.invalid_descriptions()
+        invalid_amount_tags = self.invalid_tags()
+
+        logging.warning(f"Spotted {invalid_ids.sum()} invalid ids")
+        logging.warning(f"Spotted {invalid_dts.sum()} invalid datetimes")
+        logging.warning(f"Spotted {invalid_amounts.sum()} invalid amounts")
+        logging.warning(f"Spotted {invalid_currencies.sum()} invalid currencies")
+        logging.warning(f"Spotted {invalid_amount_curs.sum()} invalid amount_cur values")
+        logging.warning(f"Spotted {invalid_amount_descrs.sum()} invalid descriptions")
+        logging.warning(f"Spotted {invalid_amount_tags.sum()} invalid tag values")
+
+        invalid_rows = invalid_ids | invalid_dts | invalid_amounts | invalid_currencies | invalid_amount_curs | invalid_amount_descrs | invalid_amount_tags
+        if invalid_rows.sum() == 0:
+            return None
+
+        invalid_rows_df = self.dataframe()[invalid_rows]
+        invalid_trans = Transactions(invalid_rows_df)
+        return invalid_trans
 
     def fill_values(self, fill_unit,
                     start_date: datetime | date | None = None,
