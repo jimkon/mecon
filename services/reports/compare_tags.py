@@ -15,7 +15,7 @@ from mecon.settings import Settings
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
-
+# TODO filter tagsand ui is not working well, plus it is not using the latest filter design the other services use
 datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
