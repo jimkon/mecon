@@ -113,6 +113,7 @@ app_ui = ui.page_fluid(
                             )
                         ),
                         id="total_amount_or_count_acc",
+                        open=None,
                         multiple=True
                     ),
                 ),
@@ -235,6 +236,9 @@ def server(input: Inputs, output: Outputs, session: Session):
             start_date, end_date = all_transactions.date_range()
 
         min_date, max_date = all_transactions.date_range()
+        logging.info(f"date_range set to {min_date=} and {max_date=}")
+        # if transactions.size()==0:
+        #     ui.update_select(id='date_period_input_select', selected="All")
 
         ui.update_date_range(id='transactions_date_range',
                              start=start_date,
@@ -259,6 +263,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             .select_date_range(start_date, end_date) \
             .containing_tags(filter_in_tags) \
             .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
+
         logging.info(
             f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
 

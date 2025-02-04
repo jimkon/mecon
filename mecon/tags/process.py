@@ -50,6 +50,11 @@ class LinearTagging(TaggingSession):
 
 
 class RuleExecutionPlanMonitor:
+    """
+    TODO
+    * find redundant rules (never true, always true, conditions of the same Tag conjunction that can be removes (a>10, a>100  << redundant))
+    """
+
     def __init__(self, dataset: Dataset, df_calculations=None, df_operations=None):
         self.df_calculations = df_calculations
         self.df_operations = df_operations

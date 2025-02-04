@@ -370,7 +370,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df['datetime'] = df['datetime'].apply(format_dt)
         return render.DataTable(
             df,
-            selection_mode="rows",
+            selection_mode="none",
             filters=True,
             styles=styles
         )
@@ -381,7 +381,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         df['datetime'] = df['datetime'].apply(format_dt)
         return render.DataTable(
             df,
-            selection_mode="rows",
+            selection_mode="none",
             filters=True,
             styles=styles
         )
@@ -449,6 +449,30 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.id_add_button)
     def _():
+        """ TODO error while adding id
+        INFO:root:Adding IDs (1): ['RVLTd20220810t190439an57500i32747']
+mecon-edit_data_app-1: Traceback (most recent call last):
+mecon-edit_data_app-1:   File "/usr/local/lib/python3.11/site-packages/shiny/reactive/_reactives.py", line 584, in _run
+mecon-edit_data_app-1:     await self._fn()
+mecon-edit_data_app-1:   File "/usr/local/lib/python3.11/site-packages/shiny/_utils.py", line 273, in fn_async
+mecon-edit_data_app-1:     return fn(*args, **kwargs)
+mecon-edit_data_app-1:            ^^^^^^^^^^^^^^^^^^^
+mecon-edit_data_app-1:   File "/usr/local/lib/python3.11/site-packages/shiny/reactive/_reactives.py", line 901, in new_user_fn
+mecon-edit_data_app-1:     return user_fn()
+mecon-edit_data_app-1:            ^^^^^^^^^
+mecon-edit_data_app-1:   File "/mecon/services/edit_data/edit_tags.py", line 454, in _
+mecon-edit_data_app-1:     new_tag = tag_helpers.add_rule_for_id(
+mecon-edit_data_app-1:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mecon-edit_data_app-1:   File "/mecon/mecon/tags/tag_helpers.py", line 11, in add_rule_for_id
+mecon-edit_data_app-1:     potential_id_condition = tag.rule.rules[0].rules[0]
+mecon-edit_data_app-1:                              ^^^^^^^^^^^^^^^^^^^^^^^
+mecon-edit_data_app-1: AttributeError: 'Condition' object has no attribute 'rules'
+mecon-edit_data_app-1: /usr/local/lib/python3.11/site-packages/shiny/reactive/_reactives.py:566: ReactiveWarning: Error in Effect: 'Condition' object has no attribute 'rules'
+mecon-edit_data_app-1:   await self._run()
+mecon-edit_data_app-1: Unhandled error: 'Condition' object has no attribute 'rules'
+mecon-edit_data_app-1: INFO:     connection closed
+mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?filter_in_tags=Rent HTTP/1.1" 200 OK
+        """
         ids_to_add = list(input.id_add_selectize())
         logging.info(f"Adding IDs ({len(ids_to_add)}): {ids_to_add}")
         new_tag = tag_helpers.add_rule_for_id(
@@ -478,12 +502,15 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.check_diffs_button)
     def _():
+        # TODO rows added and rows removed are the same, have to change .diff to account for that
         diff, monitor = changed_transactions()
         all_monitored_tags = sorted(monitor.all_monitored_tag_names())
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
         m = ui.modal(
             ui.navset_tab(
+                ui.nav_panel(f"{len(diff_df)} rows added (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_added_output_df')),
+                ui.nav_panel(f"{len(diff_df)} rows removed (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_removed_output_df')),
                 ui.nav_panel('Calcs',
                              ui.input_select(
                                  id='tag_select_for_calc_monitor',
@@ -492,7 +519,6 @@ def server(input: Inputs, output: Outputs, session: Session):
                                  selected=fetch_tag_name()
                              ),
                              ui.output_data_frame(id='calculation_monitor_output_df')),
-                ui.nav_panel(f"{len(diff_df)} rows changed (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_output_df')),
             ),
             # ui.HTML(diff_df.to_html()),
             title=f"Recalculated transaction tags",
@@ -517,8 +543,23 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     @render.data_frame
-    def transactions_diff_output_df():
+    def transactions_diff_added_output_df():
         diff, monitor = changed_transactions()
+        diff_df = diff.dataframe()
+        logging.info(f"Diff: {diff_df.shape=}")
+        return render.DataTable(
+            diff_df,
+            selection_mode="none",
+            filters=True,
+            styles=styles
+        )
+
+    @render.data_frame
+    def transactions_diff_removed_output_df():
+        transactions = data_manager.get_transactions()
+        new_trans, monitor = new_transactions_and_monitor()
+
+        diff = new_trans.tags_diff(transactions, target_tags=[fetch_tag_name()])
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
         return render.DataTable(

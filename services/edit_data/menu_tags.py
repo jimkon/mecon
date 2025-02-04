@@ -127,11 +127,11 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         m = ui.modal(
             ui.input_select(id='name_of_tag_to_delete_select', label='New tag name',
-                            choices={tag.name: tag.name for tag in all_tags_reactive.get()}),
+                            choices=sorted([tag.name for tag in all_tags_reactive.get()])),
             title=f"Delete a new tag",
             easy_close=False,
             footer=ui.input_task_button(id='confirm_delete_button',
-                                        label='Confirm',
+                                        label='DELETE',
                                         label_buzy='Deleting...',
                                         type='danger'),
             size='l'
