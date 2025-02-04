@@ -24,6 +24,7 @@ if dataset is None:
     raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
 
 # TODO settings are not refreshed if i change something manually. maybe shiny is caching stuff, because something similar happens to the data in the reports
+# TODO need to rework the etl. statements should be treated as unique, don't check for duplicate rows between different statements. also, i should instantly convert them to transactions and add them to transactions table, skipping the bank statement tables entirely. the will reduce the db size, and complexity, and it will allow any data to be added by only adding the parser/etl converted
 
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),

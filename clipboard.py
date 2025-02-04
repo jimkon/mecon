@@ -1,6 +1,3 @@
-from mecon.tags.process import *
-from mecon.tags.rule_graphs import TagGraph
-
 if __name__ == '__main__':
     from mecon import config
     from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
@@ -21,11 +18,14 @@ if __name__ == '__main__':
     # proc.create_rule_execution_plan()
     # proc.tag(transactions)
 
-    monitor = RuleExecutionPlanMonitor(dataset)
-    proc = OptimisedRuleExecutionPlanTagging(tags)
-    proc.create_rule_execution_plan()
-    proc.create_optimised_rule_execution_plan()
-    new_transactions = proc.tag(transactions, monitor=monitor)
+    # monitor = RuleExecutionPlanMonitor(dataset)
+    # proc = OptimisedRuleExecutionPlanTagging(tags)
+    # proc.create_rule_execution_plan()
+    # proc.create_optimised_rule_execution_plan()
+    # new_transactions = proc.tag(transactions, monitor=monitor)
+    #
+    # monitor.get_tag_calculations('Afternoon')
 
-    monitor.get_tag_calculations('Afternoon')
+    from mecon.data.reports import transactions_stats_json
+    transactions_stats_json(transactions.containing_tags('Dinner time'))
     pass
