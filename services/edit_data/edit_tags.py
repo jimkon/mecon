@@ -5,7 +5,7 @@ from urllib.parse import urlparse, parse_qs
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
-from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 from mecon.data import reports
 from mecon.data.transactions import Transactions
 from mecon.tags import tagging, process

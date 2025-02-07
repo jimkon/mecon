@@ -77,7 +77,7 @@ class WorkingDataManager(CachedDBDataManager):
         db = DBWrapper(db_path)
         super().__init__(db)
 
-    def reset_db(self):
+    def reset(self):
         logging.info(f"Resetting database")
         self.reset_statements()
         statements_dir = WorkingDatasetDir().working_dataset.statements
@@ -134,7 +134,7 @@ class WorkingDataManagerInfo:
 
         return res
 
-    def db_transactions_info(self):
+    def transactions_info(self):
         try:
             transactions = self._data_manager.get_transactions()
             res = {

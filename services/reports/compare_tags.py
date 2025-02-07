@@ -7,7 +7,7 @@ from urllib.parse import urlparse, parse_qs
 from shiny import App, Inputs, Outputs, Session, ui, reactive
 from shinywidgets import output_widget, render_widget
 
-from mecon.app.file_system import WorkingDataManager
+from mecon.app.current_data import WorkingDataManager
 from mecon.data import graphs
 from mecon.settings import Settings
 

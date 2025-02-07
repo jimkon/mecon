@@ -4,7 +4,7 @@ import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
-from mecon.app.file_system import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
+from mecon.app.current_data import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -125,13 +125,13 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def db_info_text():
-        info_json = WorkingDataManagerInfo().db_transactions_info()
+        info_json = WorkingDataManagerInfo().transactions_info()
         return info_json
 
     @reactive.effect
     @reactive.event(input.reset_db_button)
     def reset_db():
-        WorkingDataManager().reset_db()
+        WorkingDataManager().reset()
 
     @render.data_frame
     def statements_info_dataframe():
