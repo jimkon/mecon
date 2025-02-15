@@ -334,7 +334,7 @@ class TestCachedDataManager(unittest.TestCase):
             self.data_manager._cache.reset_statements.assert_called_once()
 
     def test_all_tags(self):
-        self.data_manager._cache.tags = None
+        self.data_manager._cache.tags_df = None
         tags = [{'name': 'tag1', 'conditions_json': {}}, {'name': 'tag2', 'conditions_json': []}]
         self.tags_io.all_tags.return_value = tags
         tags = self.data_manager.all_tags()
@@ -348,7 +348,7 @@ class TestCachedDataManager(unittest.TestCase):
         self.tags_io.all_tags.assert_called_once()
 
     def test_get_tag(self):
-        self.data_manager._cache.tags = None
+        self.data_manager._cache.tags_df = None
         tags = [{'name': 'tag1', 'conditions_json': {}}, {'name': 'tag2', 'conditions_json': []}]
         self.tags_io.all_tags.return_value = tags
         tag = self.data_manager.get_tag('tag1')

@@ -1,3 +1,5 @@
+import pathlib
+import tempfile
 import unittest
 from datetime import datetime
 from unittest import mock
@@ -7,8 +9,12 @@ import pandas as pd
 from mecon.app import db_controller
 from mecon.app import db_extension
 from mecon.app import models
+from mecon.data.data_management import CachedFileDataManager
+from mecon.etl.dataset import Dataset
+from mecon.tags import tagging
 
 
+@unittest.skip('In the process of removing the DB')
 class TestTagsDBData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -69,6 +75,7 @@ class TestTagsDBData(unittest.TestCase):
         self.assertEqual(expected_tags, returned_tags)
 
 
+@unittest.skip('In the process of removing the DB')
 class TestTagsMetadataDBData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -164,6 +171,7 @@ class TestTagsMetadataDBData(unittest.TestCase):
         pd.testing.assert_frame_equal(returned_metadata, expected_metadata)
 
 
+@unittest.skip('In the process of removing the DB')
 class HSBCTransactionsDBAccessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -256,6 +264,7 @@ class HSBCTransactionsDBAccessorTestCase(unittest.TestCase):
         self.assertEqual(transactions, None)
 
 
+@unittest.skip('In the process of removing the DB')
 class MonzoTransactionsDBAccessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -418,6 +427,7 @@ class MonzoTransactionsDBAccessorTestCase(unittest.TestCase):
         self.assertEqual(transactions, None)
 
 
+@unittest.skip('In the process of removing the DB')
 class RevoTransactionsDBAccessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -545,6 +555,7 @@ class RevoTransactionsDBAccessorTestCase(unittest.TestCase):
         self.assertEqual(transactions, None)
 
 
+@unittest.skip('In the process of removing the DB')
 class TransactionsDBAccessorssorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -798,6 +809,70 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
+
+
+class CachedFileDataManagerTestDataFlow(unittest.TestCase):
+    def setUp(self):
+        self.working_dir = tempfile.TemporaryDirectory()
+        self.working_dir_path = pathlib.Path(self.working_dir.name)
+
+        self.data_path = self.working_dir_path / 'data/db'
+        self.data_path.mkdir(parents=True, exist_ok=True)
+        with open(self.data_path / 'tags.csv', 'w') as tags_file:
+            tags_file.write("""name,conditions_json,date_created
+test_tag,"[{""description.lower"":{""contains"":""something""}}]",2025-01-22 00:40:10
+test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:40:10
+""")
+
+    def tearDown(self):
+        self.working_dir.cleanup()
+
+    def test_get_tag(self):
+        dataset = Dataset.from_dirpath(self.working_dir_path)
+        dm = CachedFileDataManager(dataset)
+        existing_tag = dm.get_tag('test_tag')
+        self.assertEqual(existing_tag.name, 'test_tag')
+
+        non_existing_tag = dm.get_tag('dadsas_tag')
+        self.assertIsNone(non_existing_tag)
+
+    def test_update_tag(self):
+        dataset = Dataset.from_dirpath(self.working_dir_path)
+        dm = CachedFileDataManager(dataset)
+
+        existing_tag = dm.get_tag('test_tag')
+        self.assertEqual(existing_tag.name, 'test_tag')
+        self.assertEqual(existing_tag.rule.to_json(), [{'description.lower': {'contains': 'something'}}])
+        existing_tag._rule = tagging.Disjunction.from_json([{}])
+        dm.update_tag(existing_tag, update_tags=False)
+        existing_tag = dm.get_tag('test_tag')
+        self.assertEqual(existing_tag.name, 'test_tag')
+        self.assertEqual(existing_tag.rule.to_json(), [{}])
+
+        non_existing_tag = tagging.Tag.from_json_string('test_tag3', '[{}]')
+        dm.update_tag(non_existing_tag, update_tags=False)
+        non_existing_tag = dm.get_tag('test_tag3')
+        self.assertEqual(non_existing_tag.name, 'test_tag3')
+        self.assertEqual(non_existing_tag.rule.to_json(), [{}])
+        self.assertEqual(dm.tags_df['date_created'].isna().sum(), 0)
+
+    def test_delete_tag(self):
+        dataset = Dataset.from_dirpath(self.working_dir_path)
+        dm = CachedFileDataManager(dataset)
+
+        self.assertIsNotNone(dm.get_tag('test_tag'))
+        dm.delete_tag('test_tag')
+        self.assertIsNone(dm.get_tag('test_tag'))
+
+    def test_all_tags(self):
+        dataset = Dataset.from_dirpath(self.working_dir_path)
+        dm = CachedFileDataManager(dataset)
+
+        tags = dm.all_tags()
+
+        self.assertEqual(len(tags), 2)
+        self.assertListEqual([tag.name for tag in tags], ['test_tag', 'test_tag2'])
+
 
 
 if __name__ == '__main__':

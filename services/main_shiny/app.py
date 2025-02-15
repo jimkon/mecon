@@ -26,6 +26,8 @@ if dataset is None:
 # TODO settings are not refreshed if i change something manually. maybe shiny is caching stuff, because something similar happens to the data in the reports
 # TODO need to rework the etl. statements should be treated as unique, don't check for duplicate rows between different statements. also, i should instantly convert them to transactions and add them to transactions table, skipping the bank statement tables entirely. the will reduce the db size, and complexity, and it will allow any data to be added by only adding the parser/etl converted
 
+data_manager = WorkingDataManager()
+
 app_ui = ui.page_fluid(
     ui.tags.title("μEcon"),
     ui.navset_pill(
@@ -62,28 +64,47 @@ app_ui = ui.page_fluid(
                              ui.input_action_button("import_dataset_button", "Import dataset...", disabled=True,
                                                     width='300px'),
                          )),
-            ui.nav_panel("DB", ui.page_fluid(
-                ui.h3('Database content'),
-                ui.output_text(id="db_info_text"),
-                ui.input_task_button("reset_db_button", "Reset", label_busy='Might take up to a minute...',
-                                     width='300px'),
-            )),
-            ui.nav_panel("Statements", ui.page_fluid(
-                ui.h3("DataFrame as HTML Table"),
-                # ui.HTML(df)
-                ui.output_data_frame("statements_info_dataframe")
-            )),
-            ui.nav_panel("Load statements", ui.page_fluid(
-                ui.h3("Manually"),
-                ui.card('Not implemented yet'),
-                # ui.card(ui.input_file('import_statements_button',
-                #                       button_label='Import statement',
-                #                       accept=['.csv'],
-                #                       # disabled=True,
-                #                       width='300px')),
-                ui.h3("From Monzo API"),
-                ui.card('Not implemented yet'),
-            )),
+            # ui.nav_panel("DB", ui.page_fluid(
+            #     ui.h3('Database content'),
+            #     ui.output_text(id="db_info_text"),
+            #     ui.input_task_button("reset_db_button", "Reset", label_busy='Might take up to a minute...',
+            #                          width='300px'),
+            # )),
+            # ui.nav_panel("Statements", ui.page_fluid(
+            #     ui.h3("DataFrame as HTML Table"),
+            #     # ui.HTML(df)
+            #     ui.output_data_frame("statements_info_dataframe")
+            # )),
+            # ui.nav_panel("Load statements", ui.page_fluid(
+            #     ui.h3("Manually"),
+            #     ui.card('Not implemented yet'),
+            #     # ui.card(ui.input_file('import_statements_button',
+            #     #                       button_label='Import statement',
+            #     #                       accept=['.csv'],
+            #     #                       # disabled=True,
+            #     #                       width='300px')),
+            #     ui.h3("From Monzo API"),
+            #     ui.card('Not implemented yet'),
+            # )),
+            ui.nav_panel(
+                'Data Flow',
+                ui.accordion(
+                    ui.accordion_panel('Import statements'),
+                    ui.accordion_panel('Statements', ui.card(
+                        ui.output_data_frame("statements_info_dataframe")
+                    )),
+                    ui.accordion_panel('Transactions', ui.card(
+                        ui.output_data_frame("transactions_info_dataframe")
+                    )),
+                    ui.accordion_panel('Tags', ui.card(
+                        ui.output_data_frame("tags_info_dataframe")
+                    )),
+                    ui.accordion_panel('Tagged Transactions', ui.card(
+                        ui.output_data_frame("tagged_transactions_info_dataframe")
+                    )),
+                    id='data_flow_acc'
+                )
+            )
         )
     )
 )
@@ -96,7 +117,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         markdown_text = ""
         links = dataset.settings.get('links', {})
 
-        if len(links)==0:
+        if len(links) == 0:
             return "No links found in dataset settings"
 
         for link_category, link_spec in links.items():
@@ -159,7 +180,25 @@ def server(input: Inputs, output: Outputs, session: Session):
                 df_stat = pd.read_csv(statement_dict['path'], index_col=None)
                 return df_stat
 
+    @render.data_frame
+    def transactions_info_dataframe():
+        df_trans = data_manager.get_transactions().dataframe()
+        df_info = df_trans.describe(include='all').reset_index()
+        res = render.DataGrid(df_info, selection_mode="row")
+        return res
 
+    @render.data_frame
+    def tags_info_dataframe():
+        df_tags_info = data_manager.get_tags_metadata()
+        res = render.DataGrid(df_tags_info, selection_mode="row")
+        return res
+
+    @render.data_frame
+    def tagged_transactions_info_dataframe():
+        df_tags_info = pd.DataFrame.from_dict(data_manager.get_tagged_transactions().all_tag_counts(), orient='index').reset_index()
+        df_tags_info.columns = ['tag', 'name']
+        res = render.DataGrid(df_tags_info, selection_mode="row")
+        return res
 
 
 app = App(app_ui, server)
