@@ -94,7 +94,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                         'Count',
                         'Total money in',
                         'Total money out',
-                        # 'Date created',
+                        'Date created',
                         'Date modified',
                         'Actions']
         return tag_stats_df[cols_to_show]

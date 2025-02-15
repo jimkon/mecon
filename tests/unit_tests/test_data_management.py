@@ -420,13 +420,13 @@ class TestCachedDataManager(unittest.TestCase):
 
     def test_get_tags_metadata_with_cache(self):
         mock_metadata = Mock()
-        self.data_manager._cache.tags_metadata = mock_metadata
+        self.data_manager._cache.tags_metadata_df = mock_metadata
         result = self.data_manager.get_tags_metadata()
         self.assertEqual(result, mock_metadata)
         self.tags_metadata_io.get_all_metadata.assert_not_called()
 
     def test_get_tags_metadata_without_cache(self):
-        self.data_manager._cache.tags_metadata = None
+        self.data_manager._cache.tags_metadata_df = None
         with patch.object(self.tags_metadata_io, 'get_all_metadata', return_value='mock_metadata') as mock_func:
             result = self.data_manager.get_tags_metadata()
             mock_func.assert_called_once()

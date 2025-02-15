@@ -233,14 +233,18 @@ class CachedFileDataManager:
         self.files_dirpath = dataset.db.parent
         self.statements_dirpath = self.files_dirpath / "statements"
 
+        self.transactions = None
         self._transactions_path = self.files_dirpath / 'transactions.csv'
         self._load_transactions()
 
+        self.tags_df = None
         self._tags_path = self.files_dirpath / 'tags.csv'
         self._load_tags()
 
+        self.tags_metadata_df = None
         self._tags_metadata_path = self.files_dirpath / 'tags_metadata.csv'
         self._load_tags_metadata()
+        pass
 
     def _load_transactions(self):
         self.transactions = Transactions.from_csv(self._transactions_path) if self._transactions_path.exists() else None
@@ -249,7 +253,8 @@ class CachedFileDataManager:
         self.tags_df = pd.read_csv(self._tags_path, index_col=None) if self._tags_path.exists() else None
 
     def _load_tags_metadata(self):
-        self.tags_metadata = pd.read_csv(self._tags_metadata_path, index_col=None) if self._tags_metadata_path.exists() else None
+        self.tags_metadata_df = pd.read_csv(self._tags_metadata_path,
+                                            index_col=None) if self._tags_metadata_path.exists() else None
 
     def _save_transactions(self):
         self.transactions.dataframe().to_csv(self._transactions_path, index=False)
@@ -258,7 +263,7 @@ class CachedFileDataManager:
         self.tags_df.to_csv(self._tags_path, index=False)
 
     def _save_tags_metadata(self):
-        self.tags_metadata.to_csv(self._tags_metadata_path, index=False)
+        self.tags_metadata_df.to_csv(self._tags_metadata_path, index=False)
 
     def get_statement_filepaths(self) -> dict[str, list[pathlib.Path]]:
         # all_statement_paths = list(self.statements_dirpath.rglob("*.csv"))
@@ -304,7 +309,7 @@ class CachedFileDataManager:
         df_merged.sort_values(by=["datetime"], inplace=True)
 
         self.transactions = Transactions(df_merged)
-        df_merged['tags'] = ''#'[[] for _ in range(len(df_merged))]
+        df_merged['tags'] = ''  # '[[] for _ in range(len(df_merged))]
         self._save_transactions()
         # logging.info(f"Wrote {self.transactions.size()} transactions to {self.files_dirpath}")
         return self
@@ -374,26 +379,19 @@ class CachedFileDataManager:
 
         tags_metadata = tag_stats_from_transactions(transactions)
         self.replace_tags_metadata(tags_metadata)
-        self._save_tags_metadata()
 
     def get_tags_metadata(self):
-        if self.tags_metadata is None:
+        if self.tags_metadata_df is None:
             path = self.files_dirpath / 'tags_metadata.csv'
-            self.tags_metadata = pd.read_csv(path, index_col=None)
+            self.tags_metadata_df = pd.read_csv(path, index_col=None)
 
         self.all_tags()  # load tags if not already loaded
-        df_metadata = self.tags_df.merge(self.tags_metadata, on='name')
+        df_metadata = self.tags_df.merge(self.tags_metadata_df, on='name')
         del df_metadata['conditions_json']
 
         return df_metadata
 
     def replace_tags_metadata(self, metadata_df: pd.DataFrame):
-        self.tags_metadata = metadata_df
-
-
-if __name__ == '__main__':
-    dataset = Dataset.from_dirpath('/Users/wimpole/PycharmProjects/mecon/datasets/shared')
-    dm = CachedFileDataManager(dataset)
-    t = dm.get_transactions()
-    dm.get_tagged_transactions().all_tag_counts()
-    pass
+        self.tags_metadata_df = metadata_df
+        self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+        self._save_tags_metadata()
