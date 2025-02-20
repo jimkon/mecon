@@ -395,3 +395,10 @@ class CachedFileDataManager:
         self.tags_metadata_df = metadata_df
         self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
         self._save_tags_metadata()
+
+
+    def reset(self):
+        self.reset_transactions()
+        self._load_tags()
+        self.reset_transaction_tags()
+

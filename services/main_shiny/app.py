@@ -88,8 +88,9 @@ app_ui = ui.page_fluid(
             # )),
             ui.nav_panel(
                 'Data Flow',
+                ui.input_task_button(id='reset_button', label='Reset data from statements'),
                 ui.accordion(
-                    ui.accordion_panel('Import statements'),
+                    # ui.accordion_panel('Import statements'),
                     ui.accordion_panel('Statements', ui.card(
                         ui.output_data_frame("statements_info_dataframe")
                     )),
@@ -199,6 +200,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_tags_info.columns = ['tag', 'name']
         res = render.DataGrid(df_tags_info, selection_mode="row")
         return res
+
+    @reactive.effect
+    @reactive.event(input.reset_button)
+    def _():
+        logging.info(f"Reset data")
+        data_manager.reset()
 
 
 app = App(app_ui, server)
