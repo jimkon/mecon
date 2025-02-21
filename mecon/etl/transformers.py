@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import pandas as pd
+from numpy.f2py.crackfortran import sourcecodeform
 
 from mecon.utils import currencies
 from mecon.utils.dataframe_transformers import DataframeTransformer
@@ -21,18 +22,20 @@ def factory_db(source):
 
 def transaction_id_formula(transaction, source):
     if source == 'Monzo':
-        bank_abr = 'MZN'
+        source_abr = 'MZN'
     elif source == 'HSBC':
-        bank_abr = 'HSBC'
+        source_abr = 'HSBC'
     elif source == 'Revolut':
-        bank_abr = 'RVLT'
+        source_abr = 'RVLT'
+    elif source == 'INVENG':
+        source_abr = 'INVENG'
     else:
         raise ValueError(f"Invalid or unknown transaction source name: {source}")
 
     datetime_str = transaction['datetime'].strftime("d%Y%m%dt%H%M%S")
     amount_str = f"a{'p' if transaction['amount']>0 else 'n'}{int(100 * abs(transaction['amount']))}"
     ordinal_value = f"i{transaction['id']}" # TODO that can change depending on the dataset. maybe get different counter for each day
-    result = f"{bank_abr}{datetime_str}{amount_str}{ordinal_value}"
+    result = f"{source_abr}{datetime_str}{amount_str}{ordinal_value}"
     return result
 
 def _convert_df_column_names(df):
@@ -141,7 +144,7 @@ class RevoStatementTransformer(DataframeTransformer):
 
 
 class StatementTransformer(DataframeTransformer, abc.ABC):
-    SOURCES = ['Monzo', 'HSBC', 'Revolut']
+    SOURCES = ['Monzo', 'HSBC', 'Revolut', 'INVENG']
 
     def read_csv(self, path):
         df =  pd.read_csv(path, index_col=None)
@@ -156,6 +159,8 @@ class StatementTransformer(DataframeTransformer, abc.ABC):
             return HSBCFileStatementTransformer()
         elif source == 'Revolut':
             return RevoFileStatementTransformer()
+        elif source == 'INVENG':
+            return InvestEngineStatementTransformer()
         else:
             raise ValueError(f"Invalid or unknown transaction source name: {source}")
 
@@ -273,3 +278,20 @@ class RevoFileStatementTransformer(StatementTransformer):
         df_transformed['description'] = 'bank:Revolut, ' + df_transformed['description']
 
         return df_transformed
+
+
+class InvestEngineStatementTransformer(StatementTransformer):
+    def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        logging.info(f"Transforming InvestEngineer raw transactions ({df.shape} shape)")
+        df = df.copy()
+
+        df['id'] = list(range(len(df)))
+        df['datetime'] = pd.to_datetime(df['datetime'], format="%d/%m/%Y %H:%M:%S")
+        df['amount_cur'] = df['amount']
+        df['description'] = df['description'].apply(lambda x: 'bank:INVENG: ' + x)
+
+        df['id'] = df.apply(lambda row: transaction_id_formula(row, 'INVENG'), axis=1)
+
+        df_final = df[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
+
+        return df_final
