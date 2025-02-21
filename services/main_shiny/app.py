@@ -1,10 +1,13 @@
 import logging
+from itertools import chain
 
 import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
 from mecon.app.current_data import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
+from mecon.etl import transformers
+from mecon.etl.fetch_statement_files import transform_dates
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -205,6 +208,20 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.reset_button)
     def _():
         logging.info(f"Reset data")
+        filepaths = data_manager.get_statement_filepaths()
+        statement_source = set(filepaths.keys())
+        transformer_sources = set(transformers.StatementTransformer.SOURCES)
+        unparsed_sources = statement_source.difference(transformer_sources) | {'Revolut'}
+        if len(unparsed_sources) > 0:
+            message = f"No parser for sources: {unparsed_sources}\n"
+            message += '\n'.join([f" -> Skipping {len(filepaths[source])} statement file from  source '{source}'" for source in unparsed_sources])
+            logging.info(f"Unparsed sources: {unparsed_sources}, {message=}")
+            ui.notification_show(
+                f"WARNING:\n{message}",
+                type="warning",
+                duration=10,
+                close_button=True
+            )
         data_manager.reset()
 
 
