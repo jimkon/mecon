@@ -40,6 +40,7 @@ def _convert_df_column_names(df):
     return df
 
 
+#TODO remove
 class HSBCStatementTransformer(DataframeTransformer):
     def _transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:
         # TODO:v3 make it more readable
@@ -67,7 +68,7 @@ class HSBCStatementTransformer(DataframeTransformer):
 
         return df_transformed
 
-
+#TODO remove
 class MonzoStatementTransformer(DataframeTransformer):
     def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
@@ -106,7 +107,7 @@ class MonzoStatementTransformer(DataframeTransformer):
 
         return df_transformed
 
-
+#TODO remove
 class RevoStatementTransformer(DataframeTransformer):
     def __init__(self, currency_converter=None):
         self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
@@ -140,6 +141,8 @@ class RevoStatementTransformer(DataframeTransformer):
 
 
 class StatementTransformer(DataframeTransformer, abc.ABC):
+    SOURCES = ['Monzo', 'HSBC', 'Revolut']
+
     def read_csv(self, path):
         df =  pd.read_csv(path, index_col=None)
         df = _convert_df_column_names(df)
