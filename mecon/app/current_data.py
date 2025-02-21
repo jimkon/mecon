@@ -66,10 +66,10 @@ class WorkingDatasetDirInfo:
         dfs = []
         for bank, rows in info_json.items():
             df = pd.DataFrame(rows, columns=['path', 'filename', 'rows'])
-            df['bank'] = bank
+            df['source'] = bank
             dfs.append(df)
 
-        merged_df = pd.concat(dfs, ignore_index=True)[['bank', 'filename', 'rows', 'path', ]]
+        merged_df = pd.concat(dfs, ignore_index=True)[['source', 'filename', 'rows', 'path', ]]
         return merged_df
 
 class WorkingDataManager(CachedFileDataManager):
