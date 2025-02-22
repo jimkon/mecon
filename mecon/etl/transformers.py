@@ -29,6 +29,8 @@ def transaction_id_formula(transaction, source):
         source_abr = 'RVLT'
     elif source == 'INVENG':
         source_abr = 'INVENG'
+    elif source == 'HSBCSVR':
+        source_abr = 'HSBCSVR'
     else:
         raise ValueError(f"Invalid or unknown transaction source name: {source}")
 
@@ -144,7 +146,7 @@ class RevoStatementTransformer(DataframeTransformer):
 
 
 class StatementTransformer(DataframeTransformer, abc.ABC):
-    SOURCES = ['Monzo', 'HSBC', 'Revolut', 'INVENG']
+    SOURCES = ['Monzo', 'HSBC', 'Revolut', 'INVENG', 'HSBCSVR']
 
     def read_csv(self, path):
         df =  pd.read_csv(path, index_col=None)
@@ -161,12 +163,16 @@ class StatementTransformer(DataframeTransformer, abc.ABC):
             return RevoFileStatementTransformer()
         elif source == 'INVENG':
             return InvestEngineStatementTransformer()
+        elif source == 'HSBCSVR':
+            return HSBCSaverStatementTransformer()
         else:
             raise ValueError(f"Invalid or unknown transaction source name: {source}")
 
 
 
 class HSBCFileStatementTransformer(StatementTransformer):
+    source_name = 'HSBC'
+
     def read_csv(self, path):
         df = pd.read_csv(path, header=None, index_col=None)
         df.columns = ['date', 'description', 'amount']
@@ -188,10 +194,10 @@ class HSBCFileStatementTransformer(StatementTransformer):
 
         df_hsbc['amount'] = df_hsbc['amount'].astype(str).str.replace(',', '').astype(float)
         df_hsbc['amount_cur'] = df_hsbc['amount']
-        df_hsbc['description'] = 'bank:HSBC, ' + df_hsbc['description']
+        df_hsbc['description'] = f'bank:{self.source_name}, ' + df_hsbc['description']
 
         df_hsbc['id'] = list(range(len(df_hsbc)))
-        df_hsbc['id'] = df_hsbc.apply(lambda row: transaction_id_formula(row, 'HSBC'), axis=1)
+        df_hsbc['id'] = df_hsbc.apply(lambda row: transaction_id_formula(row, self.source_name), axis=1)
 
         # Select and rename columns
         df_transformed = df_hsbc[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
@@ -295,3 +301,6 @@ class InvestEngineStatementTransformer(StatementTransformer):
         df_final = df[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
 
         return df_final
+
+class HSBCSaverStatementTransformer(HSBCFileStatementTransformer):
+    source_name = 'HSBCSVR'
