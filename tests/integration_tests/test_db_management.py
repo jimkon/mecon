@@ -818,62 +818,70 @@ class CachedFileDataManagerTestDataFlow(unittest.TestCase):
 
         self.data_path = self.working_dir_path / 'data/db'
         self.data_path.mkdir(parents=True, exist_ok=True)
+
+        with open(self.data_path / 'transactions.csv', 'w') as tags_file:
+            tags_file.write("""id,datetime,amount,currency,amount_cur,description,tags
+RVLTd201901217t150315ap833i3634,2019-12-17 15:03:15,8,EUR,10.0,"bank:Revolut, desc example","Afternoon,Friends transfers,MoneyIn,Revolut,Spending,Transfers,All"
+RVLTd20200228t150811an833i3635,2020-02-28 15:08:11,-8,EUR,-10.0,"bank:Revolut, desc example","Afternoon,Friends transfers,MoneyOut,Revolut,Spending,Transfers,All"
+RVLTd20200508t090618ap666i3636,2020-05-08 09:06:18,6,EUR,8.0,"bank:Revolut, desc example","Alpha Bank,MoneyIn,Morning,Revolut,Inside transfers,Spending,Transfers,All"
+RVLTd20210617t180640an485i3637,2021-06-17 18:06:40,-4,EUR,-5.82,"bank:Revolut, desc example","Afternoon,GiffGaff,MoneyOut,Revolut,Other bills,Spending,All"
+RVLTd20210625t100635an96i3638,2021-06-25 10:06:35,-1,EUR,-1.16,"bank:Revolut, desc example","Alpha Bank,MoneyOut,Morning,Revolut,Inside transfers,Spending,Transfers,All"
+MZNd20230321t082145ap100itx_00009iC3annMpNMjlaD7RZ,2023-03-21 08:21:45,1.0,GBP,1.0,"bank:Monzo, desc example","Alpha Bank,MoneyIn,Monzo,Morning,Spending,Transfers,All"
+MZNd20240827t082145ap100itx_00009iC3annMpNMjlaD7RZ,2024-08-27 08:21:45,1.0,GBP,1.0,"bank:Monzo, desc example","Alpha Bank,MoneyIn,Monzo,Morning,Spending,Transfers,All"
+""")
+
         with open(self.data_path / 'tags.csv', 'w') as tags_file:
             tags_file.write("""name,conditions_json,date_created
 test_tag,"[{""description.lower"":{""contains"":""something""}}]",2025-01-22 00:40:10
 test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:40:10
 """)
 
+        self.dataset = Dataset.from_dirpath(self.working_dir_path)
+        self.dm = CachedFileDataManager(self.dataset)
+
     def tearDown(self):
         self.working_dir.cleanup()
 
     def test_get_tag(self):
-        dataset = Dataset.from_dirpath(self.working_dir_path)
-        dm = CachedFileDataManager(dataset)
-        existing_tag = dm.get_tag('test_tag')
+
+        existing_tag = self.dm.get_tag('test_tag')
         self.assertEqual(existing_tag.name, 'test_tag')
 
-        non_existing_tag = dm.get_tag('dadsas_tag')
+        non_existing_tag = self.dm.get_tag('dadsas_tag')
         self.assertIsNone(non_existing_tag)
 
     def test_update_tag(self):
-        dataset = Dataset.from_dirpath(self.working_dir_path)
-        dm = CachedFileDataManager(dataset)
-
-        existing_tag = dm.get_tag('test_tag')
+        existing_tag = self.dm.get_tag('test_tag')
         self.assertEqual(existing_tag.name, 'test_tag')
         self.assertEqual(existing_tag.rule.to_json(), [{'description.lower': {'contains': 'something'}}])
         existing_tag._rule = tagging.Disjunction.from_json([{}])
-        dm.update_tag(existing_tag, update_tags=False)
-        existing_tag = dm.get_tag('test_tag')
+        self.dm.update_tag(existing_tag, update_tags=False)
+        existing_tag = self.dm.get_tag('test_tag')
         self.assertEqual(existing_tag.name, 'test_tag')
         self.assertEqual(existing_tag.rule.to_json(), [{}])
 
         non_existing_tag = tagging.Tag.from_json_string('test_tag3', '[{}]')
-        dm.update_tag(non_existing_tag, update_tags=False)
-        non_existing_tag = dm.get_tag('test_tag3')
+        self.dm.update_tag(non_existing_tag, update_tags=False)
+        non_existing_tag = self.dm.get_tag('test_tag3')
         self.assertEqual(non_existing_tag.name, 'test_tag3')
         self.assertEqual(non_existing_tag.rule.to_json(), [{}])
-        self.assertEqual(dm.tags_df['date_created'].isna().sum(), 0)
+        self.assertEqual(self.dm.tags_df['date_created'].isna().sum(), 0)
 
     def test_delete_tag(self):
-        dataset = Dataset.from_dirpath(self.working_dir_path)
-        dm = CachedFileDataManager(dataset)
-
-        self.assertIsNotNone(dm.get_tag('test_tag'))
-        dm.delete_tag('test_tag')
-        self.assertIsNone(dm.get_tag('test_tag'))
+        self.assertIsNotNone(self.dm.get_tag('test_tag'))
+        self.dm.delete_tag('test_tag')
+        self.assertIsNone(self.dm.get_tag('test_tag'))
 
     def test_all_tags(self):
-        dataset = Dataset.from_dirpath(self.working_dir_path)
-        dm = CachedFileDataManager(dataset)
-
-        tags = dm.all_tags()
+        tags = self.dm.all_tags()
 
         self.assertEqual(len(tags), 2)
         self.assertListEqual([tag.name for tag in tags], ['test_tag', 'test_tag2'])
 
-
+    def test_tagged_transactions_after_modifying_tags(self):
+        # create a tag and see if get_transactions is updated
+        # same for delete
+        pass
 
 if __name__ == '__main__':
     unittest.main()
