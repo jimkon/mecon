@@ -165,16 +165,18 @@ def server(input: Inputs, output: Outputs, session: Session):
         filtered_in_transactions = transactions.containing_tags(filter_in_tags)
         if filtered_in_transactions.size() == 0:
             ui.notification_show(
-                f"Error: No transactions found for {params['time_unit']} time unit containing '{params['filter_in_tags']}' tags.",
+                f"Error: No transactions found for {params['time_unit']} time unit containing {params['filter_in_tags']} tags.",
                 type="error",
                 duration=None,
                 close_button=True
             )
+            return None
+
         filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
                                                                                         empty_tags_strategy='all_true')
         if filtered_in_and_out_transactions.size() == 0:
             ui.notification_show(
-                f"Error: No transactions found for {params['time_unit']} time unit after filtering out '{params['filter_in_tags']}' tags.",
+                f"Error: No transactions found for {params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags.",
                 type="error",
                 duration=None,
                 close_button=True

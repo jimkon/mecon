@@ -317,7 +317,12 @@ class TagsColumnMixin(ColumnMixin):
         """
         contains_tags_flags = self.contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
         df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags].reset_index(drop=True)
-        return self._df_wrapper_obj.factory(df)
+
+        try:
+            return self._df_wrapper_obj.factory(df)
+        except InvalidInputDataFrameColumns as e:
+            logging.error(f"Invalid input dataframe columns: {e}")
+            raise ValueError(f"TagsColumnMixin failed to create dataframe containing tags {tags}, result {df.shape=}")
 
     def not_containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal[
         "all_true", "raise", "all_false"] = 'all_false') -> DataframeWrapper:
@@ -327,7 +332,12 @@ class TagsColumnMixin(ColumnMixin):
 
         not_contains_tags_flags = self.not_contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
         df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags].reset_index(drop=True)
-        return self._df_wrapper_obj.factory(df)
+
+        try:
+            return self._df_wrapper_obj.factory(df)
+        except InvalidInputDataFrameColumns as e:
+            logging.error(f"Invalid input dataframe columns: {e}")
+            raise ValueError(f"TagsColumnMixin failed to create dataframe NOT containing tags {tags}, result {df.shape=}")
 
     def reset_tags(self):
         """
