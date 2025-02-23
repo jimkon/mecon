@@ -843,7 +843,6 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         self.working_dir.cleanup()
 
     def test_get_tag(self):
-
         existing_tag = self.dm.get_tag('test_tag')
         self.assertEqual(existing_tag.name, 'test_tag')
 
@@ -879,9 +878,20 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         self.assertListEqual([tag.name for tag in tags], ['test_tag', 'test_tag2'])
 
     def test_tagged_transactions_after_modifying_tags(self):
-        # create a tag and see if get_transactions is updated
-        # same for delete
-        pass
+        transactions = self.dm.get_transactions()
+        self.assertEqual(transactions.containing_tags('test_tag1').size(), 0)
+
+        tag = tagging.Tag.from_json_string('test_tag1', '[{}]')
+        self.dm.update_tag(tag, update_tags=True)
+
+        transactions = self.dm.get_transactions()
+        self.assertEqual(transactions.containing_tags('test_tag1').size(), 7)
+
+        self.dm.delete_tag('test_tag1')
+
+        transactions = self.dm.get_transactions()
+        self.assertEqual(transactions.containing_tags('test_tag1').size(), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

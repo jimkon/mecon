@@ -167,6 +167,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             ui.notification_show(
                 f"Error: No transactions found for {params['time_unit']} time unit containing '{params['filter_in_tags']}' tags.",
                 type="error",
+                duration=None,
                 close_button=True
             )
         filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
@@ -175,6 +176,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             ui.notification_show(
                 f"Error: No transactions found for {params['time_unit']} time unit after filtering out '{params['filter_in_tags']}' tags.",
                 type="error",
+                duration=None,
                 close_button=True
             )
         logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")

@@ -37,6 +37,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         fields.TagsColumnMixin.__init__(self, df_wrapper=self)
 
     def invalid_transactions(self):
+        # TODO add a more descriptive error message with what is invalid
         invalid_ids = self.invalid_ids()
         invalid_dts = self.invalid_datetimes()
         invalid_amounts = self.invalid_amounts()

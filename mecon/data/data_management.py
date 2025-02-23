@@ -281,7 +281,7 @@ class CachedFileDataManager:
     def get_statements(self) -> dict[str, list[pd.DataFrame]]:
         filepaths = self.get_statement_filepaths()
         sources_and_statements = {
-            source: [transformers.StatementTransformer.factory(source).read_csv(filepath) for filepath in filepaths]
+            source: [transformers.StatementTransformer.factory(source).read_df(filepath) for filepath in filepaths]
             for source, filepaths in filepaths.items() if source in transformers.StatementTransformer.SOURCES}
         return sources_and_statements
 
