@@ -1,7 +1,7 @@
 import pathlib
-import unittest
-import tempfile
 import shutil
+import tempfile
+import unittest
 from pathlib import Path
 
 import pandas as pd
@@ -53,13 +53,13 @@ class SubfolderCSVTest(unittest.TestCase):
     def test_subfolder_csv_files_content(self):
         expected_content = {
             "subfolder1": [
-                "file1.csv",
-                "file2.csv"
+                self.path / "subfolder1/file1.csv",
+                self.path / "subfolder1/file2.csv"
             ],
             "subfolder2": [
-                "file3.csv",
-                "file4.csv",
-                "file5.csv",
+                self.path / "subfolder2/file3.csv",
+                self.path / "subfolder2/file4.csv",
+                self.path / "subfolder2/file5.csv",
             ]
             # Add more subfolder and CSV file paths as needed
         }
@@ -93,7 +93,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(list(statement_files.keys()), ['test_bank'])
         self.assertEqual(len(statement_files['test_bank']), 1)
         csv_file = pathlib.Path(temp_fp.name)
-        self.assertEqual(statement_files['test_bank'][0], str(csv_file.name))
+        self.assertEqual(statement_files['test_bank'][0].name, str(csv_file.name))
 
         csv_file.unlink()
 
@@ -115,7 +115,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(list(statement_files.keys()), [bank_name])
         self.assertEqual(len(statement_files[bank_name]), 1)
         expected_path = self.dataset.statements / bank_name / filename
-        self.assertEqual(statement_files[bank_name][0], str(expected_path.name))
+        self.assertEqual(statement_files[bank_name][0].name, str(expected_path.name))
 
         # Clean up temporary files
         expected_path.unlink()
