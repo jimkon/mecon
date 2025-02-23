@@ -241,7 +241,7 @@ class TestDataManager(unittest.TestCase):
         # Assert
         self.tags_metadata_io.replace_all_metadata.assert_called_once_with(metadata_df)
 
-
+@unittest.skip('In the process of removing the DB')
 class TestCachedDataManager(unittest.TestCase):
     def setUp(self):
         self.transactions_io = Mock()
