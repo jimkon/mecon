@@ -6,7 +6,7 @@ import shinywidgets
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
-from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 from mecon.tags import tagging
 
 # from mecon.monitoring.logs import setup_logging

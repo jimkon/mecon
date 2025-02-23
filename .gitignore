@@ -1,8 +1,8 @@
 *.csv
-/statements/
-/notebooks/
+/misc/statements/
+/misc/notebooks/
 /clipboard.py
-/reports_history/
+/misc/reports_history/
 
 /datasets/
 /creds/
@@ -15,4 +15,6 @@ example_path
 /templates/
 /static/
 settings.json
-/misc_scripts/
+/misc/misc_scripts/
+/misc/
+/todo.txt

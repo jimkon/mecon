@@ -5,6 +5,7 @@ from typing import Dict
 import pandas as pd
 
 from mecon import config
+from mecon.data.data_management import CachedFileDataManager
 from mecon.app.data_manager import CachedDBDataManager
 from mecon.app.db_extension import DBWrapper
 from mecon.data.datafields import InvalidInputDataFrameColumns, NullDataframeInDataframeWrapper
@@ -41,6 +42,7 @@ class WorkingDatasetDirInfo:
     def statement_files_info(self) -> Dict:
         current_dataset = self._dataset_dir.working_dataset
         dirs_path = current_dataset.statements
+        dm = WorkingDataManager()
         transformed_dict = current_dataset.statement_files().copy()
 
         for dir_name in transformed_dict:
@@ -64,42 +66,46 @@ class WorkingDatasetDirInfo:
         dfs = []
         for bank, rows in info_json.items():
             df = pd.DataFrame(rows, columns=['path', 'filename', 'rows'])
-            df['bank'] = bank
+            df['source'] = bank
             dfs.append(df)
 
-        merged_df = pd.concat(dfs, ignore_index=True)[['bank', 'filename', 'rows', 'path', ]]
+        merged_df = pd.concat(dfs, ignore_index=True)[['source', 'filename', 'rows', 'path', ]]
         return merged_df
 
-
-class WorkingDataManager(CachedDBDataManager):
+class WorkingDataManager(CachedFileDataManager):
     def __init__(self):
-        db_path = WorkingDatasetDir().working_dataset.db
-        db = DBWrapper(db_path)
-        super().__init__(db)
+        super().__init__(WorkingDatasetDir().working_dataset)
 
-    def reset_db(self):
-        logging.info(f"Resetting database")
-        self.reset_statements()
-        statements_dir = WorkingDatasetDir().working_dataset.statements
 
-        hsbc_dfs = HSBCStatementCSV.from_all_paths_in_dir(statements_dir / 'HSBC').dataframe()
-        self.add_statement(hsbc_dfs, bank='HSBC')
-
-        monzo_dfs = MonzoStatementCSV.from_all_paths_in_dir(statements_dir / 'Monzo').dataframe()
-        self.add_statement(monzo_dfs, bank='Monzo')
-
-        revo_dfs = RevoStatementCSV.from_all_paths_in_dir(statements_dir / 'Revolut').dataframe()
-        self.add_statement(revo_dfs, bank='Revolut')
-
-        self.reset_transactions()
-        logging.info(f"Resetting database finished")
+# class WorkingDataManager(CachedDBDataManager):
+#     def __init__(self):
+#         db_path = WorkingDatasetDir().working_dataset.db
+#         db = DBWrapper(db_path)
+#         super().__init__(db)
+#
+#     def reset(self):
+#         logging.info(f"Resetting database")
+#         self.reset_statements()
+#         statements_dir = WorkingDatasetDir().working_dataset.statements
+#
+#         hsbc_dfs = HSBCStatementCSV.from_all_paths_in_dir(statements_dir / 'HSBC').dataframe()
+#         self.add_statement(hsbc_dfs, bank='HSBC')
+#
+#         monzo_dfs = MonzoStatementCSV.from_all_paths_in_dir(statements_dir / 'Monzo').dataframe()
+#         self.add_statement(monzo_dfs, bank='Monzo')
+#
+#         revo_dfs = RevoStatementCSV.from_all_paths_in_dir(statements_dir / 'Revolut').dataframe()
+#         self.add_statement(revo_dfs, bank='Revolut')
+#
+#         self.reset_transactions()
+#         logging.info(f"Resetting database finished")
 
 
 class WorkingDataManagerInfo:
     def __init__(self):
         self._data_manager = WorkingDataManager()
 
-    def db_statements_info(self):
+    def statements_info(self):
         res = {}
         hsbc_trans = self._data_manager.get_hsbc_statements()
         if hsbc_trans is not None:
@@ -134,7 +140,7 @@ class WorkingDataManagerInfo:
 
         return res
 
-    def db_transactions_info(self):
+    def transactions_info(self):
         try:
             transactions = self._data_manager.get_transactions()
             res = {

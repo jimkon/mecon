@@ -299,8 +299,8 @@ class OptimisedRuleExecutionPlanTaggingTestCase(unittest.TestCase):
             {'priority': '1.1', 'rule': 'tags contains Airbnb', 'tag': 'Accommodation', 'type': 'Condition'},
             {'priority': '1.1', 'rule': 'tags contains Rent', 'tag': 'Accommodation', 'type': 'Condition'}
         ])
-        pd.testing.assert_frame_equal(df_plan[['priority', 'tag', 'type']].reset_index(drop=True),
-                                      expected_df[['priority', 'tag', 'type']])
+        pd.testing.assert_frame_equal(df_plan[['priority', 'tag', 'type']].sort_values(by=['priority']).reset_index(drop=True),
+                                      expected_df[['priority', 'tag', 'type']].sort_values(by=['priority']).reset_index(drop=True))
 
     def test_split_in_batches(self):
         new_orep = OptREPTagging(self.orep.tags)

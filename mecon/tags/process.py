@@ -50,6 +50,11 @@ class LinearTagging(TaggingSession):
 
 
 class RuleExecutionPlanMonitor:
+    """
+    TODO
+    * find redundant rules (never true, always true, conditions of the same Tag conjunction that can be removes (a>10, a>100  << redundant))
+    """
+
     def __init__(self, dataset: Dataset, df_calculations=None, df_operations=None):
         self.df_calculations = df_calculations
         self.df_operations = df_operations
@@ -241,12 +246,15 @@ class RuleExecutionPlanTagging(TaggingSession):
                 df_temp = pd.concat(group_results, axis=1)
 
                 new_tags_col = f"tags_added_{priority}"
+
+                # TODO fix: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
                 df_in[new_tags_col] = df_temp.apply(
                     # DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
                     lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1)
                 df_in['new_tags_list'] = df_in.apply(lambda row: row['new_tags_list'] + row[new_tags_col], axis=1)
 
                 df_in['tags'] = df_in['new_tags_list'].apply(lambda tags: ','.join(tags))
+                # TODO fix: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
                 df_in[f"tags_list_{priority}"] = df_in['new_tags_list']
             else:
                 df_in = pd.concat([df_in, *group_results], axis=1)

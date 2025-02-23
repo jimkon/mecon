@@ -13,7 +13,8 @@ def _subfolder_csvs(path):
     result = {}
     for subfolder in path.iterdir():
         if subfolder.is_dir():
-            csv_files = [p.name for p in subfolder.glob("*.csv")]
+            # csv_files = [p.name for p in subfolder.glob("*.csv")]
+            csv_files = list(subfolder.glob("*.csv"))
             result[subfolder.name] = csv_files
 
     return result
@@ -32,7 +33,8 @@ class Dataset:
 
 
     @classmethod
-    def from_dirpath(self, dir_path: Path):
+    def from_dirpath(self, dir_path: Path | str):
+        dir_path = pathlib.Path(dir_path)
         data_data = dir_path / 'data'
 
         db_path = data_data / 'db'

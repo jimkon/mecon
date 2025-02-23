@@ -64,7 +64,7 @@ class NightOutRule(IdMatchingCustomRule):
 
 if __name__ == '__main__':
     from mecon import config
-    from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+    from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
     datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
     if not datasets_dir.exists():
         raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")

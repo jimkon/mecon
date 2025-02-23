@@ -166,6 +166,15 @@ class TestTagsColumnMixin(unittest.TestCase):
         with self.assertRaises(ValueError):
             example_wrapper.not_containing_tags(None, empty_tags_strategy='raise')
 
+    def test_invalid_tags(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', False, 12321, -12.2]
+        }))
+
+        self.assertEqual(example_wrapper.invalid_tags().to_list(),
+                         [False, False, False, True, True, True])
+
+
 
 class TestDateTimeColumnMixin(unittest.TestCase):
     def test_date_range(self):
@@ -318,6 +327,16 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         #                               expected_wrapper_df.reset_index(drop=True))
         self.assertEqual(len(result_df), 0)
 
+    def test_invalid_datetimes(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'datetime': [pd.Timestamp(2019, 1, 1, 0, 0, 0),
+                         datetime(2019, 1, 1, 0, 0, 0),
+                         '2020-01-01 00:00:00', False, 12321, -12.2]
+        }))
+
+        self.assertEqual(example_wrapper.invalid_datetimes().to_list(),
+                         [False, False, True, True, True, True])
+
 
 class TestAmountColumnMixin(unittest.TestCase):
     def test_all_currencies(self):
@@ -375,6 +394,50 @@ class TestAmountColumnMixin(unittest.TestCase):
         })
         pd.testing.assert_frame_equal(pos_nonzero_amounts_wrapper.dataframe().reset_index(drop=True),
                                       expected_wrapper_df.reset_index(drop=True))
+
+
+    def test_invalid_amounts(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'amount': [1, -1, .1, False, '12321', -12.2, datetime(2019, 1, 1, 0, 0, 0)]
+        }))
+
+        self.assertEqual(example_wrapper.invalid_amounts().to_list(),
+                         [False, False, False, False, True, False, True])
+
+    def test_invalid_amount_curs(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'amount_cur': [1, -1, .1, False, '12321', -12.2, datetime(2019, 1, 1, 0, 0, 0)]
+        }))
+
+        self.assertEqual(example_wrapper.invalid_amount_curs().to_list(),
+                         [False, False, False, False, True, False, True])
+
+    def test_invalid_currencies(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'currency': [1, -1, .1, False, '12321', -12.2, datetime(2019, 1, 1, 0, 0, 0)]
+        }))
+
+        self.assertEqual(example_wrapper.invalid_currencies().to_list(),
+                         [True, True, True, True, False, True, True])
+
+
+class TestDescriptionColumnMixin(unittest.TestCase):
+    def test_invalid_descriptions(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'description': [1, -1, .1, False, '12321', -12.2, datetime(2019, 1, 1, 0, 0, 0)]
+        }))
+
+        self.assertEqual(example_wrapper.invalid_descriptions().to_list(),
+                         [True, True, True, True, False, True, True])
+
+class TestIDColumnMixin(unittest.TestCase):
+    def test_invalid_ids(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'id': [1, -1, .1, False, '12321', -12.2, datetime(2019, 1, 1, 0, 0, 0)]
+        }))
+
+        self.assertEqual(example_wrapper.invalid_ids().to_list(),
+                         [True, True, True, True, False, True, True])
 
 
 if __name__ == '__main__':

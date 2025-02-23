@@ -1,3 +1,5 @@
+import pathlib
+import tempfile
 import unittest
 from datetime import datetime
 from unittest import mock
@@ -7,8 +9,12 @@ import pandas as pd
 from mecon.app import db_controller
 from mecon.app import db_extension
 from mecon.app import models
+from mecon.data.data_management import CachedFileDataManager
+from mecon.etl.dataset import Dataset
+from mecon.tags import tagging
 
 
+@unittest.skip('In the process of removing the DB')
 class TestTagsDBData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -69,6 +75,7 @@ class TestTagsDBData(unittest.TestCase):
         self.assertEqual(expected_tags, returned_tags)
 
 
+@unittest.skip('In the process of removing the DB')
 class TestTagsMetadataDBData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -164,6 +171,7 @@ class TestTagsMetadataDBData(unittest.TestCase):
         pd.testing.assert_frame_equal(returned_metadata, expected_metadata)
 
 
+@unittest.skip('In the process of removing the DB')
 class HSBCTransactionsDBAccessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -256,6 +264,7 @@ class HSBCTransactionsDBAccessorTestCase(unittest.TestCase):
         self.assertEqual(transactions, None)
 
 
+@unittest.skip('In the process of removing the DB')
 class MonzoTransactionsDBAccessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -418,6 +427,7 @@ class MonzoTransactionsDBAccessorTestCase(unittest.TestCase):
         self.assertEqual(transactions, None)
 
 
+@unittest.skip('In the process of removing the DB')
 class RevoTransactionsDBAccessorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -545,6 +555,7 @@ class RevoTransactionsDBAccessorTestCase(unittest.TestCase):
         self.assertEqual(transactions, None)
 
 
+@unittest.skip('In the process of removing the DB')
 class TransactionsDBAccessorssorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -798,6 +809,88 @@ class TransactionsDBAccessorssorTestCase(unittest.TestCase):
         transactions = self.accessor.get_transactions()
         self.assertEqual(len(transactions), 3)
         pd.testing.assert_frame_equal(transactions, df)
+
+
+class CachedFileDataManagerTestDataFlow(unittest.TestCase):
+    def setUp(self):
+        self.working_dir = tempfile.TemporaryDirectory()
+        self.working_dir_path = pathlib.Path(self.working_dir.name)
+
+        self.data_path = self.working_dir_path / 'data/db'
+        self.data_path.mkdir(parents=True, exist_ok=True)
+
+        with open(self.data_path / 'transactions.csv', 'w') as tags_file:
+            tags_file.write("""id,datetime,amount,currency,amount_cur,description,tags
+RVLTd201901217t150315ap833i3634,2019-12-17 15:03:15,8,EUR,10.0,"bank:Revolut, desc example","Afternoon,Friends transfers,MoneyIn,Revolut,Spending,Transfers,All"
+RVLTd20200228t150811an833i3635,2020-02-28 15:08:11,-8,EUR,-10.0,"bank:Revolut, desc example","Afternoon,Friends transfers,MoneyOut,Revolut,Spending,Transfers,All"
+RVLTd20200508t090618ap666i3636,2020-05-08 09:06:18,6,EUR,8.0,"bank:Revolut, desc example","Alpha Bank,MoneyIn,Morning,Revolut,Inside transfers,Spending,Transfers,All"
+RVLTd20210617t180640an485i3637,2021-06-17 18:06:40,-4,EUR,-5.82,"bank:Revolut, desc example","Afternoon,GiffGaff,MoneyOut,Revolut,Other bills,Spending,All"
+RVLTd20210625t100635an96i3638,2021-06-25 10:06:35,-1,EUR,-1.16,"bank:Revolut, desc example","Alpha Bank,MoneyOut,Morning,Revolut,Inside transfers,Spending,Transfers,All"
+MZNd20230321t082145ap100itx_00009iC3annMpNMjlaD7RZ,2023-03-21 08:21:45,1.0,GBP,1.0,"bank:Monzo, desc example","Alpha Bank,MoneyIn,Monzo,Morning,Spending,Transfers,All"
+MZNd20240827t082145ap100itx_00009iC3annMpNMjlaD7RZ,2024-08-27 08:21:45,1.0,GBP,1.0,"bank:Monzo, desc example","Alpha Bank,MoneyIn,Monzo,Morning,Spending,Transfers,All"
+""")
+
+        with open(self.data_path / 'tags.csv', 'w') as tags_file:
+            tags_file.write("""name,conditions_json,date_created
+test_tag,"[{""description.lower"":{""contains"":""something""}}]",2025-01-22 00:40:10
+test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:40:10
+""")
+
+        self.dataset = Dataset.from_dirpath(self.working_dir_path)
+        self.dm = CachedFileDataManager(self.dataset)
+
+    def tearDown(self):
+        self.working_dir.cleanup()
+
+    def test_get_tag(self):
+        existing_tag = self.dm.get_tag('test_tag')
+        self.assertEqual(existing_tag.name, 'test_tag')
+
+        non_existing_tag = self.dm.get_tag('dadsas_tag')
+        self.assertIsNone(non_existing_tag)
+
+    def test_update_tag(self):
+        existing_tag = self.dm.get_tag('test_tag')
+        self.assertEqual(existing_tag.name, 'test_tag')
+        self.assertEqual(existing_tag.rule.to_json(), [{'description.lower': {'contains': 'something'}}])
+        existing_tag._rule = tagging.Disjunction.from_json([{}])
+        self.dm.update_tag(existing_tag, update_tags=False)
+        existing_tag = self.dm.get_tag('test_tag')
+        self.assertEqual(existing_tag.name, 'test_tag')
+        self.assertEqual(existing_tag.rule.to_json(), [{}])
+
+        non_existing_tag = tagging.Tag.from_json_string('test_tag3', '[{}]')
+        self.dm.update_tag(non_existing_tag, update_tags=False)
+        non_existing_tag = self.dm.get_tag('test_tag3')
+        self.assertEqual(non_existing_tag.name, 'test_tag3')
+        self.assertEqual(non_existing_tag.rule.to_json(), [{}])
+        self.assertEqual(self.dm.tags_df['date_created'].isna().sum(), 0)
+
+    def test_delete_tag(self):
+        self.assertIsNotNone(self.dm.get_tag('test_tag'))
+        self.dm.delete_tag('test_tag')
+        self.assertIsNone(self.dm.get_tag('test_tag'))
+
+    def test_all_tags(self):
+        tags = self.dm.all_tags()
+
+        self.assertEqual(len(tags), 2)
+        self.assertListEqual([tag.name for tag in tags], ['test_tag', 'test_tag2'])
+
+    def test_tagged_transactions_after_modifying_tags(self):
+        transactions = self.dm.get_transactions()
+        self.assertEqual(transactions.containing_tags('test_tag1').size(), 0)
+
+        tag = tagging.Tag.from_json_string('test_tag1', '[{}]')
+        self.dm.update_tag(tag, update_tags=True)
+
+        transactions = self.dm.get_transactions()
+        self.assertEqual(transactions.containing_tags('test_tag1').size(), 7)
+
+        self.dm.delete_tag('test_tag1')
+
+        transactions = self.dm.get_transactions()
+        self.assertEqual(transactions.containing_tags('test_tag1').size(), 0)
 
 
 if __name__ == '__main__':

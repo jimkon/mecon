@@ -4,7 +4,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
 from mecon import config
-from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 from mecon.tags.rule_graphs import TagGraph, AcyclicTagGraph
 
 # from mecon.monitoring.logs import setup_logging
@@ -93,7 +93,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         else:
             raise ValueError(f"Invalid category: {category}")
 
-        logging.info(f"calc_tags_graph-> {len(tg.tags)=},{tg.has_cycles()=}")
+        logging.info(f"calc_tags_graph-> {len(tg.tags_df)=},{tg.has_cycles()=}")
         return tg
 
     @render.data_frame

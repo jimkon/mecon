@@ -218,6 +218,7 @@ class Disjunction(AbstractCompositeRule):
 
     @classmethod
     def from_json(cls, _json, observers_f=None):
+        # TODO make sure to skip empty conjunction and disjunctions
         if isinstance(_json, dict):
             _json = [_json]
 

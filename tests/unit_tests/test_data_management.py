@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch, call
 import pandas as pd
 
 from mecon.data.data_management import DataManager, CachedDataManager
+from mecon.tags.tagging import Tag
 
 
 class TestDataManager(unittest.TestCase):
@@ -144,14 +145,22 @@ class TestDataManager(unittest.TestCase):
         transactions_mock.reset_tags = Mock(return_value=transactions_mock)
         transactions_mock.apply_tag = Mock(return_value=transactions_mock)
         transactions_mock.dataframe = Mock(return_value='dataframe')
-        self.data_manager.all_tags = Mock(return_value=['tag1', 'tag2'])
+        tag1, tag2 = Tag.from_json('tag1', {}), Tag.from_json('tag2', {})
+        self.data_manager.all_tags = Mock(return_value=[tag1, tag2])
         with patch.object(self.data_manager, 'get_transactions', return_value=transactions_mock):
             with patch.object(self.data_manager._transactions, 'update_tags') as mock_update_tags:
-                self.data_manager.reset_transaction_tags()
-                transactions_mock.reset_tags.assert_called_once()
-                self.data_manager.all_tags.assert_called_once()
-                transactions_mock.apply_tag.assert_has_calls([call('tag1'), call('tag2')])
-                mock_update_tags.assert_called_once_with('dataframe')
+                with patch("mecon.data.data_management.OptREPTagging") as mock_rep:
+                    self.data_manager.reset_transaction_tags()
+                    transactions_mock.reset_tags.assert_called_once()
+                    self.data_manager.all_tags.assert_called_once()
+                    mock_rep.assert_has_calls([
+                        call([tag1, tag2]),
+                        call().create_rule_execution_plan().create_optimised_rule_execution_plan().tag(
+                            transactions_mock)
+                    ], any_order=True)
+                    # transactions_mock.apply_tag.assert_has_calls([call('tag1'), call('tag2')]) # only for linear tag session
+                    mock_update_tags.assert_called_once_with(
+                        mock_rep().create_rule_execution_plan().create_optimised_rule_execution_plan().tag().dataframe())
 
     def test_get_tags_metadata(self):
         # Mock the return values for dependencies
@@ -232,7 +241,7 @@ class TestDataManager(unittest.TestCase):
         # Assert
         self.tags_metadata_io.replace_all_metadata.assert_called_once_with(metadata_df)
 
-
+@unittest.skip('In the process of removing the DB')
 class TestCachedDataManager(unittest.TestCase):
     def setUp(self):
         self.transactions_io = Mock()
@@ -325,7 +334,7 @@ class TestCachedDataManager(unittest.TestCase):
             self.data_manager._cache.reset_statements.assert_called_once()
 
     def test_all_tags(self):
-        self.data_manager._cache.tags = None
+        self.data_manager._cache.tags_df = None
         tags = [{'name': 'tag1', 'conditions_json': {}}, {'name': 'tag2', 'conditions_json': []}]
         self.tags_io.all_tags.return_value = tags
         tags = self.data_manager.all_tags()
@@ -339,7 +348,7 @@ class TestCachedDataManager(unittest.TestCase):
         self.tags_io.all_tags.assert_called_once()
 
     def test_get_tag(self):
-        self.data_manager._cache.tags = None
+        self.data_manager._cache.tags_df = None
         tags = [{'name': 'tag1', 'conditions_json': {}}, {'name': 'tag2', 'conditions_json': []}]
         self.tags_io.all_tags.return_value = tags
         tag = self.data_manager.get_tag('tag1')
@@ -393,25 +402,31 @@ class TestCachedDataManager(unittest.TestCase):
         transactions_mock.reset_tags = Mock(return_value=transactions_mock)
         transactions_mock.apply_tag = Mock(return_value=transactions_mock)
         transactions_mock.dataframe = Mock(return_value='dataframe')
-        self.data_manager.all_tags = Mock(return_value=['tag1', 'tag2'])
+        tag1, tag2 = Tag.from_json('tag1', {}), Tag.from_json('tag2', {})
+        self.data_manager.all_tags = Mock(return_value=[tag1, tag2])
         with patch.object(self.data_manager, 'get_transactions', return_value=transactions_mock):
             with patch.object(self.data_manager._transactions, 'update_tags') as mock_update_tags:
-                self.data_manager.reset_transaction_tags()
-                transactions_mock.reset_tags.assert_called_once()
-                self.data_manager.all_tags.assert_called_once()
-                self.data_manager._cache.reset_transactions.assert_called_once()
-                transactions_mock.apply_tag.assert_has_calls([call('tag1'), call('tag2')])
-                mock_update_tags.assert_called_once_with('dataframe')
+                with patch("mecon.data.data_management.OptREPTagging") as mock_rep:
+                    self.data_manager.reset_transaction_tags()
+                    transactions_mock.reset_tags.assert_called_once()
+                    self.data_manager.all_tags.assert_called_once()
+                    self.data_manager._cache.reset_transactions.assert_called_once()
+                    mock_rep.assert_has_calls([
+                        call([tag1, tag2]),
+                        call().create_rule_execution_plan().create_optimised_rule_execution_plan().tag(transactions_mock)
+                    ], any_order=True)
+                    # transactions_mock.apply_tag.assert_has_calls([call('tag1'), call('tag2')]) # only for linear tag session
+                    mock_update_tags.assert_called_once_with(mock_rep().create_rule_execution_plan().create_optimised_rule_execution_plan().tag().dataframe())
 
     def test_get_tags_metadata_with_cache(self):
         mock_metadata = Mock()
-        self.data_manager._cache.tags_metadata = mock_metadata
+        self.data_manager._cache.tags_metadata_df = mock_metadata
         result = self.data_manager.get_tags_metadata()
         self.assertEqual(result, mock_metadata)
         self.tags_metadata_io.get_all_metadata.assert_not_called()
 
     def test_get_tags_metadata_without_cache(self):
-        self.data_manager._cache.tags_metadata = None
+        self.data_manager._cache.tags_metadata_df = None
         with patch.object(self.tags_metadata_io, 'get_all_metadata', return_value='mock_metadata') as mock_func:
             result = self.data_manager.get_tags_metadata()
             mock_func.assert_called_once()

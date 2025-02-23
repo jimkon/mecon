@@ -100,19 +100,21 @@ class MissingRequiredColumnInDataframeWrapperError(Exception):
 
 
 class ColumnMixin:
-    _required_column = None
+    _required_columns = None
 
-    def __init__(self, df_wrapper: DataframeWrapper):
+    def __init__(self, df_wrapper: DataframeWrapper, validate=False):
         self._df_wrapper_obj = df_wrapper
-        # self._validate_column() TODO tests have to be adapted
+
+        if validate:
+            self._validate_column()  # TODO tests have to be adapted
 
     def _validate_column(self):
-        if self._required_column is not None:
-            _req_set = set(self._required_column) if isinstance(self._required_column, list) else {
-                self._required_column}
+        if self._required_columns is not None:
+            _req_set = set(self._required_columns) if isinstance(self._required_columns, list) else {
+                self._required_columns}
             if _req_set.issubset(self._df_wrapper_obj.dataframe().columns):
                 raise MissingRequiredColumnInDataframeWrapperError(
-                    f"Column '{self._required_column}' is required from {self.__class__.__name__}")
+                    f"Column '{self._required_columns}' is required from {self.__class__.__name__}")
 
     @property
     def dataframe_wrapper_obj(self):
@@ -120,19 +122,25 @@ class ColumnMixin:
 
 
 class IdColumnMixin(ColumnMixin):
-    _required_column = 'id'
+    _required_columns = 'id'
 
     @property
     def id(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['id']
 
+    def invalid_ids(self):
+        return self.id.isna() | self.id.isnull() | self.id.duplicated(keep=False) | self.id.apply(lambda x: not isinstance(x, str))
+
 
 class DateTimeColumnMixin(ColumnMixin):
-    _required_column = 'datetime'
+    _required_columns = 'datetime'
 
     @property
     def datetime(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['datetime']
+
+    def invalid_datetimes(self):
+        return self.datetime.isna() | self.datetime.isnull() | self.datetime.apply(lambda x: not isinstance(x, datetime) and not isinstance(x, pd.Timestamp))
 
     @property
     def date(self) -> pd.Series:
@@ -169,7 +177,7 @@ class DateTimeColumnMixin(ColumnMixin):
 
 
 class AmountColumnMixin(ColumnMixin):
-    _required_column = ['amount', 'currency', 'amount_cur']
+    _required_columns = ['amount', 'currency', 'amount_cur']
 
     @property
     def amount(self) -> pd.Series:
@@ -180,12 +188,25 @@ class AmountColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.dataframe()['currency']
 
     @property
-    def currency_list(self) -> pd.Series:
-        return self.currency.apply(lambda s: s.split(','))
-
-    @property
     def amount_cur(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['amount_cur']
+
+    def invalid_amounts(self):
+        return self.amount.isna() | self.amount.isnull() |  self.amount.apply(lambda x: not isinstance(x, int) and not isinstance(x, float))
+
+    def invalid_amount_curs(self):
+        return self.amount_cur.isna() | self.amount_cur.isnull() |  self.amount_cur.apply(lambda x: not isinstance(x, int) and not isinstance(x, float))
+        # return (self.amount_cur.isna() |
+        #         self.amount_cur.isnull() |
+        #         self.amount_cur.apply(lambda x: not isinstance(x, int) and not isinstance(x, float)) |
+        #         self.amount_cur.apply(lambda x: isinstance(x, bool)))
+
+    def invalid_currencies(self):
+        return self.currency.isna() | self.currency.isnull() |  self.currency.apply(lambda x: not isinstance(x, str))
+
+    @property
+    def currency_list(self) -> pd.Series:
+        return self.currency.apply(lambda s: s.split(','))
 
     def all_currencies(self):
         flattened = list(itertools.chain(*self.currency_list))
@@ -215,10 +236,14 @@ class AmountColumnMixin(ColumnMixin):
 
 
 class DescriptionColumnMixin(ColumnMixin):
-    _required_column = 'description'
+    _required_columns = 'description'
 
+    @property
     def description(self) -> pd.Series:
         return self._df_wrapper_obj.dataframe()['description']
+
+    def invalid_descriptions(self):
+        return self.description.isna() | self.description.isnull() |  self.description.apply(lambda x: not isinstance(x, str))
 
 
 class TagsColumnDoesNotExistInDataframe(Exception):
@@ -226,12 +251,15 @@ class TagsColumnDoesNotExistInDataframe(Exception):
 
 
 class TagsColumnMixin(ColumnMixin):
-    _required_column = 'tags'
+    _required_columns = 'tags'
 
     @property
     def tags(self) -> pd.Series:
         """ Returns the 'tags' column of the dataframe wrapper. """
         return self._df_wrapper_obj.dataframe()['tags']
+
+    def invalid_tags(self):
+        return self.tags.isna() | self.tags.isnull() |  self.tags.apply(lambda x: not isinstance(x, str))
 
     def all_tag_counts(self) -> dict:
         """ Returns all the unique tags in the dataframe wrapper along with their counts. """
@@ -244,10 +272,11 @@ class TagsColumnMixin(ColumnMixin):
     def all_tags(self) -> list:
         return list(self.all_tag_counts().keys())
 
-    def contains_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_true') -> pd.Series:
+    def contains_tags(self, tags: str | list | None,
+                      empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_true') -> pd.Series:
         """
         Returns a boolean pd.Series with True for each row where tags present.
-        if not tags presented, it return True for all the rows
+        if not tags presented, it returns True for all the rows
         """
         tags = [] if tags is None else tags
         if len(tags) == 0:
@@ -256,9 +285,11 @@ class TagsColumnMixin(ColumnMixin):
             elif empty_tags_strategy == 'all_false':
                 return pd.Series([False] * self._df_wrapper_obj.size())
             elif empty_tags_strategy == 'raise':
-                raise ValueError(f"Invalid 'tags' value: None or empty. Either provide a value to 'tags', or set 'empty_tags_strategy' to another value than 'raise'")
+                raise ValueError(
+                    f"Invalid 'tags' value: None or empty. Either provide a value to 'tags', or set 'empty_tags_strategy' to another value than 'raise'")
             else:
-                raise ValueError(f"Invalid 'empty_tags_strategy' value: {empty_tags_strategy}, allows values are [all_true, raise, all_false]")
+                raise ValueError(
+                    f"Invalid 'empty_tags_strategy' value: {empty_tags_strategy}, allows values are [all_true, raise, all_false]")
 
         tags = [tags] if isinstance(tags, str) else tags
         tag_rules = [tagging.TagMatchCondition(tag) for tag in tags]
@@ -266,10 +297,11 @@ class TagsColumnMixin(ColumnMixin):
         index_col = tagging.Tagger.get_index_for_rule(self._df_wrapper_obj.dataframe(), rule)
         return index_col
 
-    def not_contains_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_false') -> pd.Series:
+    def not_contains_tags(self, tags: str | list | None,
+                          empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_false') -> pd.Series:
         """
         The opposite of contains_tag, it returns a boolean pd.Series with True for each row where tags present.
-        if not tags presented, it return False for all the rows
+        if not tags presented, it returns False for all the rows
         """
         # Flip empty_tags_strategy from 'all_true' to 'all_false' and vice versa as it gets negated downstream
         empty_tags_strategy = 'all_true' if empty_tags_strategy == 'all_false' else 'all_false' if empty_tags_strategy == 'all_true' else empty_tags_strategy
@@ -278,22 +310,34 @@ class TagsColumnMixin(ColumnMixin):
         not_contains_tags_flags = ~contains_tags_flags
         return not_contains_tags_flags
 
-    def containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_true') -> DataframeWrapper:
+    def containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal[
+        "all_true", "raise", "all_false"] = 'all_true') -> DataframeWrapper:
         """
         Returns a copy of the df_wrapper with all the rows where tags are present.
         """
         contains_tags_flags = self.contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
         df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags].reset_index(drop=True)
-        return self._df_wrapper_obj.factory(df)
 
-    def not_containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal["all_true", "raise", "all_false"] = 'all_false') -> DataframeWrapper:
+        try:
+            return self._df_wrapper_obj.factory(df)
+        except InvalidInputDataFrameColumns as e:
+            logging.error(f"Invalid input dataframe columns: {e}")
+            raise ValueError(f"TagsColumnMixin failed to create dataframe containing tags {tags}, result {df.shape=}")
+
+    def not_containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal[
+        "all_true", "raise", "all_false"] = 'all_false') -> DataframeWrapper:
         """
         The opposite of containing_tag, it returns a copy of the df_wrapper with all the rows where tags are NOT present.
         """
 
         not_contains_tags_flags = self.not_contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
         df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags].reset_index(drop=True)
-        return self._df_wrapper_obj.factory(df)
+
+        try:
+            return self._df_wrapper_obj.factory(df)
+        except InvalidInputDataFrameColumns as e:
+            logging.error(f"Invalid input dataframe columns: {e}")
+            raise ValueError(f"TagsColumnMixin failed to create dataframe NOT containing tags {tags}, result {df.shape=}")
 
     def reset_tags(self):
         """

@@ -7,7 +7,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
 from mecon import config
-from mecon.app.file_system import WorkingDataManager, WorkingDatasetDir
+from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 from mecon.data import graphs
 from mecon.data import reports
 
@@ -72,14 +72,16 @@ app_ui = ui.page_fluid(
             ui.input_selectize(
                 id='filter_in_tags_select',
                 label='Select tags to filter IN',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
+                choices=[],
+                # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
             ui.input_selectize(
                 id='filter_out_tags_select',
                 label='Select tags to filter OUT',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
+                choices=[],
+                # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
@@ -105,7 +107,7 @@ app_ui = ui.page_fluid(
                             f"Aggregated",
                             ui.card(
                                 ui.input_radio_buttons(
-                                            id='total_amount_or_count_radio',
+                                    id='total_amount_or_count_radio',
                                     label='Aggregate on:',
                                     choices={'sum': 'Amount', 'count': 'Count'},
                                 ),
@@ -113,6 +115,7 @@ app_ui = ui.page_fluid(
                             )
                         ),
                         id="total_amount_or_count_acc",
+                        open=None,
                         multiple=True
                     ),
                 ),
@@ -158,11 +161,28 @@ def server(input: Inputs, output: Outputs, session: Session):
         params = url_params()
         filter_in_tags = params['filter_in_tags']
         filter_out_tags = params['filter_out_tags']
-        transactions = dm.get_transactions() \
-            .containing_tags(filter_in_tags) \
-            .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
-        logging.info(f"URL param transactions: {transactions.size()=}")
-        return transactions
+        transactions = dm.get_transactions()
+        filtered_in_transactions = transactions.containing_tags(filter_in_tags)
+        if filtered_in_transactions.size() == 0:
+            ui.notification_show(
+                f"Error: No transactions found for {params['time_unit']} time unit containing {params['filter_in_tags']} tags.",
+                type="error",
+                duration=None,
+                close_button=True
+            )
+            return None
+
+        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
+                                                                                        empty_tags_strategy='all_true')
+        if filtered_in_and_out_transactions.size() == 0:
+            ui.notification_show(
+                f"Error: No transactions found for {params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags.",
+                type="error",
+                duration=None,
+                close_button=True
+            )
+        logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
+        return filtered_in_and_out_transactions
 
     @reactive.effect
     def init():
@@ -235,6 +255,9 @@ def server(input: Inputs, output: Outputs, session: Session):
             start_date, end_date = all_transactions.date_range()
 
         min_date, max_date = all_transactions.date_range()
+        logging.info(f"date_range set to {min_date=} and {max_date=}")
+        # if transactions.size()==0:
+        #     ui.update_select(id='date_period_input_select', selected="All")
 
         ui.update_date_range(id='transactions_date_range',
                              start=start_date,
@@ -259,6 +282,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             .select_date_range(start_date, end_date) \
             .containing_tags(filter_in_tags) \
             .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
+
         logging.info(
             f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
 
