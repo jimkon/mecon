@@ -1,12 +1,27 @@
 version: '3'
 services:
-  app:
-    build: .
+  main_app:
+    build:
+      dockerfile: services/main_shiny/Dockerfile
     ports:
-      - "5000:5000"
-    depends_on:
-      - redis
-  redis:
-    image: redis:7-alpine
-#  db:
-#    image: keinos/sqlite3
+      - 8000:8000
+    volumes:
+#      - ./datasets:/mecon/datasets
+      - "${DATASETS_DIR}:/mecon/datasets"
+  reports_app:
+    build:
+      dockerfile: services/reports/Dockerfile
+    ports:
+      - 8001:8000
+    volumes:
+#      - ./datasets:/mecon/datasets
+      - "${DATASETS_DIR}:/mecon/datasets"
+  edit_data_app:
+    build:
+      dockerfile: services/edit_data/Dockerfile
+    ports:
+      - 8002:8000
+    volumes:
+#      - ./datasets:/mecon/datasets
+      - "${DATASETS_DIR}:/mecon/datasets"
+

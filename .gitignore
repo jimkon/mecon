@@ -1,8 +1,20 @@
 *.csv
-/statements/
-/notebooks/
+/misc/statements/
+/misc/notebooks/
 /clipboard.py
-/reports_history/report.html
+/misc/reports_history/
 
-reports_history/report.html
 /datasets/
+/creds/
+/.env
+/.idea/
+mecon.egg-info
+
+/TODO.md
+example_path
+/templates/
+/static/
+settings.json
+/misc/misc_scripts/
+/misc/
+/todo.txt

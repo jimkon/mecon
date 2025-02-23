@@ -1,10 +1,10 @@
+import logging
 from collections import OrderedDict
 
 import pandas as pd
 
-import tagging
-from mecon import datafields
-from mecon import groupings
+from mecon.data import groupings, datafields
+from mecon.tags import tagging
 
 
 def _extract_tags(string):
@@ -116,13 +116,13 @@ class ExecutionInfoMixin(datafields.ColumnMixin):
         return groups
 
     def group_by_tags(self):
-        tags_list = self._df_wrapper_obj.all_tags().keys()  # TODO:v3 resolve all_tags for df_wrapper
+        tags_list = self._df_wrapper_obj.all_tags()  # TODO:v3 resolve all_tags for df_wrapper
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(self._df_wrapper_obj)
         return groups
 
 
-class PerformanceDataAggregator(datafields.AggregatorABC):
+class PerformanceDataAggregator(datafields.AggregatorABC):  # TODO legacy code, replaced by PerformanceDataAggregatorV2
     def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
         # will not work for recursive calls
         df_logs = df_wrapper.dataframe().copy()
@@ -130,8 +130,8 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
 
         df_logs['datetime_ms'] = pd.to_datetime(df_logs['datetime'], unit='ms')
         df_logs['execution_time'] = -df_logs['datetime_ms'].diff(periods=-1).dt.total_seconds() * 1000
-        df_logs['started'] = df_wrapper.contains_tag('start')
-        df_logs['finished'] = df_wrapper.contains_tag('end').shift(periods=-1, fill_value=False)
+        df_logs['started'] = df_wrapper.contains_tags('start')
+        df_logs['finished'] = df_wrapper.contains_tags('end').shift(periods=-1, fill_value=False)
 
         df_started_finished = df_logs[(df_logs['started']) & (df_logs['finished'])]
         df_started_not_finished = df_logs[(df_logs['started']) & (~df_logs['finished'])]
@@ -144,11 +144,39 @@ class PerformanceDataAggregator(datafields.AggregatorABC):
         for tag in ['codeflow', 'start', 'end']:
             tagging.Tagger.remove_tag(tag, perf_df)
 
-        perf_df.dropna(subset=['execution_time'], inplace=True)  # TODO:v3 added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
+        perf_df.dropna(subset=['execution_time'],
+                       inplace=True)  # TODO:v3 added because of pandas.errors.IntCastingNaNError: Cannot convert non-finite values (NA or inf) to integer. please investigate
         perf_df['execution_time'] = perf_df['execution_time'].astype('int64')
 
         perf_logs = PerformanceData(perf_df)
         return perf_logs
+
+
+class PerformanceDataAggregatorV2(datafields.AggregatorABC):
+    def aggregation(self, df_wrapper: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
+        df_logs = df_wrapper.containing_tags(['end']).dataframe()
+        df_logs.sort_values('datetime', inplace=True)
+
+        df_logs['execution_time'] = df_logs['description'].apply(self._extract_execution_duration) * 1000
+        df_logs['datetime'] = df_logs['datetime'] - df_logs['execution_time'].apply(lambda t: pd.Timedelta(milliseconds=t))
+
+        perf_df = df_logs[['datetime', 'execution_time', 'tags']]
+        perf_df = perf_df.sort_values(by='datetime').reset_index(drop=True)
+
+        for tag in ['codeflow', 'start', 'end']:
+            tagging.Tagger.remove_tag(tag, perf_df)
+
+        perf_logs = PerformanceData(perf_df)
+        return perf_logs
+
+    @staticmethod
+    def _extract_execution_duration(log_message):
+        try:
+            exec_dur = float(log_message.split('exec_dur=')[1].split(' ')[0])
+            return exec_dur
+        except (IndexError, ValueError) as e:
+            logging.warning(f"Unable to extract exec_dur from log description: {log_message}, {e}")
+            return None
 
 
 class PerformanceData(datafields.DatedDataframeWrapper,
@@ -162,15 +190,15 @@ class PerformanceData(datafields.DatedDataframeWrapper,
 
     @classmethod
     def from_log_data(cls, log_data: LogData):  # -> PerformanceData: TODO:v2 upgrade to python 3.11
-        codeflow_logs = log_data.containing_tag('codeflow')
+        codeflow_logs = log_data.containing_tags('codeflow')
         # maybe add tags for level, module, funcName
-        # tags_list = sorted(list(set(codeflow_logs.all_tags().keys()) - {'codeflow', 'start', 'end'}))
+        # tags_list = sorted(list(set(codeflow_logs.all_tags()) - {'codeflow', 'start', 'end'}))
         tags_list = _distinct_function_tags(codeflow_logs.tags)
 
         grouper = groupings.TagGrouping(tags_list=tags_list)
         groups = grouper.group(codeflow_logs)
 
-        aggregator = PerformanceDataAggregator()
+        aggregator = PerformanceDataAggregatorV2()  # PerformanceDataAggregator()
         performance_df = aggregator.aggregate_result_df(groups).sort_values('datetime').reset_index(drop=True)
 
         return PerformanceData(performance_df)

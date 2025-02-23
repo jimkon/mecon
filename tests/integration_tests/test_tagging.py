@@ -1,10 +1,9 @@
 import unittest
+from unittest.mock import Mock
 
 import pandas as pd
 
-from mecon import comparisons
-from mecon import transformations
-from mecon import tagging
+from mecon.tags import comparisons, transformations, tagging
 
 
 class TestCondition(unittest.TestCase):
@@ -50,6 +49,17 @@ class TestCondition(unittest.TestCase):
                 compare_op=lambda x: x,
                 value='1'
             ).to_dict()
+
+    def test_fit(self):
+        condition = tagging.Condition.from_string_values(
+            field='field',
+            transformation_op_key='str',
+            compare_op_key='greater',
+            value='1'
+        )
+
+        self.assertListEqual(condition.fit([{'field': 0}, {'field': 1}, {'field': 2}]),
+                             [False, False, True])
 
 
 class TestConjunction(unittest.TestCase):
@@ -115,22 +125,76 @@ class TestConjunction(unittest.TestCase):
             field='field2',
             transformation_op_key="str",
             compare_op_key='greater',
-            value='3'
+            value=['3', '3.1']
         )
         cond4 = tagging.Condition.from_string_values(
             field='field2',
             transformation_op_key=None,
             compare_op_key='less',
-            value='4'
+            value=['4']
         )
-        conjunction = tagging.Conjunction([cond1, cond2, cond3, cond4])
+        cond5 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key=None,
+            compare_op_key='less',
+            value='5'
+        )
+        cond6 = tagging.Condition.from_string_values(
+            field='field2',
+            transformation_op_key=None,
+            compare_op_key='less',
+            value=['6', '6.1']
+        )
+        cond7 = tagging.Condition.from_string_values(
+            field='field1',
+            transformation_op_key='str',
+            compare_op_key='less',
+            value='2'
+        )
+
+        conjunction = tagging.Conjunction([cond1, cond2, cond3, cond4, cond5, cond6, cond7])
         result_dict = conjunction.to_dict()
         self.assertDictEqual(result_dict,
                              {
-                                 "field1.str": {"greater": "1"},
-                                 "field2.str": {"greater": ["2", "3"]},
-                                 "field2": {"less": "4"},
+                                 "field1.str": {"greater": "1", 'less': '2'},
+                                 "field2.str": {"greater": ["2", "3", "3.1"]},
+                                 "field2": {"less": ["4", "5", "6", "6.1"]},
                              })
+
+    def test_from_dict_to_dict_conversions(self):
+        test_dict = {
+            "field1.str": {"greater": "1", 'less': '2'},
+            "field2.str": {"greater": ["2", "3", "3.1"]},
+            "field2": {"less": ["4", "5", "6", "6.1"]},
+        }
+        conjunction = tagging.Conjunction.from_dict(test_dict)
+        result_dict = conjunction.to_dict()
+        self.assertDictEqual(test_dict, result_dict)
+
+    def test_fit(self):
+        test_dict = {
+            "field1.str": {"greater": "1", 'less': '2'},
+            "field2.str": {"greater": ["2", "3", "3.1"]},
+            "field2": {"less": ["4", "5", "6", "6.1"]},
+        }
+        conjunction = tagging.Conjunction.from_dict(test_dict)
+        fit_results = conjunction.fit([
+            {'field1': 1.5, 'field2': '5'},
+            {'field1': 1.5, 'field2': '3.5'},
+            {'field1': 3, 'field2': '3.5'},
+        ])
+        self.assertListEqual(fit_results, [False, True, False])
+
+    def test_fit_empty_rule(self):
+        test_dict = {}
+
+        conjunction = tagging.Conjunction.from_dict(test_dict)
+        fit_results = conjunction.fit([
+            {'field1': 1.5, 'field2': '5'},
+            {'field1': 1.5, 'field2': '3.5'},
+            {'field1': 3, 'field2': '3.5'},
+        ])
+        self.assertListEqual(fit_results, [False, False, False])
 
 
 class TestDisjunction(unittest.TestCase):
@@ -146,7 +210,6 @@ class TestDisjunction(unittest.TestCase):
                     'less': -1,
                 }
             }
-
         ]
 
         disjunction = tagging.Disjunction.from_json(test_json)
@@ -173,7 +236,7 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(disjunction.compute({'col1': 1}), False)
         self.assertEqual(disjunction.compute({'col1': 2}), True)
 
-    def test_to_dict(self):
+    def test_to_json(self):
         cond1 = tagging.Condition.from_string_values(
             field='field1',
             transformation_op_key="str",
@@ -216,6 +279,22 @@ class TestDisjunction(unittest.TestCase):
             }
         ])
 
+    def test_from_json_to_json_conversions(self):
+        test_json = [
+            {
+                "field1.str": {"greater": "1"}
+            },
+            {
+                "field2.str": {"greater": ["2", "3"]}
+            },
+            {
+                "field2": {"less": "4"},
+            }
+        ]
+        disjunction = tagging.Disjunction.from_json(test_json)
+        result_json = disjunction.to_json()
+        self.assertListEqual(test_json, result_json)
+
     def test_append(self):
         cond1 = tagging.Condition.from_string_values(
             field='field1',
@@ -241,6 +320,23 @@ class TestDisjunction(unittest.TestCase):
                 "field1.str": {"greater": "1"}
             }
         ])
+
+    def test_fit(self):
+        test_json = [
+            {
+                "field2": {"less": "4"},
+            },
+            {
+                "field1.str": {"greater": "1"}
+            }
+        ]
+        conjunction = tagging.Disjunction.from_json(test_json)
+        fit_results = conjunction.fit([
+            {'field1': 0, 'field2': '3'},
+            {'field1': 1, 'field2': '4'},
+            {'field1': 2, 'field2': '5'},
+        ])
+        self.assertListEqual(fit_results, [True, False, True])
 
 
 class TestTagging(unittest.TestCase):
@@ -274,7 +370,82 @@ class TestTagging(unittest.TestCase):
         })
         pd.testing.assert_frame_equal(df, expected_df)
 
+    def test_tagger_empty_rule(self):
+        test_json = [{}]
+
+        df = pd.DataFrame({
+            'col1': [-2, -1, 0, 1, 2],
+            'tags': ['', '', '', '', '']
+        })
+
+        tag = tagging.Tag.from_json('test_tag', test_json)
+        tagger = tagging.Tagger()
+
+        tagger.tag(tag, df)
+
+        expected_df = pd.DataFrame({
+            'col1': [-2, -1, 0, 1, 2],
+            'tags': ['', '', '', '', '']
+        })
+        pd.testing.assert_frame_equal(df, expected_df)
+
+
+class AddingRuleObserverersTestCase(unittest.TestCase):
+    def test_add_observers(self):
+        condition = tagging.Condition(
+            field='field',
+            transformation_op=None,
+            compare_op=lambda x, y: x > y,
+            value=1
+        )
+        condition.add_observers(None)
+        self.assertEqual(len(condition._observers), 0)
+
+        observer = Mock()
+        condition.add_observers(observer)
+        self.assertEqual(len(condition._observers), 1)
+        self.assertEqual(condition._observers[0], observer)
+
+        condition2 = tagging.Condition.from_string_values(
+            field='field',
+            transformation_op_key=None,
+            compare_op_key='greater',
+            value=1,
+            observers_f=observer
+        )
+        self.assertEqual(len(condition2._observers), 1)
+        self.assertEqual(condition2._observers[0], observer)
+
+    def test_add_observers_recursively(self):
+        test_json = [
+            {
+                'col1': {
+                    'greater': 1,
+                }
+            },
+            {
+                'col1': {
+                    'less': -1,
+                }
+            }
+
+        ]
+        disjunction = tagging.Disjunction.from_json(test_json)
+
+        self.assertEqual(len(disjunction._observers), 0)
+        self.assertEqual(len(disjunction.rules[0]._observers), 0)
+        self.assertEqual(len(disjunction.rules[0].rules[0]._observers), 0)
+        self.assertEqual(len(disjunction.rules[1]._observers), 0)
+        self.assertEqual(len(disjunction.rules[1].rules[0]._observers), 0)
+
+        observer_mock = 'test_observer_obj'
+        disjunction.add_observers_recursively(observer_mock)
+        self.assertEqual(disjunction._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[0]._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[0].rules[0]._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[1]._observers, [observer_mock])
+        self.assertEqual(disjunction.rules[1].rules[0]._observers, [observer_mock])
+
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -1,9 +1,19 @@
 import unittest
 
-from mecon import comparisons as cmp
+from mecon.tags import comparisons as cmp
 
 
 class TestCompareOperator(unittest.TestCase):
+    def test_validate_inputs(self):
+        with self.assertRaises(cmp.TypesOfComparedValuesDoNotMatch):
+            test_cmp = cmp.CompareOperator('test_validate_inputs', lambda a, b: a + b)
+            test_cmp(1, '2')
+
+    def test_validate_result(self):
+        with self.assertRaises(cmp.CompareOperatorMustReturnBooleanResults):
+            test_cmp = cmp.CompareOperator('test_validate_result', lambda a, b: a + b)
+            test_cmp(1, 2)
+
     def test_greater(self):
         co = cmp.CompareOperator.from_key('greater')
 
@@ -106,6 +116,60 @@ class TestCompareOperator(unittest.TestCase):
         self.assertEqual(co('abc123xyz', '[0-9]+'), True)
         self.assertEqual(co('abcxyz', '[0-9]+'), False)
         self.assertEqual(co('', '[0-9]+'), False)
+
+    def test_in(self):
+        co = cmp.CompareOperator.from_key('in')
+
+        self.assertEqual(co('a', 'a,1'), True)
+        self.assertEqual(co('a', 'a'), True)
+        self.assertEqual(co('ab', 'a'), False)
+        self.assertEqual(co('a', 'b,c'), False)
+        self.assertEqual(co('a', 'aa,1'), True)
+        self.assertEqual(co('a', ''), False)
+        self.assertEqual(co(['a'], 'a,b'), True)
+        self.assertEqual(co(['c'], 'a,b'), False)
+        self.assertEqual(co(['c', 'b'], 'a,b'), True)
+
+    def test_not_in(self):
+        co = cmp.CompareOperator.from_key('not_in')
+
+        self.assertEqual(co('a', 'a,1'), False)
+        self.assertEqual(co('a', 'a'), False)
+        self.assertEqual(co('ab', 'a'), True)
+        self.assertEqual(co('a', 'b,c'), True)
+        self.assertEqual(co('a', 'aa,1'), False)
+        self.assertEqual(co('a', ''), True)
+        self.assertEqual(co(['a'], 'a,b'), False)
+        self.assertEqual(co(['c'], 'a,b'), True)
+        self.assertEqual(co(['c', 'b'], 'a,b'), False)
+
+    def test_in_csv(self):
+        co = cmp.CompareOperator.from_key('in_csv')
+
+        self.assertEqual(co('a', 'a,1'), True)
+        self.assertEqual(co('a', 'a'), True)
+        self.assertEqual(co('ab', 'a'), False)
+        self.assertEqual(co('a', 'b,c'), False)
+        self.assertEqual(co('a', 'aa,1'), False)
+        self.assertEqual(co('a', 'b'), False)
+        self.assertEqual(co('a', ''), False)
+        self.assertEqual(co(['a'], 'a,b'), True)
+        self.assertEqual(co(['c'], 'a,b'), False)
+        self.assertEqual(co(['c', 'b'], 'a,b'), True)
+
+    def test_not_in_csv(self):
+        co = cmp.CompareOperator.from_key('not_in_csv')
+
+        self.assertEqual(co('a', 'a,1'), False)
+        self.assertEqual(co('a', 'a'), False)
+        self.assertEqual(co('ab', 'a'), True)
+        self.assertEqual(co('a', 'b,c'), True)
+        self.assertEqual(co('a', 'aa,1'), True)
+        self.assertEqual(co('a', 'b'), True)
+        self.assertEqual(co('a', ''), True)
+        self.assertEqual(co(['a'], 'a,b'), False)
+        self.assertEqual(co(['c'], 'a,b'), True)
+        self.assertEqual(co(['c', 'b'], 'a,b'), False)
 
 
 if __name__ == '__main__':

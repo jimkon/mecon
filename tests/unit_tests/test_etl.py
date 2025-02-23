@@ -1,23 +1,59 @@
 import unittest
-from datetime import date, time, datetime
-from unittest.mock import MagicMock
+from datetime import datetime
 
 import pandas as pd
 
-from mecon.data import etl
+from mecon.etl import transformers
+
+
+class TransactionIDTest(unittest.TestCase):
+    def test_monzo_positive_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
+        result = transformers.transaction_id_formula(transaction, 'Monzo')
+        self.assertEqual(result, 'MZNd20230101t120000ap5000i123')
+
+    def test_monzo_negative_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -30, 'id': 456}
+        result = transformers.transaction_id_formula(transaction, 'Monzo')
+        self.assertEqual(result, 'MZNd20230101t120000an3000i456')
+
+    def test_hsbc_positive_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 75, 'id': 789}
+        result = transformers.transaction_id_formula(transaction, 'HSBC')
+        self.assertEqual(result, 'HSBCd20230101t120000ap7500i789')
+
+    def test_hsbc_negative_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -20, 'id': 101}
+        result = transformers.transaction_id_formula(transaction, 'HSBC')
+        self.assertEqual(result, 'HSBCd20230101t120000an2000i101')
+
+    def test_revolut_positive_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 120, 'id': 111}
+        result = transformers.transaction_id_formula(transaction, 'Revolut')
+        self.assertEqual(result, 'RVLTd20230101t120000ap12000i111')
+
+    def test_revolut_negative_amount(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -45, 'id': 222}
+        result = transformers.transaction_id_formula(transaction, 'Revolut')
+        self.assertEqual(result, 'RVLTd20230101t120000an4500i222')
+
+    def test_invalid_bank(self):
+        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
+        with self.assertRaises(ValueError):
+            transformers.transaction_id_formula(transaction, 'InvalidBank')
 
 
 class HSBCTransformerTest(unittest.TestCase):
     def test_transform_hsbc_transactions(self):
         df_hsbc = pd.DataFrame({
             'id': [1, 2, 3],
-            'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+            'date': ["01/01/2022", "06/15/2022", "12/31/2022"],
             'amount': [100.0, '2,000.0', '-300.00'],
             'description': ['Transaction 1', 'Transaction 2', 'Transaction 3']
         })
 
         expected_output = pd.DataFrame({
-            'id': [11, 12, 13],
+            'id': ['HSBCd20220101t000000ap10000i1', 'HSBCd20220615t000000ap200000i2', 'HSBCd20221231t000000an30000i3'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 0, 0, 0),
                          datetime(2022, 12, 31, 0, 0, 0)],
             'amount': [100.0, 2000.0, -300.0],
@@ -26,7 +62,7 @@ class HSBCTransformerTest(unittest.TestCase):
             'description': ['bank:HSBC, Transaction 1', 'bank:HSBC, Transaction 2', 'bank:HSBC, Transaction 3']
         })
 
-        transformer = etl.HSBCTransformer()
+        transformer = transformers.HSBCStatementTransformer()
         transformed_df = transformer.transform(df_hsbc)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
@@ -36,7 +72,7 @@ class MonzoTransformerTest(unittest.TestCase):
         df_monzo = pd.DataFrame(
             {
                 'id': [1, 2, 3],
-                'date': ["01/01/2022", "15/06/2022", "31/12/2022"],
+                'date': ["2022-01-01", "2022-06-15", "2022-12-31"],
                 'time': ["00:00:00", "12:30:30", "23:59:59"],
                 'transaction_type': ['Payment', 'Expense', 'Payment'],
                 'name': ['John Doe', 'Groceries', 'Jane Smith'],
@@ -57,7 +93,7 @@ class MonzoTransformerTest(unittest.TestCase):
         )
 
         expected_output = pd.DataFrame({
-            'id': [21, 22, 23],
+            'id': ['MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30),
                          datetime(2022, 12, 31, 23, 59, 59)],
             'amount': [100.0, 50.0, 200.0],
@@ -69,7 +105,7 @@ class MonzoTransformerTest(unittest.TestCase):
                 'bank:Monzo, transaction_type: Payment, name: Jane Smith, emoji: 💳, category: Shopping, notes_tags: Tag1, Tag2, address: 456 Elm St, receipt: https://example.com/receipt2, description: Description 3, category_split: none, money_out: none, money_in: 200.0']
         })
 
-        transformer = etl.MonzoTransformer()
+        transformer = transformers.MonzoStatementTransformer()
         transformed_df = transformer.transform(df_monzo)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
@@ -92,7 +128,7 @@ class RevoTransformerTest(unittest.TestCase):
         )
 
         expected_output = pd.DataFrame({
-            'id': [31, 32, 33],
+            'id': ['RVLTd20220101t000000ap10000i31', 'RVLTd20220615t123030ap20000i32', 'RVLTd20221231t235959ap30000i33'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30),
                          datetime(2022, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
@@ -104,7 +140,7 @@ class RevoTransformerTest(unittest.TestCase):
                 'bank:Revolut, type: Type 3, product: Product C, completed_date: 2022-12-31 23:59:59, description: Description 3, fee: 30.0, state: State 3, balance: 3000.0']
         })
 
-        transformer = etl.RevoTransformer()  # currency_converter will be FixedRateCurrencyConverter by default
+        transformer = transformers.RevoStatementTransformer()  # currency_converter will be FixedRateCurrencyConverter by default
         transformed_df = transformer.transform(df_revo)
         pd.testing.assert_frame_equal(transformed_df, expected_output)
 
