@@ -5,6 +5,7 @@ from htmltools import HTML
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
+from mecon.app import shiny_modules
 from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 from mecon.tags import tagging
 
@@ -29,14 +30,8 @@ data_manager = WorkingDataManager()
 all_tags = data_manager.all_tags()
 
 app_ui = ui.page_fluid(
-    ui.tags.title("μEcon"),
-    ui.navset_pill(
-        ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
-        ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
-        ui.nav_control(ui.input_dark_mode(id="light_mode")),
-    ),
+    shiny_modules.title,
+    shiny_modules.navbar,
     ui.hr(),
 
     ui.page_fluid(

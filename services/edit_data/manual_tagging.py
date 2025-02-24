@@ -1,14 +1,14 @@
 import logging
-import pathlib
 
 import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 import utils
-from mecon.app.current_data import WorkingDataManager
+from mecon import config
+from mecon.app import shiny_modules
+from mecon.app.current_data import WorkingDatasetDir, WorkingDataManager
 from mecon.data import groupings
 from mecon.data.transactions import Transactions
-from mecon.settings import Settings
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -16,13 +16,16 @@ from mecon.settings import Settings
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 
-settings = Settings()
-settings['DATASETS_DIR'] = str(datasets_dir)
+datasets_obj = WorkingDatasetDir()
+datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+dataset = datasets_obj.working_dataset
 
+if dataset is None:
+    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
 
 
 change_tracker = []
@@ -35,14 +38,8 @@ PAGE_SIZE = 100
 
 
 app_ui = ui.page_fluid(
-    ui.tags.title("μEcon"),
-    ui.navset_pill(
-        ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
-        ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
-        ui.nav_control(ui.input_dark_mode(id="light_mode")),
-    ),
+    shiny_modules.title,
+    shiny_modules.navbar,
     ui.hr(),
 
     ui.layout_sidebar(

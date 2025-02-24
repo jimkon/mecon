@@ -4,6 +4,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
 from mecon import config
+from mecon.app import shiny_modules
 from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 from mecon.tags.rule_graphs import TagGraph, AcyclicTagGraph
 
@@ -34,14 +35,8 @@ tag_root_groups = {f"root:{tag.name}": f"{tag.name} ({len(tag_graph_all.all_tags
 # TODO could sort from largest to smallest
 
 app_ui = ui.page_fluid(
-    ui.tags.title("μEcon"),
-    ui.navset_pill(
-        ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
-        ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
-        ui.nav_control(ui.input_dark_mode(id="light_mode")),
-    ),
+    shiny_modules.title,
+    shiny_modules.navbar,
     ui.hr(),
 
     ui.h5(ui.output_text('title_output')),
