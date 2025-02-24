@@ -1,5 +1,4 @@
 import logging
-from itertools import chain
 
 import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
@@ -7,7 +6,6 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from mecon import config
 from mecon.app.current_data import WorkingDatasetDir, WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
 from mecon.etl import transformers
-from mecon.etl.fetch_statement_files import transform_dates
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -95,6 +93,7 @@ app_ui = ui.page_fluid(
                 ui.accordion(
                     # ui.accordion_panel('Import statements'),
                     ui.accordion_panel('Statements', ui.card(
+                        ui.output_ui('statements_info_text'),
                         ui.output_data_frame("statements_info_dataframe")
                     )),
                     ui.accordion_panel('Transactions', ui.card(
@@ -157,6 +156,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.reset_db_button)
     def reset_db():
         WorkingDataManager().reset()
+
+    @render.ui
+    def statements_info_text():
+        # TODO df['rows'].sum() is LESS than the numbers of transactions tagged as 'All', how?
+        df = WorkingDatasetDirInfo().statement_files_info_df()
+        text = ui.HTML(f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> in total and <b>{df['source'].nunique()} different sources<b/></p>""")
+        return text
 
     @render.data_frame
     def statements_info_dataframe():
