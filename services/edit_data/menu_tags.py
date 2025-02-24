@@ -29,11 +29,7 @@ if dataset is None:
 data_manager = WorkingDataManager()
 all_tags = data_manager.all_tags()
 
-app_ui = ui.page_fluid(
-    shiny_modules.title,
-    shiny_modules.navbar,
-    ui.hr(),
-
+app_ui = shiny_modules.app_ui_factory(
     ui.page_fluid(
         ui.input_task_button(id='create_button', label='Create new tag'),
         ui.input_task_button(id='recalculate_button', label='Recalculate all tags', label_busy='Recalculating...'),

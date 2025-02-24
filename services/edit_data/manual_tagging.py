@@ -37,11 +37,7 @@ DEFAULT_TIME_UNIT = 'month'
 PAGE_SIZE = 100
 
 
-app_ui = ui.page_fluid(
-    shiny_modules.title,
-    shiny_modules.navbar,
-    ui.hr(),
-
+app_ui = shiny_modules.app_ui_factory(
     ui.layout_sidebar(
         ui.sidebar(
             ui.input_select(

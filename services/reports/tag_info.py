@@ -36,11 +36,7 @@ all_transactions = dm.get_transactions()
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
 
-app_ui = ui.page_fluid(
-    shiny_modules.title,
-    shiny_modules.navbar,
-    ui.hr(),
-
+app_ui = shiny_modules.app_ui_factory(
     ui.h5(ui.output_text('title_output')),
     ui.layout_sidebar(
         ui.sidebar(

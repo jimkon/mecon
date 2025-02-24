@@ -34,11 +34,7 @@ tag_root_groups = {f"root:{tag.name}": f"{tag.name} ({len(tag_graph_all.all_tags
 # TODO numbers in tag_root_groups are wrong sometimes
 # TODO could sort from largest to smallest
 
-app_ui = ui.page_fluid(
-    shiny_modules.title,
-    shiny_modules.navbar,
-    ui.hr(),
-
+app_ui = shiny_modules.app_ui_factory(
     ui.h5(ui.output_text('title_output')),
     ui.layout_sidebar(
         ui.sidebar(

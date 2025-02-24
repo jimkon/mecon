@@ -28,11 +28,7 @@ dm = WorkingDataManager()
 all_tags = dm.all_tags()
 
 
-app_ui = ui.page_fluid(
-    shiny_modules.title,
-    shiny_modules.navbar,
-    ui.hr(),
-
+app_ui = shiny_modules.app_ui_factory(
     ui.page_fluid(
         ui.h1('Not implemented yet')
     )

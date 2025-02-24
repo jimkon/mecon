@@ -21,7 +21,8 @@ all_tags = dm.all_tags()
 
 all_transactions = dm.get_transactions()
 
-title = ui.tags.title("μEcon App")
+tab_title = ui.tags.title("μEcon App")
+page_title = ui.HTML('<h2>mEcon<sub><small><u><i>v3</i></u></small></sub></h2>')
 navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
     ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
@@ -29,6 +30,16 @@ navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
     # ui.nav_control(ui.input_dark_mode(id="light_mode")),
 )
+
+def app_ui_factory(*args):
+    return ui.page_fluid(
+        tab_title,
+        page_title,
+        navbar,
+        ui.hr(),
+        *args
+    )
+
 
 filter_menu = ui.sidebar(
     ui.input_select(

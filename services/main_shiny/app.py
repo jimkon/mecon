@@ -30,12 +30,9 @@ if dataset is None:
 
 data_manager = WorkingDataManager()
 
-app_ui = ui.page_fluid(
-    shiny_modules.title,
-    shiny_modules.navbar,
-    ui.hr(),
-
+app_ui = shiny_modules.app_ui_factory(
     ui.card(
+
         ui.navset_tab(
             ui.nav_panel("Home",
                          ui.h3('Menu'),
@@ -156,7 +153,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def statements_info_text():
         # TODO df['rows'].sum() is LESS than the numbers of transactions tagged as 'All', how?
         df = WorkingDatasetDirInfo().statement_files_info_df()
-        text = ui.HTML(f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> in total and <b>{df['source'].nunique()} different sources<b/></p>""")
+        text = ui.HTML(
+            f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> in total and <b>{df['source'].nunique()} different sources<b/></p>""")
         return text
 
     @render.data_frame
@@ -200,7 +198,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def tagged_transactions_info_dataframe():
-        df_tags_info = pd.DataFrame.from_dict(data_manager.get_tagged_transactions().all_tag_counts(), orient='index').reset_index()
+        df_tags_info = pd.DataFrame.from_dict(data_manager.get_tagged_transactions().all_tag_counts(),
+                                              orient='index').reset_index()
         df_tags_info.columns = ['tag', 'name']
         res = render.DataGrid(df_tags_info, selection_mode="row")
         return res
@@ -215,7 +214,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         unparsed_sources = statement_source.difference(transformer_sources)
         if len(unparsed_sources) > 0:
             message = f"No parser for sources: {unparsed_sources}\n"
-            message += '\n'.join([f" -> Skipping {len(filepaths[source])} statement file from  source '{source}'" for source in unparsed_sources])
+            message += '\n'.join(
+                [f" -> Skipping {len(filepaths[source])} statement file from  source '{source}'" for source in
+                 unparsed_sources])
             logging.info(f"Unparsed sources: {unparsed_sources}, {message=}")
             ui.notification_show(
                 f"WARNING:\n{message}",

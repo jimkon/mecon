@@ -30,11 +30,7 @@ dataset = datasets_obj.working_dataset
 if dataset is None:
     raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
 
-app_ui = ui.page_fluid(
-    shiny_modules.title,
-    shiny_modules.navbar,
-    ui.hr(),
-
+app_ui = shiny_modules.app_ui_factory(
     ui.page_fillable(
         ui.h1(ui.output_text(id='title_output_text')),
         ui.h3(ui.output_ui(id='tag_info_link')),
