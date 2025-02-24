@@ -6,9 +6,8 @@ from urllib.parse import urlparse, parse_qs
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
-from mecon import config
-from mecon.app import shiny_modules
-from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
+from mecon.app import shiny_app
+from mecon.app.current_data import WorkingDataManager
 from mecon.data import graphs
 from mecon.data import reports
 
@@ -17,16 +16,7 @@ from mecon.data import reports
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
-if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
-
-datasets_obj = WorkingDatasetDir()
-datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-dataset = datasets_obj.working_dataset
-
-if dataset is None:
-    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
+dataset = shiny_app.get_working_dataset()
 
 dm = WorkingDataManager()
 all_tags = dm.all_tags()
@@ -36,7 +26,7 @@ all_transactions = dm.get_transactions()
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
 
-app_ui = shiny_modules.app_ui_factory(
+app_ui = shiny_app.app_ui_factory(
     ui.h5(ui.output_text('title_output')),
     ui.layout_sidebar(
         ui.sidebar(

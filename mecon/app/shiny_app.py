@@ -8,13 +8,26 @@ from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
 
-datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
-if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+# datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
+# if not datasets_dir.exists():
+#     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+#
+# datasets_obj = WorkingDatasetDir()
+# datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+# dataset = datasets_obj.working_dataset
 
-datasets_obj = WorkingDatasetDir()
-datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-dataset = datasets_obj.working_dataset
+def get_working_dataset():
+    datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
+    if not datasets_dir.exists():
+        raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+
+    datasets_obj = WorkingDatasetDir()
+    dataset = datasets_obj.working_dataset
+
+    if dataset is None:
+        raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
+
+    return dataset
 
 dm = WorkingDataManager()
 all_tags = dm.all_tags()

@@ -4,9 +4,8 @@ import pandas as pd
 from htmltools import HTML
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-from mecon import config
-from mecon.app import shiny_modules
-from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
+from mecon.app import shiny_app
+from mecon.app.current_data import WorkingDataManager
 from mecon.tags import tagging
 
 # from mecon.monitoring.logs import setup_logging
@@ -15,21 +14,12 @@ from mecon.tags import tagging
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
-if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
-
-datasets_obj = WorkingDatasetDir()
-datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-dataset = datasets_obj.working_dataset
-
-if dataset is None:
-    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
+dataset = shiny_app.get_working_dataset()
 
 data_manager = WorkingDataManager()
 all_tags = data_manager.all_tags()
 
-app_ui = shiny_modules.app_ui_factory(
+app_ui = shiny_app.app_ui_factory(
     ui.page_fluid(
         ui.input_task_button(id='create_button', label='Create new tag'),
         ui.input_task_button(id='recalculate_button', label='Recalculate all tags', label_busy='Recalculating...'),
