@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from shiny import ui
 
@@ -7,6 +8,9 @@ from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
 
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.INFO)
 
 # datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 # if not datasets_dir.exists():
@@ -28,6 +32,10 @@ def get_working_dataset():
         raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
 
     return dataset
+
+def create_data_manager():
+    logging.info("Creating data manager")
+    return WorkingDataManager()
 
 dm = WorkingDataManager()
 all_tags = dm.all_tags()

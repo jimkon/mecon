@@ -14,10 +14,6 @@ from mecon.tags import tagging
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-dataset = shiny_app.get_working_dataset()
-
-data_manager = WorkingDataManager()
-all_tags = data_manager.all_tags()
 
 app_ui = shiny_app.app_ui_factory(
     ui.page_fluid(
@@ -42,6 +38,8 @@ def tag_actions(tag_name):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = WorkingDataManager()
+
     all_tags_reactive = reactive.Value(data_manager.all_tags())
     tags_metadata_reactive = reactive.Value(value=data_manager.get_tags_metadata().copy())
 

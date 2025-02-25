@@ -3,8 +3,9 @@ import logging
 import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
+from mecon import config
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDatasetDirInfo, WorkingDataManagerInfo, WorkingDataManager
+from mecon.app.current_data import WorkingDatasetDirInfo, WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
 from mecon.etl import transformers
 
 # from mecon.monitoring.logs import setup_logging
@@ -18,7 +19,13 @@ dataset = shiny_app.get_working_dataset()
 # TODO settings are not refreshed if i change something manually. maybe shiny is caching stuff, because something similar happens to the data in the reports
 # TODO need to rework the etl. statements should be treated as unique, don't check for duplicate rows between different statements. also, i should instantly convert them to transactions and add them to transactions table, skipping the bank statement tables entirely. the will reduce the db size, and complexity, and it will allow any data to be added by only adding the parser/etl converted
 
-data_manager = WorkingDataManager()
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
+if not datasets_dir.exists():
+    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+datasets_obj = WorkingDatasetDir()
+datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
+# dataset = datasets_obj.working_dataset
+
 
 app_ui = shiny_app.app_ui_factory(
     ui.card(
@@ -95,6 +102,8 @@ app_ui = shiny_app.app_ui_factory(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = shiny_app.create_data_manager()
+
     @render.text
     def links_output_text():
         # can also be a collapsable list (ui.accordion, ui.accordion_panel)

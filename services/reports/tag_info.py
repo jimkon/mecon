@@ -16,12 +16,6 @@ from mecon.data import reports
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-dataset = shiny_app.get_working_dataset()
-
-dm = WorkingDataManager()
-all_tags = dm.all_tags()
-
-all_transactions = dm.get_transactions()
 
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
@@ -121,6 +115,9 @@ app_ui = shiny_app.app_ui_factory(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = WorkingDataManager()
+    all_transactions = data_manager.get_transactions()
+
     @reactive.calc
     def url_params():
         urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
@@ -142,7 +139,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         params = url_params()
         filter_in_tags = params['filter_in_tags']
         filter_out_tags = params['filter_out_tags']
-        transactions = dm.get_transactions()
+        transactions = data_manager.get_transactions()
         filtered_in_transactions = transactions.containing_tags(filter_in_tags)
         if filtered_in_transactions.size() == 0:
             ui.notification_show(
@@ -172,7 +169,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
         params = url_params()
         transactions = default_transactions()
-        all_tags_names = [tag.name for tag in dm.all_tags()]
+        all_tags_names = [tag.name for tag in data_manager.all_tags()]
         new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
                        cnt > 0]
 
@@ -259,7 +256,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.calc
     def filtered_transactions():
         start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params()
-        transactions = dm.get_transactions() \
+        transactions = data_manager.get_transactions() \
             .select_date_range(start_date, end_date) \
             .containing_tags(filter_in_tags) \
             .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')

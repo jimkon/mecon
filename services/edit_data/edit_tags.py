@@ -5,7 +5,6 @@ from urllib.parse import urlparse, parse_qs
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDataManager
 from mecon.data import reports
 from mecon.data.transactions import Transactions
 from mecon.tags import tagging, process
@@ -18,7 +17,6 @@ from mecon.tags.process import RuleExecutionPlanMonitor
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-dataset = shiny_app.get_working_dataset()
 
 
 app_ui = shiny_app.app_ui_factory(
@@ -218,7 +216,8 @@ def rule_to_ui(rule: tagging.AbstractRule):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    data_manager = WorkingDataManager()
+    dataset = shiny_app.get_working_dataset()
+    data_manager = shiny_app.create_data_manager()
     all_tags = data_manager.all_tags()
 
     current_tag_value = reactive.Value(None)

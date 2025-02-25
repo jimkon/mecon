@@ -5,7 +5,6 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 import utils
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDataManager
 from mecon.data import groupings
 from mecon.data.transactions import Transactions
 
@@ -15,7 +14,6 @@ from mecon.data.transactions import Transactions
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-dataset = shiny_app.get_working_dataset()
 
 change_tracker = []
 added_tags, removed_tags = {}, {}
@@ -93,7 +91,7 @@ def new_transaction_row(transaction, all_tags):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    data_manager = WorkingDataManager()
+    data_manager = shiny_app.create_data_manager()
     all_tags = data_manager.all_tags()
 
     transactions = data_manager.get_transactions()

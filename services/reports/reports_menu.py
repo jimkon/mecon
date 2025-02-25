@@ -3,7 +3,6 @@ import logging
 from shiny import App, Inputs, Outputs, Session, ui
 
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDataManager
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -14,8 +13,6 @@ logging.getLogger().setLevel(logging.INFO)
 dataset = shiny_app.get_working_dataset()
 
 
-dm = WorkingDataManager()
-all_tags = dm.all_tags()
 
 
 app_ui = shiny_app.app_ui_factory(
@@ -27,6 +24,8 @@ app_ui = shiny_app.app_ui_factory(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    dm = shiny_app.create_data_manager()
+    all_tags = dm.all_tags()
     pass
 
 

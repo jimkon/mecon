@@ -4,7 +4,6 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDataManager
 from mecon.tags.rule_graphs import TagGraph, AcyclicTagGraph
 
 # from mecon.monitoring.logs import setup_logging
@@ -13,10 +12,10 @@ from mecon.tags.rule_graphs import TagGraph, AcyclicTagGraph
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
+# TODO all these will not refresh if i make any change to the data. data manager is not reseting
 dataset = shiny_app.get_working_dataset()
-
-dm = WorkingDataManager()
-all_tags = dm.all_tags()
+data_manager = shiny_app.create_data_manager()
+all_tags = data_manager.all_tags()
 
 tag_graph_all = TagGraph.from_tags(all_tags).remove_cycles()
 tag_roots = tag_graph_all.find_all_root_tags()
@@ -51,6 +50,8 @@ app_ui = shiny_app.app_ui_factory(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = shiny_app.create_data_manager()
+
     @render.text
     def title_output():
         return f"All tags: {len(all_tags)}"
