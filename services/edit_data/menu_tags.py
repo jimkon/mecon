@@ -84,7 +84,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         m = ui.modal(
             ui.input_text(id='name_of_new_tag_text', label='New tag name'),
             title=f"Create a new tag",
-            easy_close=False,
+            easy_close=True,
             footer=ui.input_task_button(id='confirm_create_button', label='Confirm', label_buzy='Creating...'),
             size='l'
         )
@@ -108,7 +108,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             ui.input_select(id='name_of_tag_to_delete_select', label='New tag name',
                             choices=sorted([tag.name for tag in all_tags_reactive.get()])),
             title=f"Delete a new tag",
-            easy_close=False,
+            easy_close=True,
             footer=ui.input_task_button(id='confirm_delete_button',
                                         label='DELETE',
                                         label_buzy='Deleting...',

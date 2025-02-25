@@ -414,7 +414,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 f"{tag_json_str}"
             ),
             title=f"Saving {fetch_tag_name()}",
-            easy_close=False,
+            easy_close=True,
             footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
             size='xl'
         )
