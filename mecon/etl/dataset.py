@@ -100,9 +100,9 @@ class DatasetDir:
         # logging.info(f"New datasets directory in path '{path}'. #info#filesystem")
 
         self._datasets = {}
-        subpaths = list(self._path.iterdir())
+        subpaths = [p for p in self._path.iterdir() if not p.is_file()]
         if len(subpaths) == 0:
-            logging.warning(f"DatasetDir.__init__: Path {self._path} has no datasets inside.")
+            raise FileNotFoundError(f"DatasetDir.__init__: Path {self._path} has no datasets inside.")
 
         logging.info(f"Adding {len(subpaths)} datasets from {path}. #info#filesystem")
         self.add_datasets_from_paths(subpaths)
