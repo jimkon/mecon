@@ -17,8 +17,6 @@ from mecon.tags.process import RuleExecutionPlanMonitor
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-
-
 app_ui = shiny_app.app_ui_factory(
     ui.page_fillable(
         ui.h1(ui.output_text(id='title_output_text')),
@@ -90,12 +88,19 @@ app_ui = shiny_app.app_ui_factory(
                             ui.input_task_button(id='condition_add_button', label='Add condition', width='25%')
                         )
                     ),
+                    # ui.nav_panel( # TODO enable or remove
+                    #     "Rules",
+                    #     ui.input_task_button(id='acc_rules_apply_button', label='Apply', disabled=True),
+                    #     ui.accordion(
+                    #         id="rules_accordion",
+                    #         multiple=True
+                    #     ),
+                    # ),
                     ui.nav_panel(
-                        "Rules",
-                        ui.input_task_button(id='acc_rules_apply_button', label='Apply', disabled=True),
-                        ui.accordion(
-                            id="rules_accordion",
-                            multiple=True
+                        "Rule calculations",
+                        ui.input_checkbox(id='rule_calculations_show_tagged', label='Show only tagged', value=True),
+                        ui.output_data_frame(
+                            id="rule_calculations_table",
                         ),
                     ),
                 )
@@ -490,8 +495,10 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         logging.info(f"Diff: {diff_df.shape=}")
         m = ui.modal(
             ui.navset_tab(
-                ui.nav_panel(f"{len(diff_df)} rows added (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_added_output_df')),
-                ui.nav_panel(f"{len(diff_df)} rows removed (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_removed_output_df')),
+                ui.nav_panel(f"{len(diff_df)} rows added (regarding to '{fetch_tag_name()}' tag)",
+                             ui.output_data_frame(id='transactions_diff_added_output_df')),
+                ui.nav_panel(f"{len(diff_df)} rows removed (regarding to '{fetch_tag_name()}' tag)",
+                             ui.output_data_frame(id='transactions_diff_removed_output_df')),
                 ui.nav_panel('Calcs',
                              ui.input_select(
                                  id='tag_select_for_calc_monitor',
@@ -550,6 +557,20 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
             styles=styles
         )
 
+    @render.data_frame
+    def rule_calculations_table():
+        new_trans, monitor = new_transactions_and_monitor()
+        df = monitor.get_tag_calculations(fetch_tag_name())
+        if input.rule_calculations_show_tagged():
+            idx_true = Transactions(df).contains_tags(fetch_tag_name())
+            df = df[idx_true]
+        df.replace([False, True], value=['False', 'True'], inplace=True)
+        return render.DataTable(
+            df,
+            selection_mode="none",
+            filters=True,
+            styles=styles
+        )
 
 
 edit_tags_app = App(app_ui, server)
