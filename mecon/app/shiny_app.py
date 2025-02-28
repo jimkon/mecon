@@ -37,10 +37,20 @@ def create_data_manager():
     logging.info("Creating data manager")
     return WorkingDataManager()
 
-dm = WorkingDataManager()
-all_tags = dm.all_tags()
+def url_for_tag_report(tag_name):
+    if isinstance(tag_name, list):
+        tag_name = ','.join(tag_name)
+    return f"http://127.0.0.1:8001/reports/tags/?filter_in_tags={tag_name}"
 
-all_transactions = dm.get_transactions()
+def url_for_tag_edit(tag_name):
+    if isinstance(tag_name, list):
+        tag_name = ','.join(tag_name)
+    return f"http://127.0.0.1:8002/edit_data/tags/edit/?filter_in_tags={tag_name}"
+
+# dm = WorkingDataManager()
+# all_tags = dm.all_tags()
+#
+# all_transactions = dm.get_transactions()
 
 tab_title = ui.tags.title("μEcon App")
 page_title = ui.HTML('<h2>mEcon<sub><small><u><i>v3</i></u></small></sub></h2>')

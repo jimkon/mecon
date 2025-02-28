@@ -22,6 +22,7 @@ DEFAULT_TIME_UNIT = 'month'
 
 app_ui = shiny_app.app_ui_factory(
     ui.h5(ui.output_text('title_output')),
+    ui.h3(ui.output_ui(id='tag_edit_link')),
     ui.layout_sidebar(
         ui.sidebar(
             ui.input_select(
@@ -273,6 +274,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def title_output():
         return f"Tags: {url_params()['filter_in_tags']}"
+
+    @render.ui
+    def tag_edit_link():
+        return ui.tags.a("Edit tag", href=shiny_app.url_for_tag_edit(url_params()['filter_in_tags'][0]))
 
     @render.ui
     def info_stats():

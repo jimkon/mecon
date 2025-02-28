@@ -30,9 +30,9 @@ app_ui = shiny_app.app_ui_factory(
 def tag_actions(tag_name):
     return HTML(
         f"""
-        <a href="http://127.0.0.1:8001/reports/tags/?filter_in_tags={tag_name}" target="_blank">Info</a>
+        <a href="{shiny_app.url_for_tag_report(tag_name)}" target="_blank">Info</a>
         &nbsp;|&nbsp;
-        <a href="http://127.0.0.1:8002/edit_data/tags/edit/?filter_in_tags={tag_name}" target="_blank">Edit</a>
+        <a href="{shiny_app.url_for_tag_edit(tag_name)}" target="_blank">Edit</a>
         """
     )
 
