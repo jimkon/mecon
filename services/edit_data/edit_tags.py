@@ -563,7 +563,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         df = monitor.get_tag_calculations(fetch_tag_name())
         if input.rule_calculations_show_tagged():
             idx_true = Transactions(df).contains_tags(fetch_tag_name())
-            df = df[idx_true]
+            df = df[idx_true].copy()
         df.replace([False, True], value=['False', 'True'], inplace=True)
         return render.DataTable(
             df,
