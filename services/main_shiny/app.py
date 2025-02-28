@@ -151,8 +151,10 @@ def server(input: Inputs, output: Outputs, session: Session):
     def statements_info_text():
         # TODO df['rows'].sum() is LESS than the numbers of transactions tagged as 'All', how?
         df = WorkingDatasetDirInfo().statement_files_info_df()
+        source_total_rows = df.groupby('source').agg({'filename': 'count', 'rows': 'sum'}).reset_index().to_html()#.to_dict('index')
         text = ui.HTML(
-            f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> in total and <b>{df['source'].nunique()} different sources<b/></p>""")
+            f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> (* rows might not be 100% accurate).</p>)
+             in total and <b>{df['source'].nunique()} different sources</b></p> {source_total_rows}""")
         return text
 
     @render.data_frame
