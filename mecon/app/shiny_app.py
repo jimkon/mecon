@@ -5,12 +5,14 @@ from shiny import ui
 
 from mecon import config
 from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
+from mecon.utils.html import build_url
 
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
+
 
 # datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 # if not datasets_dir.exists():
@@ -33,19 +35,21 @@ def get_working_dataset():
 
     return dataset
 
+
 def create_data_manager():
     logging.info("Creating data manager")
     return WorkingDataManager()
 
-def url_for_tag_report(tag_name):
-    if isinstance(tag_name, list):
-        tag_name = ','.join(tag_name)
-    return f"http://127.0.0.1:8001/reports/tags/?filter_in_tags={tag_name}"
 
-def url_for_tag_edit(tag_name):
-    if isinstance(tag_name, list):
-        tag_name = ','.join(tag_name)
-    return f"http://127.0.0.1:8002/edit_data/tags/edit/?filter_in_tags={tag_name}"
+def url_for_tag_report(**kwargs):
+    url = build_url("http://127.0.0.1:8001/reports/tags/", kwargs)
+    return url
+
+
+def url_for_tag_edit(**kwargs):
+    url = build_url("http://127.0.0.1:8002/edit_data/tags/edit/", kwargs)
+    return url
+
 
 # dm = WorkingDataManager()
 # all_tags = dm.all_tags()
@@ -61,6 +65,7 @@ navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
     # ui.nav_control(ui.input_dark_mode(id="light_mode")),
 )
+
 
 def app_ui_factory(*args):
     return ui.page_fluid(
