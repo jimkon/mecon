@@ -14,8 +14,6 @@ from mecon.etl import transformers
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-
-
 # TODO settings are not refreshed if i change something manually. maybe shiny is caching stuff, because something similar happens to the data in the reports
 # TODO need to rework the etl. statements should be treated as unique, don't check for duplicate rows between different statements. also, i should instantly convert them to transactions and add them to transactions table, skipping the bank statement tables entirely. the will reduce the db size, and complexity, and it will allow any data to be added by only adding the parser/etl converted
 
@@ -47,7 +45,7 @@ app_ui = shiny_app.app_ui_factory(
                                  id="dataset_select",
                                  label="Select dataset:",
                                  choices=datasets_dict,
-                                 selected=datasets_obj.working_dataset.name if datasets_obj and not datasets_obj.is_empty() else 'Something went wrong',
+                                 selected=datasets_obj.working_dataset.name if datasets_obj and datasets_obj.working_dataset and not datasets_obj.is_empty() else 'Something went wrong',
                                  multiple=False,
                              ),
                              ui.input_action_button("import_dataset_button", "Import dataset...", disabled=True,

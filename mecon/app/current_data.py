@@ -30,8 +30,10 @@ class WorkingDatasetDir(CustomisedDatasetDir):
         return self._working_dataset
 
     def set_working_dataset(self, dataset_name: str) -> Dataset:
-        logging.info(f"Setting new current working dataset to '{dataset_name}'")
         self._working_dataset = self.get_dataset(dataset_name)
+        if self._working_dataset is None:
+            raise ValueError(f"Working dataset {dataset_name} does not exist in {self.path}")
+        logging.info(f"Setting new current working dataset to '{dataset_name}': {self._working_dataset}")
         return self.working_dataset
 
 
