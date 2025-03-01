@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 import pathlib
 
 from mecon import config
@@ -35,6 +36,7 @@ class DictFile(dict):
         return _dict
 
     def save(self):
+        logging.info(f"Saving settings to {self.path}")
         self.path.write_text(json.dumps(self, **JSON_FILE_FORMATING_KWARGS))
 
     def __setitem__(self, key, value):
