@@ -57,8 +57,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         tag_stats_df = tags_metadata_reactive.get()
         tag_stats_df.columns = [col.capitalize().replace('_', ' ') for col in tag_stats_df.columns]
         tag_stats_df = tags_df.merge(tag_stats_df, on='Name', how='left')
+        tag_stats_df.sort_values(by=['Name'], ascending=True, inplace=True)
 
-        tag_stats_df['i'] = tag_stats_df.index
+        tag_stats_df['i'] = list(range(len(tag_stats_df)))
         tag_stats_df['Actions'] = tag_stats_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
 
         tag_stats_df['Total money in'] = tag_stats_df['Total money in'].apply(lambda x: f"£ {float(x):.2f}")
