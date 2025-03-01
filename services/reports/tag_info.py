@@ -16,15 +16,16 @@ from mecon.data import reports
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-
 DEFAULT_PERIOD = 'Last year'
 DEFAULT_TIME_UNIT = 'month'
 
 app_ui = shiny_app.app_ui_factory(
     ui.h5(ui.output_text('title_output')),
-    ui.h3(ui.output_ui(id='tag_edit_link')),
     ui.layout_sidebar(
         ui.sidebar(
+            # TODO add custom date period option
+            # TODO add date period in url params, with higher priority from the date range one
+            # TODO move filter to shiny_apps, have to understand how the reactive will be modularized
             ui.input_select(
                 id='date_period_input_select',
                 label='Select date period',
@@ -108,6 +109,14 @@ app_ui = shiny_app.app_ui_factory(
                              ),
                 ui.nav_panel("Table",
                              ui.output_data_frame(id="transactions_table"),
+                             ),
+                ui.nav_panel("Manage",
+                             ui.h4(ui.output_ui(id='tag_edit_link')),
+                             ui.card(
+                                 ui.card_header("Make a custom report page"),
+                                 ui.input_text(id='save_report_name', label='New report name'),
+                                 ui.input_action_button(id='save_report_button', label='Save this report...')
+                             ),
                              ),
             )
         )
@@ -245,6 +254,37 @@ def server(input: Inputs, output: Outputs, session: Session):
                              max=max_date
                              )
 
+    @reactive.effect
+    @reactive.event(input.save_report_button)
+    def _():
+        filter_params = get_filter_params()
+        logging.info(f"filter_params: {filter_params}")
+        dataset = shiny_app.get_working_dataset()
+        settings = dataset.settings
+        saved_reports = settings['links']['Reports']
+
+        new_report_name = input.save_report_name()
+        if new_report_name is None or new_report_name == "" or new_report_name in saved_reports:
+            message = 'Empty name' if (
+                    new_report_name is None or new_report_name == "") else f"Report name already exists, all existing names: {', '.join(saved_reports.keys())}"
+            ui.notification_show(
+                f"Invalid name for the new report '{new_report_name}', {message=}",
+                type="error",
+            )
+            return
+
+        new_report_url = shiny_app.url_for_tag_report(**filter_params)
+        saved_reports[
+            new_report_name] = new_report_url  # TODO maybe make a class that deals with DatasetSettings for easier use and testing
+        settings.save()
+
+        ui.notification_show(
+            f"Report '{new_report_name}' has been created successfully.",
+            action=ui.tags.a(new_report_url, href=new_report_url),
+            duration=10,
+            type="message",
+        )
+
     @reactive.calc
     def get_filter_params():
         logging.info('Fetching filter params')
@@ -252,11 +292,18 @@ def server(input: Inputs, output: Outputs, session: Session):
         time_unit = input.time_unit_select()
         filter_in_tags = input.filter_in_tags_select()
         filter_out_tags = input.filter_out_tags_select()
-        return start_date, end_date, time_unit, filter_in_tags, filter_out_tags
+        filter_params_dict = {
+            'start_date': start_date,
+            'end_date': end_date,
+            'time_unit': time_unit,
+            'filter_in_tags': filter_in_tags,
+            'filter_out_tags': filter_out_tags
+        }
+        return filter_params_dict
 
     @reactive.calc
     def filtered_transactions():
-        start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params()
+        start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params().values()
         transactions = data_manager.get_transactions() \
             .select_date_range(start_date, end_date) \
             .containing_tags(filter_in_tags) \
@@ -277,7 +324,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.ui
     def tag_edit_link():
-        return ui.tags.a("Edit tag", href=shiny_app.url_for_tag_edit(url_params()['filter_in_tags'][0]))
+        return ui.tags.a("Edit tag", href=shiny_app.url_for_tag_edit(filter_in_tags=url_params()['filter_in_tags'][0]))
 
     @render.ui
     def info_stats():
