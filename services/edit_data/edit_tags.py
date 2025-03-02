@@ -23,21 +23,18 @@ app_ui = shiny_app.app_ui_factory(
         ui.h3(ui.output_ui(id='tag_info_link')),
         ui.input_task_button(id='save_button', label='Save'),
         ui.input_task_button(id='reset_button', label='Reset', label_busy='Loading...'),
+        ui.input_task_button(id='recalculate_button', label='Recalculate'),
+        ui.tooltip(ui.input_task_button(
+            id='check_diffs_button',
+            label='Check differences... (!!)',
+            style="color: #fff; background-color: #aaa; border-color: #000"),
+            'It will recalculate all tags for the current version of the tag and the last save.'),
         ui.layout_columns(
             ui.card(
                 ui.navset_tab(
                     ui.nav_panel(
                         "JSON",
                         ui.card(
-                            ui.row(
-                                ui.input_task_button(id='recalculate_button', label='Recalculate', width='25%'),
-                                ui.tooltip(ui.input_task_button(
-                                    id='check_diffs_button',
-                                    label='Check differences... (!!)',
-                                    width='25%',
-                                    style="color: #fff; background-color: #aaa; border-color: #000"),
-                                    'It will recalculate all tags for the current version of the tag and the last save.')
-                            ),
                             ui.input_text_area(
                                 id="tag_json_text",
                                 label=ui.markdown("JSON text"),
@@ -133,32 +130,6 @@ app_ui = shiny_app.app_ui_factory(
         )
     )
 )
-
-styles = [
-    {
-        "location": "body",
-        "style": {
-            "background-color": "grey",
-            "border": "0.5px solid black",
-            'font-size': '14px',
-            'color': 'black'
-        },
-    },
-    {
-        "location": "body",
-        "cols": [0],
-        "style": {
-            'font-size': '8px',
-        },
-    },
-    {
-        "location": "body",
-        "cols": [1],
-        "style": {
-            'width': '400px',
-        },
-    }
-]
 
 
 def rule_to_ui(rule: tagging.AbstractRule):
@@ -295,7 +266,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             invalid_transactions.dataframe(),
             selection_mode="none",
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
     @reactive.calc
@@ -358,7 +329,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             df,
             selection_mode="none",
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
     @render.data_frame
@@ -369,7 +340,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             df,
             selection_mode="none",
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
     @render.text
@@ -527,7 +498,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
             df,
             selection_mode='none',
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
     @render.data_frame
@@ -539,7 +510,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
             diff_df,
             selection_mode="none",
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
     @render.data_frame
@@ -554,7 +525,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
             diff_df,
             selection_mode="none",
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
     @render.data_frame
@@ -569,7 +540,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
             df,
             selection_mode="none",
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
 

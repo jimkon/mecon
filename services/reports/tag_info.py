@@ -8,6 +8,7 @@ from shinywidgets import output_widget, render_widget
 
 from mecon.app import shiny_app
 from mecon.app.current_data import WorkingDataManager
+from mecon.app import shiny_app
 from mecon.data import graphs
 from mecon.data import reports
 
@@ -405,7 +406,12 @@ def server(input: Inputs, output: Outputs, session: Session):
             fill_dates_after_groupagg=True,
         )
         df = total_amount_transactions.dataframe()
-        return df
+        return render.DataTable(
+            df,
+            selection_mode="none",
+            filters=True,
+            styles=shiny_app.datatable_styles
+        )
 
 
 tag_info_app = App(app_ui, server)

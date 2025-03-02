@@ -118,3 +118,29 @@ filter_menu = ui.sidebar(
     #     label_busy='Filtering...'
     # )
 )
+
+datatable_styles = [
+    {
+        "location": "body",
+        "style": {
+            "background-color": "grey",
+            "border": "0.5px solid black",
+            'font-size': '14px',
+            'color': 'black'
+        },
+    },
+    {
+        "location": "body",
+        "cols": [0],
+        "style": {
+            'font-size': '8px',
+        },
+    },
+    {
+        "location": "body",
+        "cols": [1],
+        "style": {
+            'width': '400px',
+        },
+    }
+]

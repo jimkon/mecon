@@ -96,7 +96,7 @@ def amount_and_freq_timeline_fig(time_pos: List | pd.Series,
     amount = amount_pos + amount_neg
     smoothed_total = amount.rolling(rolling_window, min_periods=1).mean()
     smoothed_total = smoothed_total.round(2)
-    fig.add_trace(go.Scatter(x=time_pos, y=smoothed_total, name="total (rolling)", line=dict(width=5)))
+    fig.add_trace(go.Scatter(x=time_pos, y=amount, name="total", line=dict(width=2)))
     # fig.add_trace(go.Scatter(x=time_pos, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     freq_axis_range = None
     if freq is not None:
