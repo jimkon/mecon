@@ -337,7 +337,8 @@ class TagsColumnMixin(ColumnMixin):
             return self._df_wrapper_obj.factory(df)
         except InvalidInputDataFrameColumns as e:
             logging.error(f"Invalid input dataframe columns: {e}")
-            raise ValueError(f"TagsColumnMixin failed to create dataframe NOT containing tags {tags}, result {df.shape=}")
+            original_df = self.dataframe_wrapper_obj.dataframe()
+            raise ValueError(f"TagsColumnMixin failed to create dataframe NOT containing tags {tags} from {original_df.shape=}, result {df.shape=}")
 
     def reset_tags(self):
         """
