@@ -127,10 +127,14 @@ app_ui = shiny_app.app_ui_factory(
 
 def server(input: Inputs, output: Outputs, session: Session):
     data_manager = WorkingDataManager()
-    all_transactions = data_manager.get_transactions()
 
-    (url_params,
-     get_filter_params,
+    url_params = shiny_app.url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager)
+
+    (get_filter_params,
      default_transactions,
      init,
      filtered_transactions) = shiny_app.filter_funcs_factory(

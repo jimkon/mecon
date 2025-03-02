@@ -134,12 +134,10 @@ class ShinyTransactionFilterError(ValueError):
         )
         super().__init__(message)
 
-def filter_funcs_factory(
-        input: Inputs,
+def url_params_function_factory(input: Inputs,
         output: Outputs,
         session: Session,
-        data_manager: WorkingDataManager,
-):
+        data_manager: WorkingDataManager,):
     from urllib.parse import urlparse, parse_qs
 
     @reactive.calc
@@ -147,6 +145,7 @@ def filter_funcs_factory(
         urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
         logging.info(f"Fetched URL params: {urlparse_result=}")
         _url_params = parse_qs(urlparse_result.query)
+        logging.info(f"Input params: {_url_params=}")
         params = {}
         params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
         params['filter_in_tags'] = params['filter_in_tags'].split(',') if len(params['filter_in_tags']) > 0 else []
@@ -154,9 +153,18 @@ def filter_funcs_factory(
         params['filter_out_tags'] = params['filter_out_tags'].split(',') if len(params['filter_out_tags']) > 0 else []
         params['time_unit'] = _url_params.get('time_unit', DEFAULT_FILTER_TIME_UNIT)
         params['compare_tags'] = _url_params.get('compare_tags', [''])[0].split(',')
-        logging.info(f"Input params: {params}")
+        logging.info(f"Input params: {params=}")
 
         return params
+
+    return url_params
+
+def filter_funcs_factory(
+        input: Inputs,
+        output: Outputs,
+        session: Session,
+        data_manager: WorkingDataManager,
+):
 
     @reactive.calc
     def get_filter_params():
@@ -176,6 +184,7 @@ def filter_funcs_factory(
 
     @reactive.calc
     def default_transactions():
+        url_params = url_params_function_factory(input, output, session, data_manager)
         params = url_params()
         filter_in_tags = params['filter_in_tags']
         filter_out_tags = params['filter_out_tags']
@@ -199,6 +208,7 @@ def filter_funcs_factory(
         logging.info('Init')
         ui.update_select(id='date_period_input_select', selected=DEFAULT_FILTER_PERIOD)
 
+        url_params = url_params_function_factory(input, output, session, data_manager)
         params = url_params()
         transactions = default_transactions()
         all_tags_names = [tag.name for tag in data_manager.all_tags()]
@@ -302,7 +312,7 @@ def filter_funcs_factory(
 
         return filtered_in_and_out_transactions
 
-    return url_params, get_filter_params, default_transactions, init, filtered_transactions
+    return get_filter_params, default_transactions, init, filtered_transactions
 
 
 filter_menu = ui.sidebar(
