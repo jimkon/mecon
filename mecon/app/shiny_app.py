@@ -125,6 +125,7 @@ def transactions_intersection_filted_factory():
 
 class ShinyTransactionFilterError(ValueError):
     def __init__(self, message):
+        message = f"ShinyTransactionFilterError: {message}"
         ui.notification_show(
             message,
             type="error",
@@ -181,23 +182,15 @@ def filter_funcs_factory(
         transactions = data_manager.get_transactions()
         filtered_in_transactions = transactions.containing_tags(filter_in_tags)
         if filtered_in_transactions.size() == 0:
-            ui.notification_show(
-                f"Error: No transactions found for {params['time_unit']} time unit containing {params['filter_in_tags']} tags.",
-                type="error",
-                duration=None,
-                close_button=True
-            )
-            return None
+            error_msg = f"No transactions found for {params['time_unit']} time unit containing {params['filter_in_tags']} tags."
+            raise ShinyTransactionFilterError(error_msg)
 
         filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
                                                                                         empty_tags_strategy='all_true')
         if filtered_in_and_out_transactions.size() == 0:
-            ui.notification_show(
-                f"Error: No transactions found for {params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags.",
-                type="error",
-                duration=None,
-                close_button=True
-            )
+            error_msg = f"No transactions found for {params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags."
+            raise ShinyTransactionFilterError(error_msg)
+
         logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
         return filtered_in_and_out_transactions
 
@@ -291,37 +284,18 @@ def filter_funcs_factory(
 
         in_date_range_transactions = transactions.select_date_range(start_date, end_date)
         if in_date_range_transactions.size() == 0:
-            error_msg = f"Error: No transactions found for '{time_unit}' time unit in given date range {start_date} to {end_date}."
-            ui.notification_show(
-                error_msg,
-                type="error",
-                duration=None,
-                close_button=True
-            )
-            raise ValueError(error_msg)
+            error_msg = f"No transactions found for '{time_unit}' time unit in given date range {start_date} to {end_date}."
+            raise ShinyTransactionFilterError(error_msg)
 
         filtered_in_transactions = in_date_range_transactions.containing_tags(filter_in_tags)
         if filtered_in_transactions.size() == 0:
-            error_msg = f"Error: No transactions found for '{time_unit}' time unit containing {filter_in_tags} tags."
-            ui.notification_show(
-                error_msg,
-                type="error",
-                duration=None,
-                close_button=True
-            )
-            raise ValueError(error_msg)
+            error_msg = f"No transactions found for '{time_unit}' time unit containing {filter_in_tags} tags."
+            raise ShinyTransactionFilterError(error_msg)
 
-        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
-                                                                                        empty_tags_strategy='all_true')
+        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,                                                                           empty_tags_strategy='all_true')
         if filtered_in_and_out_transactions.size() == 0:
-            error_msg = f"Error: No transactions found for '{time_unit}' time unit after filtering out {filter_out_tags} tags."
-            ui.notification_show(
-                error_msg,
-                type="error",
-                duration=None,
-                close_button=True
-            )
-            raise ValueError(error_msg)
+            error_msg = f"No transactions found for '{time_unit}' time unit after filtering out {filter_out_tags} tags."
+            raise ShinyTransactionFilterError(error_msg)
 
         logging.info(
             f"Filtered transactions size: {filtered_in_and_out_transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
