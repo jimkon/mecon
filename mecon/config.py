@@ -63,3 +63,7 @@ EXPECTED_MONZO_COLUMNS_IN_RAW_STATEMENT = {'Transaction',
                                            "Local currency", "Notes and  # tags", "Address", "Receipt", "Description",
                                            "Category split",
                                            "Money Out", "Money In"}
+
+
+SHINY_DEFAULT_FILTER_PERIOD = 'All'
+SHINY_DEFAULT_FILTER_TIME_UNIT = 'month'
