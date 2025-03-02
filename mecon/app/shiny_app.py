@@ -73,8 +73,10 @@ def app_ui_factory(*args):
         *args
     )
 
+
 DEFAULT_FILTER_PERIOD = config.SHINY_DEFAULT_FILTER_PERIOD
 DEFAULT_FILTER_TIME_UNIT = config.SHINY_DEFAULT_FILTER_TIME_UNIT
+
 
 def transactions_intersection_filted_factory():
     # TODO add custom date period option
@@ -123,6 +125,7 @@ def transactions_intersection_filted_factory():
         # )
     )
 
+
 class ShinyTransactionFilterError(ValueError):
     def __init__(self, message):
         message = f"ShinyTransactionFilterError: {message}"
@@ -134,10 +137,11 @@ class ShinyTransactionFilterError(ValueError):
         )
         super().__init__(message)
 
+
 def url_params_function_factory(input: Inputs,
-        output: Outputs,
-        session: Session,
-        data_manager: WorkingDataManager,):
+                                output: Outputs,
+                                session: Session,
+                                data_manager: WorkingDataManager, ):
     from urllib.parse import urlparse, parse_qs
 
     @reactive.calc
@@ -154,10 +158,9 @@ def url_params_function_factory(input: Inputs,
         params['time_unit'] = _url_params.get('time_unit', DEFAULT_FILTER_TIME_UNIT)
         params['compare_tags'] = _url_params.get('compare_tags', [''])[0].split(',')
         logging.info(f"Input params: {params=}")
-
         return params
-
     return url_params
+
 
 def filter_funcs_factory(
         input: Inputs,
@@ -165,7 +168,6 @@ def filter_funcs_factory(
         session: Session,
         data_manager: WorkingDataManager,
 ):
-
     @reactive.calc
     def get_filter_params():
         logging.info('Fetching filter params')
@@ -302,7 +304,8 @@ def filter_funcs_factory(
             error_msg = f"No transactions found for '{time_unit}' time unit containing {filter_in_tags} tags."
             raise ShinyTransactionFilterError(error_msg)
 
-        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,                                                                           empty_tags_strategy='all_true')
+        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
+                                                                                        empty_tags_strategy='all_true')
         if filtered_in_and_out_transactions.size() == 0:
             error_msg = f"No transactions found for '{time_unit}' time unit after filtering out {filter_out_tags} tags."
             raise ShinyTransactionFilterError(error_msg)

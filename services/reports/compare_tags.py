@@ -1,7 +1,5 @@
 # setup_logging()
-import datetime
 import logging
-from urllib.parse import urlparse, parse_qs
 
 from shiny import App, Inputs, Outputs, Session, ui, reactive
 from shinywidgets import output_widget, render_widget
@@ -14,59 +12,21 @@ from mecon.data import graphs
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
+data_manager = shiny_app.create_data_manager()
 
-
-DEFAULT_PERIOD = 'Last year'
-DEFAULT_TIME_UNIT = 'month'
+# DEFAULT_PERIOD = 'Last year'
+# DEFAULT_TIME_UNIT = 'month'
 
 app_ui = shiny_app.app_ui_factory(
     ui.layout_sidebar(
         ui.sidebar(
-            ui.input_select(
-                id='date_period_input_select',
-                label='Select date period',
-                choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'],
-                selected=DEFAULT_PERIOD
-            ),
-            ui.input_date_range(
-                id='transactions_date_range',
-                label='Select date range',
-                start=datetime.date.today() - datetime.timedelta(days=365),
-                end=datetime.date.today(),
-                format='dd-mm-yyyy',
-                separator=':'
-            ),
-            ui.input_radio_buttons(
-                id='time_unit_select',
-                label='Time unit',
-                choices=['none', 'day', 'week', 'month', 'year'],
-                selected=DEFAULT_TIME_UNIT
-            ),
-            ui.input_selectize(
-                id='filter_in_tags_select',
-                label='Select tags to filter IN',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
-                selected=None,
-                multiple=True
-            ),
-            ui.input_selectize(
-                id='filter_out_tags_select',
-                label='Select tags to filter OUT',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
-                selected=None,
-                multiple=True
-            ),
-            # ui.input_task_button( # too much trouble for now, just do it manually or refresh the page
-            #     id='reset_filter_values_button',
-            #     label='Reset Values',
-            #     label_busy='Filtering...'
-            # )
+            shiny_app.transactions_intersection_filted_factory()
         ),
         ui.page_fluid(
             ui.input_selectize(
                 id='compare_tags_select',
                 label='Select tags to show',
-                choices=[],  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
+                choices=sorted([tag.name for tag in data_manager.all_tags()]),  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
@@ -88,133 +48,21 @@ app_ui = shiny_app.app_ui_factory(
 
 def server(input: Inputs, output: Outputs, session: Session):
     data_manager = shiny_app.create_data_manager()
-    all_transactions = data_manager.get_transactions()
 
-    @reactive.calc
-    def url_params():
-        logging.info('Fetching URL params')
-        urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
-        _url_params = parse_qs(urlparse_result.query)
-        params = {}
-        params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
-        params['filter_in_tags'] = params['filter_in_tags'].split(',') if len(params['filter_in_tags']) > 0 else []
-        params['filter_out_tags'] = _url_params.get('filter_out_tags', [''])[0]
-        params['filter_out_tags'] = params['filter_out_tags'].split(',') if len(params['filter_out_tags']) > 0 else []
-        params['time_unit'] = _url_params.get('time_unit', DEFAULT_TIME_UNIT)
-        params['compare_tags'] = _url_params.get('compare_tags', [''])[0].split(',')
-        logging.info(f"Input params: {params}")
+    url_params = shiny_app.url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager)
 
-        return params
-
-    @reactive.calc
-    def default_transactions():
-        params = url_params()
-        filter_in_tags = params['filter_in_tags']
-        filter_out_tags = params['filter_out_tags']
-        transactions = data_manager.get_transactions() \
-            .containing_tags(filter_in_tags) \
-            .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
-        logging.info(f"URL param transactions: {transactions.size()=}")
-        return transactions
-
-    @reactive.effect
-    def init():
-        logging.info('Init')
-        ui.update_select(id='date_period_input_select', selected=DEFAULT_PERIOD)
-
-        params = url_params()
-        transactions = default_transactions()
-        all_tags_names = [tag.name for tag in data_manager.all_tags()]
-        new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
-                       cnt > 0]
-
-        if len(input.filter_in_tags_select()) == 0:
-            logging.info(f"Updating filter In tags: {len(new_choices)} {params['filter_in_tags']}")
-            ui.update_selectize(id='filter_in_tags_select',
-                                choices=sorted(new_choices),
-                                selected=params['filter_in_tags'])
-
-        if len(input.filter_out_tags_select()) == 0:
-            logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {params['filter_out_tags']}")
-            ui.update_selectize(id='filter_out_tags_select',
-                                choices=all_tags_names,
-                                selected=params['filter_out_tags'])
-
-        if len(input.compare_tags_select()) == 0:
-            logging.info(f"Updating compare tags: {len(new_choices)} {params['compare_tags']}")
-            ui.update_selectize(id='compare_tags_select',
-                                choices=sorted(new_choices),
-                                selected=params['compare_tags'])
-
-        logging.info(f"{input.filter_in_tags_select()=} {input.compare_tags_select()=}")
-
-    # @reactive.calc
-    # def reset_filter_inputs():
-    #     logging.info('Reset filters')
-    #     default_params = url_params()
-    #     default_tags = default_params['tags']
-    #
-    #     if input.date_period_input_select() == 'Last 30 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last 90 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last year':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
-    #     else:
-    #         start_date, end_date = all_transactions.date_range()
-    #
-    #     default_time_unit = default_params['time_unit']
-    #     ui.update_radio_buttons(id='time_unit_select', selected=default_time_unit)
-    #
-    #     new_choices = [tag_name for tag_name, cnt in all_transactions.containing_tag(default_tags).all_tags().items() if
-    #                    cnt > 0]
-    #     ui.update_selectize(id='filter_in_tags_select',
-    #                         choices=sorted(new_choices),
-    #                         selected=default_tags)
-    #
-    #     return start_date, end_date, default_time_unit, default_tags
-
-    @reactive.effect
-    @reactive.event(input.date_period_input_select)
-    def _():
-        logging.info(f"Changed period to '{input.date_period_input_select()}'")
-        if input.date_period_input_select() == 'Last 30 days':
-            start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
-        elif input.date_period_input_select() == 'Last 90 days':
-            start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
-        elif input.date_period_input_select() == 'Last year':
-            start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
-        else:
-            start_date, end_date = all_transactions.date_range()
-
-        min_date, max_date = all_transactions.date_range()
-
-        ui.update_date_range(id='transactions_date_range',
-                             start=start_date,
-                             end=min(max_date, end_date),
-                             min=min_date,
-                             max=max_date
-                             )
-
-    @reactive.calc
-    def get_filter_params():
-        logging.info('Fetching filter params')
-        start_date, end_date = input.transactions_date_range()
-        time_unit = input.time_unit_select()
-        filter_in_tags = input.filter_in_tags_select()
-        filter_out_tags = input.filter_out_tags_select()
-        return start_date, end_date, time_unit, filter_in_tags, filter_out_tags
-
-    @reactive.calc
-    def filtered_transactions():
-        start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params()
-        transactions = data_manager.get_transactions() \
-            .select_date_range(start_date, end_date) \
-            .containing_tags(filter_in_tags) \
-            .not_containing_tags(filter_out_tags, empty_tags_strategy='all_true')
-        logging.info(
-            f"Filtered transactions size: {transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
-        return transactions
+    (get_filter_params,
+     default_transactions,
+     init,
+     filtered_transactions) = shiny_app.filter_funcs_factory(
+        input,
+        output,
+        session,
+        data_manager)
 
     @reactive.calc
     def all_ungrouped_transactions():

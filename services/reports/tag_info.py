@@ -25,47 +25,6 @@ app_ui = shiny_app.app_ui_factory(
     ui.layout_sidebar(
         ui.sidebar(
             shiny_app.transactions_intersection_filted_factory()
-            # ui.input_select(
-            #     id='date_period_input_select',
-            #     label='Select date period',
-            #     choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'],
-            #     selected=DEFAULT_PERIOD
-            # ),
-            # ui.input_date_range(
-            #     id='transactions_date_range',
-            #     label='Select date range',
-            #     start=datetime.date.today() - datetime.timedelta(days=365),
-            #     end=datetime.date.today(),
-            #     format='dd-mm-yyyy',
-            #     separator=':'
-            # ),
-            # ui.input_radio_buttons(
-            #     id='time_unit_select',
-            #     label='Time unit',
-            #     choices=['none', 'day', 'week', 'month', 'year'],
-            #     selected=DEFAULT_TIME_UNIT
-            # ),
-            # ui.input_selectize(
-            #     id='filter_in_tags_select',
-            #     label='Select tags to filter IN',
-            #     choices=[],
-            #     # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
-            #     selected=None,
-            #     multiple=True
-            # ),
-            # ui.input_selectize(
-            #     id='filter_out_tags_select',
-            #     label='Select tags to filter OUT',
-            #     choices=[],
-            #     # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
-            #     selected=None,
-            #     multiple=True
-            # ),
-            # # ui.input_task_button( # too much trouble for now, just do it manually or refresh the page
-            # #     id='reset_filter_values_button',
-            # #     label='Reset Values',
-            # #     label_busy='Filtering...'
-            # # )
         ),
         ui.page_fluid(
             ui.navset_tab(
@@ -121,8 +80,6 @@ app_ui = shiny_app.app_ui_factory(
         )
     )
 )
-
-
 
 
 def server(input: Inputs, output: Outputs, session: Session):
