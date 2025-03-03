@@ -465,13 +465,25 @@ class DateFiller:
         start_date = df_start_date if start_date is None else start_date
         end_date = df_end_date if end_date is None else end_date
 
-        fill_df = self.produce_fill_df_rows(start_date, end_date, df_wrapper.date if df_wrapper.size() > 0 else None)
+        # fill_df = self.produce_fill_df_rows(
+        #     start_date,
+        #     end_date,
+        #     remove_dates=df_wrapper.date if df_wrapper.size() > 0 else None)
+        dates_to_remove = [calendar_utils.date_range_group_beginning(dt, dt, step=self._fill_unit).values[0] for dt in df_wrapper.date]\
+                    if df_wrapper.size() > 0 else None
+        fill_df = self.produce_fill_df_rows(
+            start_date,
+            end_date,
+            remove_dates=dates_to_remove)
         fill_df_wrapper = df_wrapper.factory(fill_df)
         filtered_df_wrapper = df_wrapper.select_date_range(start_date, end_date)
         merged_df_wrapper = filtered_df_wrapper.merge(fill_df_wrapper)
         return merged_df_wrapper
 
-    def produce_fill_df_rows(self, start_date: datetime | date, end_date: datetime | date, remove_dates=None):
+    def produce_fill_df_rows(self,
+                             start_date: datetime | date,
+                             end_date: datetime | date,
+                             remove_dates=None):
         date_range = calendar_utils.date_range_group_beginning(start_date, end_date, step=self._fill_unit)
         date_range.name = 'datetime'
 

@@ -65,6 +65,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def fill_values(self, fill_unit,
                     start_date: datetime | date | None = None,
                     end_date: datetime | date | None = None):
+        logging.info(f"Filling '{fill_unit}' values from {start_date} to {end_date}")
         return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit),
                                start_date=start_date, end_date=end_date)
 
@@ -72,7 +73,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def factory(cls, df: pd.DataFrame):
         return super().factory(df)
 
-    def to_html(self, df_transformer=None):
+    def to_html(self, df_transformer=None):# TODO remove
         styles = """
         <style>
         ul {
