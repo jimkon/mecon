@@ -1,7 +1,6 @@
 import unittest
 from datetime import datetime, date
 
-import pandas as pd
 from pandas import Timestamp
 
 from mecon.utils import calendar_utils as cu
@@ -85,6 +84,41 @@ class TestCalendarUtils(unittest.TestCase):
             datetime(2023, 9, 18, 12, 23, 34)
         )
 
+    def test_get_closest_future_sunday(self):
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 11, 12, 23, 34)),
+            datetime(2023, 9, 17, 12, 23, 34)
+        )
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 12, 12, 23, 34)),
+            datetime(2023, 9, 17, 12, 23, 34)
+        )
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 13, 12, 23, 34)),
+            datetime(2023, 9, 17, 12, 23, 34)
+        )
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 14, 12, 23, 34)),
+            datetime(2023, 9, 17, 12, 23, 34)
+        )
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 15, 12, 23, 34)),
+            datetime(2023, 9, 17, 12, 23, 34)
+        )
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 16, 12, 23, 34)),
+            datetime(2023, 9, 17, 12, 23, 34)
+        )
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 17, 12, 23, 34)),
+            datetime(2023, 9, 17, 12, 23, 34)
+        )
+        self.assertEqual(
+            cu.get_closest_future_sunday(datetime(2023, 9, 18, 12, 23, 34)),
+            datetime(2023, 9, 24, 12, 23, 34)
+        )
+
+
     def test_date_floor(self):
         self.assertEqual(
             cu.date_floor(datetime(2023, 9, 12, 12, 23, 34), 'day'),
@@ -105,6 +139,27 @@ class TestCalendarUtils(unittest.TestCase):
 
         with self.assertRaises(cu.InvalidDataRange):
             cu.date_floor(datetime(2023, 9, 12, 12, 23, 34), 'quarter')
+
+    def test_date_ceil(self):
+        self.assertEqual(
+            cu.date_ceil(datetime(2023, 9, 12, 12, 23, 34), 'day'),
+            datetime(2023, 9, 12, 23, 59, 59)
+        )
+        self.assertEqual(
+            cu.date_ceil(datetime(2023, 9, 11, 12, 23, 34), 'week'),
+            datetime(2023, 9, 17, 23, 59, 59)  # Closest future Sunday
+        )
+        self.assertEqual(
+            cu.date_ceil(datetime(2023, 9, 12, 12, 23, 34), 'month'),
+            datetime(2023, 9, 30, 23, 59, 59)  # Last day of September
+        )
+        self.assertEqual(
+            cu.date_ceil(datetime(2023, 9, 12, 12, 23, 34), 'year'),
+            datetime(2023, 12, 31, 23, 59, 59)  # Last day of the year
+        )
+
+        with self.assertRaises(cu.InvalidDataRange):
+            cu.date_ceil(datetime(2023, 9, 12, 12, 23, 34), 'quarter')
 
     def test_week_of_month(self):
         # Test week_of_month function

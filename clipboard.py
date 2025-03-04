@@ -1,3 +1,5 @@
+import datetime
+
 if __name__ == '__main__':
     from mecon import config
     from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
@@ -13,19 +15,38 @@ if __name__ == '__main__':
 
     tags = data_manager.all_tags()
     transactions = data_manager.get_transactions()
-    # LinearTagging(tags).tag(data_manager.get_transactions().copy())
-    # proc = RuleExecutionPlanTagging(tags)
-    # proc.create_rule_execution_plan()
-    # proc.tag(transactions)
 
-    # monitor = RuleExecutionPlanMonitor(dataset)
-    # proc = OptimisedRuleExecutionPlanTagging(tags)
-    # proc.create_rule_execution_plan()
-    # proc.create_optimised_rule_execution_plan()
-    # new_transactions = proc.tag(transactions, monitor=monitor)
-    #
-    # monitor.get_tag_calculations('Afternoon')
+    start_date = datetime.datetime(2020, 1, 8, 1, 0, 7)
+    end_date = datetime.datetime(2025, 1, 21, 0, 0, 0)
+    time_unit = 'month'
+    compare_tags = {'Income', 'Rent'}
+    # transactions = filtered_transactions()
 
-    from mecon.data.reports import transactions_stats_json
-    transactions_stats_json(transactions.containing_tags('Dinner time'))
+    all_trans = {}
+    for tag in compare_tags:
+        trans = transactions.containing_tags(tag)
+
+        # if trans.size() == 0:
+        #     raise ValueError(
+        #         f"Transactions for {tag} is 0 for filter params=({start_date=}, {end_date=}, {filter_in_tags=}, {filter_out_tags=})")
+
+        all_trans[tag] = trans
+
+    min_date = min([trans.datetime.min() for tags, trans in all_trans.items()])
+    max_date = max([trans.datetime.max() for tags, trans in all_trans.items()])
+
+    synced_trans = {}
+    for tag, trans in all_trans.items():
+        grouped_trans = trans.group_and_fill_transactions(
+            grouping_key='month',
+            aggregation_key='sum',
+            fill_dates_after_groupagg=True,
+        )
+        dt_r1 = grouped_trans.date_range()
+        filled_trans = grouped_trans.fill_values(fill_unit='month', start_date=min_date,
+                                                 end_date=max_date)
+        dt_r2 = filled_trans.date_range()
+
+        synced_trans[tag] = filled_trans.dataframe()
+
     pass

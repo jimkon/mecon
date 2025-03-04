@@ -465,18 +465,20 @@ class DateFiller:
         start_date = df_start_date if start_date is None else start_date
         end_date = df_end_date if end_date is None else end_date
 
-        # fill_df = self.produce_fill_df_rows(
-        #     start_date,
-        #     end_date,
-        #     remove_dates=df_wrapper.date if df_wrapper.size() > 0 else None)
-        dates_to_remove = [calendar_utils.date_range_group_beginning(dt, dt, step=self._fill_unit).values[0] for dt in df_wrapper.date]\
-                    if df_wrapper.size() > 0 else None
+        if df_wrapper.size() > 0:
+            fill_dates_to_remove = [calendar_utils.date_floor(dt, date_unit=self._fill_unit) for dt in df_wrapper.datetime]
+        else:
+            fill_dates_to_remove = None
+
         fill_df = self.produce_fill_df_rows(
             start_date,
             end_date,
-            remove_dates=dates_to_remove)
+            remove_dates=fill_dates_to_remove)
         fill_df_wrapper = df_wrapper.factory(fill_df)
-        filtered_df_wrapper = df_wrapper.select_date_range(start_date, end_date)
+        filtered_df_wrapper = df_wrapper.select_date_range(
+            calendar_utils.date_floor(start_date, date_unit=self._fill_unit),
+            calendar_utils.date_ceil(end_date, date_unit=self._fill_unit))
+
         merged_df_wrapper = filtered_df_wrapper.merge(fill_df_wrapper)
         return merged_df_wrapper
 

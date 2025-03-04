@@ -882,6 +882,129 @@ class TestTransactionsFillValues(unittest.TestCase):
 
         pd.testing.assert_frame_equal(result_df, expected_df)
 
+    def test_fill_months_start_and_end_date_case(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': ['11', '13', '14', '15'],
+            'datetime': [datetime(2023, 9, 2, 2, 23, 34),
+                         datetime(2023, 10, 4, 10, 23, 34),
+                         datetime(2023, 10, 4, 11, 23, 34),
+                         datetime(2023, 12, 6, 12, 23, 34)],
+            'amount': [100.0, 200.0, 250.0, 300.0, ],
+            'currency': ['GBP', 'GBP', 'GBP', 'GBP'],
+            'amount_cur': [100.0, 200.0, 250.0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 2.5', 'Transaction 3'],
+            'tags': ['tag0', 'tag1', 'tag1.5', 'tag1,tag2']
+        }))
+
+        result_df = transactions.fill_values(
+            fill_unit='month',
+            start_date=datetime(2023, 9, 2, 0, 0, 0),
+            end_date=datetime(2023, 12, 7, 0, 0, 0)
+        ).dataframe().reset_index(drop=True)
+        expected_df = Transactions(pd.DataFrame({
+            'id': ['11', '13', '14', '', '15'],
+            'datetime': [datetime(2023, 9, 2, 2, 23, 34),
+                         datetime(2023, 10, 4, 10, 23, 34),
+                         datetime(2023, 10, 4, 11, 23, 34),
+                         datetime(2023, 11, 1, 0, 0, 0),
+                         datetime(2023, 12, 6, 12, 23, 34), ],
+            'amount': [100.0, 200.0, 250.0, .0, 300.0],
+            'currency': ['GBP', 'GBP', 'GBP', '', 'GBP'],
+            'amount_cur': [100.0, 200.0, 250.0, .0, 300.0],
+            'description': ['Transaction 1', 'Transaction 2', 'Transaction 2.5', '', 'Transaction 3'],
+            'tags': ['tag0', 'tag1', 'tag1.5', '', 'tag1,tag2']
+        })).dataframe().reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(result_df, expected_df)
+
+    def test_fill_months_start_and_end_date_case_2(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': ['test'] * 61,
+            'datetime': [Timestamp('2020-01-01 00:00:00'), Timestamp('2020-02-01 00:00:00'),
+                         Timestamp('2020-03-01 00:00:00'), Timestamp('2020-04-01 00:00:00'),
+                         Timestamp('2020-05-01 00:00:00'), Timestamp('2020-06-01 00:00:00'),
+                         Timestamp('2020-07-01 00:00:00'), Timestamp('2020-08-01 00:00:00'),
+                         Timestamp('2020-09-01 00:00:00'), Timestamp('2020-10-01 00:00:00'),
+                         Timestamp('2020-11-01 00:00:00'), Timestamp('2020-12-01 00:00:00'),
+                         Timestamp('2021-01-01 00:00:00'), Timestamp('2021-02-01 00:00:00'),
+                         Timestamp('2021-03-01 00:00:00'), Timestamp('2021-04-01 00:00:00'),
+                         Timestamp('2021-05-01 00:00:00'), Timestamp('2021-06-01 00:00:00'),
+                         Timestamp('2021-07-01 00:00:00'), Timestamp('2021-08-01 00:00:00'),
+                         Timestamp('2021-09-01 00:00:00'), Timestamp('2021-10-01 00:00:00'),
+                         Timestamp('2021-11-01 00:00:00'), Timestamp('2021-12-01 00:00:00'),
+                         Timestamp('2022-01-01 00:00:00'), Timestamp('2022-02-01 00:00:00'),
+                         Timestamp('2022-03-01 00:00:00'), Timestamp('2022-04-01 00:00:00'),
+                         Timestamp('2022-05-01 00:00:00'), Timestamp('2022-06-01 00:00:00'),
+                         Timestamp('2022-07-01 00:00:00'), Timestamp('2022-08-01 00:00:00'),
+                         Timestamp('2022-09-01 00:00:00'), Timestamp('2022-10-01 00:00:00'),
+                         Timestamp('2022-11-01 00:00:00'), Timestamp('2022-12-01 00:00:00'),
+                         Timestamp('2023-01-01 00:00:00'), Timestamp('2023-02-01 00:00:00'),
+                         Timestamp('2023-03-01 00:00:00'), Timestamp('2023-04-01 00:00:00'),
+                         Timestamp('2023-05-01 00:00:00'), Timestamp('2023-06-01 00:00:00'),
+                         Timestamp('2023-07-01 00:00:00'), Timestamp('2023-08-01 00:00:00'),
+                         Timestamp('2023-09-01 00:00:00'), Timestamp('2023-10-01 00:00:00'),
+                         Timestamp('2023-11-01 00:00:00'), Timestamp('2023-12-01 00:00:00'),
+                         Timestamp('2024-01-01 00:00:00'), Timestamp('2024-02-01 00:00:00'),
+                         Timestamp('2024-03-01 00:00:00'), Timestamp('2024-04-01 00:00:00'),
+                         Timestamp('2024-05-01 00:00:00'), Timestamp('2024-06-01 00:00:00'),
+                         Timestamp('2024-07-01 00:00:00'), Timestamp('2024-08-01 00:00:00'),
+                         Timestamp('2024-09-01 00:00:00'), Timestamp('2024-10-01 00:00:00'),
+                         Timestamp('2024-11-01 00:00:00'), Timestamp('2024-12-01 00:00:00'),
+                         Timestamp('2025-01-01 00:00:00')],
+            'amount': [1.0]*61,
+            'currency': ['GBP']*61,
+            'amount_cur': [1.0]*61,
+            'description': ['desc']*61,
+            'tags': ['t']*61
+        }))
+
+        result_df = transactions.fill_values(
+            fill_unit='month',
+            start_date=Timestamp('2020-01-28 01:00:07'),
+            end_date=Timestamp('2025-01-21 00:00:00')
+        ).dataframe().reset_index(drop=True)
+        expected_df = Transactions(pd.DataFrame({
+            'id': ['test'] * 61,
+            'datetime': [Timestamp('2020-01-01 00:00:00'), Timestamp('2020-02-01 00:00:00'),
+                         Timestamp('2020-03-01 00:00:00'), Timestamp('2020-04-01 00:00:00'),
+                         Timestamp('2020-05-01 00:00:00'), Timestamp('2020-06-01 00:00:00'),
+                         Timestamp('2020-07-01 00:00:00'), Timestamp('2020-08-01 00:00:00'),
+                         Timestamp('2020-09-01 00:00:00'), Timestamp('2020-10-01 00:00:00'),
+                         Timestamp('2020-11-01 00:00:00'), Timestamp('2020-12-01 00:00:00'),
+                         Timestamp('2021-01-01 00:00:00'), Timestamp('2021-02-01 00:00:00'),
+                         Timestamp('2021-03-01 00:00:00'), Timestamp('2021-04-01 00:00:00'),
+                         Timestamp('2021-05-01 00:00:00'), Timestamp('2021-06-01 00:00:00'),
+                         Timestamp('2021-07-01 00:00:00'), Timestamp('2021-08-01 00:00:00'),
+                         Timestamp('2021-09-01 00:00:00'), Timestamp('2021-10-01 00:00:00'),
+                         Timestamp('2021-11-01 00:00:00'), Timestamp('2021-12-01 00:00:00'),
+                         Timestamp('2022-01-01 00:00:00'), Timestamp('2022-02-01 00:00:00'),
+                         Timestamp('2022-03-01 00:00:00'), Timestamp('2022-04-01 00:00:00'),
+                         Timestamp('2022-05-01 00:00:00'), Timestamp('2022-06-01 00:00:00'),
+                         Timestamp('2022-07-01 00:00:00'), Timestamp('2022-08-01 00:00:00'),
+                         Timestamp('2022-09-01 00:00:00'), Timestamp('2022-10-01 00:00:00'),
+                         Timestamp('2022-11-01 00:00:00'), Timestamp('2022-12-01 00:00:00'),
+                         Timestamp('2023-01-01 00:00:00'), Timestamp('2023-02-01 00:00:00'),
+                         Timestamp('2023-03-01 00:00:00'), Timestamp('2023-04-01 00:00:00'),
+                         Timestamp('2023-05-01 00:00:00'), Timestamp('2023-06-01 00:00:00'),
+                         Timestamp('2023-07-01 00:00:00'), Timestamp('2023-08-01 00:00:00'),
+                         Timestamp('2023-09-01 00:00:00'), Timestamp('2023-10-01 00:00:00'),
+                         Timestamp('2023-11-01 00:00:00'), Timestamp('2023-12-01 00:00:00'),
+                         Timestamp('2024-01-01 00:00:00'), Timestamp('2024-02-01 00:00:00'),
+                         Timestamp('2024-03-01 00:00:00'), Timestamp('2024-04-01 00:00:00'),
+                         Timestamp('2024-05-01 00:00:00'), Timestamp('2024-06-01 00:00:00'),
+                         Timestamp('2024-07-01 00:00:00'), Timestamp('2024-08-01 00:00:00'),
+                         Timestamp('2024-09-01 00:00:00'), Timestamp('2024-10-01 00:00:00'),
+                         Timestamp('2024-11-01 00:00:00'), Timestamp('2024-12-01 00:00:00'),
+                         Timestamp('2025-01-01 00:00:00')],
+            'amount': [1.0]*61,
+            'currency': ['GBP']*61,
+            'amount_cur': [1.0]*61,
+            'description': ['desc']*61,
+            'tags': ['t']*61
+        })).dataframe().reset_index(drop=True)
+
+        pd.testing.assert_frame_equal(result_df, expected_df)
+
 
 if __name__ == '__main__':
     unittest.main()
