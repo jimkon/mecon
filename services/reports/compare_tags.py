@@ -71,27 +71,29 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.info(f"Calculating all transactions for {compare_tags}...")
         transactions = filtered_transactions()
 
-        all_trans = []
+        all_trans = {}
         for tag in compare_tags:
             trans = transactions.containing_tags(tag)
 
-            logging.info(f"Transactions for {tag}: {trans.size()}")
+            logging.info(f"Ungrouped transactions for {tag}: {trans.size()}, date range {trans.date_range()}")
             if trans.size() == 0:
                 raise ValueError(
                     f"Transactions for {tag} is 0 for filter params=({start_date=}, {end_date=}, {filter_in_tags=}, {filter_out_tags=})")
 
-            all_trans.append(trans)
+            all_trans[tag] = trans
 
         logging.info(f"Calculating all transactions... {len(all_trans)}")
-        return all_trans, compare_tags
+        return all_trans
 
     def all_synced_and_grouped_transactions():
-        all_trans, compare_tags = all_ungrouped_transactions()
-        min_date = min([trans.datetime.min() for trans in all_trans])
-        max_date = max([trans.datetime.max() for trans in all_trans])
+        all_trans = all_ungrouped_transactions()
+        min_date = min([trans.datetime.min() for tags, trans in all_trans.items()])
+        max_date = max([trans.datetime.max() for tags, trans in all_trans.items()])
+        compare_tags = input.compare_tags_select() if len(input.compare_tags_select()) > 0 else ['All']
+        logging.info(f"Calculating all transactions from {min_date} to {max_date} for {compare_tags} and {input.time_unit_select()}")
 
-        synced_trans = []
-        for trans in all_trans:
+        synced_trans = {}
+        for tag, trans in all_trans.items():
             grouped_trans = trans.group_and_fill_transactions(
                 grouping_key=input.time_unit_select(),
                 aggregation_key='sum',
@@ -99,9 +101,11 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
             filled_trans = grouped_trans.fill_values(fill_unit=input.time_unit_select(), start_date=min_date,
                                                      end_date=max_date)
-            synced_trans.append(filled_trans)
+            logging.info(f"Filtered transactions for {tag}: {filled_trans.size()}, date range {filled_trans.date_range()}")
 
-        return synced_trans, compare_tags
+            synced_trans[tag] = filled_trans
+
+        return synced_trans
 
     @render_widget
     def timelines():
@@ -110,30 +114,31 @@ def server(input: Inputs, output: Outputs, session: Session):
         if input.time_unit_select() == 'none':
             raise ValueError(f"This plot doesn't work for 'none' time unit")
 
-        synced_trans, tags = all_synced_and_grouped_transactions()
+        synced_trans = all_synced_and_grouped_transactions()
 
-        plot = graphs.stacked_bars_graph_html(
-            times=[trans.datetime for trans in synced_trans],
-            lines=[trans.amount for trans in synced_trans],
-            names=tags
+        plot = graphs.multiple_lines_graph_html(
+            times=[trans.datetime for tags, trans in synced_trans.items()],
+            lines=[trans.amount for tags, trans in synced_trans.items()],
+            names=list(synced_trans.keys()),
+            stacked=False
         )
         return plot
 
-    @render_widget
-    def histograms():
-        logging.info('histograms')
-        all_trans, tags = all_ungrouped_transactions()
-
-        grouped_trans = [trans.group_and_fill_transactions(
-            grouping_key=input.time_unit_select(),
-            aggregation_key='sum',
-        ) for trans in all_trans]
-
-        plot = graphs.multiple_histograms_graph_html(
-            amounts=[trans.amount for trans in grouped_trans],
-            names=tags
-        )
-        return plot
+    # @render_widget
+    # def histograms():
+    #     logging.info('histograms')
+    #     all_trans, tags = all_ungrouped_transactions()
+    #
+    #     grouped_trans = [trans.group_and_fill_transactions(
+    #         grouping_key=input.time_unit_select(),
+    #         aggregation_key='sum',
+    #     ) for trans in all_trans]
+    #
+    #     plot = graphs.multiple_histograms_graph_html(
+    #         amounts=[trans.amount for trans in grouped_trans],
+    #         names=tags
+    #     )
+    #     return plot
 
     @render_widget
     def balances():

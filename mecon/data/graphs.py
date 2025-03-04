@@ -1,4 +1,5 @@
 import datetime
+import logging
 import warnings
 from typing import List
 
@@ -309,6 +310,63 @@ def time_aggregated_amount_and_frequency_fig(time: pd.Series, amount: pd.Series 
     # Return the figure
     return fig
 
+@logging_utils.codeflow_log_wrapper('#graphs')
+def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str]):
+    fig = go.Figure()
+
+    for time, line, name in zip(times, lines, names):
+        fig.add_trace(go.Bar(x=time, y=line, name=name))
+
+    fig.update_layout(
+        barmode='stack',  # Stacked bar mode
+        autosize=True,
+        hovermode='closest',
+        yaxis=dict(title='£'),
+        # xaxis=dict(title=f"({len(time)} points)"),
+        uirevision=str(datetime.datetime.now())
+    )
+
+    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+    # return graph_html
+    return fig
+
+@logging_utils.codeflow_log_wrapper('#graphs')
+def multiple_lines_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str], stacked: bool = True):
+    fig = go.Figure()
+
+    time_lens, lines_lens = [len(time) for time in times], [len(line) for line in lines]
+    if len(set(time_lens)) != 1 or \
+        len(set(lines_lens)) != 1:
+        raise ValueError(f"All time series must have the same length, {time_lens=} != {lines_lens=}",)
+
+
+    total_line = None
+    for time, line, name in zip(times, lines, names):
+        if not stacked or total_line is None:
+            total_line = line
+        else:
+            total_line += line
+        fig.add_trace(go.Scatter(x=time, y=total_line if stacked else line, name=name,  line=dict(width=1)))
+
+    if len(lines) > 0 and not stacked:
+        # cols = df.columns.tolist()
+        # cols.remove('time')
+        # total_line = df[cols].sum(axis=1)
+        # total_line = pd.DataFrame({name: line for name, line in zip(names, lines)}).sum(axis=1)
+        # total_line = np.sum(lines, axis=1)#pd.concat(lines).sum(axis=1)
+        fig.add_trace(go.Scatter(x=times[0], y=total_line, name='Total', line=dict(width=3)))
+
+    fig.update_layout(
+        autosize=True,
+        hovermode='closest',
+        yaxis=dict(title='£'),
+        # xaxis=dict(title=f"({len(time)} points)"),
+        uirevision=str(datetime.datetime.now())
+    )
+
+    return fig
+
+
 
 # -------------------------------------------------------------------
 
@@ -329,26 +387,6 @@ def time_aggregated_amount_and_frequency_fig(time: pd.Series, amount: pd.Series 
 #     # return graph_html
 #     return fig
 
-
-@logging_utils.codeflow_log_wrapper('#graphs')
-def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str]):
-    fig = go.Figure()
-
-    for time, line, name in zip(times, lines, names):
-        fig.add_trace(go.Bar(x=time, y=line, name=name))
-
-    fig.update_layout(
-        barmode='stack',  # Stacked bar mode
-        autosize=True,
-        hovermode='closest',
-        yaxis=dict(title='£'),
-        # xaxis=dict(title=f"({len(time)} points)"),
-        uirevision=str(datetime.datetime.now())
-    )
-
-    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-    # return graph_html
-    return fig
 
 
 @logging_utils.codeflow_log_wrapper('#graphs')
