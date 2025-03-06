@@ -1,7 +1,7 @@
 import datetime
 import logging
 import warnings
-from typing import List
+from typing import List, Literal
 
 import networkx as nx
 import numpy as np
@@ -331,37 +331,84 @@ def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], name
     return fig
 
 @logging_utils.codeflow_log_wrapper('#graphs')
-def multiple_lines_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str], stacked: bool = True):
+def multiple_lines_graph_html(
+        times: List[pd.Series],
+        lines: List[pd.Series],
+        names: List[str],
+        stacked: bool = False,
+        order: Literal["desc", "asc", "none"] = "desc",  # "desc", "asc", or "none"
+        rolling_window: int = None  # Window size for rolling max/min
+):
     fig = go.Figure()
 
-    time_lens, lines_lens = [len(time) for time in times], [len(line) for line in lines]
-    if len(set(time_lens)) != 1 or \
-        len(set(lines_lens)) != 1:
-        raise ValueError(f"All time series must have the same length, {time_lens=} != {lines_lens=}",)
+    if rolling_window is None:
+        rolling_window = int(.1*len(times[0]))
 
+    # Validate input lengths
+    time_lens, lines_lens = [len(time) for time in times], [len(line) for line in lines]
+    if len(set(time_lens)) != 1 or len(set(lines_lens)) != 1:
+        raise ValueError(f"All time series must have the same length, {time_lens=} != {lines_lens=}")
+
+    # Convert to DataFrame for easier handling
+    df = pd.DataFrame({name: line.tolist() for name, line in zip(names, lines)})
+    df["time"] = times[0].tolist()  # Assume all times are identical
+
+    # Order lines if needed
+    if order in ("desc", "asc"):
+        line_sums = df[names].abs().sum()
+        sorted_names = line_sums.sort_values(ascending=(order == "asc")).index.tolist()
+        df = df[["time"] + sorted_names]  # Reorder columns
 
     total_line = None
-    for time, line, name in zip(times, lines, names):
+    cols = sorted(df.columns.tolist())
+    cols.remove("time")
+    for name in cols:  # Exclude "time" column
+        line = df[name]
         if not stacked or total_line is None:
             total_line = line
         else:
             total_line += line
-        fig.add_trace(go.Scatter(x=time, y=total_line if stacked else line, name=name,  line=dict(width=1)))
 
-    if len(lines) > 0 and not stacked:
-        # cols = df.columns.tolist()
-        # cols.remove('time')
-        # total_line = df[cols].sum(axis=1)
-        # total_line = pd.DataFrame({name: line for name, line in zip(names, lines)}).sum(axis=1)
-        # total_line = np.sum(lines, axis=1)#pd.concat(lines).sum(axis=1)
-        fig.add_trace(go.Scatter(x=times[0], y=total_line, name='Total', line=dict(width=3)))
+        fig.add_trace(go.Scatter(
+            x=df["time"], y=total_line if stacked else line, name=name,
+            line=dict(width=1), opacity=0.7  # Transparency for visibility
+        ))
 
+    # Compute total line (sum of all lines)
+    total_line = df[names].sum(axis=1)
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=total_line, name="Total",
+        line=dict(width=1, color="#FFD700"), opacity=.5  # Gold color for total
+    ))
+
+    # Compute rolling max/min and add shaded area
+    rolling_max = df[names].rolling(window=rolling_window, min_periods=1).max().sum(axis=1)
+    rolling_min = df[names].rolling(window=rolling_window, min_periods=1).min().sum(axis=1)
+    rolling_avg = df[names].rolling(window=rolling_window, min_periods=1).mean().sum(axis=1)
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=rolling_avg, name=f"Rolling Avg (w={rolling_window})",
+        line=dict(width=3, color="#FFD700"), opacity=.25  # Hide in legend
+    ))
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=rolling_max, name="Rolling Max",
+        line=dict(width=0), showlegend=False  # Hide in legend
+    ))
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=rolling_min, name="Rolling Min",
+        fill="tonexty", fillcolor="rgba(255, 215, 0, 0.1)",
+        line=dict(width=0), showlegend=False  # Semi-transparent gold shade
+    ))
+
+
+    # Update layout for dark theme
     fig.update_layout(
         autosize=True,
-        hovermode='closest',
-        yaxis=dict(title='£'),
-        # xaxis=dict(title=f"({len(time)} points)"),
-        uirevision=str(datetime.datetime.now())
+        hovermode="closest",
+        yaxis=dict(title="£", gridcolor="gray"),
+        xaxis=dict(title=f"({len(df['time'])} points)", gridcolor="gray"),
+        plot_bgcolor="#1E1E1E",  # Dark background
+        paper_bgcolor="#1E1E1E",
+        font=dict(color="white")  # White font
     )
 
     return fig

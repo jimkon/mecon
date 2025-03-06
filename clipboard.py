@@ -1,5 +1,7 @@
 import datetime
 
+from mecon.data import graphs
+
 if __name__ == '__main__':
     from mecon import config
     from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
@@ -13,13 +15,16 @@ if __name__ == '__main__':
     dataset = datasets_obj.working_dataset
     data_manager = WorkingDataManager()
 
-    tags = data_manager.all_tags()
     transactions = data_manager.get_transactions()
 
     start_date = datetime.datetime(2020, 1, 8, 1, 0, 7)
     end_date = datetime.datetime(2025, 1, 21, 0, 0, 0)
     time_unit = 'month'
-    compare_tags = {'Income', 'Rent'}
+    compare_tags = {
+        'Income',
+        'Rent',
+        'Super Market'
+    }
     # transactions = filtered_transactions()
 
     all_trans = {}
@@ -49,4 +54,12 @@ if __name__ == '__main__':
 
         synced_trans[tag] = filled_trans.dataframe()
 
-    pass
+
+    plot = graphs.multiple_lines_graph_html(
+        times=[trans.datetime for tags, trans in synced_trans.items()],
+        lines=[trans.amount for tags, trans in synced_trans.items()],
+        names=list(synced_trans.keys()),
+        stacked=False
+    )
+
+    plot.show()
