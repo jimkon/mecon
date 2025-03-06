@@ -414,6 +414,44 @@ def multiple_lines_graph_html(
     return fig
 
 
+@logging_utils.codeflow_log_wrapper('#graphs')
+def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
+    fig = go.Figure()
+
+    for amount, name in zip(amounts, names):
+        if len(amount) < 2:
+            continue  # Skip if not enough data
+
+        # Compute histogram-based density estimate
+        hist_values, bin_edges = np.histogram(amount, bins="auto", density=True)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2  # Midpoints of bins
+
+        # Normalize to make distributions comparable
+        hist_values /= np.max(hist_values) if np.max(hist_values) > 0 else 1
+
+        # Add zero-padding at the start and end
+        bin_centers = np.concatenate(([bin_edges[0]], bin_centers, [bin_edges[-1]]))
+        hist_values = np.concatenate(([0], hist_values, [0]))
+
+        # Plot density as a smooth line with a filled area
+        fig.add_trace(go.Scatter(
+            x=bin_centers, y=hist_values, name=name,
+            line=dict(width=2), fill="tozeroy", opacity=0.5
+        ))
+
+    # Layout settings for a dark theme
+    fig.update_layout(
+        autosize=True,
+        hovermode="closest",
+        yaxis=dict(title="Density", gridcolor="gray"),
+        xaxis=dict(title="Value Range", gridcolor="gray"),
+        plot_bgcolor="#1E1E1E",
+        paper_bgcolor="#1E1E1E",
+        font=dict(color="white")
+    )
+
+    return fig
+
 
 # -------------------------------------------------------------------
 
@@ -436,25 +474,7 @@ def multiple_lines_graph_html(
 
 
 
-@logging_utils.codeflow_log_wrapper('#graphs')
-def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
-    fig = go.Figure()
 
-    for amount, name in zip(amounts, names):
-        fig.add_trace(go.Histogram(x=amount, name=name, autobinx=True))
-
-    fig.update_layout(
-        # barmode='stack',  # Stacked bar mode
-        autosize=True,
-        hovermode='closest',
-        yaxis=dict(title='£'),
-        # xaxis=dict(title=f"({len(time)} points)"),
-        uirevision=str(datetime.datetime.now())
-    )
-
-    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-    # return graph_html
-    return fig
 
 
 def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, levels_col=None):

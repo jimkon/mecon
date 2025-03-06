@@ -124,21 +124,22 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
         return plot
 
-    # @render_widget
-    # def histograms():
-    #     logging.info('histograms')
-    #     all_trans, tags = all_ungrouped_transactions()
-    #
-    #     grouped_trans = [trans.group_and_fill_transactions(
-    #         grouping_key=input.time_unit_select(),
-    #         aggregation_key='sum',
-    #     ) for trans in all_trans]
-    #
-    #     plot = graphs.multiple_histograms_graph_html(
-    #         amounts=[trans.amount for trans in grouped_trans],
-    #         names=tags
-    #     )
-    #     return plot
+    @render_widget
+    def histograms():
+        logging.info('histograms')
+        all_trans = all_ungrouped_transactions()
+
+        grouped_trans = [trans.group_and_fill_transactions(
+            grouping_key=input.time_unit_select(),
+            aggregation_key='sum',
+        ) for tag, trans in all_trans.items()]
+
+        plot = graphs.multiple_histograms_graph_html(
+            amounts=[trans.amount for trans in grouped_trans],
+            names=list(all_trans.keys())
+        )
+
+        return plot
 
     @render_widget
     def balances():
