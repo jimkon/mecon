@@ -148,12 +148,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         if input.time_unit_select() == 'none':
             raise ValueError(f"This plot doesn't work for 'none' time unit")
 
-        synced_trans, tags = all_synced_and_grouped_transactions()
+        synced_trans = all_synced_and_grouped_transactions()
 
         plot = graphs.stacked_bars_graph_html(
-            times=[trans.datetime for trans in synced_trans],
-            lines=[trans.amount.cumsum() for trans in synced_trans],
-            names=tags
+            times=[trans.datetime for tag, trans in synced_trans.items()],
+            lines=[trans.amount.cumsum() for tag, trans in synced_trans.items()],
+            names=list(synced_trans.keys()),
         )
         return plot
 
