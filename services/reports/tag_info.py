@@ -85,7 +85,7 @@ app_ui = shiny_app.app_ui_factory(
 def server(input: Inputs, output: Outputs, session: Session):
     data_manager = WorkingDataManager()
 
-    url_params = shiny_app.url_params_function_factory(
+    filter_url_params = shiny_app.filter_url_params_function_factory(
         input,
         output,
         session,
@@ -133,11 +133,11 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def title_output():
-        return f"Tags: {url_params()['filter_in_tags']}"
+        return f"Tags: {filter_url_params()['filter_in_tags']}"
 
     @render.ui
     def tag_edit_link():
-        return ui.tags.a("Edit tag", href=shiny_app.url_for_tag_edit(filter_in_tags=url_params()['filter_in_tags'][0]))
+        return ui.tags.a("Edit tag", href=shiny_app.url_for_tag_edit(filter_in_tags=filter_url_params()['filter_in_tags'][0]))
 
     @render.ui
     def info_stats():

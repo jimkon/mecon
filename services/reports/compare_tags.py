@@ -49,7 +49,7 @@ app_ui = shiny_app.app_ui_factory(
 def server(input: Inputs, output: Outputs, session: Session):
     data_manager = shiny_app.create_data_manager()
 
-    url_params = shiny_app.url_params_function_factory(
+    get_url_params = shiny_app.url_params_function_factory(
         input,
         output,
         session,
@@ -63,6 +63,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         output,
         session,
         data_manager)
+
+    @reactive.effect
+    def init_compare_ui():
+        logging.info('init_compare_ui')
+        url_params = get_url_params()
+        url_params['compare_tags'] = url_params.get('compare_tags', [''])[0].split(',')
+        ui.update_selectize(id='compare_tags_select', selected=url_params['compare_tags'])
+
 
     @reactive.calc
     def all_ungrouped_transactions():

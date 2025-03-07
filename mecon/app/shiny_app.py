@@ -145,21 +145,32 @@ def url_params_function_factory(input: Inputs,
     from urllib.parse import urlparse, parse_qs
 
     @reactive.calc
-    def url_params():
+    def url_params() -> dict:
+        logging.info(f"{input['.clientdata_url_search'].get()=}")
         urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
         logging.info(f"Fetched URL params: {urlparse_result=}")
         _url_params = parse_qs(urlparse_result.query)
         logging.info(f"Input params: {_url_params=}")
+        return _url_params
+    return url_params
+
+def filter_url_params_function_factory(input: Inputs,
+                                output: Outputs,
+                                session: Session,
+                                data_manager: WorkingDataManager, ):
+
+    @reactive.calc
+    def filter_url_params():
+        _url_params = url_params_function_factory(input, output, session, data_manager)()
         params = {}
         params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
         params['filter_in_tags'] = params['filter_in_tags'].split(',') if len(params['filter_in_tags']) > 0 else []
         params['filter_out_tags'] = _url_params.get('filter_out_tags', [''])[0]
         params['filter_out_tags'] = params['filter_out_tags'].split(',') if len(params['filter_out_tags']) > 0 else []
         params['time_unit'] = _url_params.get('time_unit', DEFAULT_FILTER_TIME_UNIT)
-        params['compare_tags'] = _url_params.get('compare_tags', [''])[0].split(',')
         logging.info(f"Input params: {params=}")
         return params
-    return url_params
+    return filter_url_params
 
 
 def filter_funcs_factory(
@@ -186,20 +197,19 @@ def filter_funcs_factory(
 
     @reactive.calc
     def default_transactions():
-        url_params = url_params_function_factory(input, output, session, data_manager)
-        params = url_params()
-        filter_in_tags = params['filter_in_tags']
-        filter_out_tags = params['filter_out_tags']
+        filter_url_params = filter_url_params_function_factory(input, output, session, data_manager)()
+        filter_in_tags = filter_url_params['filter_in_tags']
+        filter_out_tags = filter_url_params['filter_out_tags']
         transactions = data_manager.get_transactions()
         filtered_in_transactions = transactions.containing_tags(filter_in_tags)
         if filtered_in_transactions.size() == 0:
-            error_msg = f"No transactions found for {params['time_unit']} time unit containing {params['filter_in_tags']} tags."
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {params['filter_in_tags']} tags."
             raise ShinyTransactionFilterError(error_msg)
 
         filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
                                                                                         empty_tags_strategy='all_true')
         if filtered_in_and_out_transactions.size() == 0:
-            error_msg = f"No transactions found for {params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags."
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags."
             raise ShinyTransactionFilterError(error_msg)
 
         logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
@@ -209,31 +219,29 @@ def filter_funcs_factory(
     def init():
         logging.info('Init')
         ui.update_select(id='date_period_input_select', selected=DEFAULT_FILTER_PERIOD)
-
-        url_params = url_params_function_factory(input, output, session, data_manager)
-        params = url_params()
+        filter_url_params = filter_url_params_function_factory(input, output, session, data_manager)()
         transactions = default_transactions()
         all_tags_names = [tag.name for tag in data_manager.all_tags()]
         new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
                        cnt > 0]
 
         if len(input.filter_in_tags_select()) == 0:
-            logging.info(f"Updating filter In tags: {len(new_choices)} {params['filter_in_tags']}")
+            logging.info(f"Updating filter In tags: {len(new_choices)} {filter_url_params['filter_in_tags']}")
             ui.update_selectize(id='filter_in_tags_select',
                                 choices=sorted(new_choices),
-                                selected=params['filter_in_tags'])
+                                selected=filter_url_params['filter_in_tags'])
 
         if len(input.filter_out_tags_select()) == 0:
-            logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {params['filter_out_tags']}")
+            logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {filter_url_params['filter_out_tags']}")
             ui.update_selectize(id='filter_out_tags_select',
                                 choices=all_tags_names,
-                                selected=params['filter_out_tags'])
+                                selected=filter_url_params['filter_out_tags'])
 
         # if len(input.compare_tags_select()) == 0:  TODO
-        #     logging.info(f"Updating compare tags: {len(new_choices)} {params['compare_tags']}")
+        #     logging.info(f"Updating compare tags: {len(new_choices)} {filter_url_params['compare_tags']}")
         #     ui.update_selectize(id='compare_tags_select',
         #                         choices=sorted(new_choices),
-        #                         selected=params['compare_tags'])
+        #                         selected=filter_url_params['compare_tags'])
 
         logging.info(f"init->{input.filter_in_tags_select()=} {input.compare_tags_select()=}")
 
