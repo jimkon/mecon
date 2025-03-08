@@ -325,23 +325,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     def tagged_transactions_output_df():
         df = tagged_transactions().dataframe().copy()
         df['datetime'] = df['datetime'].apply(format_dt)
-        return render.DataTable(
-            df,
-            selection_mode="none",
-            filters=True,
-            styles=shiny_app.datatable_styles
-        )
+        return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def untagged_transactions_output_df():
         df = untagged_transactions().dataframe().copy()
         df['datetime'] = df['datetime'].apply(format_dt)
-        return render.DataTable(
-            df,
-            selection_mode="none",
-            filters=True,
-            styles=shiny_app.datatable_styles
-        )
+        return shiny_app.render_table_standard(df)
 
     @render.text
     def tagged_transactions_stats():
@@ -494,24 +484,14 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         df = monitor.get_tag_calculations(tag_name).copy()
         df.replace([False, True], value=['False', 'True'], inplace=True)
         logging.info(f"{df.columns=}")
-        return render.DataTable(
-            df,
-            selection_mode='none',
-            filters=True,
-            styles=shiny_app.datatable_styles
-        )
+        return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def transactions_diff_added_output_df():
         diff, monitor = changed_transactions()
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
-        return render.DataTable(
-            diff_df,
-            selection_mode="none",
-            filters=True,
-            styles=shiny_app.datatable_styles
-        )
+        return shiny_app.render_table_standard(diff_df)
 
     @render.data_frame
     def transactions_diff_removed_output_df():
@@ -521,12 +501,8 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         diff = new_trans.tags_diff(transactions, target_tags=[fetch_tag_name()])
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
-        return render.DataTable(
-            diff_df,
-            selection_mode="none",
-            filters=True,
-            styles=shiny_app.datatable_styles
-        )
+        return shiny_app.render_table_standard(diff_df)
+
 
     @render.data_frame
     def rule_calculations_table():
@@ -536,12 +512,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
             idx_true = Transactions(df).contains_tags(fetch_tag_name())
             df = df[idx_true].copy()
         df.replace([False, True], value=['False', 'True'], inplace=True)
-        return render.DataTable(
-            df,
-            selection_mode="none",
-            filters=True,
-            styles=shiny_app.datatable_styles
-        )
+        return shiny_app.render_table_standard(df)
 
 
 edit_tags_app = App(app_ui, server)

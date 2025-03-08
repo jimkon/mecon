@@ -219,12 +219,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             fill_dates_after_groupagg=True,
         )
         df = total_amount_transactions.dataframe()
-        return render.DataTable(
-            df,
-            selection_mode="none",
-            filters=True,
-            styles=shiny_app.datatable_styles
-        )
+        return shiny_app.render_table_standard(df)
 
 
 tag_info_app = App(app_ui, server)

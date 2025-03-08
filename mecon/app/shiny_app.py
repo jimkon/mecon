@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from shiny import ui, Inputs, Outputs, Session, reactive
+from shiny import ui, Inputs, Outputs, Session, reactive, render
 
 from mecon import config
 from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
@@ -396,3 +396,12 @@ datatable_styles = [
         },
     }
 ]
+
+
+def render_table_standard(df):
+    return render.DataTable(
+        df,
+        selection_mode="none",
+        filters=True,
+        styles=datatable_styles
+    )
