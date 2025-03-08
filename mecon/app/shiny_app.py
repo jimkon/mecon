@@ -42,6 +42,9 @@ def url_for_tag_report(**kwargs):
     url = build_url("http://127.0.0.1:8001/reports/tags/", kwargs)
     return url
 
+def url_for_comparison_report(**kwargs):
+    url = build_url("http://127.0.0.1:8001/reports/compare/", kwargs)
+    return url
 
 def url_for_tag_edit(**kwargs):
     url = build_url("http://127.0.0.1:8002/edit_data/tags/edit/", kwargs)

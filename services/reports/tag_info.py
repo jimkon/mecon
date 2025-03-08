@@ -137,7 +137,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.ui
     def tag_edit_link():
-        return ui.tags.a("Edit tag", href=shiny_app.url_for_tag_edit(filter_in_tags=filter_url_params()['filter_in_tags'][0]))
+        return ui.tags.a("Edit tag",
+                         href=shiny_app.url_for_tag_edit(filter_in_tags=filter_url_params()['filter_in_tags'][0]))
 
     @render.ui
     def info_stats():

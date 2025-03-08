@@ -26,7 +26,8 @@ app_ui = shiny_app.app_ui_factory(
             ui.input_selectize(
                 id='compare_tags_select',
                 label='Select tags to show',
-                choices=sorted([tag.name for tag in data_manager.all_tags()]),  # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
+                choices=sorted([tag.name for tag in data_manager.all_tags()]),
+                # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
             ),
@@ -39,6 +40,13 @@ app_ui = shiny_app.app_ui_factory(
                              ),
                 ui.nav_panel("Balance",
                              output_widget(id="balances"),
+                             ),
+                ui.nav_panel("Manage",
+                             ui.card(
+                                 ui.card_header("Make a custom comparison page"),
+                                 ui.input_text(id='save_report_name', label='Name'),
+                                 ui.input_action_button(id='save_report_button', label='Save this report...')
+                             ),
                              ),
             )
         )
@@ -71,6 +79,37 @@ def server(input: Inputs, output: Outputs, session: Session):
         url_params['compare_tags'] = url_params.get('compare_tags', [''])[0].split(',')
         ui.update_selectize(id='compare_tags_select', selected=url_params['compare_tags'])
 
+    @reactive.effect
+    @reactive.event(input.save_report_button)
+    def save_report_button_effect():
+        logging.info('save_report_button_effect')
+        url_params = dict(**get_filter_params(), compare_tags=input.compare_tags_select())
+        logging.info(f"url_params: {url_params}")
+        dataset = shiny_app.get_working_dataset()
+        settings = dataset.settings
+        saved_reports = settings['links']['Comparisons']
+
+        new_report_name = input.save_report_name()
+        if new_report_name is None or new_report_name == "" or new_report_name in saved_reports:
+            message = 'Empty name' if (
+                    new_report_name is None or new_report_name == "") else f"Report name already exists, all existing names: {', '.join(saved_reports.keys())}"
+            ui.notification_show(
+                f"Invalid name for the new report '{new_report_name}', {message=}",
+                type="error",
+            )
+            return
+
+        new_report_url = shiny_app.url_for_comparison_report(**url_params)
+        saved_reports[
+            new_report_name] = new_report_url  # TODO maybe make a class that deals with DatasetSettings for easier use and testing
+        settings.save()
+
+        ui.notification_show(
+            f"Comparison report '{new_report_name}' has been created successfully.",
+            action=ui.tags.a(new_report_url, href=new_report_url),
+            duration=10,
+            type="message",
+        )
 
     @reactive.calc
     def all_ungrouped_transactions():
@@ -98,7 +137,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         min_date = min([trans.datetime.min() for tags, trans in all_trans.items()])
         max_date = max([trans.datetime.max() for tags, trans in all_trans.items()])
         compare_tags = input.compare_tags_select() if len(input.compare_tags_select()) > 0 else ['All']
-        logging.info(f"Calculating all transactions from {min_date} to {max_date} for {compare_tags} and {input.time_unit_select()}")
+        logging.info(
+            f"Calculating all transactions from {min_date} to {max_date} for {compare_tags} and {input.time_unit_select()}")
 
         synced_trans = {}
         for tag, trans in all_trans.items():
@@ -109,7 +149,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
             filled_trans = grouped_trans.fill_values(fill_unit=input.time_unit_select(), start_date=min_date,
                                                      end_date=max_date)
-            logging.info(f"Filtered transactions for {tag}: {filled_trans.size()}, date range {filled_trans.date_range()}")
+            logging.info(
+                f"Filtered transactions for {tag}: {filled_trans.size()}, date range {filled_trans.date_range()}")
 
             synced_trans[tag] = filled_trans
 
