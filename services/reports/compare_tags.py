@@ -12,7 +12,7 @@ from mecon.data import graphs
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-data_manager = shiny_app.create_data_manager()
+# data_manager = shiny_app.create_data_manager()
 
 # DEFAULT_PERIOD = 'Last year'
 # DEFAULT_TIME_UNIT = 'month'
@@ -26,7 +26,7 @@ app_ui = shiny_app.app_ui_factory(
             ui.input_selectize(
                 id='compare_tags_select',
                 label='Select tags to show',
-                choices=sorted([tag.name for tag in data_manager.all_tags()]),
+                choices=[],#sorted([tag.name for tag in data_manager.all_tags()]),
                 # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
                 multiple=True
