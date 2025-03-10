@@ -29,7 +29,8 @@ app_ui = shiny_app.app_ui_factory(
                 choices=[],#sorted([tag.name for tag in data_manager.all_tags()]),
                 # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
                 selected=None,
-                multiple=True
+                multiple=True,
+                width='60%',
             ),
             ui.navset_tab(
                 ui.nav_panel("Timelines",
