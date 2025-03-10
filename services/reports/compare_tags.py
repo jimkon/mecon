@@ -77,7 +77,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.info('init_compare_ui')
         url_params = get_url_params()
         url_params['compare_tags'] = url_params.get('compare_tags', [''])[0].split(',')
-        ui.update_selectize(id='compare_tags_select', selected=url_params['compare_tags'])
+        ui.update_selectize(id='compare_tags_select', selected=url_params['compare_tags'], choices=sorted([tag.name for tag in data_manager.all_tags()]))
 
     @reactive.effect
     @reactive.event(input.save_report_button)
