@@ -77,9 +77,19 @@ app_ui = shiny_app.app_ui_factory(
                 'Data Flow',
                 ui.input_task_button(id='reset_button', label='Reset data from statements'),
                 ui.accordion(
-                    # ui.accordion_panel('Import statements'),
-                    ui.accordion_panel('Statements', ui.card(
+                    ui.accordion_panel('Sources', ui.card(
                         ui.output_ui('statements_info_text'),
+                        ui.navset_tab(
+                            ui.nav_panel("All", ui.output_data_frame('all_sources_info_text')),
+                            ui.nav_panel("HSBC", ui.card(ui.output_data_frame('hsbc_source_info_text'))),
+                            ui.nav_panel("Monzo", ui.card(ui.output_data_frame('monzo_source_info_text'))),
+                            ui.nav_panel("Revolut", ui.card(ui.output_data_frame('revo_source_info_text'))),
+                            ui.nav_panel("HSBC Savings account", ui.card(ui.output_data_frame('hsbcsvr_source_info_text'))),
+                            ui.nav_panel("Trading 212", ui.card(ui.output_data_frame('trd212_source_info_text'))),
+                            ui.nav_panel("Invest Engine", ui.card(ui.output_data_frame('inveng_source_info_text'))),
+                        )
+                    )),
+                    ui.accordion_panel('Statements', ui.card(
                         ui.output_data_frame("statements_info_dataframe")
                     )),
                     ui.accordion_panel('Transactions', ui.card(
@@ -91,12 +101,19 @@ app_ui = shiny_app.app_ui_factory(
                     ui.accordion_panel('Tagged Transactions', ui.card(
                         ui.output_data_frame("tagged_transactions_info_dataframe")
                     )),
-                    id='data_flow_acc'
+                    id='data_flow_acc',
+                    open=False
                 )
             )
         )
     )
 )
+
+
+def source_info_df(source):
+    df = WorkingDatasetDirInfo().statement_files_info_df()
+    df_res = df[df['source'] == source]
+    return df_res
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -150,11 +167,47 @@ def server(input: Inputs, output: Outputs, session: Session):
     def statements_info_text():
         # TODO df['rows'].sum() is LESS than the numbers of transactions tagged as 'All', how?
         df = WorkingDatasetDirInfo().statement_files_info_df()
-        source_total_rows = df.groupby('source').agg({'filename': 'count', 'rows': 'sum'}).reset_index().to_html()#.to_dict('index')
+
         text = ui.HTML(
-            f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> (* rows might not be 100% accurate).</p>)
-             in total and <b>{df['source'].nunique()} different sources</b></p> {source_total_rows}""")
+            f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> (* rows might not be 100% accurate).
+             in total and <b>{df['source'].nunique()} different sources</b></p>""")
         return text
+
+    @render.data_frame
+    def all_sources_info_text():
+        df = WorkingDatasetDirInfo().statement_files_info_df()
+        df_agg = df.groupby('source').agg({'filename': 'count', 'rows': 'sum'}).reset_index()
+        return shiny_app.render_table_standard(df_agg)
+
+    @render.data_frame
+    def hsbc_source_info_text():
+        df = source_info_df('HSBC')
+        return shiny_app.render_table_standard(df)
+
+    @render.data_frame
+    def monzo_source_info_text():
+        df = source_info_df('Monzo')
+        return shiny_app.render_table_standard(df)
+
+    @render.data_frame
+    def revo_source_info_text():
+        df = source_info_df('Revolut')
+        return shiny_app.render_table_standard(df)
+
+    @render.data_frame
+    def hsbcsvr_source_info_text():
+        df = source_info_df('HSBCSVR')
+        return shiny_app.render_table_standard(df)
+
+    @render.data_frame
+    def trd212_source_info_text():
+        df = source_info_df('TRD212')
+        return shiny_app.render_table_standard(df)
+
+    @render.data_frame
+    def inveng_source_info_text():
+        df = source_info_df('INVENG')
+        return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def statements_info_dataframe():

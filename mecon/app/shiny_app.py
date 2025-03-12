@@ -62,7 +62,7 @@ navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
     ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
     ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
-    ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
+    # ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
     # ui.nav_control(ui.input_dark_mode(id="light_mode")),
 )
 
