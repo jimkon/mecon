@@ -3,10 +3,10 @@ import logging
 
 import numpy as np
 import pandas as pd
-from numpy.f2py.crackfortran import sourcecodeform
 
 from mecon.utils import currencies
 from mecon.utils.dataframe_transformers import DataframeTransformer
+
 
 # TODO remove
 def factory_db(source):
@@ -36,17 +36,18 @@ def transaction_id_formula(transaction, source):
     #     raise ValueError(f"Invalid or unknown transaction source name: {source}")
 
     datetime_str = transaction['datetime'].strftime("d%Y%m%dt%H%M%S")
-    amount_str = f"a{'p' if transaction['amount']>0 else 'n'}{int(100 * abs(transaction['amount']))}"
-    ordinal_value = f"i{transaction['id']}" # TODO that can change depending on the dataset. maybe get different counter for each day
+    amount_str = f"a{'p' if transaction['amount'] > 0 else 'n'}{int(100 * abs(transaction['amount']))}"
+    ordinal_value = f"i{transaction['id']}"  # TODO that can change depending on the dataset. maybe get different counter for each day
     result = f"{source_abr}{datetime_str}{amount_str}{ordinal_value}"
     return result
+
 
 def _convert_df_column_names(df):
     df.columns = [col.lower().replace(' ', '_') for col in df.columns]
     return df
 
 
-#TODO remove
+# TODO remove
 class HSBCStatementTransformer(DataframeTransformer):
     def _transform(self, df_hsbc: pd.DataFrame) -> pd.DataFrame:
         # TODO:v3 make it more readable
@@ -74,7 +75,8 @@ class HSBCStatementTransformer(DataframeTransformer):
 
         return df_transformed
 
-#TODO remove
+
+# TODO remove
 class MonzoStatementTransformer(DataframeTransformer):
     def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
@@ -113,7 +115,8 @@ class MonzoStatementTransformer(DataframeTransformer):
 
         return df_transformed
 
-#TODO remove
+
+# TODO remove
 class RevoStatementTransformer(DataframeTransformer):
     def __init__(self, currency_converter=None):
         self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
@@ -150,7 +153,7 @@ class StatementTransformer(DataframeTransformer, abc.ABC):
     SOURCES = ['Monzo', 'HSBC', 'Revolut', 'INVENG', 'HSBCSVR', 'TRD212']
 
     def read_df(self, path):
-        df =  pd.read_csv(path, index_col=None)
+        df = pd.read_csv(path, index_col=None)
         df = _convert_df_column_names(df)
         return df
 
@@ -170,7 +173,6 @@ class StatementTransformer(DataframeTransformer, abc.ABC):
             return Trading212StatementTransformer()
         else:
             raise ValueError(f"Invalid or unknown transaction source name: {source}")
-
 
 
 class HSBCFileStatementTransformer(StatementTransformer):
@@ -216,10 +218,24 @@ class MonzoFileStatementTransformer(StatementTransformer):
     source_name = 'Monzo'
     source_name_abr = 'MZN'
 
-    def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
+    def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
+        type_1_cols = {'Transaction ID', 'Date', 'Time', 'Type', 'Name', 'Emoji', 'Category', 'Amount',
+                       'Currency', 'Local amount', 'Local currency', 'Notes and #tags', 'Address',
+                       'Receipt', 'Category split', 'Description', 'Money In', 'Money Out'}
+        type_1_cols = set(map(lambda col: col.lower().replace(' ', '_'), type_1_cols))
+
+        if df_monzo.shape[1] == len(type_1_cols):
+            logging.info(f"Type 1: Transforming Monzo transactions ({df_monzo.shape} shape)")
+            df_transformed = self._transform_type1(df_monzo)
+        else:
+            logging.info(f"Type 2: Transforming Monzo transactions ({df_monzo.shape} shape)")
+            df_transformed = self._transform_type2(df_monzo)
+
+        return df_transformed
+
+    def _transform_type1(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
         df_monzo = df_monzo.copy()
-
 
         df_monzo['id'] = df_monzo['transaction_id']
         # df_monzo['id'] = ('2' + df_monzo['id'].astype(str)).astype(np.int64)
@@ -235,7 +251,6 @@ class MonzoFileStatementTransformer(StatementTransformer):
         df_monzo['currency'] = df_monzo['local_currency']
         df_monzo['amount'] = df_monzo['amount'].astype(float)
         df_monzo['amount_cur'] = df_monzo['local_amount'].astype(float)
-
 
         df_monzo['id'] = df_monzo.apply(lambda row: transaction_id_formula(row, self.source_name), axis=1)
 
@@ -258,6 +273,41 @@ class MonzoFileStatementTransformer(StatementTransformer):
 
         return df_transformed
 
+    def _transform_type2(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
+        logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
+        df_monzo = df_monzo.copy()
+        # df_monzo['id'] = df_monzo['id']
+        df_monzo['datetime'] = pd.to_datetime(df_monzo['created'])
+        df_monzo['currency'] = df_monzo['local_currency']
+        df_monzo['amount'] = df_monzo['amount'].astype(float) / 100
+        df_monzo['amount_cur'] = df_monzo['local_amount'].astype(float) / 100
+
+        df_monzo['id'] = df_monzo.apply(lambda row: transaction_id_formula(row, self.source_name), axis=1)
+
+        current_cols = set(df_monzo.columns)
+
+        cols_to_not_concat = {'id', 'datetime', 'amount', 'currency', 'amount_cur',
+                              'local_currency', 'created', 'local_amount'}
+        cols_to_concat = current_cols.difference(cols_to_not_concat)
+
+        df_transformed = df_monzo[['id', 'datetime', 'amount', 'currency', 'amount_cur']].copy()
+
+        df_other_cols = df_monzo[list(cols_to_concat)].copy()
+        descs = [{k: v for k, v in record.items() if v != 'None'} for record in df_other_cols.fillna(value='None').to_dict('records')] # TODO understand how to treat nan values and replace .fillna(value='None')
+        descs_str = [f'bank:{self.source_name}, other_fields: ' + str(_dict).replace("'", "") for _dict in descs]
+        df_transformed['description'] = descs_str
+
+        df_transformed = df_transformed.reindex(
+            columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
+
+        return df_transformed
+
+if __name__ == '__main__':
+    files = ['/Users/wimpole/PycharmProjects/mecon/datasets/shared/data/statements/Monzo/Monzo_Transactions_11Oct2018-11Oct2024_2024-10-11_224411.csv',
+             '/Users/wimpole/PycharmProjects/mecon/services/main_shiny/Monzo_transactions.csv']
+    for file in files:
+        df = MonzoFileStatementTransformer().read_df(file)
+        df_trans = MonzoFileStatementTransformer().transform(df)
 
 class RevoFileStatementTransformer(StatementTransformer):
     source_name = 'Revolut'
@@ -315,6 +365,7 @@ class InvestEngineStatementTransformer(StatementTransformer):
 
         return df_final
 
+
 class HSBCSaverStatementTransformer(HSBCFileStatementTransformer):
     source_name = 'HSBCSVR'
     source_name_abr = 'HSBCSVR'
@@ -350,4 +401,3 @@ class Trading212StatementTransformer(StatementTransformer):
         df_final = df[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
 
         return df_final
-

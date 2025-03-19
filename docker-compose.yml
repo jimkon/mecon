@@ -8,6 +8,8 @@ services:
     volumes:
 #      - ./datasets:/mecon/datasets
       - "${DATASETS_DIR}:/mecon/datasets"
+    env_file:
+      - ./env/.env.monzo
   reports_app:
     build:
       dockerfile: services/reports/Dockerfile
