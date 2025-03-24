@@ -6,6 +6,8 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from mecon.app import shiny_app
 from mecon.etl.transformers import MonzoFileStatementTransformer
 
+import monzo_api_lib as monzo
+
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
 
@@ -14,13 +16,13 @@ logging.getLogger().setLevel(logging.INFO)
 
 app_ui = shiny_app.app_ui_factory(
     ui.card(
-        ui.accordion(ui.accordion_panel("Monzo API", ui.card(
+        ui.card(ui.h3("Monzo API"),
             ui.output_ui('monzo_info_text'),
             ui.input_task_button(id='monzo_refresh_token_button', label='Refresh Token'),
             ui.input_action_button(id='monzo_authenticate_button', label='Authenticate'),
             ui.input_task_button(id='monzo_fetch_transactions_button',
                                  label='Fetch Transactions'),
-        ))),
+        ),
     )
 )
 
@@ -29,9 +31,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     data_manager = shiny_app.create_data_manager()
 
     dataset = shiny_app.get_working_dataset()
-    token_filepath = dataset.db.parent.parent.parent / 'monzo.json'
+    token_filepath = dataset.db.parent.parent.parent / 'monzo-api.json'
 
-    import monzo_lib as monzo
     monzo_client = monzo.MonzoClient(token_file=token_filepath)
 
     def save_monzo_statement(df, name):
@@ -62,7 +63,8 @@ def server(input: Inputs, output: Outputs, session: Session):
         try:
             monzo_client.refresh_token()
             ui.update_text(id='monzo_info_text',
-                           text=f"NEW: Authenticated until {monzo_client.expires_at()}.")
+                           label='Status',
+                           value=f"NEW: Authenticated until {monzo_client.expires_at()}.")
             ui.notification_show(
                 f"Proceed to refresh token from the Monzo App",
                 type="message",

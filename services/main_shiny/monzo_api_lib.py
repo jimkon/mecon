@@ -8,41 +8,82 @@ import pandas as pd
 from monzo.authentication import Authentication
 from monzo.endpoints.account import Account
 from monzo.exceptions import MonzoError
+from monzo.handlers.filesystem import FileSystem
+from monzo.monzo import Monzo
+from monzo.errors import ForbiddenError, BadRequestError
+from tenacity import before_log
 
 logging.basicConfig(level=logging.INFO)
+
+
+class EnchancedFileSystem(FileSystem):
+    def store(
+            self,
+            access_token: str,
+            client_id: str,
+            client_secret: str,
+            expiry: int,
+            refresh_token: str = ''
+    ) -> None:
+        """
+        Store the Monzo credentials.
+
+        Args:
+            access_token: New access token
+            client_id: Monzo client ID
+            client_secret: Monzo client secret
+            expiry: Access token expiry as a unix timestamp
+            refresh_token: Refresh token that can be used to renew an access token
+        """
+        content = {
+            'access_token': access_token,
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'expiry': expiry,
+            'refresh_token': refresh_token,
+            'created_at': datetime.datetime.now().timestamp(),
+        }
+        with open(self._file, 'w') as handler:
+            handler.write(json.dumps(content, indent=4))
+        logging.info("Successfully stored access token")
+
 
 class MonzoClient:
     def __init__(self, token_file):
         self.token_file = pathlib.Path(token_file)
-        self._load_token_file()
+        self.filesystem_handler = EnchancedFileSystem(token_file)
+        self.monzo = None
 
-        self.monzo = Authentication(
-            client_id=os.getenv('MONZO_CLIENT_ID'),
-            client_secret=os.getenv('MONZO_CLIENT_SECRET'),
-            redirect_url=os.getenv('MONZO_REDIRECT_URI'),
-            access_token=self.access_token,
-            access_token_expiry=self.expires_at,
-            refresh_token=self.refresh_token
-        )
-
-    def _load_token_file(self):
-        if self.token_file.exists():
-            logging.info(f"MonzoClient init with token file {self.token_file}")
-            token = json.loads(self.token_file.read_text())
-            self.access_token = token.get('access_token')
-            self.refresh_token = token.get('refresh_token')
-            self.expires_at = token.get('expires_at')
+        if not self.token_file.exists():
+            self.monzo_auth = Authentication(
+                client_id=os.getenv('MONZO_CLIENT_ID'),
+                client_secret=os.getenv('MONZO_CLIENT_SECRET'),
+                redirect_url=os.getenv('MONZO_REDIRECT_URI'),
+            )
         else:
-            self.access_token = self.refresh_token = self.expires_at = None
+            content = self.filesystem_handler.fetch()
+            self.created_at = content['created_at'] if 'created_at' in content else 0
+
+            self.monzo_auth = Authentication(
+                client_id=content['client_id'],
+                client_secret=content['client_secret'],
+                redirect_url=os.getenv('MONZO_REDIRECT_URI'),
+                access_token=content['access_token'],
+                access_token_expiry=content['expiry'],
+                refresh_token=content['refresh_token']
+            )
+
+        self.monzo_auth.register_callback_handler(self.filesystem_handler)
+
 
     def has_token(self):
-        return self.access_token is not None
+        return self.monzo_auth.access_token != ''
 
     def expires_at(self):
-        return datetime.datetime.fromtimestamp(float(self.expires_at)).strftime('%Y-%m-%d %H:%M:%S') if self.expires_at else None
+        return datetime.datetime.fromtimestamp(float(self.monzo_auth.access_token_expiry)).strftime('%Y-%m-%d %H:%M:%S') if self.expires_at else None
 
     def created_at_secs(self):
-        return float(self.expires_at) if self.expires_at else None
+        return float(self.created_at) if self.created_at else None
 
     def minutes_passed_from_token_creation(self):
         created_at_secs = self.created_at_secs()
@@ -51,65 +92,91 @@ class MonzoClient:
         now_secs = datetime.datetime.now().timestamp()
         return (now_secs - created_at_secs) / 60.0
 
+    def authenticated(self):
+        return self.has_token()
+
     def refresh_token(self):
         logging.info("Refreshing token...")
-        self.monzo.refresh_access_token()
-        self._save_token_to_file_callback(self.monzo.access_token)
+        self.monzo_auth.refresh_access()
         logging.info("Refreshing token... Done")
 
     def get_authentication_url(self):
-        return self.monzo.get_authorization_url()
+        return self.monzo_auth.authentication_url
 
-    def set_authentication_code(self, auth_code):
-        logging.info("Fetching access token...")
-        self.monzo.fetch_access_token(auth_code)
-        self._save_token_to_file_callback(self.monzo.access_token)
-        logging.info("Fetching access token... Done")
+    def set_authentication_code_from_url(self, response_url):
+        code_and_state = response_url.split('code=')[1]
+        code, state = code_and_state.split('&state=')
+        mc.monzo_auth.authenticate(authorization_token=code, state_token=state)
 
-    def set_authentication_code_from_url(self, auth_code_url):
-        auth_code = auth_code_url.split('?code=')[1].split('&state')[0]
-        self.set_authentication_code(auth_code)
 
-    def _save_token_to_file_callback(self, token):
-        token_data = {
-            'access_token': self.monzo.access_token,
-            'refresh_token': self.monzo.refresh_token,
-            'expires_at': datetime.datetime.now().timestamp() + self.monzo.access_token_expiry
-        }
-        with open(self.token_file, 'w') as fp:
-            json.dump(token_data, fp, sort_keys=True, indent=4)
-        logging.info(f"Callback: Saved token to {self.token_file}")
+    def download_full_history(self, batch_size=100, start_date="2019-01-01T00:00:00Z"):
+        account_id = os.getenv('MONZO_ACCOUNT_ID')
+        if account_id is None:
+            accounts = Account.fetch(self.monzo_auth)
+            account = accounts[0]
+            account_id = account.account_id
 
-    def download_full_history(self, batch_size=100):
-        accounts = Account.fetch(self.monzo)
-        account_id = accounts[0].id
+        monzo = Monzo(self.monzo_auth.access_token)
 
+        since = start_date
+        before = str(int(since[:4])+1)+since[4:]
         dfs = []
-        before = None
-
+        recently_authenticated = True
         while True:
-            logging.info(f"Downloading history from {account_id} before {before}...")
-            transactions = accounts[0].transactions(before=before, limit=batch_size)
-            if not transactions:
+            logging.info(f"Downloading history from {account_id} before {before=} and {since=}...")
+            try:
+                transactions = monzo.get_transactions(account_id,
+                                                       before=before,
+                                                       since=since,
+                                                       limit=batch_size
+                                                      )
+                df = pd.json_normalize(transactions['transactions'])
+                if len(df) == 0:
+                    logging.info(f"Reached the limit, no more transactions to download: {len(df) == 0=} {df.shape=}")
+                    break
+                dfs.append(df)
+                new_since = df['created'].to_list()[-1]#.isoformat()[:19] + "Z"
+                if new_since == since:
+                    logging.info(f"Reached the limit, no more transactions to download: {new_since == since=} {df.shape=}")
+                    break
+                since = new_since
+                df['created_date'] = pd.to_datetime(df['created'].apply(lambda s: s[:10]))
+                before = (df['created_date'].to_list()[-1]+datetime.timedelta(days=365)).isoformat()[:19] + "Z"
+                logging.info(
+                    f"{len(dfs)} batch downloaded with dims {df.shape}, and date range from {df['created_date'].max()} to {df['created_date'].min()}")
+
+            except (BadRequestError, ForbiddenError) as e:
+                logging.info(f"Reached the limit, authenticate again for the full history: {e}")
+                since = (datetime.datetime.utcnow() - datetime.timedelta(days=89, minutes=59, seconds=59)).isoformat() + "Z"
+                before = None
+                recently_authenticated = False
+            except IndexError as e:
+                logging.info(f"Reached the limit, no more transactions to download: {e}")
                 break
+            except Exception as e:
+                raise
 
-            tr_table = pd.json_normalize([t.__dict__ for t in transactions])
-            dfs.append(tr_table)
-            logging.info(
-                f"{len(dfs)} batch downloaded with dims {tr_table.shape}, and date range from {tr_table['created'].min()} to {tr_table['created'].max()}"
-            )
-            before = tr_table['created'].min(skipna=True)
+        all_transactions = pd.concat(dfs).reset_index(drop=True)
+        all_transactions.drop_duplicates(subset='id', inplace=True)
+        all_transactions.sort_values(by=['created'], inplace=True)
 
-        all_transactions = pd.concat(dfs)
         logging.info(
-            f"Downloaded {len(all_transactions)} batches with dims {all_transactions.shape}, and date range from {all_transactions['created'].min()} to {all_transactions['created'].max()}"
-        )
+            f"Downloaded {len(all_transactions)} transactions with dims {all_transactions.shape}\n"
+            f"date range from {all_transactions['created_date'].max()} to {all_transactions['created_date'].min()}\n"
+            f"{all_transactions['created_date'].dt.date.nunique()} unique days\n"
+            f"{all_transactions['id'].duplicated(keep=False).sum()} duplicated transactions\n")
 
         return all_transactions
 
+
 if __name__ == '__main__':
-    mc = MonzoClient("/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/monzo.json")
-
-
+    mc = MonzoClient("/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/monzo-api.json")
+    if not mc.authenticated():
+        auth_url = mc.get_authentication_url()
+        print(auth_url)
+        response_url = input(f"Copy the link from the log in button")
+        mc.set_authentication_code_from_url(response_url)
+    mc.refresh_token()
+    mc.download_full_history()
     pass
 
