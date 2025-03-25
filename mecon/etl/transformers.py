@@ -273,11 +273,17 @@ class MonzoFileStatementTransformer(StatementTransformer):
 
         return df_transformed
 
+    def _parse_and_convert_datetimes(self, datetime_str_series: pd.Series) -> pd.Series:
+        parsed_datetime = pd.to_datetime(datetime_str_series.apply(lambda datetime_str: datetime_str[:19] + 'Z'), utc=True)
+        converted_datetime = parsed_datetime.dt.tz_convert("Europe/London") # TODO consider different timezones
+        return converted_datetime
+
+
     def _transform_type2(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
         df_monzo = df_monzo.copy()
         # df_monzo['id'] = df_monzo['id']
-        df_monzo['datetime'] = pd.to_datetime(df_monzo['created'])
+        df_monzo['datetime'] = self._parse_and_convert_datetimes(df_monzo['created'])
         df_monzo['currency'] = df_monzo['local_currency']
         df_monzo['amount'] = df_monzo['amount'].astype(float) / 100
         df_monzo['amount_cur'] = df_monzo['local_amount'].astype(float) / 100
@@ -303,8 +309,7 @@ class MonzoFileStatementTransformer(StatementTransformer):
         return df_transformed
 
 if __name__ == '__main__':
-    files = ['/Users/wimpole/PycharmProjects/mecon/datasets/shared/data/statements/Monzo/Monzo_Transactions_11Oct2018-11Oct2024_2024-10-11_224411.csv',
-             '/Users/wimpole/PycharmProjects/mecon/services/main_shiny/Monzo_transactions.csv']
+    files = ['/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/data/statements/Monzo/monzo_api_transactions_2019-04-26_to_2025-03-24_merged.csv']
     for file in files:
         df = MonzoFileStatementTransformer().read_df(file)
         df_trans = MonzoFileStatementTransformer().transform(df)
