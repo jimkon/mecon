@@ -69,6 +69,9 @@ navbar = ui.navset_pill(
 
 def app_ui_factory(*args):
     return ui.page_fluid(
+        # TODO add icon
+        # ui.tags.link(rel="icon", type="image/x-icon", href="favicon.ico"),
+        # https://forum.posit.co/t/how-to-add-an-logo-in-the-header-in-pythonshiny/189333
         tab_title,
         page_title,
         navbar,

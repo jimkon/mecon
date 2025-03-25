@@ -7,14 +7,12 @@ import pandas as pd
 
 from monzo.authentication import Authentication
 from monzo.endpoints.account import Account
-from monzo.exceptions import MonzoError
 from monzo.handlers.filesystem import FileSystem
 from monzo.monzo import Monzo
 from monzo.errors import ForbiddenError, BadRequestError
-from tenacity import before_log
+
 
 logging.basicConfig(level=logging.INFO)
-
 
 class EnchancedFileSystem(FileSystem):
     def store(
@@ -106,7 +104,7 @@ class MonzoClient:
     def set_authentication_code_from_url(self, response_url):
         code_and_state = response_url.split('code=')[1]
         code, state = code_and_state.split('&state=')
-        mc.monzo_auth.authenticate(authorization_token=code, state_token=state)
+        self.monzo_auth.authenticate(authorization_token=code, state_token=state)
 
 
     def download_full_history(self, batch_size=100, start_date="2019-01-01T00:00:00Z"):
@@ -167,16 +165,4 @@ class MonzoClient:
             f"{all_transactions['id'].duplicated(keep=False).sum()} duplicated transactions\n")
 
         return all_transactions
-
-
-if __name__ == '__main__':
-    mc = MonzoClient("/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/monzo-api.json")
-    if not mc.authenticated():
-        auth_url = mc.get_authentication_url()
-        print(auth_url)
-        response_url = input(f"Copy the link from the log in button")
-        mc.set_authentication_code_from_url(response_url)
-    mc.refresh_token()
-    mc.download_full_history()
-    pass
 
