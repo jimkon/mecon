@@ -57,7 +57,7 @@ def url_for_tag_edit(**kwargs):
 # all_transactions = dm.get_transactions()
 
 tab_title = ui.tags.title("μEcon App")
-page_title = ui.HTML('<h2>mEcon<sub><small><u><i>v3</i></u></small></sub></h2>')
+page_title = ui.HTML(f"<h2>mEcon<sub><small><u><i>v{config.MECON_VERSION}</i></u></small></sub></h2>")
 navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
     ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),

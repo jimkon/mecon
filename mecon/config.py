@@ -23,6 +23,8 @@ if MECON_ROOT_DIRPATH is None or MECON_ROOT_DIRPATH == "":
     else:
         raise ValueError(f"Cannot find 'mecon' root dir in path: {_file_path}")
 
+MECON_VERSION = '3.0.0'
+
 
 DEFAULT_DATASETS_DIR_PATH = MECON_ROOT_DIRPATH / "datasets"
 SETTINGS_JSON_FILENAME = r"settings.json"
