@@ -300,12 +300,6 @@ class MonzoAPIFileStatementTransformer(StatementTransformer):
         return df_transformed
 
 
-if __name__ == '__main__':
-    files = ['/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/data/statements/MonzoAPI/monzo_api_transactions_2019-04-26_to_2025-03-24_merged.csv']
-    for file in files:
-        df = MonzoAPIFileStatementTransformer().read_df(file)
-        df_trans = MonzoAPIFileStatementTransformer().transform(df)
-
 class RevoFileStatementTransformer(StatementTransformer):
     source_name = 'Revolut'
     source_name_abr = 'RVLT'
