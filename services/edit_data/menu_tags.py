@@ -4,8 +4,8 @@ import pandas as pd
 from htmltools import HTML
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-from mecon import config
-from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
+from mecon.app import shiny_app
+from mecon.app.current_data import WorkingDataManager
 from mecon.tags import tagging
 
 # from mecon.monitoring.logs import setup_logging
@@ -14,31 +14,8 @@ from mecon.tags import tagging
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
-if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 
-datasets_obj = WorkingDatasetDir()
-datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-dataset = datasets_obj.working_dataset
-
-if dataset is None:
-    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
-
-data_manager = WorkingDataManager()
-all_tags = data_manager.all_tags()
-
-app_ui = ui.page_fluid(
-    ui.tags.title("μEcon"),
-    ui.navset_pill(
-        ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
-        ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
-        ui.nav_control(ui.input_dark_mode(id="light_mode")),
-    ),
-    ui.hr(),
-
+app_ui = shiny_app.app_ui_factory(
     ui.page_fluid(
         ui.input_task_button(id='create_button', label='Create new tag'),
         ui.input_task_button(id='recalculate_button', label='Recalculate all tags', label_busy='Recalculating...'),
@@ -53,14 +30,16 @@ app_ui = ui.page_fluid(
 def tag_actions(tag_name):
     return HTML(
         f"""
-        <a href="http://127.0.0.1:8001/reports/tags/?filter_in_tags={tag_name}" target="_blank">Info</a>
+        <a href="{shiny_app.url_for_tag_report(filter_in_tags=tag_name)}" target="_blank">Info</a>
         &nbsp;|&nbsp;
-        <a href="http://127.0.0.1:8002/edit_data/tags/edit/?filter_in_tags={tag_name}" target="_blank">Edit</a>
+        <a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit</a>
         """
     )
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = WorkingDataManager()
+
     all_tags_reactive = reactive.Value(data_manager.all_tags())
     tags_metadata_reactive = reactive.Value(value=data_manager.get_tags_metadata().copy())
 
@@ -78,8 +57,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         tag_stats_df = tags_metadata_reactive.get()
         tag_stats_df.columns = [col.capitalize().replace('_', ' ') for col in tag_stats_df.columns]
         tag_stats_df = tags_df.merge(tag_stats_df, on='Name', how='left')
+        tag_stats_df.sort_values(by=['Name'], ascending=True, inplace=True)
 
-        tag_stats_df['i'] = tag_stats_df.index
+        tag_stats_df['i'] = list(range(len(tag_stats_df)))
         tag_stats_df['Actions'] = tag_stats_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
 
         tag_stats_df['Total money in'] = tag_stats_df['Total money in'].apply(lambda x: f"£ {float(x):.2f}")
@@ -105,7 +85,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         m = ui.modal(
             ui.input_text(id='name_of_new_tag_text', label='New tag name'),
             title=f"Create a new tag",
-            easy_close=False,
+            easy_close=True,
             footer=ui.input_task_button(id='confirm_create_button', label='Confirm', label_buzy='Creating...'),
             size='l'
         )
@@ -129,7 +109,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             ui.input_select(id='name_of_tag_to_delete_select', label='New tag name',
                             choices=sorted([tag.name for tag in all_tags_reactive.get()])),
             title=f"Delete a new tag",
-            easy_close=False,
+            easy_close=True,
             footer=ui.input_task_button(id='confirm_delete_button',
                                         label='DELETE',
                                         label_buzy='Deleting...',

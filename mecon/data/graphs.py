@@ -1,6 +1,7 @@
 import datetime
+import logging
 import warnings
-from typing import List
+from typing import List, Literal
 
 import networkx as nx
 import numpy as np
@@ -96,7 +97,7 @@ def amount_and_freq_timeline_fig(time_pos: List | pd.Series,
     amount = amount_pos + amount_neg
     smoothed_total = amount.rolling(rolling_window, min_periods=1).mean()
     smoothed_total = smoothed_total.round(2)
-    fig.add_trace(go.Scatter(x=time_pos, y=smoothed_total, name="total (rolling)", line=dict(width=5)))
+    fig.add_trace(go.Scatter(x=time_pos, y=amount, name="total", line=dict(width=2)))
     # fig.add_trace(go.Scatter(x=time_pos, y=amount, name="amount", line=dict(width=1), fill='tozeroy'))
     freq_axis_range = None
     if freq is not None:
@@ -309,6 +310,148 @@ def time_aggregated_amount_and_frequency_fig(time: pd.Series, amount: pd.Series 
     # Return the figure
     return fig
 
+@logging_utils.codeflow_log_wrapper('#graphs')
+def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str]):
+    fig = go.Figure()
+
+    for time, line, name in zip(times, lines, names):
+        fig.add_trace(go.Bar(x=time, y=line, name=name))
+
+    fig.update_layout(
+        barmode='stack',  # Stacked bar mode
+        autosize=True,
+        hovermode='closest',
+        yaxis=dict(title='£'),
+        # xaxis=dict(title=f"({len(time)} points)"),
+        uirevision=str(datetime.datetime.now())
+    )
+
+    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
+    # return graph_html
+    return fig
+
+@logging_utils.codeflow_log_wrapper('#graphs')
+def multiple_lines_graph_html(
+        times: List[pd.Series],
+        lines: List[pd.Series],
+        names: List[str],
+        stacked: bool = False,
+        order: Literal["desc", "asc", "none"] = "desc",  # "desc", "asc", or "none"
+        rolling_window: int = None  # Window size for rolling max/min
+):
+    fig = go.Figure()
+
+    if rolling_window is None:
+        rolling_window = int(.1*len(times[0]))
+
+    # Validate input lengths
+    time_lens, lines_lens = [len(time) for time in times], [len(line) for line in lines]
+    if len(set(time_lens)) != 1 or len(set(lines_lens)) != 1:
+        raise ValueError(f"All time series must have the same length, {time_lens=} != {lines_lens=}")
+
+    # Convert to DataFrame for easier handling
+    df = pd.DataFrame({name: line.tolist() for name, line in zip(names, lines)})
+    df["time"] = times[0].tolist()  # Assume all times are identical
+
+    # Order lines if needed
+    if order in ("desc", "asc"):
+        line_sums = df[names].abs().sum()
+        sorted_names = line_sums.sort_values(ascending=(order == "asc")).index.tolist()
+        df = df[["time"] + sorted_names]  # Reorder columns
+
+    total_line = None
+    cols = sorted(df.columns.tolist())
+    cols.remove("time")
+    for name in cols:  # Exclude "time" column
+        line = df[name]
+        if not stacked or total_line is None:
+            total_line = line
+        else:
+            total_line += line
+
+        fig.add_trace(go.Scatter(
+            x=df["time"], y=total_line if stacked else line, name=name,
+            line=dict(width=1), opacity=0.7  # Transparency for visibility
+        ))
+
+    # Compute total line (sum of all lines)
+    total_line = df[names].sum(axis=1)
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=total_line, name="Total",
+        line=dict(width=1, color="#FFD700"), opacity=.5  # Gold color for total
+    ))
+
+    # Compute rolling max/min and add shaded area
+    rolling_max = df[names].rolling(window=rolling_window, min_periods=1).max().sum(axis=1)
+    rolling_min = df[names].rolling(window=rolling_window, min_periods=1).min().sum(axis=1)
+    rolling_avg = df[names].rolling(window=rolling_window, min_periods=1).mean().sum(axis=1)
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=rolling_avg, name=f"Rolling Avg (w={rolling_window})",
+        line=dict(width=3, color="#FFD700"), opacity=.25  # Hide in legend
+    ))
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=rolling_max, name="Rolling Max",
+        line=dict(width=0), showlegend=False  # Hide in legend
+    ))
+    fig.add_trace(go.Scatter(
+        x=df["time"], y=rolling_min, name="Rolling Min",
+        fill="tonexty", fillcolor="rgba(255, 215, 0, 0.1)",
+        line=dict(width=0), showlegend=False  # Semi-transparent gold shade
+    ))
+
+
+    # Update layout for dark theme
+    fig.update_layout(
+        autosize=True,
+        hovermode="closest",
+        yaxis=dict(title="£", gridcolor="gray"),
+        xaxis=dict(title=f"({len(df['time'])} points)", gridcolor="gray"),
+        plot_bgcolor="#1E1E1E",  # Dark background
+        paper_bgcolor="#1E1E1E",
+        font=dict(color="white")  # White font
+    )
+
+    return fig
+
+
+@logging_utils.codeflow_log_wrapper('#graphs')
+def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
+    fig = go.Figure()
+
+    for amount, name in zip(amounts, names):
+        if len(amount) < 2:
+            continue  # Skip if not enough data
+
+        # Compute histogram-based density estimate
+        hist_values, bin_edges = np.histogram(amount, bins="auto", density=True)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2  # Midpoints of bins
+
+        # Normalize to make distributions comparable
+        hist_values /= np.max(hist_values) if np.max(hist_values) > 0 else 1
+
+        # Add zero-padding at the start and end
+        bin_centers = np.concatenate(([bin_edges[0]], bin_centers, [bin_edges[-1]]))
+        hist_values = np.concatenate(([0], hist_values, [0]))
+
+        # Plot density as a smooth line with a filled area
+        fig.add_trace(go.Scatter(
+            x=bin_centers, y=hist_values, name=name,
+            line=dict(width=2), fill="tozeroy", opacity=0.5
+        ))
+
+    # Layout settings for a dark theme
+    fig.update_layout(
+        autosize=True,
+        hovermode="closest",
+        yaxis=dict(title="Density", gridcolor="gray"),
+        xaxis=dict(title="Value Range", gridcolor="gray"),
+        plot_bgcolor="#1E1E1E",
+        paper_bgcolor="#1E1E1E",
+        font=dict(color="white")
+    )
+
+    return fig
+
 
 # -------------------------------------------------------------------
 
@@ -330,46 +473,8 @@ def time_aggregated_amount_and_frequency_fig(time: pd.Series, amount: pd.Series 
 #     return fig
 
 
-@logging_utils.codeflow_log_wrapper('#graphs')
-def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str]):
-    fig = go.Figure()
-
-    for time, line, name in zip(times, lines, names):
-        fig.add_trace(go.Bar(x=time, y=line, name=name))
-
-    fig.update_layout(
-        barmode='stack',  # Stacked bar mode
-        autosize=True,
-        hovermode='closest',
-        yaxis=dict(title='£'),
-        # xaxis=dict(title=f"({len(time)} points)"),
-        uirevision=str(datetime.datetime.now())
-    )
-
-    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-    # return graph_html
-    return fig
 
 
-@logging_utils.codeflow_log_wrapper('#graphs')
-def multiple_histograms_graph_html(amounts: List[pd.Series], names: List[str]):
-    fig = go.Figure()
-
-    for amount, name in zip(amounts, names):
-        fig.add_trace(go.Histogram(x=amount, name=name, autobinx=True))
-
-    fig.update_layout(
-        # barmode='stack',  # Stacked bar mode
-        autosize=True,
-        hovermode='closest',
-        yaxis=dict(title='£'),
-        # xaxis=dict(title=f"({len(time)} points)"),
-        uirevision=str(datetime.datetime.now())
-    )
-
-    # graph_html = plot(fig, output_type='div', include_plotlyjs='cdn')
-    # return graph_html
-    return fig
 
 
 def create_plotly_graph(df, from_col=None, to_col=None, info_col=None, k=0.5, levels_col=None):

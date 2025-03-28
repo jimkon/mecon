@@ -396,13 +396,20 @@ class Tagger(abc.ABC):
         df.loc[to_rows, 'tags'] = df.loc[to_rows, 'tags'].apply(_add_tag_to_row)
 
 
+# class TagMatchCondition(Condition): # didn't work when there was a white space ie "tag1 blabla"
+#     def __init__(self, tag_name):
+#         field = 'tags'
+#         transformation_op = None
+#         compare_op = comparisons.REGEX
+#         regex_value = r"\b" + tag_name + r"\b"
+#         super().__init__(field, transformation_op, compare_op, regex_value)
+
 class TagMatchCondition(Condition):  # TODO:v3 use in all tag match cases
     def __init__(self, tag_name):
         field = 'tags'
-        transformation_op = None
-        compare_op = comparisons.REGEX
-        regex_value = r"\b" + tag_name + r"\b"
-        super().__init__(field, transformation_op, compare_op, regex_value)
+        transformation_op = transformations.SPLIT_COMMA
+        compare_op = comparisons.IN_CSV
+        super().__init__(field, transformation_op, compare_op, tag_name)
 
 
 class CustomRule(AbstractRule, abc.ABC, instance_management.Multiton):

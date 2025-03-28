@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime, date
 from enum import Enum
 from math import ceil
+from calendar import monthrange
 
 import pandas as pd
 
@@ -66,20 +67,50 @@ def get_closest_past_monday(dt):
     return closest_monday
 
 
-def date_floor(dt: datetime, group_by_key: str):
-    valid_values = [dr.value for dr in DateRangeUnit]
-    if group_by_key not in valid_values:
-        raise InvalidDataRange(f"Date grouping key must be one of {valid_values}. {group_by_key} was given instead.")
+def get_closest_future_sunday(dt: datetime) -> datetime:
+    """Returns the closest future Sunday from a given date."""
+    days_until_sunday = (6 - dt.weekday()) % 7  # 0=Monday, 6=Sunday
+    return dt + timedelta(days=days_until_sunday)
 
-    if group_by_key == DateRangeUnit.DAY.value:
+
+def date_floor(dt: datetime, date_unit: str):
+    valid_values = [dr.value for dr in DateRangeUnit]
+    if date_unit not in valid_values:
+        raise InvalidDataRange(f"Date unit must be one of {valid_values}. {date_unit} was given instead.")
+
+    if date_unit == DateRangeUnit.DAY.value:
         return datetime(dt.year, dt.month, dt.day, 0, 0, 0)
-    elif group_by_key == DateRangeUnit.WEEK.value:
+    elif date_unit == DateRangeUnit.WEEK.value:
         past_monday = get_closest_past_monday(dt)
         return datetime(past_monday.year, past_monday.month, past_monday.day, 0, 0, 0)
-    elif group_by_key == DateRangeUnit.MONTH.value:
+    elif date_unit == DateRangeUnit.MONTH.value:
         return datetime(dt.year, dt.month, 1, 0, 0, 0)
-    elif group_by_key == DateRangeUnit.YEAR.value:
+    elif date_unit == DateRangeUnit.YEAR.value:
         return datetime(dt.year, 1, 1, 0, 0, 0)
+
+
+def date_ceil(dt: datetime, date_unit: str):
+    """
+    Returns the maximum date in the given date unit.
+
+    Example:
+    - If date_unit is 'month' and dt is 2023-03-24, it returns 2023-03-31.
+    - If date_unit is 'week' and dt is a Wednesday, it returns the upcoming Sunday.
+    """
+    valid_values = [dr.value for dr in DateRangeUnit]
+    if date_unit not in valid_values:
+        raise InvalidDataRange(f"Date unit must be one of {valid_values}. {date_unit} was given instead.")
+
+    if date_unit == DateRangeUnit.DAY.value:
+        return datetime(dt.year, dt.month, dt.day, 23, 59, 59)
+    elif date_unit == DateRangeUnit.WEEK.value:
+        future_sunday = get_closest_future_sunday(dt)
+        return datetime(future_sunday.year, future_sunday.month, future_sunday.day, 23, 59, 59)
+    elif date_unit == DateRangeUnit.MONTH.value:
+        last_day = monthrange(dt.year, dt.month)[1]  # Get last day of the month
+        return datetime(dt.year, dt.month, last_day, 23, 59, 59)
+    elif date_unit == DateRangeUnit.YEAR.value:
+        return datetime(dt.year, 12, 31, 23, 59, 59)
 
 
 def datetime_to_str(dt: datetime) -> str:

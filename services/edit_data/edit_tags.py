@@ -4,8 +4,7 @@ from urllib.parse import urlparse, parse_qs
 
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-from mecon import config
-from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
+from mecon.app import shiny_app
 from mecon.data import reports
 from mecon.data.transactions import Transactions
 from mecon.tags import tagging, process
@@ -18,48 +17,24 @@ from mecon.tags.process import RuleExecutionPlanMonitor
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
-if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
-
-datasets_obj = WorkingDatasetDir()
-datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-dataset = datasets_obj.working_dataset
-
-if dataset is None:
-    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
-
-app_ui = ui.page_fluid(
-    ui.tags.title("μEcon"),
-    ui.navset_pill(
-        ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
-        ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
-        ui.nav_control(ui.input_dark_mode(id="light_mode")),
-    ),
-    ui.hr(),
-
+app_ui = shiny_app.app_ui_factory(
     ui.page_fillable(
         ui.h1(ui.output_text(id='title_output_text')),
         ui.h3(ui.output_ui(id='tag_info_link')),
         ui.input_task_button(id='save_button', label='Save'),
         ui.input_task_button(id='reset_button', label='Reset', label_busy='Loading...'),
+        ui.input_task_button(id='recalculate_button', label='Recalculate'),
+        ui.tooltip(ui.input_task_button(
+            id='check_diffs_button',
+            label='Check differences... (!!)',
+            style="color: #fff; background-color: #aaa; border-color: #000"),
+            'It will recalculate all tags for the current version of the tag and the last save.'),
         ui.layout_columns(
             ui.card(
                 ui.navset_tab(
                     ui.nav_panel(
                         "JSON",
                         ui.card(
-                            ui.row(
-                                ui.input_task_button(id='recalculate_button', label='Recalculate', width='25%'),
-                                ui.tooltip(ui.input_task_button(
-                                    id='check_diffs_button',
-                                    label='Check differences... (!!)',
-                                    width='25%',
-                                    style="color: #fff; background-color: #aaa; border-color: #000"),
-                                    'It will recalculate all tags for the current version of the tag and the last save.')
-                            ),
                             ui.input_text_area(
                                 id="tag_json_text",
                                 label=ui.markdown("JSON text"),
@@ -110,12 +85,19 @@ app_ui = ui.page_fluid(
                             ui.input_task_button(id='condition_add_button', label='Add condition', width='25%')
                         )
                     ),
+                    # ui.nav_panel( # TODO enable or remove
+                    #     "Rules",
+                    #     ui.input_task_button(id='acc_rules_apply_button', label='Apply', disabled=True),
+                    #     ui.accordion(
+                    #         id="rules_accordion",
+                    #         multiple=True
+                    #     ),
+                    # ),
                     ui.nav_panel(
-                        "Rules",
-                        ui.input_task_button(id='acc_rules_apply_button', label='Apply', disabled=True),
-                        ui.accordion(
-                            id="rules_accordion",
-                            multiple=True
+                        "Rule calculations",
+                        ui.input_checkbox(id='rule_calculations_show_tagged', label='Show only tagged', value=True),
+                        ui.output_data_frame(
+                            id="rule_calculations_table",
                         ),
                     ),
                 )
@@ -148,32 +130,6 @@ app_ui = ui.page_fluid(
         )
     )
 )
-
-styles = [
-    {
-        "location": "body",
-        "style": {
-            "background-color": "grey",
-            "border": "0.5px solid black",
-            'font-size': '14px',
-            'color': 'black'
-        },
-    },
-    {
-        "location": "body",
-        "cols": [0],
-        "style": {
-            'font-size': '8px',
-        },
-    },
-    {
-        "location": "body",
-        "cols": [1],
-        "style": {
-            'width': '400px',
-        },
-    }
-]
 
 
 def rule_to_ui(rule: tagging.AbstractRule):
@@ -236,7 +192,8 @@ def rule_to_ui(rule: tagging.AbstractRule):
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    data_manager = WorkingDataManager()
+    dataset = shiny_app.get_working_dataset()
+    data_manager = shiny_app.create_data_manager()
     all_tags = data_manager.all_tags()
 
     current_tag_value = reactive.Value(None)
@@ -309,7 +266,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             invalid_transactions.dataframe(),
             selection_mode="none",
             filters=True,
-            styles=styles
+            styles=shiny_app.datatable_styles
         )
 
     @reactive.calc
@@ -357,7 +314,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.ui
     def tag_info_link():
-        return ui.tags.a("Info page", href=f"http://127.0.0.1:8001/reports/tags/?filter_in_tags={fetch_tag_name()}")
+        return ui.tags.a("Tag info", href=shiny_app.url_for_tag_report(filter_in_tags=fetch_tag_name()))
 
     def format_dt(dt):
         date_str, time = dt.date().strftime('%a %d %b, %Y'), dt.time()
@@ -368,23 +325,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     def tagged_transactions_output_df():
         df = tagged_transactions().dataframe().copy()
         df['datetime'] = df['datetime'].apply(format_dt)
-        return render.DataTable(
-            df,
-            selection_mode="none",
-            filters=True,
-            styles=styles
-        )
+        return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def untagged_transactions_output_df():
         df = untagged_transactions().dataframe().copy()
         df['datetime'] = df['datetime'].apply(format_dt)
-        return render.DataTable(
-            df,
-            selection_mode="none",
-            filters=True,
-            styles=styles
-        )
+        return shiny_app.render_table_standard(df)
 
     @render.text
     def tagged_transactions_stats():
@@ -433,7 +380,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 f"{tag_json_str}"
             ),
             title=f"Saving {fetch_tag_name()}",
-            easy_close=False,
+            easy_close=True,
             footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
             size='xl'
         )
@@ -509,8 +456,10 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         logging.info(f"Diff: {diff_df.shape=}")
         m = ui.modal(
             ui.navset_tab(
-                ui.nav_panel(f"{len(diff_df)} rows added (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_added_output_df')),
-                ui.nav_panel(f"{len(diff_df)} rows removed (regarding to '{fetch_tag_name()}' tag)", ui.output_data_frame(id='transactions_diff_removed_output_df')),
+                ui.nav_panel(f"{len(diff_df)} rows added (regarding to '{fetch_tag_name()}' tag)",
+                             ui.output_data_frame(id='transactions_diff_added_output_df')),
+                ui.nav_panel(f"{len(diff_df)} rows removed (regarding to '{fetch_tag_name()}' tag)",
+                             ui.output_data_frame(id='transactions_diff_removed_output_df')),
                 ui.nav_panel('Calcs',
                              ui.input_select(
                                  id='tag_select_for_calc_monitor',
@@ -535,24 +484,14 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         df = monitor.get_tag_calculations(tag_name).copy()
         df.replace([False, True], value=['False', 'True'], inplace=True)
         logging.info(f"{df.columns=}")
-        return render.DataTable(
-            df,
-            selection_mode='none',
-            filters=True,
-            styles=styles
-        )
+        return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def transactions_diff_added_output_df():
         diff, monitor = changed_transactions()
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
-        return render.DataTable(
-            diff_df,
-            selection_mode="none",
-            filters=True,
-            styles=styles
-        )
+        return shiny_app.render_table_standard(diff_df)
 
     @render.data_frame
     def transactions_diff_removed_output_df():
@@ -562,13 +501,18 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         diff = new_trans.tags_diff(transactions, target_tags=[fetch_tag_name()])
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
-        return render.DataTable(
-            diff_df,
-            selection_mode="none",
-            filters=True,
-            styles=styles
-        )
+        return shiny_app.render_table_standard(diff_df)
 
+
+    @render.data_frame
+    def rule_calculations_table():
+        new_trans, monitor = new_transactions_and_monitor()
+        df = monitor.get_tag_calculations(fetch_tag_name())
+        if input.rule_calculations_show_tagged():
+            idx_true = Transactions(df).contains_tags(fetch_tag_name())
+            df = df[idx_true].copy()
+        df.replace([False, True], value=['False', 'True'], inplace=True)
+        return shiny_app.render_table_standard(df)
 
 
 edit_tags_app = App(app_ui, server)

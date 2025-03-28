@@ -65,14 +65,16 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def fill_values(self, fill_unit,
                     start_date: datetime | date | None = None,
                     end_date: datetime | date | None = None):
-        return self.fill_dates(TransactionDateFiller(fill_unit=fill_unit),
+        new_df_wrapper = self.fill_dates(TransactionDateFiller(fill_unit=fill_unit),
                                start_date=start_date, end_date=end_date)
+        logging.info(f"Filling '{fill_unit}' values from {start_date} to {end_date}, resulting in {new_df_wrapper.size()} rows and date range {new_df_wrapper.date_range()}")
+        return new_df_wrapper
 
     @classmethod
     def factory(cls, df: pd.DataFrame):
         return super().factory(df)
 
-    def to_html(self, df_transformer=None):
+    def to_html(self, df_transformer=None):# TODO remove
         styles = """
         <style>
         ul {

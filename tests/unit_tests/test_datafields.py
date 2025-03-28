@@ -46,19 +46,22 @@ class TestTagsColumnMixin(unittest.TestCase):
 
     def test_contains_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
-            'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3', 'tag4 blabla']
         }))
 
         pd.testing.assert_series_equal(example_wrapper.contains_tags('tag1'),
-                                       pd.Series([False, True, True, False]))
+                                       pd.Series([False, True, True, False, False]))
         pd.testing.assert_series_equal(example_wrapper.contains_tags('tag2'),
-                                       pd.Series([False, False, True, False]))
+                                       pd.Series([False, False, True, False, False]))
         pd.testing.assert_series_equal(example_wrapper.contains_tags('tag3'),
-                                       pd.Series([False, False, False, True]))
+                                       pd.Series([False, False, False, True, False]))
         pd.testing.assert_series_equal(example_wrapper.contains_tags(['tag1', 'tag2']),
-                                       pd.Series([False, False, True, False]))
+                                       pd.Series([False, False, True, False, False]))
         pd.testing.assert_series_equal(example_wrapper.contains_tags([]),
-                                       pd.Series([True, True, True, True]))
+                                       pd.Series([True, True, True, True, True]))
+        pd.testing.assert_series_equal(example_wrapper.contains_tags('tag4'),
+                                       pd.Series([False, False, False, False, False]))
+
 
     def test_contains_tags_empty_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({

@@ -18,3 +18,7 @@ settings.json
 /misc/misc_scripts/
 /misc/
 /todo.txt
+/.env.monzo
+/services/main_shiny/clipboard.py
+/services/main_shiny/monzo.json
+/env/

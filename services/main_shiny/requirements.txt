@@ -1,6 +1,9 @@
-faicons==0.2.2
 shiny==1.0.0
 shinywidgets==0.3.4
 plotly==5.20.0
 pandas==2.0.2
-ridgeplot==0.3.1
+monzo-api==1.2.0
+monzo
+anyio==4.6.2.post1
+idna>=2.7
+requests>2.22.1

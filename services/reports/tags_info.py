@@ -3,8 +3,7 @@ import logging
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
-from mecon import config
-from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
+from mecon.app import shiny_app
 from mecon.tags.rule_graphs import TagGraph, AcyclicTagGraph
 
 # from mecon.monitoring.logs import setup_logging
@@ -13,19 +12,10 @@ from mecon.tags.rule_graphs import TagGraph, AcyclicTagGraph
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
-if not datasets_dir.exists():
-    raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
-
-datasets_obj = WorkingDatasetDir()
-datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-dataset = datasets_obj.working_dataset
-
-if dataset is None:
-    raise ValueError(f"Unable to locate working dataset: {datasets_obj.working_dataset=}")
-
-dm = WorkingDataManager()
-all_tags = dm.all_tags()
+# TODO all these will not refresh if i make any change to the data. data manager is not reseting
+dataset = shiny_app.get_working_dataset()
+data_manager = shiny_app.create_data_manager()
+all_tags = data_manager.all_tags()
 
 tag_graph_all = TagGraph.from_tags(all_tags).remove_cycles()
 tag_roots = tag_graph_all.find_all_root_tags()
@@ -33,17 +23,7 @@ tag_root_groups = {f"root:{tag.name}": f"{tag.name} ({len(tag_graph_all.all_tags
 # TODO numbers in tag_root_groups are wrong sometimes
 # TODO could sort from largest to smallest
 
-app_ui = ui.page_fluid(
-    ui.tags.title("μEcon"),
-    ui.navset_pill(
-        ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
-        ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
-        ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
-        ui.nav_control(ui.tags.a("Monitoring", href=f"http://127.0.0.1:8003/")),
-        ui.nav_control(ui.input_dark_mode(id="light_mode")),
-    ),
-    ui.hr(),
-
+app_ui = shiny_app.app_ui_factory(
     ui.h5(ui.output_text('title_output')),
     ui.layout_sidebar(
         ui.sidebar(
@@ -70,6 +50,8 @@ app_ui = ui.page_fluid(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    data_manager = shiny_app.create_data_manager()
+
     @render.text
     def title_output():
         return f"All tags: {len(all_tags)}"

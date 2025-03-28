@@ -7,7 +7,6 @@ from pathlib import Path
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-logging.info(f"Searching for MECON_ROOT_DIRPATH in environment variables.")
 MECON_ROOT_DIRPATH = getenv("MECON_ROOT_DIRPATH")
 if MECON_ROOT_DIRPATH is None or MECON_ROOT_DIRPATH == "":
     logging.info(f"MECON_ROOT_DIRPATH not found in environment variables. Using default value relative to {__file__=}.")
@@ -20,11 +19,12 @@ if MECON_ROOT_DIRPATH is None or MECON_ROOT_DIRPATH == "":
             if part == 'mecon':
                 break
         MECON_ROOT_DIRPATH = pathlib.Path(*final_path_parts)
-        logging.info(f"MECON_ROOT_DIRPATH set to: {MECON_ROOT_DIRPATH}")
+        logging.info(f"MECON_ROOT_DIRPATH set to: {MECON_ROOT_DIRPATH=}")
     else:
-        raise ValueError(f"Cannot find 'mecon' in path: {_file_path}")
+        raise ValueError(f"Cannot find 'mecon' root dir in path: {_file_path}")
 
-logging.info(f"{MECON_ROOT_DIRPATH=}")
+MECON_VERSION = '3.0.0'
+
 
 DEFAULT_DATASETS_DIR_PATH = MECON_ROOT_DIRPATH / "datasets"
 SETTINGS_JSON_FILENAME = r"settings.json"
@@ -63,3 +63,7 @@ EXPECTED_MONZO_COLUMNS_IN_RAW_STATEMENT = {'Transaction',
                                            "Local currency", "Notes and  # tags", "Address", "Receipt", "Description",
                                            "Category split",
                                            "Money Out", "Money In"}
+
+
+SHINY_DEFAULT_FILTER_PERIOD = 'All'
+SHINY_DEFAULT_FILTER_TIME_UNIT = 'month'

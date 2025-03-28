@@ -30,20 +30,21 @@ class WorkingDatasetDir(CustomisedDatasetDir):
         return self._working_dataset
 
     def set_working_dataset(self, dataset_name: str) -> Dataset:
-        logging.info(f"Setting new current working dataset to '{dataset_name}'")
         self._working_dataset = self.get_dataset(dataset_name)
+        if self._working_dataset is None:
+            raise ValueError(f"Working dataset {dataset_name} does not exist in {self.path}")
+        logging.info(f"Setting new current working dataset to '{dataset_name}': {self._working_dataset}")
         return self.working_dataset
 
 
 class WorkingDatasetDirInfo:
     def __init__(self):
         self._dataset_dir = WorkingDatasetDir()
+        self._current_dataset = self._dataset_dir.working_dataset
 
     def statement_files_info(self) -> Dict:
-        current_dataset = self._dataset_dir.working_dataset
-        dirs_path = current_dataset.statements
-        dm = WorkingDataManager()
-        transformed_dict = current_dataset.statement_files().copy()
+        dirs_path = self._current_dataset.statements
+        transformed_dict = self._current_dataset.statement_files().copy()
 
         for dir_name in transformed_dict:
             files_info = []

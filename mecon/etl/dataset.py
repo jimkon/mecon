@@ -21,6 +21,7 @@ def _subfolder_csvs(path):
 
 
 class Dataset:
+    # TODO enrich this class with much more functionality, everything related to specific Datasets should start from here. make this object a Mediator
     def __init__(self,
                  name: str,
                  db_path: Path,
@@ -69,9 +70,26 @@ class Dataset:
     def statements(self):
         return self._statements
 
-    def statement_files(self) -> Dict:
-        return _subfolder_csvs(self.statements)
+    def statement_files(self, filter_option:Literal['all', 'settings'] = 'settings') -> Dict:
+        all_files = _subfolder_csvs(self.statements)
+        # if filter_option == 'all':
+        #     return all_files
+        # elif filter_option == 'settings' and 'sources' in self.settings:
+        #     selected_sources = self.settings['sources']
+        #     selected_files = {k: all_files[v] for k, v in selected_sources}
+        #     return selected_files
+        # else:
+        #     raise ValueError(f"Invalid filter_option: {filter_option}")
+        if 'sources' not in self.settings:
+            return all_files
 
+        if self.settings['sources']['Monzo'] == 'MonzoAPI': # TODO temporary solution untill all sources are selected in the app
+            del all_files['Monzo']
+        else:
+            del all_files['MonzoAPI']
+        return all_files
+
+    # TODO
     def add_statement(self, bank_name: str, statement_path: str | Path):
         statement_path = Path(statement_path)
         filename = statement_path.name
@@ -100,9 +118,9 @@ class DatasetDir:
         # logging.info(f"New datasets directory in path '{path}'. #info#filesystem")
 
         self._datasets = {}
-        subpaths = list(self._path.iterdir())
+        subpaths = [p for p in self._path.iterdir() if not p.is_file()]
         if len(subpaths) == 0:
-            logging.warning(f"DatasetDir.__init__: Path {self._path} has no datasets inside.")
+            raise FileNotFoundError(f"DatasetDir.__init__: Path {self._path} has no datasets inside.")
 
         logging.info(f"Adding {len(subpaths)} datasets from {path}. #info#filesystem")
         self.add_datasets_from_paths(subpaths)
