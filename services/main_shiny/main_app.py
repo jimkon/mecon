@@ -63,7 +63,7 @@ app_ui = shiny_app.app_ui_factory(
                                          ui.input_radio_buttons(
                                              "monzo_source_radio",
                                              "Choose between Monzo sources",
-                                             {"Monzo API": "MonzoAPI", "Monzo": "Monzo"},
+                                             {"MonzoAPI": "Monzo API", "Monzo": "Monzo"},
                                              selected=dataset.settings['sources']['Monzo']
                                          ),
                                          ui.card(
