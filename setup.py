@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
    name='mecon',
-   version='3.0.0',
+   version='4.0.0',
    description='My economics',
    packages=['mecon'],  #same as name
 )
