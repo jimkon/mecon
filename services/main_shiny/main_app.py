@@ -22,8 +22,7 @@ if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 datasets_obj = WorkingDatasetDir()
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-# dataset = datasets_obj.working_dataset
-
+dataset = datasets_obj.working_dataset
 
 app_ui = shiny_app.app_ui_factory(
     ui.card(
@@ -60,15 +59,32 @@ app_ui = shiny_app.app_ui_factory(
                         ui.navset_tab(
                             ui.nav_panel("All", ui.output_data_frame('all_sources_info_text')),
                             ui.nav_panel("HSBC", ui.card(ui.output_data_frame('hsbc_source_info_text'))),
-                            ui.nav_panel("Monzo", ui.card(
-                                ui.tags.a('Monzo auth', href="http://127.0.0.1:8000/auth/monzo/"),
-                                ui.output_data_frame('monzo_source_info_text')
-                            )),
-                            ui.nav_panel("Revolut", ui.card(ui.output_data_frame('revo_source_info_text'))),
+                            ui.nav_panel("Monzo",
+                                         ui.input_radio_buttons(
+                                             "monzo_source_radio",
+                                             "Choose between Monzo sources",
+                                             {"Monzo API": "MonzoAPI", "Monzo": "Monzo"},
+                                             selected=dataset.settings['sources']['Monzo']
+                                         ),
+                                         ui.card(
+                                             ui.h3("Monzo Export"),
+                                             ui.output_data_frame('monzo_export_source_info_text'),
+                                         ),
+                                         ui.card(
+                                             ui.h3("Monzo API (*not integrated yet)"),
+                                             ui.tags.a('Monzo authentication and fetching...',
+                                                       href="http://127.0.0.1:8000/auth/monzo/"),
+                                             ui.output_data_frame('monzo_api_source_info_text'),
+                                         ),
+                                         ),
+                            ui.nav_panel("Revolut",
+                                         ui.card(ui.output_data_frame('revo_source_info_text'))),
                             ui.nav_panel("HSBC Savings account",
                                          ui.card(ui.output_data_frame('hsbcsvr_source_info_text'))),
-                            ui.nav_panel("Trading 212", ui.card(ui.output_data_frame('trd212_source_info_text'))),
-                            ui.nav_panel("Invest Engine", ui.card(ui.output_data_frame('inveng_source_info_text'))),
+                            ui.nav_panel("Trading 212",
+                                         ui.card(ui.output_data_frame('trd212_source_info_text'))),
+                            ui.nav_panel("Invest Engine",
+                                         ui.card(ui.output_data_frame('inveng_source_info_text'))),
                         )
                     )),
                     ui.accordion_panel('Statements', ui.card(
@@ -167,9 +183,25 @@ def server(input: Inputs, output: Outputs, session: Session):
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
-    def monzo_source_info_text():
+    def monzo_export_source_info_text():
         df = source_info_df('Monzo')
         return shiny_app.render_table_standard(df)
+
+    @render.data_frame
+    def monzo_api_source_info_text():
+        df = source_info_df('MonzoAPI')
+        logging.info(f"Source: {df=}")
+        return shiny_app.render_table_standard(df)
+
+    @reactive.effect
+    @reactive.event(input.monzo_source_radio)
+    def monzo_source_radio_change():
+        logging.info(f"new monzo_source_radio={input.monzo_source_radio()}")
+        curr_dataset = WorkingDatasetDir().working_dataset
+        curr_dataset.settings['sources']['Monzo'] = input.monzo_source_radio()
+        curr_dataset.settings.save()
+        logging.info(
+            f"new monzo_source_radio={input.monzo_source_radio()} saved to curr_dataset.settings['sources']['Monzo']")
 
     @render.data_frame
     def revo_source_info_text():

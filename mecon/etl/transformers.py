@@ -161,6 +161,8 @@ class StatementTransformer(DataframeTransformer, abc.ABC):
     def factory(cls, source):
         if source == MonzoFileStatementTransformer.source_name:
             return MonzoFileStatementTransformer()
+        if source == MonzoAPIFileStatementTransformer.source_name:
+            return MonzoAPIFileStatementTransformer()
         elif source == HSBCFileStatementTransformer.source_name:
             return HSBCFileStatementTransformer()
         elif source == RevoFileStatementTransformer.source_name:
@@ -218,22 +220,7 @@ class MonzoFileStatementTransformer(StatementTransformer):
     source_name = 'Monzo'
     source_name_abr = 'MZN'
 
-    def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
-        type_1_cols = {'Transaction ID', 'Date', 'Time', 'Type', 'Name', 'Emoji', 'Category', 'Amount',
-                       'Currency', 'Local amount', 'Local currency', 'Notes and #tags', 'Address',
-                       'Receipt', 'Category split', 'Description', 'Money In', 'Money Out'}
-        type_1_cols = set(map(lambda col: col.lower().replace(' ', '_'), type_1_cols))
-
-        if df_monzo.shape[1] == len(type_1_cols):
-            logging.info(f"Type 1: Transforming Monzo transactions ({df_monzo.shape} shape)")
-            df_transformed = self._transform_type1(df_monzo)
-        else:
-            logging.info(f"Type 2: Transforming Monzo transactions ({df_monzo.shape} shape)")
-            df_transformed = self._transform_type2(df_monzo)
-
-        return df_transformed
-
-    def _transform_type1(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
+    def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:  # TODO:v3 make it more readable
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
         df_monzo = df_monzo.copy()
 
@@ -273,13 +260,17 @@ class MonzoFileStatementTransformer(StatementTransformer):
 
         return df_transformed
 
+
+class MonzoAPIFileStatementTransformer(StatementTransformer):
+    source_name = 'MonzoAPI'
+    source_name_abr = 'MZN'
+
     def _parse_and_convert_datetimes(self, datetime_str_series: pd.Series) -> pd.Series:
         parsed_datetime = pd.to_datetime(datetime_str_series.apply(lambda datetime_str: datetime_str[:19] + 'Z'), utc=True)
         converted_datetime = parsed_datetime.dt.tz_convert("Europe/London") # TODO consider different timezones
         return converted_datetime
 
-
-    def _transform_type2(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
+    def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
         df_monzo = df_monzo.copy()
         # df_monzo['id'] = df_monzo['id']
@@ -307,6 +298,7 @@ class MonzoFileStatementTransformer(StatementTransformer):
             columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
         return df_transformed
+
 
 if __name__ == '__main__':
     files = ['/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/data/statements/Monzo/monzo_api_transactions_2019-04-26_to_2025-03-24_merged.csv']

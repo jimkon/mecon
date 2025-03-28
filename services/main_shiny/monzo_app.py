@@ -38,7 +38,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     monzo_client = monzo.MonzoClient(token_file=token_filepath)
 
     def save_monzo_statement(df, name):
-        monzo_dir = dataset.statements / 'Monzo'
+        monzo_dir = dataset.statements / 'MonzoAPI'
 
         # back up old files
         backup_dir = monzo_dir / 'backup'
@@ -157,7 +157,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
             WorkingDatasetDirInfo().statement_files_info()
             dataset_dir_info = WorkingDatasetDirInfo()
-            prev_statements = [path for path, *_ in dataset_dir_info.statement_files_info()['Monzo']]# if str(path).startswith('monzo_api_transactions')]
+            prev_statements = [path for path, *_ in dataset_dir_info.statement_files_info()['MonzoAPI']]# if str(path).startswith('monzo_api_transactions')]
             logging.info(f"{prev_statements=}")
             if prev_statements:
                 df_prev = pd.concat([pd.read_csv(file, index_col=None) for file in prev_statements])
