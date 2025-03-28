@@ -80,6 +80,9 @@ class Dataset:
         #     return selected_files
         # else:
         #     raise ValueError(f"Invalid filter_option: {filter_option}")
+        if 'sources' not in self.settings:
+            return all_files
+
         if self.settings['sources']['Monzo'] == 'MonzoAPI': # TODO temporary solution untill all sources are selected in the app
             del all_files['Monzo']
         else:

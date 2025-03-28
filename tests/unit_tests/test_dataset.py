@@ -97,6 +97,8 @@ class DatasetTestCase(unittest.TestCase):
 
         csv_file.unlink()
 
+    # TODO remove
+    @unittest.skip('Not used')
     def test_add_df_statement(self):
         # Initial assertion
         self.assertEqual(self.dataset.statement_files(), {})
