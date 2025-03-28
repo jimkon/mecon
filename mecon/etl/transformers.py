@@ -150,7 +150,7 @@ class RevoStatementTransformer(DataframeTransformer):
 
 
 class StatementTransformer(DataframeTransformer, abc.ABC):
-    SOURCES = ['Monzo', 'HSBC', 'Revolut', 'INVENG', 'HSBCSVR', 'TRD212']
+    SOURCES = ['Monzo', 'MonzoAPI', 'HSBC', 'Revolut', 'INVENG', 'HSBCSVR', 'TRD212']
 
     def read_df(self, path):
         df = pd.read_csv(path, index_col=None)
