@@ -268,7 +268,7 @@ class MonzoAPIFileStatementTransformer(StatementTransformer):
     def _parse_and_convert_datetimes(self, datetime_str_series: pd.Series) -> pd.Series:
         parsed_datetime = pd.to_datetime(datetime_str_series.apply(lambda datetime_str: datetime_str[:19] + 'Z'), utc=True)
         converted_datetime = parsed_datetime.dt.tz_convert("Europe/London") # TODO consider different timezones
-        return converted_datetime
+        return converted_datetime.dt.tz_localize(None) # removes timezone info
 
     def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
@@ -301,10 +301,10 @@ class MonzoAPIFileStatementTransformer(StatementTransformer):
 
 
 if __name__ == '__main__':
-    files = ['/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/data/statements/Monzo/monzo_api_transactions_2019-04-26_to_2025-03-24_merged.csv']
+    files = ['/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared/data/statements/MonzoAPI/monzo_api_transactions_2019-04-26_to_2025-03-24_merged.csv']
     for file in files:
-        df = MonzoFileStatementTransformer().read_df(file)
-        df_trans = MonzoFileStatementTransformer().transform(df)
+        df = MonzoAPIFileStatementTransformer().read_df(file)
+        df_trans = MonzoAPIFileStatementTransformer().transform(df)
 
 class RevoFileStatementTransformer(StatementTransformer):
     source_name = 'Revolut'
