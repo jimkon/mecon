@@ -57,7 +57,8 @@ def url_for_tag_edit(**kwargs):
 # all_transactions = dm.get_transactions()
 
 tab_title = ui.tags.title("μEcon App")
-page_title = ui.HTML(f"<h2>mEcon<sub><small><u><i>v{config.MECON_VERSION}</i></u></small></sub></h2>")
+page_title = ui.HTML(f"<big><big><big>mEcon</big></big></big><sub><small><u><i>v{config.MECON_VERSION}</i></u></small></sub><br>")
+dataset_label = ui.tooltip(ui.HTML(f"<sub><small>Selected dataset: {get_working_dataset().name}</small></sub>"), f"Dataset directory: {config.DEFAULT_DATASETS_DIR_PATH}")
 navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
     # ui.nav_control(ui.tags.a("Reports", href=f"http://127.0.0.1:8001/reports/")),
@@ -74,6 +75,7 @@ def app_ui_factory(*args):
         # https://forum.posit.co/t/how-to-add-an-logo-in-the-header-in-pythonshiny/189333
         tab_title,
         page_title,
+        dataset_label,
         navbar,
         ui.hr(),
         *args
