@@ -244,7 +244,7 @@ class MonzoFileStatementTransformer(StatementTransformer):
         # Concatenate columns to create description
         cols_to_concat = ['type', 'name', 'emoji', 'category', 'notes_and_#tags', 'address', 'receipt',
                           'description',
-                          'category_split', 'money_out', 'money_in']
+                          'category_split', 'money_out', 'money_in', 'transaction_id']
 
         df_transformed = df_monzo[['id', 'datetime', 'amount', 'currency', 'amount_cur']].copy()
 
