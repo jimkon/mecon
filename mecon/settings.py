@@ -52,6 +52,11 @@ class Settings(DictFile):
         if path is None:
             path = config.SETTINGS_JSON_FILENAME
 
+        path = pathlib.Path(path)
+
+        if path.is_dir():
+            path = path / config.SETTINGS_JSON_FILENAME
+
         super().__init__(path=path)
 
 

@@ -20,7 +20,7 @@ def _subfolder_csvs(path):
     return result
 
 
-class Dataset:
+class DatasetV1:
     # TODO enrich this class with much more functionality, everything related to specific Datasets should start from here. make this object a Mediator
     def __init__(self,
                  name: str,
@@ -30,8 +30,8 @@ class Dataset:
         self._name = name
         self._sqlite = db_path
         self._statements = statements_path
-        self._settings = settings.Settings(path=settings_path)
 
+        self._settings = settings.Settings(path=settings_path)
 
     @classmethod
     def from_dirpath(self, dir_path: Path | str):
@@ -46,10 +46,10 @@ class Dataset:
 
         settings_path = dir_path / config.SETTINGS_JSON_FILENAME
 
-        return Dataset(name=dir_path.name,
-                       db_path=db_path,
-                       statements_path=statements_path,
-                       settings_path=settings_path)
+        return DatasetV1(name=dir_path.name,
+                         db_path=db_path,
+                         statements_path=statements_path,
+                         settings_path=settings_path)
 
     def __repr__(self):
         return f"Dataset({self.name}): {self.db}, {self.statements}"
@@ -70,7 +70,7 @@ class Dataset:
     def statements(self):
         return self._statements
 
-    def statement_files(self, filter_option:Literal['all', 'settings'] = 'settings') -> Dict:
+    def statement_files(self, filter_option: Literal['all', 'settings'] = 'settings') -> Dict:
         all_files = _subfolder_csvs(self.statements)
         # if filter_option == 'all':
         #     return all_files
@@ -83,13 +83,14 @@ class Dataset:
         if 'sources' not in self.settings:
             return all_files
 
-        if self.settings['sources']['Monzo'] == 'MonzoAPI': # TODO temporary solution untill all sources are selected in the app
+        if self.settings['sources'][
+            'Monzo'] == 'MonzoAPI':  # TODO temporary solution untill all sources are selected in the app
             del all_files['Monzo']
         else:
             del all_files['MonzoAPI']
         return all_files
 
-    # TODO
+    # TODO remove
     def add_statement(self, bank_name: str, statement_path: str | Path):
         statement_path = Path(statement_path)
         filename = statement_path.name
@@ -98,11 +99,141 @@ class Dataset:
         new_statement_path.write_bytes(statement_path.read_bytes())
         logging.info(f"Added Monzo statement file to {new_statement_path}")
 
+    # TODO remove
     def add_df_statement(self, bank_name: str | Path, df: pd.DataFrame, filename: str):
         new_statement_path = self.statements / bank_name / filename
         new_statement_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(new_statement_path, index=False)
         logging.info(f"Added Monzo statement file with {len(df)} transactions to {new_statement_path}")
+
+
+class DatasetV2:
+    """
+    Directory Dataset
+    """
+
+    def __init__(self,
+                 path: Path | str):
+        path = pathlib.Path(path)
+        if path.is_file():
+            raise ValueError(f"DatasetV2 can only be initialized from a directory: '{path}' given")
+
+        if not path.exists():
+            raise ValueError(f"DatasetV2 can only be initialized from an existing directory: '{path}' does not exist")
+
+        self._path = pathlib.Path(path)
+        self._name = self.path.stem
+        self._data = self._path / 'data'
+        self._current_data = self._data / 'current'
+        self._statements = self._data / 'statements'
+        self._settings = None
+        self._build_file_structure()
+
+    def __repr__(self):
+        return f"DatasetV2({self.name}): {self._path}"
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def data(self):
+        return self._data
+
+    @property
+    def current_data(self):
+        return self._current_data
+
+    @property
+    def statements(self):
+        return self._statements
+
+    @property
+    def settings(self):
+        return self._settings
+
+    @property
+    def db(self):
+        raise DeprecationWarning("db attribute is deprecated, use 'current_data' instead")
+        return self.current_data
+
+    def _build_file_structure(self):
+        self.path.mkdir(parents=True, exist_ok=True)
+        self.current_data.mkdir(parents=True, exist_ok=True)
+        self.statements.mkdir(parents=True, exist_ok=True)
+        self._settings = settings.Settings(path=self.path)
+        # TODO version check
+
+    def statement_files(self, filter_option: Literal['all', 'settings'] | None = 'settings') -> Dict:
+        if filter_option is None:
+            filter_option = "all" if 'sources' not in self.settings and 'filter' not in self.settings['sources'] else self.settings['sources']['filter']
+
+        all_files = _subfolder_csvs(self.statements)
+
+        if filter_option == 'all':
+            return all_files
+        elif filter_option == 'settings':
+            if 'sources' not in self.settings:
+                logging.warning(f"No sources defined in settings file '{self._settings.path}'")
+                return all_files
+
+            if set(all_files.keys()) != set(self.settings['sources'].keys()):
+                logging.warning(f"Discrepancy between sources found ({set(all_files.keys())}) and the ones defined in settings file settings ({set(self.settings['sources'].keys())})")
+
+            selected_files = {source_name: all_files[source_name] for source_name, is_enabled in self.settings['sources'].items() if is_enabled}
+            logging.info(f"Selected files: {self.settings['sources']}")
+            return selected_files
+        else:
+            raise ValueError(f"Invalid filter_option: {filter_option}")
+
+    def statement_files_info(self) -> Dict:
+        transformed_dict = self.statement_files()
+
+        for dir_name in transformed_dict:
+            files_info = []
+            for filename in transformed_dict[dir_name]:
+                statement_filepath = self.statements / dir_name / filename
+                try:
+                    df = pd.read_csv(statement_filepath)
+                    stats = len(df)
+                except FileNotFoundError | ValueError:
+                    stats = 'error while reading file'
+
+                files_info.append((statement_filepath, filename, stats))
+            transformed_dict[dir_name] = files_info
+
+        return transformed_dict
+
+    def statement_files_info_df(self) -> pd.DataFrame:
+        info_json = self.statement_files_info()
+
+        dfs = []
+        for bank, rows in info_json.items():
+            df = pd.DataFrame(rows, columns=['path', 'filename', 'rows'])
+            df['source'] = bank
+            dfs.append(df)
+
+        merged_df = pd.concat(dfs, ignore_index=True)[['source', 'filename', 'rows', 'path', ]]
+        return merged_df
+
+    @classmethod
+    def from_dirpath(cls, dirpath: Path):
+        # redundant, just because it existed in DatasetV1
+        return DatasetV2(dirpath)
+
+
+if __name__ == '__main__':
+    d = DatasetV2('/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared_monzoapi')
+    d.statement_files()
+    pass
+
+# TODO, trick to easily replace Dataset original (v1) with V2, possibly a bad idea
+class Dataset(DatasetV2):
+    pass
 
 
 class DatasetDir:

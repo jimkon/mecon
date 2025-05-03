@@ -5,7 +5,8 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDatasetDirInfo, WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
+from mecon.app.current_data import WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
+# from mecon.app.current_data import WorkingDatasetDirInfo
 from mecon.etl import transformers
 
 # from mecon.monitoring.logs import setup_logging
@@ -60,16 +61,11 @@ app_ui = shiny_app.app_ui_factory(
                             ui.nav_panel("All", ui.output_data_frame('all_sources_info_text')),
                             ui.nav_panel("HSBC", ui.card(ui.output_data_frame('hsbc_source_info_text'))),
                             ui.nav_panel("Monzo",
-                                         ui.input_radio_buttons(
-                                             "monzo_source_radio",
-                                             "Choose between Monzo sources",
-                                             {"MonzoAPI": "Monzo API", "Monzo": "Monzo"},
-                                             selected=dataset.settings['sources']['Monzo']
-                                         ),
                                          ui.card(
                                              ui.h3("Monzo Export"),
                                              ui.output_data_frame('monzo_export_source_info_text'),
-                                         ),
+                                         )),
+                            ui.nav_panel("MonzoAPI",
                                          ui.card(
                                              ui.h3("Monzo API (*not integrated yet)"),
                                              ui.tags.a('Monzo authentication and fetching...',
@@ -109,7 +105,7 @@ app_ui = shiny_app.app_ui_factory(
 
 
 def source_info_df(source):
-    df = WorkingDatasetDirInfo().statement_files_info_df()
+    df = dataset.statement_files_info_df()
     df_res = df[df['source'] == source]
     return df_res
 
@@ -164,7 +160,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.ui
     def statements_info_text():
         # TODO df['rows'].sum() is LESS than the numbers of transactions tagged as 'All', how?
-        df = WorkingDatasetDirInfo().statement_files_info_df()
+        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
 
         text = ui.HTML(
             f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> (* rows might not be 100% accurate).
@@ -173,7 +169,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def all_sources_info_text():
-        df = WorkingDatasetDirInfo().statement_files_info_df()
+        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
         df_agg = df.groupby('source').agg({'filename': 'count', 'rows': 'sum'}).reset_index()
         return shiny_app.render_table_standard(df_agg)
 
@@ -225,7 +221,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def statements_info_dataframe():
-        df = WorkingDatasetDirInfo().statement_files_info_df()
+        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
         res = render.DataGrid(df, selection_mode="row")
         return res
 

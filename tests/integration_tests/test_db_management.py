@@ -816,7 +816,7 @@ class CachedFileDataManagerTestDataFlow(unittest.TestCase):
         self.working_dir = tempfile.TemporaryDirectory()
         self.working_dir_path = pathlib.Path(self.working_dir.name)
 
-        self.data_path = self.working_dir_path / 'data/db'
+        self.data_path = self.working_dir_path / 'data/current'
         self.data_path.mkdir(parents=True, exist_ok=True)
 
         with open(self.data_path / 'transactions.csv', 'w') as tags_file:

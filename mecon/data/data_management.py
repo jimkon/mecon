@@ -230,19 +230,18 @@ class DataCache:
 class CachedFileDataManager:
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.files_dirpath = dataset.db.parent
-        self.statements_dirpath = self.files_dirpath / "statements"
+        self.statements_dirpath = self.dataset.statements
 
         self.transactions = None
-        self._transactions_path = self.files_dirpath / 'transactions.csv'
+        self._transactions_path = self.dataset.current_data / 'transactions.csv'
         self._load_transactions()
 
         self.tags_df = None
-        self._tags_path = self.files_dirpath / 'tags.csv'
+        self._tags_path = self.dataset.current_data / 'tags.csv'
         self._load_tags()
 
         self.tags_metadata_df = None
-        self._tags_metadata_path = self.files_dirpath / 'tags_metadata.csv'
+        self._tags_metadata_path = self.dataset.current_data / 'tags_metadata.csv'
         self._load_tags_metadata()
         pass
 
@@ -311,7 +310,7 @@ class CachedFileDataManager:
         self.transactions = Transactions(df_merged)
         df_merged['tags'] = ''  # '[[] for _ in range(len(df_merged))]
         self._save_transactions()
-        # logging.info(f"Wrote {self.transactions.size()} transactions to {self.files_dirpath}")
+        # logging.info(f"Wrote {self.transactions.size()} transactions to {self.dataset.current_data}")
         return self
 
     def get_transactions(self) -> Transactions:
@@ -382,7 +381,7 @@ class CachedFileDataManager:
 
     def get_tags_metadata(self):
         if self.tags_metadata_df is None:
-            path = self.files_dirpath / 'tags_metadata.csv'
+            path = self.dataset.current_data / 'tags_metadata.csv'
             self.tags_metadata_df = pd.read_csv(path, index_col=None)
 
         self.all_tags()  # load tags if not already loaded

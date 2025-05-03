@@ -39,10 +39,13 @@ class WorkingDatasetDir(CustomisedDatasetDir):
 
 class WorkingDatasetDirInfo:
     def __init__(self):
+        raise DeprecationWarning("WorkingDatasetDirInfo is now removed")
         self._dataset_dir = WorkingDatasetDir()
         self._current_dataset = self._dataset_dir.working_dataset
 
     def statement_files_info(self) -> Dict:
+        raise DeprecationWarning("Function moved to DatasetV2")
+
         dirs_path = self._current_dataset.statements
         transformed_dict = self._current_dataset.statement_files().copy()
 
@@ -62,6 +65,8 @@ class WorkingDatasetDirInfo:
         return transformed_dict
 
     def statement_files_info_df(self) -> pd.DataFrame:
+        raise DeprecationWarning("Function moved to DatasetV2")
+
         info_json = self.statement_files_info()
 
         dfs = []
@@ -72,6 +77,7 @@ class WorkingDatasetDirInfo:
 
         merged_df = pd.concat(dfs, ignore_index=True)[['source', 'filename', 'rows', 'path', ]]
         return merged_df
+
 
 class WorkingDataManager(CachedFileDataManager):
     def __init__(self):
