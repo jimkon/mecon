@@ -25,6 +25,30 @@ datasets_obj = WorkingDatasetDir()
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 dataset = datasets_obj.working_dataset
 
+def source_info_df(source):
+    df = dataset.statement_files_info_df()
+    df_res = df[df['source'] == source]
+    return df_res
+
+# def source_panel_factory(source_name, *args):
+#     element_name_id = source_name.lower().replace(' ', '_')
+#     """
+#     @render.data_frame
+#     def 'element_name_id'_api_source_info_text():
+#         df = source_info_df(source_name)
+#         logging.info(f"Source: {df=}")
+#         return shiny_app.render_table_standard(df)
+#     """
+#
+#     return ui.nav_panel(
+#         source_name,
+#         ui.card(
+#             ui.output_data_frame(f"{element_name_id}_source_info_text"),
+#             *args
+#         )
+#     )
+
+
 app_ui = shiny_app.app_ui_factory(
     ui.card(
         ui.navset_tab(
@@ -102,12 +126,6 @@ app_ui = shiny_app.app_ui_factory(
         )
     )
 )
-
-
-def source_info_df(source):
-    df = dataset.statement_files_info_df()
-    df_res = df[df['source'] == source]
-    return df_res
 
 
 def server(input: Inputs, output: Outputs, session: Session):
