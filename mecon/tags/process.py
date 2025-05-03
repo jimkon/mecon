@@ -58,7 +58,7 @@ class RuleExecutionPlanMonitor:
     def __init__(self, dataset: Dataset, df_calculations=None, df_operations=None):
         self.df_calculations = df_calculations
         self.df_operations = df_operations
-        self.path = dataset.statements.parent / 'monitoring'
+        self.path = dataset.current_data
         self.calc_path = self.path / 'calc_monitoring.csv'
         self.op_path = self.path / 'op_monitoring.csv'
         self.path.mkdir(parents=True, exist_ok=True)

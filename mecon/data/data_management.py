@@ -9,7 +9,7 @@ import pandas as pd
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework
 from mecon.etl.dataset import Dataset
-from mecon.tags.process import OptREPTagging
+from mecon.tags.process import OptREPTagging, RuleExecutionPlanMonitor
 from mecon.tags.tag_helpers import tag_stats_from_transactions
 from mecon.tags.tagging import Tag
 from mecon.etl import transformers
@@ -372,7 +372,8 @@ class CachedFileDataManager:
         sess = OptREPTagging(all_tags) \
             .create_rule_execution_plan() \
             .create_optimised_rule_execution_plan()
-        transactions = sess.tag(transactions)
+        transactions = sess.tag(transactions,
+                                monitor=RuleExecutionPlanMonitor(self.dataset))
         self.transactions = transactions
         self._save_transactions()
 
