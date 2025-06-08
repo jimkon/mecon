@@ -457,5 +457,17 @@ class TestIDColumnMixin(unittest.TestCase):
                          [True, True, True, True, False, True, True])
 
 
+    def test_select_by_ids(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'id': ['id1', 'id2', 'id3', 'id4', 'id5'],
+        }))
+        selected_ids_wrapper = example_wrapper.select_by_ids(['id1', 'id4', 'non_existent_id'])
+        expected_wrapper_df = pd.DataFrame({
+            'id': ['id1', 'id4'],
+        })
+        pd.testing.assert_frame_equal(selected_ids_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -202,9 +202,10 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def tags_diff(self,
                   transactions: Transactions,
                   target_tags: list[str] | str | None = None,
-                  # comparison: Literal['']
                   ) -> Transactions:
-        # TODO decide if this is in transactions or fields.TagsColumn
+        common_ids = self.id.isin(transactions.id)
+
+
         target_tags = [target_tags] if target_tags is not None and isinstance(target_tags, str) else target_tags
         df_this, df_other = self.dataframe(), transactions.dataframe()
         comparison_results = []
