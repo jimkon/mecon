@@ -177,6 +177,20 @@ class TestTagsColumnMixin(unittest.TestCase):
         self.assertEqual(example_wrapper.invalid_tags().to_list(),
                          [False, False, False, True, True, True])
 
+    def test_diffs(self):
+        a_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3', 'tag4', 'tag5', 'tag6,tag7']
+        }))
+        b_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3', 'not_tag4', '', 'tag6']
+        }))
+
+        pd.testing.assert_series_equal(a_wrapper.diffs(b_wrapper.tags),
+                         pd.Series([True, True, True, True, False, False, False]))
+
+        pd.testing.assert_series_equal(a_wrapper.diffs(b_wrapper.tags, target_tags=['tag1', 'tag6']),
+                                       pd.Series([True, True, True, True, True, True, True]))
+
 
 
 class TestDateTimeColumnMixin(unittest.TestCase):

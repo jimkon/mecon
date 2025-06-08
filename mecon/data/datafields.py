@@ -357,6 +357,21 @@ class TagsColumnMixin(ColumnMixin):
         tagging.Tagger.tag(tag, new_df)
         return self._df_wrapper_obj.factory(new_df)
 
+    def diffs(self,
+              other_tags: list[str],
+              target_tags: list[str] | None = None
+              ) -> pd.Series:
+        if len(self.tags) != len(other_tags):
+            raise ValueError(f"Different number of tags lists: {len(self.tags)} != {len(other_tags)}")
+
+        tags_this_set = [set(ts.split(',')) for ts in self.tags]
+        tags_other_set = [set(ts.split(',')) for ts in other_tags]
+        if target_tags is not None:
+            tags_this_set = [ts.intersection(target_tags) for ts in tags_this_set]
+            tags_other_set = [ts.intersection(target_tags) for ts in tags_other_set]
+
+        comps = [tags_this==tags_other for tags_this, tags_other in zip(tags_this_set, tags_other_set)]
+        return pd.Series(comps)
 
 class Grouping(abc.ABC):
     @logging_utils.codeflow_log_wrapper('#data#transactions#process')
