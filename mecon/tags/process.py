@@ -1,5 +1,6 @@
 import abc
 import logging
+import pathlib
 import time
 from collections import namedtuple
 from itertools import chain
@@ -55,10 +56,14 @@ class RuleExecutionPlanMonitor:
     * find redundant rules (never true, always true, conditions of the same Tag conjunction that can be removes (a>10, a>100  << redundant))
     """
 
-    def __init__(self, dataset: Dataset, df_calculations=None, df_operations=None):
+    def __init__(self, dest_path_or_dataset: str | pathlib.Path | Dataset, df_calculations=None, df_operations=None):
         self.df_calculations = df_calculations
         self.df_operations = df_operations
-        self.path = dataset.current_data
+
+        if isinstance(dest_path_or_dataset, Dataset):
+            self.path = dest_path_or_dataset.current_data
+        else:
+            self.path = pathlib.Path(dest_path_or_dataset)
         self.calc_path = self.path / 'calc_monitoring.csv'
         self.op_path = self.path / 'op_monitoring.csv'
         self.path.mkdir(parents=True, exist_ok=True)
