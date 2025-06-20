@@ -10,7 +10,9 @@ from mecon.monitoring import logging_utils
 from mecon.tags import comparisons, transformations
 from mecon.utils import calendar_utils
 from mecon.utils import instance_management
-from mecon.tags.tag_helpers import expand_rule_to_subrules
+
+# circular import
+# from mecon.tags.tag_helpers import expand_rule_to_subrules
 
 
 class FieldIsNotStringException(Exception):
@@ -71,9 +73,10 @@ class AbstractCompositeRule(AbstractRule, abc.ABC):
     def rules(self):
         return self._rules
 
-    @property
-    def rules_and_subrules(self):
-        return expand_rule_to_subrules(self)
+    # circular import
+    # @property
+    # def rules_and_subrules(self):
+    #     return expand_rule_to_subrules(self)
 
     def add_observers_recursively(self, observers_f):
         if observers_f is None:
