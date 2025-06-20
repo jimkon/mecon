@@ -96,6 +96,10 @@ class TestTransactions(unittest.TestCase):
         transactions_a = Transactions(pd.DataFrame([  # the tags col will be reset, just keeping it for reference
             {'amount': -400, 'amount_cur': -400, 'currency': 'GBP', 'datetime': Timestamp('2020-01-01 00:00:00'),
              'description': 'landlord',
+             'id': 'id_0',
+             'tags': 'Rent,Accommodation,Online payments'},
+            {'amount': -400, 'amount_cur': -400, 'currency': 'GBP', 'datetime': Timestamp('2020-01-01 00:00:00'),
+             'description': 'landlord',
              'id': 'id_1',
              'tags': 'Rent,Accommodation,Online payments'},
             {'amount': -400, 'amount_cur': -400, 'currency': 'GBP', 'datetime': Timestamp('2020-01-01 00:00:00'),

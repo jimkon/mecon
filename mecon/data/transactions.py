@@ -209,7 +209,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         common_ids = set(self.id).intersection(transactions.id)
         self_subset, other_subset = self.select_by_ids(common_ids), transactions.select_by_ids(common_ids)
         res_indices = self_subset.tag_row_wise_diffs(other_subset.tags, target_tags)
-        res_df = self.dataframe()[res_indices]
+        res_df = self_subset.dataframe()[res_indices]
         diff_trans = Transactions(res_df)
         return diff_trans
 
