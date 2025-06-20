@@ -74,6 +74,9 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def factory(cls, df: pd.DataFrame):
         return super().factory(df)
 
+    def __repr__(self):
+        return f"Transactions({len(self.dataframe())}, {self.date_range()})"
+
     def to_html(self, df_transformer=None):# TODO remove
         styles = """
         <style>
@@ -203,21 +206,11 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
                   transactions: Transactions,
                   target_tags: list[str] | str | None = None,
                   ) -> Transactions:
-        common_ids = self.id.isin(transactions.id)
-
-
-        target_tags = [target_tags] if target_tags is not None and isinstance(target_tags, str) else target_tags
-        df_this, df_other = self.dataframe(), transactions.dataframe()
-        comparison_results = []
-        for tags_this, tags_other in zip(df_this['tags'], df_other['tags']):
-            tags_this_set, tags_other_set = set(tags_this.split(',')), set(tags_other.split(','))
-            tags_this_focused = tags_this_set.intersection(target_tags) if target_tags is not None else tags_this_set
-            tags_other_focused = tags_other_set.intersection(target_tags) if target_tags is not None else tags_other_set
-            is_different = tags_this_focused != tags_other_focused#len(this_tags_focused.intersection(tags_other_set)) != len(this_tags_focused)
-            comparison_results.append(is_different)
-
-        the_other_minus_this = df_other[comparison_results]
-        diff_trans = Transactions(the_other_minus_this)
+        common_ids = set(self.id).intersection(transactions.id)
+        self_subset, other_subset = self.select_by_ids(common_ids), transactions.select_by_ids(common_ids)
+        res_indices = self_subset.tag_row_wise_diffs(other_subset.tags, target_tags)
+        res_df = self.dataframe()[res_indices]
+        diff_trans = Transactions(res_df)
         return diff_trans
 
     def equals(self,

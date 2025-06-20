@@ -7,7 +7,7 @@ import logging
 from collections import Counter
 from datetime import datetime, date
 from itertools import chain
-from typing import List, Literal
+from typing import List, Literal, Iterable
 
 import pandas as pd
 
@@ -130,6 +130,17 @@ class IdColumnMixin(ColumnMixin):
 
     def invalid_ids(self):
         return self.id.isna() | self.id.isnull() | self.id.duplicated(keep=False) | self.id.apply(lambda x: not isinstance(x, str))
+
+    def select_by_ids(self, ids: Iterable[str]):
+        rule = tagging.Condition.from_string_values(
+            'id',
+            'none',
+            'in',
+            ids
+        )
+        index_col = tagging.Tagger.get_index_for_rule(self._df_wrapper_obj.dataframe(), rule)
+        df = self.dataframe_wrapper_obj.dataframe()[index_col].reset_index(drop=True)
+        return self._df_wrapper_obj.factory(df)
 
 
 class DateTimeColumnMixin(ColumnMixin):
@@ -357,7 +368,7 @@ class TagsColumnMixin(ColumnMixin):
         tagging.Tagger.tag(tag, new_df)
         return self._df_wrapper_obj.factory(new_df)
 
-    def diffs(self,
+    def tag_row_wise_equality(self,
               other_tags: list[str],
               target_tags: list[str] | None = None
               ) -> pd.Series:
@@ -372,6 +383,13 @@ class TagsColumnMixin(ColumnMixin):
 
         comps = [tags_this==tags_other for tags_this, tags_other in zip(tags_this_set, tags_other_set)]
         return pd.Series(comps)
+
+    def tag_row_wise_diffs(self,
+              other_tags: list[str],
+              target_tags: list[str] | None = None
+              ) -> pd.Series:
+        return ~self.tag_row_wise_equality(other_tags, target_tags)
+
 
 class Grouping(abc.ABC):
     @logging_utils.codeflow_log_wrapper('#data#transactions#process')
