@@ -229,6 +229,7 @@ class DataCache:
 
 class CachedFileDataManager:
     def __init__(self, dataset: Dataset):
+        assert dataset is not None, "None given as dataset"
         self.dataset = dataset
         self.statements_dirpath = self.dataset.statements
 
