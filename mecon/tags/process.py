@@ -60,10 +60,11 @@ class RuleExecutionPlanMonitor:
         self.df_calculations = df_calculations
         self.df_operations = df_operations
 
-        if isinstance(dest_path_or_dataset, Dataset):
-            self.path = dest_path_or_dataset.current_data
-        else:
+        if isinstance(dest_path_or_dataset, str) or isinstance(dest_path_or_dataset, pathlib.Path):
             self.path = pathlib.Path(dest_path_or_dataset)
+        else:
+            self.path = dest_path_or_dataset.current_data
+
         self.calc_path = self.path / 'calc_monitoring.csv'
         self.op_path = self.path / 'op_monitoring.csv'
         self.path.mkdir(parents=True, exist_ok=True)
