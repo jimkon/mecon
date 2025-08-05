@@ -22,7 +22,7 @@ def factory_db(source):
 
 
 def transaction_id_formula(transaction, source, txid=None):
-    source_abr = StatementTransformer.factory(source).source_name_abr
+    source_abr = source #StatementTransformer.factory(source).source_name_abr
     # if source == 'Monzo':
     #     source_abr = 'MZN'
     # elif source == 'HSBC':
@@ -414,21 +414,26 @@ class TrueLayerStatementTransformer(StatementTransformer):
         df = df.copy()
 
         df_transformed = pd.DataFrame({'id': df['transaction_id']})
-        df_transformed['datetime'] = pd.to_datetime(df['datetime'], format="%Y-%m-%d %H:%M:%S")
+        try:
+            df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%SZ")
+        except Exception as ve:
+            df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%S.%fZ")
+
         df_transformed['amount'] = self.convert_amounts(df['amount'], df['currency'],
                                                         df_transformed['datetime'].dt.date)
         df_transformed['currency'] = df['currency']
         df_transformed['amount_cur'] = df['amount']
 
-        other_desc_cols = ['transaction_type', 'transaction_category', 'normalised_provider_transaction_id',
-                           'meta_provider_category']
+        # other_desc_cols = ['transaction_type', 'transaction_category', 'normalised_provider_transaction_id',
+        #                    'meta_provider_category']
+        other_desc_cols = df.columns.difference(df_transformed.columns).difference(['timestamp', 'description', 'transaction_id'])
         df['other_description'] = df[other_desc_cols].to_dict(orient='records')
         df_transformed['description'] = df.apply(
             lambda row: f'bank:{self.source}, ' + row['description'] + f' other_fields:{row["other_description"]}',
             axis=1)
 
         df_transformed['id'] = df_transformed.apply(
-            lambda row: transaction_id_formula(row, self.source, txid=row['id']), axis=1)
+            lambda row: transaction_id_formula(row, self.source_name_abr, txid=row['id']), axis=1)
 
         return df_transformed
 

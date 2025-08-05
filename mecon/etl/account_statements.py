@@ -175,7 +175,7 @@ class TrueLayerStatements(APIAccountStatementsSource):
         )
 
     def fetch(self):
-        fetch_datetime = datetime.now().isoformat() + 'Z'
+        fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
         json_transactions = self.api_handler.get_transactions(self.bank.lower(), self.account_id)
