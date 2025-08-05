@@ -7,6 +7,7 @@ import pandas as pd
 
 from mecon import config
 from mecon import settings
+from mecon.settings import DictFile
 
 
 def _subfolder_csvs(path):
@@ -157,6 +158,12 @@ class DatasetV2:
         return self._settings
 
     @property
+    def creds(self):
+        path = self.path.parent / config.CREDS_FILENAME
+        creds = DictFile(path)
+        return creds
+
+    @property
     def db(self):
         raise DeprecationWarning("db attribute is deprecated, use 'current_data' instead")
         return self.current_data
@@ -225,11 +232,6 @@ class DatasetV2:
         # redundant, just because it existed in DatasetV1
         return DatasetV2(dirpath)
 
-
-if __name__ == '__main__':
-    d = DatasetV2('/Users/wimpole/Library/CloudStorage/GoogleDrive-jimitsos41@gmail.com/Other computers/My Laptop/datasets/shared_monzoapi')
-    d.statement_files()
-    pass
 
 # TODO, trick to easily replace Dataset original (v1) with V2, possibly a bad idea
 class Dataset(DatasetV2):

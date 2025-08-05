@@ -464,7 +464,7 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
 
     def _validate_datetime_order(self):
         if not self.datetime.is_monotonic_increasing:
-            raise UnorderedDatedDataframeWrapper
+            raise UnorderedDatedDataframeWrapper(f"Transaction data must be in ascending order.")
 
     def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:  # TODO add to DataframeWrapper too
         not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if

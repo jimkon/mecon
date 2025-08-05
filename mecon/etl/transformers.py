@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from mecon.utils import currencies
+from mecon.utils.data_transformations import normalise_df_column_names
 from mecon.utils.dataframe_transformers import DataframeTransformer
 
 
@@ -20,7 +21,7 @@ def factory_db(source):
         raise ValueError(f"Invalid or unknown transaction source name: {source}")
 
 
-def transaction_id_formula(transaction, source):
+def transaction_id_formula(transaction, source, txid=None):
     source_abr = StatementTransformer.factory(source).source_name_abr
     # if source == 'Monzo':
     #     source_abr = 'MZN'
@@ -37,14 +38,12 @@ def transaction_id_formula(transaction, source):
 
     datetime_str = transaction['datetime'].strftime("d%Y%m%dt%H%M%S")
     amount_str = f"a{'p' if transaction['amount'] > 0 else 'n'}{int(100 * abs(transaction['amount']))}"
-    ordinal_value = f"i{transaction['id']}"  # TODO that can change depending on the dataset. maybe get different counter for each day
+    if txid is None:
+        ordinal_value = f"i{transaction['id']}"  # TODO that can change depending on the dataset. maybe get different counter for each day
+    else:
+        ordinal_value = f"i{txid}"
     result = f"{source_abr}{datetime_str}{amount_str}{ordinal_value}"
     return result
-
-
-def _convert_df_column_names(df):
-    df.columns = [col.lower().replace(' ', '_') for col in df.columns]
-    return df
 
 
 # TODO remove
@@ -152,9 +151,9 @@ class RevoStatementTransformer(DataframeTransformer):
 class StatementTransformer(DataframeTransformer, abc.ABC):
     SOURCES = ['Monzo', 'MonzoAPI', 'HSBC', 'Revolut', 'INVENG', 'HSBCSVR', 'TRD212']
 
-    def read_df(self, path):
+    def read_df(self, path): # TODO moved to statement class
         df = pd.read_csv(path, index_col=None)
-        df = _convert_df_column_names(df)
+        df = normalise_df_column_names(df)
         return df
 
     @classmethod
@@ -212,7 +211,7 @@ class HSBCFileStatementTransformer(StatementTransformer):
         df_transformed = df_transformed.rename(columns={'id': 'id', 'datetime': 'datetime', 'amount': 'amount',
                                                         'currency': 'currency', 'amount_cur': 'amount_cur',
                                                         'description': 'description'})
-
+        df_transformed.sort_values('datetime', inplace=True)
         return df_transformed
 
 
@@ -266,9 +265,10 @@ class MonzoAPIFileStatementTransformer(StatementTransformer):
     source_name_abr = 'MZN'
 
     def _parse_and_convert_datetimes(self, datetime_str_series: pd.Series) -> pd.Series:
-        parsed_datetime = pd.to_datetime(datetime_str_series.apply(lambda datetime_str: datetime_str[:19] + 'Z'), utc=True)
-        converted_datetime = parsed_datetime.dt.tz_convert("Europe/London") # TODO consider different timezones
-        return converted_datetime.dt.tz_localize(None) # removes timezone info
+        parsed_datetime = pd.to_datetime(datetime_str_series.apply(lambda datetime_str: datetime_str[:19] + 'Z'),
+                                         utc=True)
+        converted_datetime = parsed_datetime.dt.tz_convert("Europe/London")  # TODO consider different timezones
+        return converted_datetime.dt.tz_localize(None)  # removes timezone info
 
     def _transform(self, df_monzo: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Monzo raw transactions ({df_monzo.shape} shape)")
@@ -290,7 +290,9 @@ class MonzoAPIFileStatementTransformer(StatementTransformer):
         df_transformed = df_monzo[['id', 'datetime', 'amount', 'currency', 'amount_cur']].copy()
 
         df_other_cols = df_monzo[list(cols_to_concat)].copy()
-        descs = [{k: v for k, v in record.items() if v != 'None'} for record in df_other_cols.fillna(value='None').to_dict('records')] # TODO understand how to treat nan values and replace .fillna(value='None')
+        descs = [{k: v for k, v in record.items() if v != 'None'} for record in
+                 df_other_cols.fillna(value='None').to_dict(
+                     'records')]  # TODO understand how to treat nan values and replace .fillna(value='None')
         descs_str = [f'bank:{self.source_name}, other_fields: ' + str(_dict).replace("'", "") for _dict in descs]
         df_transformed['description'] = descs_str
 
@@ -392,3 +394,61 @@ class Trading212StatementTransformer(StatementTransformer):
         df_final = df[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
 
         return df_final
+
+
+class TrueLayerStatementTransformer(StatementTransformer):
+    source_name = 'TLR'
+    source_name_abr = 'TLR'
+
+    def __init__(self, source, currency_converter=None):
+        self.source = source
+        self._currency_converter = currency_converter if currency_converter is not None else currencies.FixedRateCurrencyConverter()
+
+    def convert_amounts(self, amount_ser, currency_ser, datetime_ser):
+        return [self._currency_converter.amount_to_gbp(amount, currency, date)
+                for amount, currency, date
+                in zip(amount_ser, currency_ser, datetime_ser)]
+
+    def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        logging.info(f"Transforming True Layer raw transactions ({df.shape} shape)")
+        df = df.copy()
+
+        df_transformed = pd.DataFrame({'id': df['transaction_id']})
+        df_transformed['datetime'] = pd.to_datetime(df['datetime'], format="%Y-%m-%d %H:%M:%S")
+        df_transformed['amount'] = self.convert_amounts(df['amount'], df['currency'],
+                                                        df_transformed['datetime'].dt.date)
+        df_transformed['currency'] = df['currency']
+        df_transformed['amount_cur'] = df['amount']
+
+        other_desc_cols = ['transaction_type', 'transaction_category', 'normalised_provider_transaction_id',
+                           'meta_provider_category']
+        df['other_description'] = df[other_desc_cols].to_dict(orient='records')
+        df_transformed['description'] = df.apply(
+            lambda row: f'bank:{self.source}, ' + row['description'] + f' other_fields:{row["other_description"]}',
+            axis=1)
+
+        df_transformed['id'] = df_transformed.apply(
+            lambda row: transaction_id_formula(row, self.source, txid=row['id']), axis=1)
+
+        return df_transformed
+
+
+TRANSFORMERS = [
+    MonzoFileStatementTransformer,
+    MonzoAPIFileStatementTransformer,
+    HSBCFileStatementTransformer,
+    RevoFileStatementTransformer,
+    InvestEngineStatementTransformer,
+    HSBCSaverStatementTransformer,
+    Trading212StatementTransformer
+]
+
+TRANSFORMER_NAMES = [transformer.source_name_abr for transformer in TRANSFORMERS]
+
+
+def statement_transformers_factory(source):
+    if source not in TRANSFORMER_NAMES:
+        raise ValueError(f"Invalid or unknown transaction source name '{source}', must be one of {TRANSFORMER_NAMES}")
+
+    search_index = TRANSFORMER_NAMES.index(source)
+    return TRANSFORMERS[search_index]
