@@ -416,7 +416,7 @@ class TrueLayerStatementTransformer(StatementTransformer):
         df_transformed = pd.DataFrame({'id': df['transaction_id']})
         try:
             df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%SZ")
-        except Exception as ve:
+        except ValueError as ve:
             df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%S.%fZ")
 
         df_transformed['amount'] = self.convert_amounts(df['amount'], df['currency'],

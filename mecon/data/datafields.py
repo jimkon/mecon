@@ -467,8 +467,7 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
             raise UnorderedDatedDataframeWrapper(f"Transaction data must be in ascending order.")
 
     def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:  # TODO add to DataframeWrapper too
-        not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if
-                         len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
+        not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
         df = pd.concat(not_empty_dfs).drop_duplicates()
         df.sort_values(by='datetime', inplace=True)
         return self.factory(df)

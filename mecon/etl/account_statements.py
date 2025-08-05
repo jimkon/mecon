@@ -36,6 +36,8 @@ class AccountStatementsSource:
 
     def read_statement_file(self, path):
         df = pd.read_csv(path, index_col=None)
+        if len(df) == 0:
+            return None
         df = normalise_df_column_names(df)
         return df
 
@@ -45,7 +47,12 @@ class AccountStatementsSource:
 
     @cached_property
     def statement_dataframes(self) -> Iterable[pd.DataFrame]:
-        dfs = [self.read_statement_file(path) for path in self.statement_filepaths]
+        dfs = []
+        for path in self.statement_filepaths:
+            df = self.read_statement_file(path)
+            if df is not None:
+                dfs.append(df)
+
         logging.info(
             f"AccountStatements({self.name}) discovered {len(dfs)} statement files with {sum(len(df) for df in dfs)} total rows")
         return dfs
@@ -180,6 +187,10 @@ class TrueLayerStatements(APIAccountStatementsSource):
 
         json_transactions = self.api_handler.get_transactions(self.bank.lower(), self.account_id)
         df = json_to_csv(json_transactions)
+        if len(df) == 0:
+            logging.info(f"{self.__class__.__name__}: No transactions fetched for {self.bank}:{self.id} and {self.account_id}. No file added to {self.dir_name}.")
+            return
+
         filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
         filepath.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(filepath)
@@ -192,7 +203,7 @@ class TrueLayerHSBCStatements(TrueLayerStatements):
     account_id = 'd4aa58643585c1e3a5f7d3e24cf5e829'
 
 
-class TrueLayerHSBCSSavertatements(TrueLayerStatements):
+class TrueLayerHSBCSSaverStatements(TrueLayerStatements):
     id = 'TLHSBCSVR'
     dir_name = 'TrueLayerHSBCSaver'
     bank = 'ob-hsbc'
@@ -201,28 +212,28 @@ class TrueLayerHSBCSSavertatements(TrueLayerStatements):
 
 class TrueLayerRevolutGBPStatements(TrueLayerStatements):
     id = 'TLREVOGBP'
-    dir_name = 'TrueLayerHSBCGBP'
+    dir_name = 'TrueLayerRevolutGBP'
     bank = 'ob-revolut'
     account_id = '3b2038675f58008e4e58c43a5d8d103c'
 
 
 class TrueLayerRevolutEURStatements(TrueLayerStatements):
     id = 'TLREVOEUR'
-    dir_name = 'TrueLayerHSBCEUR'
+    dir_name = 'TrueLayerRevolutEUR'
     bank = 'ob-revolut'
     account_id = '5f2ed9feaf603a7a7a904469f37b260a'
 
 
 class TrueLayerRevolutRONStatements(TrueLayerStatements):
     id = 'TLREVORON'
-    dir_name = 'TrueLayerHSBCRON'
+    dir_name = 'TrueLayerRevolutRON'
     bank = 'ob-revolut'
     account_id = 'fa5ddbfc7431ffd009445263b4259094'
 
 
 class TrueLayerRevolutHUFStatements(TrueLayerStatements):
     id = 'TLREVOHUF'
-    dir_name = 'TrueLayerHSBCHUF'
+    dir_name = 'TrueLayerRevolutHUF'
     bank = 'ob-revolut'
     account_id = '3ea5d7076b553a642d47c90ab5efec8b'
 
@@ -252,7 +263,7 @@ ACCOUNT_STATEMENT_SOURCES = [
     InvestEngineAccountStatementsSource,
     Trading212AccountStatementsSource,
     TrueLayerHSBCStatements,
-    TrueLayerHSBCSSavertatements,
+    TrueLayerHSBCSSaverStatements,
     TrueLayerRevolutGBPStatements,
     TrueLayerRevolutEURStatements,
     TrueLayerRevolutRONStatements,
@@ -299,7 +310,10 @@ class StatementsManager:
         txs = []
         for source in self.sources:
             try:
-                txs.append(source.to_transactions())
+                tx = source.to_transactions()
+                if tx is None:
+                    continue
+                txs.append(tx)
             except Exception as e:
                 logging.error(f"{e.__class__} {e}: Error while fetching {source.name} ({source})")
                 raise
