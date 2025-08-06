@@ -66,7 +66,9 @@ class AccountStatementsSource:
 
             tx = Transactions(df_tx)
             statement_transactions = tx if statement_transactions is None else statement_transactions.merge(tx)
-
+        logging.info(f"AccountStatements({self.name}) "
+                     f"transformed {len(self.statement_dataframes)} files "
+                     f"into {statement_transactions.size() if statement_transactions else 'NONE'} transactions.")
         return statement_transactions
 
     @classmethod
@@ -79,6 +81,9 @@ class AccountStatementsSource:
     def from_dataset(cls, dataset: Dataset) -> list["AccountStatementsSource"]:
         statements_dirs = [p.name for p in dataset.statements.glob('*') if p.is_dir()]
         return [account_statements_factory(dataset, d) for d in statements_dirs]
+
+    def __repr__(self):
+        return f"{self.id} #AccountStatement({self.dir_name})"
 
 
 class HSBCAccountStatementsSource(AccountStatementsSource):
@@ -193,7 +198,7 @@ class TrueLayerStatements(APIAccountStatementsSource):
 
         filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(filepath)
+        df.to_csv(filepath, index_label=None)
 
 
 class TrueLayerHSBCStatements(TrueLayerStatements):
@@ -259,9 +264,9 @@ ACCOUNT_STATEMENT_SOURCES = [
     # HSBCAccountStatementsSource,
     # HSBCSaverAccountStatementsSource,
     # MonzoAccountStatementsSource,
-    RevolutAccountStatementsSource,
-    InvestEngineAccountStatementsSource,
-    Trading212AccountStatementsSource,
+    # RevolutAccountStatementsSource,
+    # InvestEngineAccountStatementsSource,
+    # Trading212AccountStatementsSource,
     TrueLayerHSBCStatements,
     TrueLayerHSBCSSaverStatements,
     TrueLayerRevolutGBPStatements,
@@ -303,12 +308,16 @@ class StatementsManager:
         self.discover_statement_sources()
 
     def discover_statement_sources(self):
-        self.sources = [account_statements_factory(dataset, source_name) for source_name in
+        self.sources = [account_statements_factory(self.dataset, source_name) for source_name in
                         ACCOUNT_STATEMENT_SOURCE_DIR_NAMES]
 
-    def all_transactions(self):
+    def all_transactions_from_all_sources(self, source_ids_to_exclude=None):
+        source_ids_to_exclude = source_ids_to_exclude or []
         txs = []
         for source in self.sources:
+            if source.id in source_ids_to_exclude:
+                logging.info(f"Skipping {source.id} from fetching all transactions because it is found in the exclude list")
+                continue
             try:
                 tx = source.to_transactions()
                 if tx is None:
@@ -320,7 +329,7 @@ class StatementsManager:
         return txs
 
     def collect_and_merge_transactions(self):
-        txs = self.all_transactions()
+        txs = self.all_transactions_from_all_sources()
         merges_tx = txs[0]
         for tx in txs[1:]:
             merges_tx.merge(tx)
@@ -328,12 +337,13 @@ class StatementsManager:
 
 
 if __name__ == '__main__':
-    dataset = Dataset(
+    dt = Dataset(
         r"C:\Users\dimitris\PycharmProjects\datasets\v2_dataset_new_statements")
 
 
-    sm = StatementsManager(dataset)
+    sm = StatementsManager(dt)
     tx = sm.collect_and_merge_transactions()
+
     breakpoint()
 
     # sources = AccountStatementsSource.from_dataset(dataset)
