@@ -466,9 +466,20 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
         if not self.datetime.is_monotonic_increasing:
             raise UnorderedDatedDataframeWrapper(f"Transaction data must be in ascending order.")
 
-    def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:  # TODO add to DataframeWrapper too
-        not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
-        df = pd.concat(not_empty_dfs).drop_duplicates()
+    # def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:  # TODO add to DataframeWrapper too
+    #     not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
+    #     df = pd.concat(not_empty_dfs).drop_duplicates()
+    #     df.sort_values(by='datetime', inplace=True)
+    #     return self.factory(df)
+
+    def merge(self, df_wrappers: DatedDataframeWrapper | list[DatedDataframeWrapper], dedup_cols=None) -> DatedDataframeWrapper:  # TODO untested
+        df_wrappers_list = df_wrappers if isinstance(df_wrappers, list) else [df_wrappers]
+        df_wrappers_list.insert(0, self)
+        not_empty_dfs = [df_wrp.dataframe() for df_wrp in df_wrappers_list if df_wrp.size() > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
+        df = pd.concat(not_empty_dfs)
+        if dedup_cols:
+            df.drop_duplicates(subset=dedup_cols, inplace=True)
+
         df.sort_values(by='datetime', inplace=True)
         return self.factory(df)
 

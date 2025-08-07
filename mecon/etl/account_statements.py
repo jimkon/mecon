@@ -45,8 +45,7 @@ class AccountStatementsSource:
     def statement_filepaths(self) -> Iterable[Path]:
         return list(self.working_dir.rglob("*.csv"))
 
-    @cached_property
-    def statement_dataframes(self) -> Iterable[pd.DataFrame]:
+    def fetch_statement_dataframes(self) -> list[pd.DataFrame]:
         dfs = []
         for path in self.statement_filepaths:
             df = self.read_statement_file(path)
@@ -58,16 +57,19 @@ class AccountStatementsSource:
         return dfs
 
     def to_transactions(self) -> Transactions:
-        statement_transactions = None
-        for statement_dataframe in self.statement_dataframes:
+        all_dfs = self.fetch_statement_dataframes()
+        txs = []
+        for statement_dataframe in all_dfs:
             df_tx = self.trans_transformer.transform(statement_dataframe)
             if not df_tx['datetime'].is_monotonic_increasing:
                 df_tx.sort_values(by='datetime', inplace=True)
 
             tx = Transactions(df_tx)
-            statement_transactions = tx if statement_transactions is None else statement_transactions.merge(tx)
+            txs.append(tx)
+
+        statement_transactions = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:], dedup_cols=['id'])
         logging.info(f"AccountStatements({self.name}) "
-                     f"transformed {len(self.statement_dataframes)} files "
+                     f"transformed {len(all_dfs)} files "
                      f"into {statement_transactions.size() if statement_transactions else 'NONE'} transactions.")
         return statement_transactions
 
@@ -298,17 +300,26 @@ def account_statements_factory(dataset, source) -> "AccountStatementsSource":
 
 
 class StatementsManager:
-    def __init__(self,
-                 dataset: Dataset,
-                 ):
-        self.dataset = dataset
-        self.creds = dataset.creds
-        self.sources = None
+    def __init__(self, sources):
+        self.sources = sources
 
-        self.discover_statement_sources()
+    @classmethod
+    def from_dataset(cls, dataset):
+        sources = cls.discover_statement_sources(dataset)
+        return cls(sources)
 
-    def discover_statement_sources(self):
-        self.sources = [account_statements_factory(self.dataset, source_name) for source_name in
+    # def __init__(self,
+    #              dataset: Dataset,
+    #              ):
+    #     self.dataset = dataset
+    #     self.creds = dataset.creds
+    #     self.sources = None
+    #
+    #     self.discover_statement_sources()
+
+    @staticmethod
+    def discover_statement_sources(dataset):
+        return [account_statements_factory(dataset, source_name) for source_name in
                         ACCOUNT_STATEMENT_SOURCE_DIR_NAMES]
 
     def all_transactions_from_all_sources(self, source_ids_to_exclude=None):
@@ -330,9 +341,7 @@ class StatementsManager:
 
     def collect_and_merge_transactions(self):
         txs = self.all_transactions_from_all_sources()
-        merges_tx = txs[0]
-        for tx in txs[1:]:
-            merges_tx.merge(tx)
+        merges_tx = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:])
         return merges_tx
 
 
@@ -341,8 +350,8 @@ if __name__ == '__main__':
         r"C:\Users\dimitris\PycharmProjects\datasets\v2_dataset_new_statements")
 
 
-    sm = StatementsManager(dt)
-    tx = sm.collect_and_merge_transactions()
+    sm = StatementsManager.from_dataset(dt)
+    all_tx = sm.collect_and_merge_transactions()
 
     breakpoint()
 

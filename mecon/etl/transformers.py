@@ -39,10 +39,10 @@ def transaction_id_formula(transaction, source, txid=None):
     datetime_str = transaction['datetime'].strftime("d%Y%m%dt%H%M%S")
     amount_str = f"a{'p' if transaction['amount'] > 0 else 'n'}{int(100 * abs(transaction['amount']))}"
     if txid is None:
-        ordinal_value = f"i{transaction['id']}"  # TODO that can change depending on the dataset. maybe get different counter for each day
+        id_string = f"id.{transaction['id']}"  # TODO that can change depending on the dataset. maybe get different counter for each day
     else:
-        ordinal_value = f"i{txid}"
-    result = f"{source_abr}{datetime_str}{amount_str}{ordinal_value}"
+        id_string = f"i{txid}"
+    result = f"{source}-{datetime_str}-{amount_str}-{id_string}"
     return result
 
 
@@ -410,7 +410,6 @@ class TrueLayerStatementTransformer(StatementTransformer):
                 in zip(amount_ser, currency_ser, datetime_ser)]
 
     def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
-        logging.info(f"Transforming True Layer raw transactions ({df.shape} shape)")
         df = df.copy()
 
         df_transformed = pd.DataFrame({'id': df['transaction_id']})
@@ -433,8 +432,9 @@ class TrueLayerStatementTransformer(StatementTransformer):
             axis=1)
 
         df_transformed['id'] = df_transformed.apply(
-            lambda row: transaction_id_formula(row, self.source_name_abr, txid=row['id']), axis=1)
+            lambda row: transaction_id_formula(row, self.source, txid=row['id']), axis=1)
 
+        logging.info(f"Transformed True Layer raw transactions shape {df.shape} for {df_transformed['datetime'].min()} to {df_transformed['datetime'].max()}")
         return df_transformed
 
 
