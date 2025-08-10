@@ -22,7 +22,7 @@ def factory_db(source):
 
 
 def transaction_id_formula(transaction, source, txid=None):
-    source_abr = source #StatementTransformer.factory(source).source_name_abr
+    source_abr = source  # StatementTransformer.factory(source).source_name_abr
     # if source == 'Monzo':
     #     source_abr = 'MZN'
     # elif source == 'HSBC':
@@ -151,7 +151,7 @@ class RevoStatementTransformer(DataframeTransformer):
 class StatementTransformer(DataframeTransformer, abc.ABC):
     SOURCES = ['Monzo', 'MonzoAPI', 'HSBC', 'Revolut', 'INVENG', 'HSBCSVR', 'TRD212']
 
-    def read_df(self, path): # TODO moved to statement class
+    def read_df(self, path):  # TODO moved to statement class
         df = pd.read_csv(path, index_col=None)
         df = normalise_df_column_names(df)
         return df
@@ -372,26 +372,24 @@ class Trading212StatementTransformer(StatementTransformer):
         logging.info(f"Transforming Trading212 raw transactions ({df.shape} shape)")
         df = df.copy()
 
-        df['datetime'] = pd.to_datetime(df['time'].apply(lambda s: s[:19]), format="%Y-%m-%d %H:%M:%S")
-        df['amount'] = df['total']
-        df['amount_cur'] = df['amount']
-        df['currency'] = df['currency_(total)']
+        dt = pd.to_datetime(df['time'].apply(lambda s: s[:19]), format="%Y-%m-%d %H:%M:%S")
+        df_transformed = pd.DataFrame({'datetime': dt})
+        df_transformed['amount'] = df['total']
+        df_transformed['amount_cur'] = df['total']
+        df_transformed['currency'] = df['currency_(total)']
 
-        df['raw_id'] = df['id']
-        del df['id']
+        cols_to_concat = df.columns.difference(df_transformed.columns).difference(['time', 'total', 'id'])
+        df['other_description'] = df[cols_to_concat].to_dict(orient='records')
 
-        cols_to_concat = ['action', 'notes', 'raw_id']
-        df['description'] = df[cols_to_concat].apply(
-            lambda x: ', '.join([f"{col}: {x[col]}" for col in cols_to_concat if pd.notnull(x[col])]),
-            axis=1
-        )
+        df_transformed['description'] = df.apply(
+            lambda row: f'bank:{self.source_name}, ' + f' other_fields:{row["other_description"]}',
+            axis=1)
 
-        df['description'] = df['description'].apply(lambda x: f'bank:{self.source_name}, ' + x)
+        df_transformed['id'] = df['id']
+        df_transformed['id'] = df_transformed.apply(
+            lambda row: transaction_id_formula(row, self.source_name, txid=row['id']), axis=1)
 
-        df['id'] = list(range(len(df)))
-        df['id'] = df.apply(lambda row: transaction_id_formula(row, self.source_name), axis=1)
-
-        df_final = df[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
+        df_final = df_transformed[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
 
         return df_final
 
@@ -425,7 +423,8 @@ class TrueLayerStatementTransformer(StatementTransformer):
 
         # other_desc_cols = ['transaction_type', 'transaction_category', 'normalised_provider_transaction_id',
         #                    'meta_provider_category']
-        other_desc_cols = df.columns.difference(df_transformed.columns).difference(['timestamp', 'description', 'transaction_id'])
+        other_desc_cols = df.columns.difference(df_transformed.columns).difference(
+            ['timestamp', 'description', 'transaction_id'])
         df['other_description'] = df[other_desc_cols].to_dict(orient='records')
         df_transformed['description'] = df.apply(
             lambda row: f'bank:{self.source}, ' + row['description'] + f' other_fields:{row["other_description"]}',
@@ -434,7 +433,8 @@ class TrueLayerStatementTransformer(StatementTransformer):
         df_transformed['id'] = df_transformed.apply(
             lambda row: transaction_id_formula(row, self.source, txid=row['id']), axis=1)
 
-        logging.info(f"Transformed True Layer raw transactions shape {df.shape} for {df_transformed['datetime'].min()} to {df_transformed['datetime'].max()}")
+        logging.info(
+            f"Transformed True Layer raw transactions shape {df.shape} for {df_transformed['datetime'].min()} to {df_transformed['datetime'].max()}")
         return df_transformed
 
 

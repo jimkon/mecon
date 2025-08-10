@@ -1,5 +1,8 @@
+import abc
 import logging
 import uuid
+from abc import abstractclassmethod
+import datetime as dt
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
@@ -13,7 +16,8 @@ from mecon.etl import transformers
 # from mecon.etl.transformers import StatementTransformer, statement_transformers_factory, TrueLayerStatementTransformer, \
 #     HSBCFileStatementTransformer
 # from mecon.etl.true_layer import TrueLayerAccount, TrueLayerAPIHandler
-from mecon.etl.true_layer_by_o3 import TrueLayerClient
+from mecon.etl.true_layer_client_by_o3 import TrueLayerClient
+from mecon.etl.trading212_client_by_o3 import Trading212Client
 from mecon.settings import DictFile
 from mecon.utils.data_transformations import json_to_csv
 from mecon.utils.data_transformations import normalise_df_column_names
@@ -155,7 +159,7 @@ class Trading212AccountStatementsSource(AccountStatementsSource):
         super().__init__(working_dir, trans_transformer)
 
 
-class APIAccountStatementsSource(AccountStatementsSource):
+class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
     def __init__(self,
                  working_dir: str | Path,
                  trans_transformer: transformers.StatementTransformer,
@@ -167,6 +171,12 @@ class APIAccountStatementsSource(AccountStatementsSource):
         if auto_fetch:
             self.fetch()
 
+    @classmethod
+    @abc.abstractmethod
+    def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        pass
+
+    @abc.abstractmethod
     def fetch(self):
         pass
 
@@ -201,6 +211,17 @@ class TrueLayerStatements(APIAccountStatementsSource):
         filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
         filepath.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(filepath, index_label=None)
+        logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
+
+    @classmethod
+    def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        return super().__init__(
+            working_dir=working_dir,
+            trans_transformer=transformers.TrueLayerStatementTransformer(
+                source=cls.id,
+            ),
+            api_handler=TrueLayerClient(creds)
+        )
 
 
 class TrueLayerHSBCStatements(TrueLayerStatements):
@@ -261,6 +282,30 @@ class Trading212APIStatements(APIAccountStatementsSource):
     id = 'Trading212API'
     dir_name = 'Trading212API'
 
+    @classmethod
+    def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        return cls(
+            working_dir=working_dir,
+            trans_transformer=transformers.Trading212StatementTransformer(),
+            api_handler=Trading212Client(creds)
+        )
+
+
+    def fetch(self, since=dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)):
+        fetch_datetime = datetime.now().date()
+        fetch_job_id = str(uuid.uuid4())
+
+        df = self.api_handler.fetch_history_dataframe(since=since)
+        if len(df) == 0:
+            logging.info(
+                f"{self.__class__.__name__}: No transactions fetched for Trading212 since {self}. No file added to {self.dir_name}.")
+            return
+
+        filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(filepath, index_label=None)
+        logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
+
 
 ACCOUNT_STATEMENT_SOURCES = [
     # HSBCAccountStatementsSource,
@@ -269,15 +314,15 @@ ACCOUNT_STATEMENT_SOURCES = [
     # RevolutAccountStatementsSource,
     # InvestEngineAccountStatementsSource,
     # Trading212AccountStatementsSource,
-    TrueLayerHSBCStatements,
-    TrueLayerHSBCSSaverStatements,
-    TrueLayerRevolutGBPStatements,
-    TrueLayerRevolutEURStatements,
-    TrueLayerRevolutRONStatements,
-    TrueLayerRevolutHUFStatements,
-    TrueLayerMonzoStatements,
+    # TrueLayerHSBCStatements,
+    # TrueLayerHSBCSSaverStatements,
+    # TrueLayerRevolutGBPStatements,
+    # TrueLayerRevolutEURStatements,
+    # TrueLayerRevolutRONStatements,
+    # TrueLayerRevolutHUFStatements,
+    # TrueLayerMonzoStatements,
     # MonzoAPIStatements,
-    # Trading212APIStatements,
+    Trading212APIStatements,
 ]
 
 ACCOUNT_STATEMENT_SOURCE_DIR_NAMES = [source_obj.dir_name for source_obj in ACCOUNT_STATEMENT_SOURCES]
@@ -293,7 +338,7 @@ def account_statements_factory(dataset, source) -> "AccountStatementsSource":
 
     acc_statement_class = ACCOUNT_STATEMENT_SOURCES[search_index]
     if issubclass(acc_statement_class, APIAccountStatementsSource):
-        acc_statement_source = ACCOUNT_STATEMENT_SOURCES[search_index](dir_path, creds=dataset.creds)
+        acc_statement_source = ACCOUNT_STATEMENT_SOURCES[search_index].from_path_and_creds(dir_path, creds=dataset.creds)
     else:
         acc_statement_source = ACCOUNT_STATEMENT_SOURCES[search_index](dir_path)
     return acc_statement_source
@@ -321,6 +366,11 @@ class StatementsManager:
     def discover_statement_sources(dataset):
         return [account_statements_factory(dataset, source_name) for source_name in
                         ACCOUNT_STATEMENT_SOURCE_DIR_NAMES]
+
+    def fetch_from_apis(self):
+        for source in self.sources:
+            if issubclass(source.__class__, APIAccountStatementsSource) and hasattr(source, 'fetch'):
+                source.fetch()
 
     def all_transactions_from_all_sources(self, source_ids_to_exclude=None):
         source_ids_to_exclude = source_ids_to_exclude or []
@@ -351,6 +401,7 @@ if __name__ == '__main__':
 
 
     sm = StatementsManager.from_dataset(dt)
+    # sm.fetch_from_apis()
     all_tx = sm.collect_and_merge_transactions()
 
     breakpoint()
