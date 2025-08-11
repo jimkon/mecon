@@ -18,6 +18,7 @@ from mecon.etl import transformers
 # from mecon.etl.true_layer import TrueLayerAccount, TrueLayerAPIHandler
 from mecon.etl.true_layer_client_by_o3 import TrueLayerClient
 from mecon.etl.trading212_client_by_o3 import Trading212Client
+from mecon.etl.monzo_api_client import MonzoClient
 from mecon.settings import DictFile
 from mecon.utils.data_transformations import json_to_csv
 from mecon.utils.data_transformations import normalise_df_column_names
@@ -273,11 +274,6 @@ class TrueLayerMonzoStatements(TrueLayerStatements):
     account_id = 'bee16ba99227a5079f78408115b05686'
 
 
-class MonzoAPIStatements(APIAccountStatementsSource):
-    id = 'MonzoAPI'
-    dir_name = 'MonzoAPI'
-
-
 class Trading212APIStatements(APIAccountStatementsSource):
     id = 'Trading212API'
     dir_name = 'Trading212API'
@@ -307,6 +303,35 @@ class Trading212APIStatements(APIAccountStatementsSource):
         logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
 
 
+
+class MonzoAPIStatements(APIAccountStatementsSource):
+    id = 'MonzoAPI'
+    dir_name = 'MonzoAPI'
+
+    @classmethod
+    def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        return cls(
+            working_dir=working_dir,
+            trans_transformer=transformers.MonzoAPIFileStatementTransformer(),
+            api_handler=MonzoClient(creds)
+        )
+
+    def fetch(self, since="2019-01-01T00:00:00Z"):
+        fetch_datetime = datetime.now().date()
+        fetch_job_id = str(uuid.uuid4())
+
+        df = self.api_handler.download_full_history(since=since)
+        if len(df) == 0:
+            logging.info(
+                f"{self.__class__.__name__}: No transactions fetched for Monzo-API since {self}. No file added to {self.dir_name}.")
+            return
+
+        filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(filepath, index_label=None)
+        logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
+
+
 ACCOUNT_STATEMENT_SOURCES = [
     # HSBCAccountStatementsSource,
     # HSBCSaverAccountStatementsSource,
@@ -321,8 +346,8 @@ ACCOUNT_STATEMENT_SOURCES = [
     # TrueLayerRevolutRONStatements,
     # TrueLayerRevolutHUFStatements,
     # TrueLayerMonzoStatements,
-    # MonzoAPIStatements,
-    Trading212APIStatements,
+    # Trading212APIStatements,
+    MonzoAPIStatements,
 ]
 
 ACCOUNT_STATEMENT_SOURCE_DIR_NAMES = [source_obj.dir_name for source_obj in ACCOUNT_STATEMENT_SOURCES]
