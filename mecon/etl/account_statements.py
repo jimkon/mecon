@@ -20,8 +20,8 @@ from mecon.etl.true_layer_client_by_o3 import TrueLayerClient
 from mecon.etl.trading212_client_by_o3 import Trading212Client
 from mecon.etl.monzo_api_client import MonzoClient
 from mecon.settings import DictFile
-from mecon.utils.data_transformations import json_to_csv
-from mecon.utils.data_transformations import normalise_df_column_names
+from mecon.utils.datatype_transformations import json_to_csv
+from mecon.utils.datatype_transformations import normalise_df_column_names
 
 
 class AccountStatementsSource:

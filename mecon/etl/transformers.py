@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from mecon.utils import currencies
-from mecon.utils.data_transformations import normalise_df_column_names
+from mecon.utils.datatype_transformations import normalise_df_column_names
 from mecon.utils.dataframe_transformers import DataframeTransformer
 
 
