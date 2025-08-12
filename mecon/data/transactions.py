@@ -74,6 +74,11 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def factory(cls, df: pd.DataFrame):
         return super().factory(df)
 
+    @classmethod
+    def empty_transactions_factory(cls):
+        empty_df = pd.DataFrame({col: [] for col in cls.columns})
+        return cls(empty_df)
+
     def __repr__(self):
         return f"Transactions({len(self.dataframe())}, {self.date_range()})"
 
