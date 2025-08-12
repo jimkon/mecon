@@ -186,18 +186,18 @@ class TrueLayerStatements(APIAccountStatementsSource):
     bank = None
     account_id = None
 
-    def __init__(self,
-                 working_dir: Path,
-                 creds: DictFile,
-                 ):
-        self.creds = creds
-        super().__init__(
-            working_dir=working_dir,
-            trans_transformer=transformers.TrueLayerStatementTransformer(
-                source=self.id,
-            ),
-            api_handler=TrueLayerClient(creds)
-        )
+    # def __init__(self,
+    #              working_dir: Path,
+    #              creds: DictFile,
+    #              ):
+    #     self.creds = creds
+    #     super().__init__(
+    #         working_dir=working_dir,
+    #         trans_transformer=transformers.TrueLayerStatementTransformer(
+    #             source=self.id,
+    #         ),
+    #         api_handler=TrueLayerClient(creds)
+    #     )
 
     def fetch(self):
         fetch_datetime = datetime.now().date()
@@ -216,7 +216,7 @@ class TrueLayerStatements(APIAccountStatementsSource):
 
     @classmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
-        return super().__init__(
+        return cls(
             working_dir=working_dir,
             trans_transformer=transformers.TrueLayerStatementTransformer(
                 source=cls.id,
@@ -333,39 +333,38 @@ class MonzoAPIStatements(APIAccountStatementsSource):
 
 
 ACCOUNT_STATEMENT_SOURCES = [
-    # HSBCAccountStatementsSource,
-    # HSBCSaverAccountStatementsSource,
-    # MonzoAccountStatementsSource,
-    # RevolutAccountStatementsSource,
-    # InvestEngineAccountStatementsSource,
-    # Trading212AccountStatementsSource,
-    # TrueLayerHSBCStatements,
-    # TrueLayerHSBCSSaverStatements,
-    # TrueLayerRevolutGBPStatements,
-    # TrueLayerRevolutEURStatements,
-    # TrueLayerRevolutRONStatements,
-    # TrueLayerRevolutHUFStatements,
-    # TrueLayerMonzoStatements,
-    # Trading212APIStatements,
+    HSBCAccountStatementsSource,
+    HSBCSaverAccountStatementsSource,
+    MonzoAccountStatementsSource,
+    RevolutAccountStatementsSource,
+    InvestEngineAccountStatementsSource,
+    Trading212AccountStatementsSource,
+    TrueLayerHSBCStatements,
+    TrueLayerHSBCSSaverStatements,
+    TrueLayerRevolutGBPStatements,
+    TrueLayerRevolutEURStatements,
+    TrueLayerRevolutRONStatements,
+    TrueLayerRevolutHUFStatements,
+    TrueLayerMonzoStatements,
+    Trading212APIStatements,
     MonzoAPIStatements,
 ]
 
-ACCOUNT_STATEMENT_SOURCE_DIR_NAMES = [source_obj.dir_name for source_obj in ACCOUNT_STATEMENT_SOURCES]
+ACCOUNT_STATEMENT_SOURCE_MAPPING = {source_obj.dir_name: source_obj for source_obj in ACCOUNT_STATEMENT_SOURCES}
 
 
 def account_statements_factory(dataset, source) -> "AccountStatementsSource":
     dir_path = dataset.statements / source
-    if source not in ACCOUNT_STATEMENT_SOURCE_DIR_NAMES:
+    if source not in ACCOUNT_STATEMENT_SOURCE_MAPPING.keys():
         raise ValueError(
-            f"Invalid or unknown transaction source name '{source}', must be one of {ACCOUNT_STATEMENT_SOURCE_DIR_NAMES}")
+            f"Invalid or unknown transaction source name '{source}', must be one of {ACCOUNT_STATEMENT_SOURCE_MAPPING.keys()}")
 
-    search_index = ACCOUNT_STATEMENT_SOURCE_DIR_NAMES.index(source)
 
-    acc_statement_class = ACCOUNT_STATEMENT_SOURCES[search_index]
+    acc_statement_class = ACCOUNT_STATEMENT_SOURCE_MAPPING[source]
     if issubclass(acc_statement_class, APIAccountStatementsSource):
-        acc_statement_source = ACCOUNT_STATEMENT_SOURCES[search_index].from_path_and_creds(dir_path, creds=dataset.creds)
+        acc_statement_source = acc_statement_class.from_path_and_creds(dir_path, creds=dataset.creds)
     else:
-        acc_statement_source = ACCOUNT_STATEMENT_SOURCES[search_index](dir_path)
+        acc_statement_source = acc_statement_class(dir_path)
     return acc_statement_source
 
 
@@ -374,8 +373,8 @@ class StatementsManager:
         self.sources = sources
 
     @classmethod
-    def from_dataset(cls, dataset):
-        sources = cls.discover_statement_sources(dataset)
+    def from_dataset(cls, dataset, source_names_to_look_for=None):
+        sources = cls.discover_statement_sources(dataset, source_names_to_look_for)
         return cls(sources)
 
     # def __init__(self,
@@ -387,10 +386,23 @@ class StatementsManager:
     #
     #     self.discover_statement_sources()
 
+    # @staticmethod
+    # def discover_statement_sources(dataset):
+    #     return [account_statements_factory(dataset, source_name) for source_name in
+    #                     ACCOUNT_STATEMENT_SOURCE_MAPPING.keys()]
+
     @staticmethod
-    def discover_statement_sources(dataset):
-        return [account_statements_factory(dataset, source_name) for source_name in
-                        ACCOUNT_STATEMENT_SOURCE_DIR_NAMES]
+    def discover_statement_sources(dataset, source_names_to_look_for=None):
+        source_names_to_look_for = list(ACCOUNT_STATEMENT_SOURCE_MAPPING.keys()) if source_names_to_look_for is None else source_names_to_look_for
+
+        sub_dirs = set([p.name for p in dataset.statements.glob('*') if p.is_dir()])
+        source_dir_names = set([ACCOUNT_STATEMENT_SOURCE_MAPPING[source_name].dir_name for source_name in source_names_to_look_for])
+        found_sources = [account_statements_factory(dataset, _dir) for _dir in sub_dirs.intersection(source_dir_names)]
+
+        logging.info(f"Discovered {len(found_sources)} of {len(source_dir_names)} sources, {source_dir_names.difference(sub_dirs)} missing")
+        if len(found_sources) < len(source_dir_names):
+            logging.warning(f"Unknown source directory in {dataset} statements dir: {sub_dirs.difference(source_dir_names)}")
+        return found_sources
 
     def fetch_from_apis(self):
         for source in self.sources:
@@ -421,20 +433,18 @@ class StatementsManager:
 
 
 if __name__ == '__main__':
-    dt = Dataset(
-        r"C:\Users\dimitris\PycharmProjects\datasets\v2_dataset_new_statements")
+    dt = Dataset(r"C:\Users\dimitris\PycharmProjects\datasets\v2_dataset_new_statements")
 
-
-    sm = StatementsManager.from_dataset(dt)
-    # sm.fetch_from_apis()
-    all_tx = sm.collect_and_merge_transactions()
+    t = StatementsManager.discover_statement_sources(dt)
+    # sm = StatementsManager.from_dataset(dt)
+    # # sm.fetch_from_apis()
+    # all_tx = sm.collect_and_merge_transactions()
 
     breakpoint()
 
     # sources = AccountStatementsSource.from_dataset(dataset)
     # sources = [account_statements_factory(dataset, source_name) for source_name in ACCOUNT_STATEMENT_SOURCE_DIR_NAMES]
     # t = account_statements_factory(dataset, source='TrueLayerHSBC')
-    t = 0
     # t = TrueLayerHSBCStatements(dataset.statements / "TrueLayerHSBC",
     #                             dataset.creds,)
     # t.api_handler.get_accounts('hsbc')
