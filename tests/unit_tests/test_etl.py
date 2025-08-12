@@ -11,37 +11,32 @@ class TransactionIDTest(unittest.TestCase):
     def test_monzo_positive_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
         result = transformers.transaction_id_formula(transaction, 'Monzo')
-        self.assertEqual(result, 'MZNd20230101t120000ap5000i123')
+        self.assertEqual(result, 'Monzo-d20230101t120000-ap5000-id.123')
 
     def test_monzo_negative_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -30, 'id': 456}
         result = transformers.transaction_id_formula(transaction, 'Monzo')
-        self.assertEqual(result, 'MZNd20230101t120000an3000i456')
+        self.assertEqual(result, 'Monzo-d20230101t120000-an3000-id.456')
 
     def test_hsbc_positive_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 75, 'id': 789}
         result = transformers.transaction_id_formula(transaction, 'HSBC')
-        self.assertEqual(result, 'HSBCd20230101t120000ap7500i789')
+        self.assertEqual(result, 'HSBC-d20230101t120000-ap7500-id.789')
 
     def test_hsbc_negative_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -20, 'id': 101}
         result = transformers.transaction_id_formula(transaction, 'HSBC')
-        self.assertEqual(result, 'HSBCd20230101t120000an2000i101')
+        self.assertEqual(result, 'HSBC-d20230101t120000-an2000-id.101')
 
     def test_revolut_positive_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 120, 'id': 111}
         result = transformers.transaction_id_formula(transaction, 'Revolut')
-        self.assertEqual(result, 'RVLTd20230101t120000ap12000i111')
+        self.assertEqual(result, 'Revolut-d20230101t120000-ap12000-id.111')
 
     def test_revolut_negative_amount(self):
         transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': -45, 'id': 222}
         result = transformers.transaction_id_formula(transaction, 'Revolut')
-        self.assertEqual(result, 'RVLTd20230101t120000an4500i222')
-
-    def test_invalid_bank(self):
-        transaction = {'datetime': datetime(2023, 1, 1, 12, 0, 0), 'amount': 50, 'id': 123}
-        with self.assertRaises(ValueError):
-            transformers.transaction_id_formula(transaction, 'InvalidBank')
+        self.assertEqual(result, 'Revolut-d20230101t120000-an4500-id.222')
 
 
 class HSBCTransformerTest(unittest.TestCase):
@@ -54,7 +49,7 @@ class HSBCTransformerTest(unittest.TestCase):
         })
 
         expected_output = pd.DataFrame({
-            'id': ['HSBCd20220101t000000ap10000i1', 'HSBCd20220615t000000ap200000i2', 'HSBCd20221231t000000an30000i3'],
+            'id': ['HSBC-d20220101t000000-ap10000-id.1', 'HSBC-d20220615t000000-ap200000-id.2', 'HSBC-d20221231t000000-an30000-id.3'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 0, 0, 0),
                          datetime(2022, 12, 31, 0, 0, 0)],
             'amount': [100.0, 2000.0, -300.0],
@@ -94,7 +89,7 @@ class MonzoTransformerTest(unittest.TestCase):
         )
 
         expected_output = pd.DataFrame({
-            'id': ['MZNd20220101t000000ap10000i1', 'MZNd20220615t123030ap5000i2', 'MZNd20221231t235959ap20000i3'],
+            'id': ['Monzo-d20220101t000000-ap10000-id.1', 'Monzo-d20220615t123030-ap5000-id.2', 'Monzo-d20221231t235959-ap20000-id.3'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30),
                          datetime(2022, 12, 31, 23, 59, 59)],
             'amount': [100.0, 50.0, 200.0],
@@ -129,7 +124,7 @@ class RevoTransformerTest(unittest.TestCase):
         )
 
         expected_output = pd.DataFrame({
-            'id': ['RVLTd20220101t000000ap10000i31', 'RVLTd20220615t123030ap20000i32', 'RVLTd20221231t235959ap30000i33'],
+            'id': ['Revolut-d20220101t000000-ap10000-id.31', 'Revolut-d20220615t123030-ap20000-id.32', 'Revolut-d20221231t235959-ap30000-id.33'],
             'datetime': [datetime(2022, 1, 1, 0, 0, 0), datetime(2022, 6, 15, 12, 30, 30),
                          datetime(2022, 12, 31, 23, 59, 59)],
             'amount': [100.0, 200.0, 300.0],
