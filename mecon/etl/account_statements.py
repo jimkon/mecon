@@ -409,7 +409,13 @@ class StatementsManager:
             if issubclass(source.__class__, APIAccountStatementsSource) and hasattr(source, 'fetch'):
                 source.fetch()
 
-    def all_transactions_from_all_sources(self, source_ids_to_exclude=None):
+    def collect_statement_files(self):
+        return {s.id: s.statement_filepaths for s in self.sources}
+
+    def collect_statement_dataframes(self):
+        return {s.id: s.fetch_statement_dataframes() for s in self.sources}
+
+    def collect_transactions(self, source_ids_to_exclude=None):
         source_ids_to_exclude = source_ids_to_exclude or []
         txs = []
         for source in self.sources:
@@ -427,9 +433,9 @@ class StatementsManager:
         return txs
 
     def collect_and_merge_transactions(self):
-        txs = self.all_transactions_from_all_sources()
-        merges_tx = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:])
-        return merges_tx
+        txs = self.collect_transactions()
+        merged_tx = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:])
+        return merged_tx
 
 
 if __name__ == '__main__':

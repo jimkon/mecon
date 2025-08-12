@@ -7,7 +7,7 @@ from typing import List
 import pandas as pd
 
 from mecon.data.transactions import Transactions
-from mecon.etl import io_framework
+from mecon.etl import io_framework, account_statements
 from mecon.etl.dataset import Dataset
 from mecon.tags.process import OptREPTagging, RuleExecutionPlanMonitor
 from mecon.tags.tag_helpers import tag_stats_from_transactions
@@ -265,6 +265,162 @@ class CachedFileDataManager:
     def _save_tags_metadata(self):
         self.tags_metadata_df.to_csv(self._tags_metadata_path, index=False)
 
+    def _create_statement_manager(self):
+        source_names_to_look_for = [source for source, flag in self.dataset.settings['sources'].items() if flag]
+        am = account_statements.StatementsManager.from_dataset(self.dataset, source_names_to_look_for)
+        return am
+
+    def get_statement_filepaths(self) -> dict[str, list[pathlib.Path]]:
+        am = self._create_statement_manager()
+        sources_and_filenames = am.collect_statement_files()
+        return sources_and_filenames
+
+    def get_statements(self) -> dict[str, list[pd.DataFrame]]:
+        am = self._create_statement_manager()
+        sources_and_statements = am.collect_statement_dataframes()
+        return sources_and_statements
+
+    def get_transformed_statements(self) -> dict[str, pd.DataFrame]:
+        am = self._create_statement_manager()
+        sources_and_transactions = am.collect_transactions()
+        return sources_and_transactions
+
+    def reset_transactions(self):
+        am = self._create_statement_manager()
+        self.transactions = am.collect_and_merge_transactions()
+        self.transactions.reset_tags()
+        self._save_transactions()
+        # logging.info(f"Wrote {self.transactions.size()} transactions to {self.dataset.current_data}")
+        return self
+
+    def get_transactions(self) -> Transactions:
+        return self.transactions
+
+    def get_tagged_transactions(self) -> Transactions:
+        if 'tags' not in self.transactions.dataframe().columns:
+            self.reset_transaction_tags()
+        return self.transactions
+
+    def get_tag(self, tag_name) -> Tag | None:
+        tags_dict = self.tags_df.set_index('name').to_dict('index')
+
+        if tag_name not in tags_dict:
+            return None
+
+        tag = Tag.from_json_string(tag_name, tags_dict[tag_name]['conditions_json'])
+
+        return tag
+
+    def update_tag(self, tag: Tag, update_tags=True):
+        tags_dict = self.tags_df.set_index('name').to_dict('index')
+
+        tag_name = tag.name
+        if tag_name not in tags_dict:
+            tags_dict[tag_name] = {
+                'conditions_json': None,
+                'date_created': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
+            }
+        tags_dict[tag_name]['conditions_json'] = json.dumps(tag.rule.to_json())
+        self.tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
+        if update_tags:
+            self.reset_transaction_tags()
+
+        self._save_tags()
+
+    def delete_tag(self, tag_name: str, update_tags=True):
+        tags_dict = self.tags_df.set_index('name').to_dict('index')
+
+        if tag_name not in tags_dict:
+            return
+
+        del tags_dict[tag_name]
+        self.tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
+
+        if update_tags:
+            self.reset_transaction_tags()
+
+        self._save_tags()
+
+    def all_tags(self) -> List[Tag]:
+        tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in self.tags_df.iterrows()]
+        return tags
+
+    def reset_transaction_tags(self):
+        transactions = self.get_transactions().reset_tags()
+        all_tags = self.all_tags()
+
+        sess = OptREPTagging(all_tags) \
+            .create_rule_execution_plan() \
+            .create_optimised_rule_execution_plan()
+        transactions = sess.tag(transactions,
+                                monitor=RuleExecutionPlanMonitor(self.dataset))
+        self.transactions = transactions
+        self._save_transactions()
+
+        tags_metadata = tag_stats_from_transactions(transactions)
+        self.replace_tags_metadata(tags_metadata)
+
+    def get_tags_metadata(self):
+        if self.tags_metadata_df is None:
+            path = self.dataset.current_data / 'tags_metadata.csv'
+            self.tags_metadata_df = pd.read_csv(path, index_col=None)
+
+        self.all_tags()  # load tags if not already loaded
+        df_metadata = self.tags_df.merge(self.tags_metadata_df, on='name')
+        del df_metadata['conditions_json']
+
+        return df_metadata
+
+    def replace_tags_metadata(self, metadata_df: pd.DataFrame):
+        self.tags_metadata_df = metadata_df
+        self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+        self._save_tags_metadata()
+
+
+    def reset(self):
+        self.reset_transactions()
+        self._load_tags()
+        self.reset_transaction_tags()
+
+
+class CachedFileDataManagerLegacy:
+    def __init__(self, dataset: Dataset):
+        assert dataset is not None, "None given as dataset"
+        self.dataset = dataset
+        self.statements_dirpath = self.dataset.statements
+
+        self.transactions = None
+        self._transactions_path = self.dataset.current_data / 'transactions.csv'
+        self._load_transactions()
+
+        self.tags_df = None
+        self._tags_path = self.dataset.current_data / 'tags.csv'
+        self._load_tags()
+
+        self.tags_metadata_df = None
+        self._tags_metadata_path = self.dataset.current_data / 'tags_metadata.csv'
+        self._load_tags_metadata()
+        pass
+
+    def _load_transactions(self):
+        self.transactions = Transactions.from_csv(self._transactions_path) if self._transactions_path.exists() else None
+
+    def _load_tags(self):
+        self.tags_df = pd.read_csv(self._tags_path, index_col=None) if self._tags_path.exists() else None
+
+    def _load_tags_metadata(self):
+        self.tags_metadata_df = pd.read_csv(self._tags_metadata_path,
+                                            index_col=None) if self._tags_metadata_path.exists() else None
+
+    def _save_transactions(self):
+        self.transactions.dataframe().to_csv(self._transactions_path, index=False)
+
+    def _save_tags(self):
+        self.tags_df.to_csv(self._tags_path, index=False)
+
+    def _save_tags_metadata(self):
+        self.tags_metadata_df.to_csv(self._tags_metadata_path, index=False)
+
     def get_statement_filepaths(self) -> dict[str, list[pathlib.Path]]:
         # all_statement_paths = list(self.statements_dirpath.rglob("*.csv"))
         # sources_and_filenames = {}
@@ -402,4 +558,3 @@ class CachedFileDataManager:
         self.reset_transactions()
         self._load_tags()
         self.reset_transaction_tags()
-
