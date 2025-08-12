@@ -63,16 +63,20 @@ class AccountStatementsSource:
 
     def to_transactions(self) -> Transactions:
         all_dfs = self.fetch_statement_dataframes()
-        txs = []
-        for statement_dataframe in all_dfs:
-            df_tx = self.trans_transformer.transform(statement_dataframe)
-            if not df_tx['datetime'].is_monotonic_increasing:
-                df_tx.sort_values(by='datetime', inplace=True)
 
-            tx = Transactions(df_tx)
-            txs.append(tx)
+        if len(all_dfs) == 0:
+            statement_transactions = Transactions.empty_transactions_factory()
+        else:
+            txs = []
+            for statement_dataframe in all_dfs:
+                df_tx = self.trans_transformer.transform(statement_dataframe)
+                if not df_tx['datetime'].is_monotonic_increasing:
+                    df_tx.sort_values(by='datetime', inplace=True)
 
-        statement_transactions = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:], dedup_cols=['id'])
+                tx = Transactions(df_tx)
+                txs.append(tx)
+            statement_transactions = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:], dedup_cols=['id'])
+
         logging.info(f"AccountStatements({self.name}) "
                      f"transformed {len(all_dfs)} files "
                      f"into {statement_transactions.size() if statement_transactions else 'NONE'} transactions.")
