@@ -30,6 +30,8 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     columns = ['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
 
     def __init__(self, df: pd.DataFrame):
+        if set(self.columns) != set(df.columns):
+            raise ValueError(f"A Transaction object needs all {self.columns} columns: {set(self.columns).difference(df.columns)} is missing")
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)
         fields.AmountColumnMixin.__init__(self, df_wrapper=self)
@@ -229,6 +231,11 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def from_csv(cls, path) -> Transactions:
         df = pd.read_csv(path, index_col=None)
         df['datetime'] = pd.to_datetime(df['datetime'])
+        if 'tags' not in df.columns:
+            logging.warning(f"'tags' column was missing from Transaction object, and it was added with 'empty tags' value.")
+            df['tags'] = ''
+        else:
+            df['tags'].fillna('', inplace=True)
         return cls(df)
 
     def to_csv(self, path) -> None:

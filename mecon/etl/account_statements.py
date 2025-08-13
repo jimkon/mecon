@@ -73,6 +73,8 @@ class AccountStatementsSource:
                 if not df_tx['datetime'].is_monotonic_increasing:
                     df_tx.sort_values(by='datetime', inplace=True)
 
+                df_tx['tags'] = ''
+
                 tx = Transactions(df_tx)
                 txs.append(tx)
             statement_transactions = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:], dedup_cols=['id'])
