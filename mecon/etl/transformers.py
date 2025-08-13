@@ -438,6 +438,7 @@ class TrueLayerStatementTransformer(StatementTransformer):
         return df_transformed
 
 
+# TODO maybe remove
 TRANSFORMERS = [
     MonzoFileStatementTransformer,
     MonzoAPIFileStatementTransformer,

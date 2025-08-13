@@ -231,6 +231,9 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         df['datetime'] = pd.to_datetime(df['datetime'])
         return cls(df)
 
+    def to_csv(self, path) -> None:
+        self.dataframe().to_csv(path, index=False)
+
 
 # TODO:v3 move other Transaction related classes here like TransactionAggregators
 class TransactionDateFiller(fields.DateFiller):

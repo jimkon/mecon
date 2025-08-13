@@ -257,7 +257,7 @@ class CachedFileDataManager:
                                             index_col=None) if self._tags_metadata_path.exists() else None
 
     def _save_transactions(self):
-        self.transactions.dataframe().to_csv(self._transactions_path, index=False)
+        self.transactions.to_csv(self._transactions_path)
 
     def _save_tags(self):
         self.tags_df.to_csv(self._tags_path, index=False)

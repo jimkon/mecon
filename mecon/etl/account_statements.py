@@ -203,6 +203,16 @@ class TrueLayerStatements(APIAccountStatementsSource):
     #         api_handler=TrueLayerClient(creds)
     #     )
 
+    @classmethod
+    def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        return cls(
+            working_dir=working_dir,
+            trans_transformer=transformers.TrueLayerStatementTransformer(
+                source=cls.id,
+            ),
+            api_handler=TrueLayerClient(creds)
+        )
+
     def fetch(self):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
@@ -218,15 +228,7 @@ class TrueLayerStatements(APIAccountStatementsSource):
         df.to_csv(filepath, index_label=None)
         logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
 
-    @classmethod
-    def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
-        return cls(
-            working_dir=working_dir,
-            trans_transformer=transformers.TrueLayerStatementTransformer(
-                source=cls.id,
-            ),
-            api_handler=TrueLayerClient(creds)
-        )
+
 
 
 class TrueLayerHSBCStatements(TrueLayerStatements):
@@ -441,20 +443,3 @@ class StatementsManager:
         merged_tx = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:])
         return merged_tx
 
-
-if __name__ == '__main__':
-    dt = Dataset(r"C:\Users\dimitris\PycharmProjects\datasets\v2_dataset_new_statements")
-
-    t = StatementsManager.discover_statement_sources(dt)
-    # sm = StatementsManager.from_dataset(dt)
-    # # sm.fetch_from_apis()
-    # all_tx = sm.collect_and_merge_transactions()
-
-    breakpoint()
-
-    # sources = AccountStatementsSource.from_dataset(dataset)
-    # sources = [account_statements_factory(dataset, source_name) for source_name in ACCOUNT_STATEMENT_SOURCE_DIR_NAMES]
-    # t = account_statements_factory(dataset, source='TrueLayerHSBC')
-    # t = TrueLayerHSBCStatements(dataset.statements / "TrueLayerHSBC",
-    #                             dataset.creds,)
-    # t.api_handler.get_accounts('hsbc')
