@@ -288,6 +288,8 @@ class CachedFileDataManager:
     def reset_transactions(self):
         am = self._create_statement_manager()
         self.transactions = am.collect_and_merge_transactions()
+        if self.transactions.size() == 0:
+            raise ValueError(f"No transactions found for this {len(am.sources)} source: {am.sources}")
         self.transactions.reset_tags()
         self._save_transactions()
         # logging.info(f"Wrote {self.transactions.size()} transactions to {self.dataset.current_data}")

@@ -1,369 +1,302 @@
 # mecon/etl/monzo_api_client.py
 
-import datetime as dt
 import logging
-from typing import Any, Dict, Iterable, List, Optional
-
+import datetime
 import pandas as pd
 
 from monzo.authentication import Authentication
 from monzo.endpoints.account import Account
-from monzo.endpoints.transaction import Transaction
-from monzo.exceptions import MonzoError  # Monzo-API's catch-all
+from monzo.monzo import Monzo
+from monzo.errors import ForbiddenError, BadRequestError
 
 from mecon.settings import DictFile
+
+logging.basicConfig(level=logging.INFO)
 
 
 class MonzoCredentialsError(Exception):
     pass
 
 
-# ---------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------
-def _to_iso_z(value: Any) -> Optional[str]:
-    """Return an RFC3339 string with 'Z' for UTC or None."""
-    if value is None:
-        return None
-    if isinstance(value, dt.datetime):
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=dt.timezone.utc)
-        return value.astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
-    if isinstance(value, dt.date):
-        dttm = dt.datetime.combine(value, dt.time.min, tzinfo=dt.timezone.utc)
-        return dttm.isoformat().replace("+00:00", "Z")
-    # assume already string-like
-    s = str(value)
-    if s.endswith("+00:00"):
-        s = s[:-6] + "Z"
-    return s
-
-
-def _ensure_utc_datetime(value: Any) -> Optional[dt.datetime]:
+def _fmt_rfc3339_seconds(value) -> str:
     """
-    Convert string/date/datetime to a tz-aware UTC datetime for Monzo-API.
-    Returns None iff value is None.
+    Return UTC RFC3339 with **seconds precision** (no microseconds), e.g. 2025-08-14T10:11:12Z.
+    Accepts str/datetime; assumes naive datetimes are UTC.
     """
-    if value is None:
-        return None
-    if isinstance(value, dt.datetime):
-        if value.tzinfo is None:
-            return value.replace(tzinfo=dt.timezone.utc)
-        return value.astimezone(dt.timezone.utc)
-    if isinstance(value, dt.date):
-        return dt.datetime.combine(value, dt.time.min, tzinfo=dt.timezone.utc)
-    # string-like: be robust (supports 'Z', offsets, date-only, etc.)
     ts = pd.to_datetime(value, utc=True, errors="coerce")
     if pd.isna(ts):
-        raise ValueError(f"Cannot parse datetime from: {value!r}")
-    return ts.to_pydatetime()
+        # fall back to raw string if we really can't parse
+        return str(value)
+    return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _objects_to_dicts(items: Iterable[Any]) -> List[Dict[str, Any]]:
-    """
-    Convert Monzo-API model objects (or dicts) into plain dicts safe for json_normalize.
-    Normalizes common datetime-ish fields to ISO Z strings.
-    """
-    out: List[Dict[str, Any]] = []
-    for it in items:
-        if isinstance(it, dict):
-            d = dict(it)
-        else:
-            d = {k: v for k, v in getattr(it, "__dict__", {}).items() if not k.startswith("_")}
-        for k in ("created", "updated", "settled", "last_updated"):
-            if k in d:
-                d[k] = _to_iso_z(d[k])
-        out.append(d)
-    return out
+def _plus_seconds(rfc3339: str, secs: int) -> str:
+    ts = pd.to_datetime(rfc3339, utc=True, errors="coerce")
+    if pd.isna(ts):
+        return rfc3339
+    return (ts + pd.Timedelta(seconds=secs)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-# ---------------------------------------------------------------------
-# Client
-# ---------------------------------------------------------------------
 class MonzoClient:
-    """
-    Monzo client using ONLY the Monzo-API package.
-
-    Expects a DictFile with a "monzo-api" section:
-      {
-        "monzo-api": {
-          "client_id": "...",
-          "client_secret": "...",
-          "redirect_url": "...",
-          "token": {
-            "access_token": "...",
-            "expiry": 1710000000,
-            "refresh_token": "..."
-          },
-          "created_at": 1710000000.0,
-          "accounts": [
-            {"account_id": "acc_...", "created_at": "2020-01-01T00:00:00Z"}
-          ]
-        }
-      }
-    """
-
-    def __init__(self, creds_file: "DictFile"):
+    def __init__(self, creds_file: "DictFile", force_new_token=False):
         self.creds_file = creds_file
-        if "monzo-api" not in creds_file:
+
+        if 'monzo-api' not in creds_file:
             raise MonzoCredentialsError("No credentials for 'monzo-api' found in the creds file")
 
-        self.monzo_creds: Dict[str, Any] = self.creds_file["monzo-api"]
-        token = self.monzo_creds.get("token") or {}
+        self.monzo_creds = self.creds_file['monzo-api']
 
+        token = {} if force_new_token else self.monzo_creds.get('token', {})
         self.monzo_auth = Authentication(
-            client_id=self.monzo_creds["client_id"],
-            client_secret=self.monzo_creds["client_secret"],
-            redirect_url=self.monzo_creds["redirect_url"],
-            access_token=token.get("access_token", ""),
-            access_token_expiry=token.get("expiry", 0),
-            refresh_token=token.get("refresh_token", ""),
+            client_id=self.monzo_creds['client_id'],
+            client_secret=self.monzo_creds['client_secret'],
+            redirect_url=self.monzo_creds['redirect_url'],
+            access_token=token.get('access_token', ''),
+            access_token_expiry=token.get('expiry', 0),
+            refresh_token=token.get('refresh_token', '')
         )
 
-        # record creation time if missing
-        self.monzo_creds.setdefault("created_at", dt.datetime.now().timestamp())
+    # -------- token helpers --------
+    def has_token(self):
+        return bool(self.monzo_auth.access_token)
 
-    # ------------------------ token helpers -------------------------
-    def has_token(self) -> bool:
-        return bool(getattr(self.monzo_auth, "access_token", ""))
-
-    def expires_at(self) -> Optional[str]:
-        exp = getattr(self.monzo_auth, "access_token_expiry", None)
+    def expires_at(self):
         try:
-            exp = float(exp)
+            exp = float(self.monzo_auth.access_token_expiry)
         except (TypeError, ValueError):
             return None
         if not exp:
             return None
-        return dt.datetime.fromtimestamp(exp, tz=dt.timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        return datetime.datetime.fromtimestamp(exp).strftime('%Y-%m-%d %H:%M:%S')
 
-    def created_at_secs(self) -> Optional[float]:
+    def created_at_secs(self):
         try:
-            return float(self.monzo_creds.get("created_at"))
+            return float(self.monzo_creds.get('created_at', 0))
         except (TypeError, ValueError):
             return None
 
-    def minutes_passed_from_token_creation(self) -> Optional[float]:
-        created = self.created_at_secs()
-        if created is None:
+    def minutes_passed_from_token_creation(self):
+        created_at_secs = self.created_at_secs()
+        if created_at_secs is None:
             return None
-        return (dt.datetime.now().timestamp() - created) / 60.0
+        now_secs = datetime.datetime.now().timestamp()
+        return (now_secs - created_at_secs) / 60.0
 
-    def authenticated(self) -> bool:
+    def authenticated(self):
         return self.has_token()
 
-    def refresh_token(self) -> None:
-        logging.info("Refreshing Monzo access token...")
+    def refresh_token(self):
+        logging.info("Refreshing token...")
         self.monzo_auth.refresh_access()
-        self._persist_token()
-        logging.info("Token refresh complete. New expiry: %s", self.expires_at())
+        self._refresh_token_in_creds()
+        logging.info("Refreshing token... Done")
 
-    def _persist_token(self) -> None:
-        self.monzo_creds["token"] = {
-            "access_token": self.monzo_auth.access_token,
-            "expiry": self.monzo_auth.access_token_expiry,
-            "expires_at": self.expires_at(),
-            "refresh_token": self.monzo_auth.refresh_token,
+    def _refresh_token_in_creds(self):
+        self.monzo_creds['created_at'] = datetime.datetime.now().timestamp()
+        self.monzo_creds['token'] = {
+            'access_token': self.monzo_auth.access_token,
+            'expiry': self.monzo_auth.access_token_expiry,
+            'expires_at': self.expires_at(),
+            'refresh_token': self.monzo_auth.refresh_token,
         }
-        self.monzo_creds["created_at"] = dt.datetime.now().timestamp()
+        logging.info(f"Saving new token...")
         self.creds_file.save()
 
-    # -------------------------- OAuth ------------------------------
-    def get_authentication_url(self) -> str:
+    # -------- OAuth helpers --------
+    def get_authentication_url(self):
         return self.monzo_auth.authentication_url
 
     def get_authentication_url_and_state(self):
         url_and_state = self.get_authentication_url()
-        url, state = url_and_state.split("&state=")
+        url, state = url_and_state.split('&state=')
         return url, state
 
-    def set_authentication_code_from_url(self, response_url: str) -> None:
-        code_and_state = response_url.split("code=")[1]
-        code, state = code_and_state.split("&state=")
+    def set_authentication_code_from_url(self, response_url):
+        code_and_state = response_url.split('code=')[1]
+        code, state = code_and_state.split('&state=')
         logging.info("Authenticating with Monzo...")
         self.monzo_auth.authenticate(authorization_token=code, state_token=state)
-        self._persist_token()
+        self._refresh_token_in_creds()
         logging.info("Authentication complete. Token expires at: %s", self.expires_at())
 
-    # ------------------------- accounts ----------------------------
-    def get_accounts(self) -> List[Dict[str, Any]]:
-        if "accounts" not in self.monzo_creds or not self.monzo_creds["accounts"]:
-            logging.info("Fetching Monzo accounts (caching results)...")
+    # -------- accounts --------
+    def get_accounts(self):
+        if 'accounts' not in self.monzo_creds or len(self.monzo_creds['accounts']) == 0:
+            logging.info("Fetching account info for Monzo-API")
             accounts = Account.fetch(self.monzo_auth)
-            accounts_out = []
-            for a in accounts:
-                created = _to_iso_z(getattr(a, "created", None))
-                accounts_out.append({
-                    "account_id": getattr(a, "account_id", getattr(a, "id", None)),
-                    "created_at": created,
+            accounts_dict = []
+            for account in accounts:
+                created = getattr(account, "created", None)
+                created_str = created.strftime('%Y-%m-%d %H:%M:%S') if created else None
+                accounts_dict.append({
+                    "account_id": getattr(account, "account_id", getattr(account, "id", None)),
+                    "created_at": created_str,
                 })
-            self.monzo_creds["accounts"] = accounts_out
+            self.monzo_creds['accounts'] = accounts_dict
             self.creds_file.save()
 
-        return list(self.monzo_creds["accounts"])
+        return self.monzo_creds['accounts']
 
-    # ----------------------- transactions --------------------------
-    def download_accounts_transaction_history(
-        self,
-        account_id: str,
-        *,
-        batch_size: int = 100,                      # kept for interface parity (unused by Monzo-API)
-        since: str = "2019-01-01T00:00:00Z",
-    ) -> pd.DataFrame:
+    # -------- transactions --------
+    def _new_monzo_client(self) -> Monzo:
+        """Always construct the legacy client from the CURRENT access token."""
+        return Monzo(self.monzo_auth.access_token)
+
+    def download_accounts_transaction_history(self, account_id, batch_size=100, since="2019-01-01T00:00:00Z"):
         """
-        Download full transaction history for a single account via Monzo-API.
-
-        Notes:
-        - After ~5 minutes post-auth, Monzo restricts sync to ~90 days unless you re-auth.
-        - Monzo-API wrapper does not expose a `limit`; we page by advancing `since`.
+        Legacy client + capped windows:
+        - Build Monzo with the current access token (no Authentication object).
+        - Send RFC3339 **second-precision** timestamps.
+        - Keep each window < ~1 year (safe cap = 364 days + 23:59:59).
+        - If 'time range too large' (400), shrink window (→ 180d, then 90d) and retry.
+        - If auth fails (Forbidden/verification), refresh once; if still blocked, fall back to last ~90 days.
+        - Catch IndexError from legacy client when page is empty.
         """
-        dfs: List[pd.DataFrame] = []
-        current_since_dt = _ensure_utc_datetime(since)
-        before_dt: Optional[dt.datetime] = None  # not used; advancing since is enough
 
+        def _safe_before_from_since(since_rfc3339: str, days: int) -> str:
+            """Compute a safe 'before' as since + days (<= 364) with second precision, clamped to now."""
+            since_dt = pd.to_datetime(since_rfc3339, utc=True, errors="coerce")
+            now_dt = pd.Timestamp.now(tz="UTC")  # <-- instead of .utcnow().tz_localize("UTC")
+            window_end = since_dt + pd.Timedelta(days=days, hours=23, minutes=59, seconds=59)
+            end_dt = min(window_end, now_dt)
+            return end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        monzo = self._new_monzo_client()
+
+        # Normalize the incoming 'since' to second precision Z
+        since = _fmt_rfc3339_seconds(since)
+
+        # Start with a conservative window (<= ~1y)
+        window_days = 364  # safe cap; Monzo returns 400 for '> ~1 year'
+        before = _safe_before_from_since(since, window_days)
+
+        dfs = []
         while True:
-            logging.info(
-                "Downloading transactions for account_id=%s (since=%s, before=%s)...",
-                account_id,
-                _to_iso_z(current_since_dt),
-                _to_iso_z(before_dt),
-            )
+            logging.info(f"Downloading history from {account_id} before before='{before}' and since='{since}'...")
             try:
-                txs = Transaction.fetch(
-                    self.monzo_auth,
-                    account_id=account_id,
-                    since=current_since_dt,
-                    before=before_dt,
+                transactions = monzo.get_transactions(
+                    account_id,
+                    before=before,
+                    since=since,
+                    limit=min(int(batch_size), 100)  # default 30; max 100
                 )
-                rows = _objects_to_dicts(txs)
-                if not rows:
-                    logging.info("No more transactions returned (page empty).")
-                    break
-
-                df = pd.json_normalize(rows)
-
-                # Normalize temporal fields
-                if "created" in df.columns:
-                    df["created"] = df["created"].map(_to_iso_z)
-                    df["created_date"] = pd.to_datetime(df["created"].str[:10])
-                else:
-                    df["created_date"] = pd.NaT
-
-                # Sort and append
-                if "created" in df.columns:
-                    df.sort_values(by=["created"], inplace=True, ignore_index=True)
-                dfs.append(df)
-
-                # Advance the cursor — add +1s to avoid inclusive 'since' returning the same last row
-                if "created" in df.columns:
-                    last_created_str = df["created"].iloc[-1]
-                    last_created_dt = _ensure_utc_datetime(last_created_str)
-                    new_since_dt = last_created_dt + dt.timedelta(seconds=1)
-                else:
-                    logging.info("No 'created' field to page with; stopping after this page.")
-                    break
-
-                # Safety valve: if no progress, stop
-                if new_since_dt <= current_since_dt:
-                    logging.info("Pagination stalled (no progress). Stopping.")
-                    break
-
-                current_since_dt = new_since_dt
-
+            except IndexError:
                 logging.info(
-                    "Fetched page: %s rows, date range %s -> %s",
-                    df.shape[0],
-                    df["created_date"].min(),
-                    df["created_date"].max(),
-                )
-
-            except MonzoError as e:
-                # Commonly triggered by the 90-day restriction.
-                logging.warning(
-                    "Monzo API error while fetching transactions: %s. "
-                    "Falling back to the last ~90 days window (once).",
-                    e,
-                )
-                current_since_dt = (dt.datetime.utcnow().replace(tzinfo=dt.timezone.utc)
-                                    - dt.timedelta(days=89, hours=23, minutes=59)).replace(microsecond=0)
-                before_dt = None
-
-                try:
-                    txs = Transaction.fetch(
-                        self.monzo_auth,
-                        account_id=account_id,
-                        since=current_since_dt,
-                        before=before_dt,
-                    )
-                    rows = _objects_to_dicts(txs)
-                    if not rows:
-                        logging.info("No transactions in the ~90 day fallback window.")
-                        break
-
-                    df = pd.json_normalize(rows)
-                    if "created" in df.columns:
-                        df["created"] = df["created"].map(_to_iso_z)
-                        df["created_date"] = pd.to_datetime(df["created"].str[:10])
-                        df.sort_values(by=["created"], inplace=True, ignore_index=True)
+                    "Reached the limit, no more transactions to download: empty page (IndexError from client).")
+                break
+            except BadRequestError as e:
+                msg = (str(e) or "").lower()
+                # If the API says the time range is too large, shrink and retry this same page.
+                if "time range" in msg or "invalid_time_range" in msg:
+                    if window_days > 180:
+                        window_days = 180
+                    elif window_days > 90:
+                        window_days = 90
                     else:
-                        df["created_date"] = pd.NaT
-                    dfs.append(df)
-
-                    logging.info(
-                        "Fetched fallback page: %s rows, date range %s -> %s",
-                        df.shape[0], df["created_date"].min(), df["created_date"].max()
+                        # Already at 90d and still too large? Give up this page.
+                        logging.info("Time-range still too large at 90 days; skipping this window.")
+                        break
+                    before = _safe_before_from_since(since, window_days)
+                    logging.info(f"Shrank window due to time-range error. Retrying with ~{window_days} days.")
+                    continue
+                # Other 400s: re-raise so you can see them
+                raise
+            except ForbiddenError as e:
+                # Verification required / SCA window etc.
+                logging.info(f"Monzo error ({type(e).__name__}): {e}. Trying a token refresh and retry...")
+                try:
+                    self.refresh_token()
+                    monzo = self._new_monzo_client()
+                    transactions = monzo.get_transactions(
+                        account_id,
+                        before=before,
+                        since=since,
+                        limit=min(int(batch_size), 100)
                     )
+                except IndexError:
+                    logging.info("Reached the limit after refresh: empty page (IndexError).")
                     break
-                except MonzoError:
-                    logging.exception("Fallback fetch also failed; giving up.")
-                    raise
+                except (BadRequestError, ForbiddenError):
+                    # Fall back to ~90 days window
+                    logging.info("Retry after refresh failed. Falling back to last ~90 days window.")
+                    since_dt = datetime.datetime.utcnow() - datetime.timedelta(days=89, minutes=59, seconds=59)
+                    since = _fmt_rfc3339_seconds(since_dt)
+                    window_days = 90
+                    before = _safe_before_from_since(since, window_days)
+                    continue
+
+            # ---- success path ----
+            items = (transactions or {}).get('transactions', [])
+            if not items:
+                logging.info("Reached the limit, no more transactions to download: empty page []")
+                break
+
+            df = pd.json_normalize(items)
+            if df.empty:
+                logging.info("Reached the limit, no more transactions to download: empty DataFrame.")
+                break
+
+            # Ensure date helpers
+            if 'created' in df.columns:
+                df['created'] = df['created'].map(_fmt_rfc3339_seconds)
+                df['created_date'] = pd.to_datetime(df['created'].str[:10], errors='coerce')
+            else:
+                df['created_date'] = pd.NaT
+
+            dfs.append(df)
+
+            # Advance the window forward:
+            # Move 'since' to the oldest row in this page (+1s to avoid overlap),
+            # then set next 'before' using the current window_days.
+            if 'created' not in df.columns or df['created'].isna().all():
+                logging.info("No 'created' in page; cannot page further.")
+                break
+
+            oldest_created = str(df['created'].iloc[-1])  # API returns newest first; last row is oldest
+            new_since = _plus_seconds(oldest_created, 1)
+            if new_since == since:
+                logging.info(f"Reached the limit, no more transactions to download: {new_since == since=} {df.shape=}")
+                break
+
+            since = new_since
+            before = _safe_before_from_since(since, window_days)
+
+            logging.info(
+                f"{len(dfs)} batch(es) downloaded with dims {df.shape}, "
+                f"date range {df['created_date'].min()} -> {df['created_date'].max()}"
+            )
 
         if not dfs:
             return pd.DataFrame()
 
         all_transactions = pd.concat(dfs, ignore_index=True)
-
-        if "id" in all_transactions.columns:
-            before_drop = len(all_transactions)
-            all_transactions.drop_duplicates(subset="id", inplace=True)
-            logging.info("Dropped %s duplicate transactions by 'id'.", before_drop - len(all_transactions))
-
-        if "created" in all_transactions.columns:
-            all_transactions.sort_values(by=["created"], inplace=True, ignore_index=True)
+        if 'id' in all_transactions.columns:
+            all_transactions.drop_duplicates(subset='id', inplace=True)
+        if 'created' in all_transactions.columns:
+            all_transactions.sort_values(by=['created'], inplace=True, ignore_index=True)
 
         logging.info(
-            "Downloaded %s transactions (shape=%s). "
-            "Dates: %s -> %s. Unique days: %s. Duplicates (post-drop): %s.",
-            len(all_transactions),
-            all_transactions.shape,
-            (all_transactions.get("created_date").max() if "created_date" in all_transactions else None),
-            (all_transactions.get("created_date").min() if "created_date" in all_transactions else None),
-            (all_transactions["created_date"].dt.date.nunique() if "created_date" in all_transactions else None),
-            (all_transactions.duplicated(subset="id", keep=False).sum() if "id" in all_transactions else 0),
+            f"Downloaded {len(all_transactions)} transactions with dims {all_transactions.shape}\n"
+            f"date range {all_transactions.get('created_date').min()} -> {all_transactions.get('created_date').max()}\n"
+            f"{all_transactions.get('created_date').dt.date.nunique() if 'created_date' in all_transactions else 'n/a'} unique days\n"
+            f"{all_transactions.duplicated(subset='id', keep=False).sum() if 'id' in all_transactions else 0} duplicated transactions\n"
         )
-
         return all_transactions
 
-    def download_full_history(
-        self,
-        *,
-        batch_size: int = 100,                      # kept for interface parity (unused here)
-        since: str = "2019-01-01T00:00:00Z",
-    ) -> pd.DataFrame:
-        """Download and merge transactions across all known accounts."""
-        dfs: List[pd.DataFrame] = []
+    def download_full_history(self, batch_size=100, since="2019-01-01T00:00:00Z"):
+        dfs = []
         for account in self.get_accounts():
-            account_id = account["account_id"]
-            df = self.download_accounts_transaction_history(
-                account_id,
-                batch_size=batch_size,
-                since=since,
-            )
-            if not df.empty:
-                df["account_id"] = account_id
-                dfs.append(df)
+            account_id = account['account_id']
+            dfs.append(self.download_accounts_transaction_history(
+                account_id, batch_size=batch_size, since=since
+            ))
+        return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-        if not dfs:
-            return pd.DataFrame()
 
-        return pd.concat(dfs, ignore_index=True)
+if __name__ == "__main__":
+    from mecon.etl.dataset import Dataset
+
+    d = Dataset(r"C:\Users\dimitris\PycharmProjects\datasets\20250812")
+    mc = MonzoClient(d.creds, force_new_token=True)
+    auth_code_url = input(f"{mc.get_authentication_url()} -> ")
+    mc.set_authentication_code_from_url(auth_code_url)
