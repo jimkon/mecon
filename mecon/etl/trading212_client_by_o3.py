@@ -202,6 +202,7 @@ class Trading212Client:
 
     def request_csv_export_full(self, since: dt.datetime) -> List[int]:
         """Fire per-year exports to avoid server 500s; returns list of reportIds."""
+        logging.info(f"Requesting a new full export...")
         end = dt.datetime.now(timezone.utc)
         cur = since.astimezone(timezone.utc)
         rids: List[int] = []
@@ -238,6 +239,7 @@ class Trading212Client:
     def fetch_history_dataframe(
             self,
             since: dt.datetime,
+            request_ids_to_skip: list[str] = None,
             include: Dict[str, bool] | None = None,
             poll_interval_sec: int = 65,
             post_gap_sec: int = 31,
@@ -254,6 +256,9 @@ class Trading212Client:
             unless force_request=True.
         """
 
+        logging.info(f"Fetching full history of transactions from the Trading212 API since {since=}...")
+
+        request_ids_to_skip = request_ids_to_skip if request_ids_to_skip is not None else []
 
         if since.tzinfo is None:
             since = since.replace(tzinfo=timezone.utc)
@@ -348,6 +353,7 @@ class Trading212Client:
         created_ids: list[int] = []
         for i, (frm, to) in enumerate(need_to_create):
             rid = self.request_csv_export(frm, to, include=include)
+            logging.info(f"New export was requested: request_id={rid}")
             created_ids.append(rid)
             links_or_ids.append((rid, None, frm, to))
             if i < len(need_to_create) - 1:
@@ -419,6 +425,8 @@ class Trading212Client:
                 df["_chunk_to"] = to
                 frames.append(df)
 
+        logging.info(f"Found {len(links_or_ids)} links to be fetched.")
+
         for rid, link, frm, to in links_or_ids:
             if not link:
                 raise ApiError(f"Export {rid} has no downloadLink.")
@@ -430,9 +438,13 @@ class Trading212Client:
 
         out = pd.concat(frames, ignore_index=True)
 
-        for col in ("time", "createdAt", "date", "executionTime"):
-            if col in out.columns:
-                out[col] = pd.to_datetime(out[col], errors="coerce", utc=True)
+
+        # for col in ("Time", "CreatedAt", "Date", "ExecutionTime"):
+        #     if col in out.columns:
+        #         out[col] = pd.to_datetime(out[col], errors="coerce", utc=True)
+
+        logging.info(f"Found a total of {out.shape[0]} rows and {out.shape[1]} columns from {out['Time'].min()} to {out['Time'].max()}")
+
 
         return out
 
