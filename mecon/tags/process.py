@@ -106,8 +106,10 @@ class RuleExecutionPlanMonitor:
     def all_monitored_tag_names(self) -> list[str]:
         return self.df_operations['tag'].unique().tolist()
 
-    def get_conditions_stats(self) -> pd.DataFrame:
-        condition_cols = self.df_operations[self.df_operations['type'].isin(['Condition', 'Conjunction', 'Disjunction'])]['out'].unique()
+    def get_conditions_stats(self, tag_name: str | None = None) -> pd.DataFrame:
+        selected_tags = [tag_name] if tag_name is not None else self.all_monitored_tag_names()
+        condition_cols = self.df_operations[self.df_operations['type'].isin(['Condition', 'Conjunction', 'Disjunction'])
+                            & self.df_operations['tag'].isin(selected_tags)]['out'].unique()
         df = self.df_calculations[condition_cols]
         all_true = df.all()
         all_false = ~df.any()
