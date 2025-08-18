@@ -75,17 +75,50 @@ class RuleExecutionPlanMonitor:
         self.save()
         self.load()
 
-    def get_tag_calculations(self, tag_name: str) -> pd.DataFrame:
+    def get_tag_calculations(self,
+                             tag_name: str,
+                             only_calcs=False,
+                             ) -> pd.DataFrame:
         ops = self.df_operations[self.df_operations['tag']==tag_name]
         in_and_out_ops = ops['in'].to_list()+ops['out'].to_list()
         valid_cols = [col for col in self.df_calculations.columns.to_list() if col in in_and_out_ops]
         all_valid_cols = Transactions.columns+valid_cols
         ordered_cols = list(dict.fromkeys(all_valid_cols))
-        calcs = self.df_calculations[ordered_cols]
+
+        if only_calcs:
+            final_cols = [col for col in ordered_cols
+                          if col not in Transactions.columns]
+        else:
+            final_cols = ordered_cols
+
+        calcs = self.df_calculations[final_cols]
         return calcs
+
+    def get_tag_conditions(self,
+                           tag_name: str,
+                           ):
+        calcs = self.get_tag_calculations(tag_name, only_calcs=True)
+        cond_columns = [col for col in calcs.columns
+                        if calcs[col].dtype== bool]
+
+        return calcs[cond_columns]
 
     def all_monitored_tag_names(self) -> list[str]:
         return self.df_operations['tag'].unique().tolist()
+
+    def get_conditions_stats(self) -> pd.DataFrame:
+        condition_cols = self.df_operations[self.df_operations['type'].isin(['Condition', 'Conjunction', 'Disjunction'])]['out'].unique()
+        df = self.df_calculations[condition_cols]
+        all_true = df.all()
+        all_false = ~df.any()
+
+        df_all = pd.DataFrame({
+            'condition': all_true.index.tolist(),
+            'all_true': all_true.values.tolist(),
+            'all_false': all_false.values.tolist(),
+        })
+
+        return df_all
 
     def save(self):
         if self.df_calculations is not None:
@@ -150,7 +183,12 @@ class RuleExecutionPlanTagging(TaggingSession):
                                                                  rule.value)
                 res = df_in[f"{rule.field}"].apply(comp_f).rename(rule_alias)  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': f"{rule.field}", 'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': f"{rule.field}",
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Condition',
+                     })
                 return res
 
             return condition_op
@@ -159,7 +197,12 @@ class RuleExecutionPlanTagging(TaggingSession):
                 in_cols = [self._rule_aliases.get(subrule) for subrule in rule.rules]
                 res = df_in[in_cols].all(axis=1).rename(rule_alias)
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': in_cols, 'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': in_cols,
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Conjunction',
+                     })
                 return res
 
             return conjunction_op
@@ -168,7 +211,12 @@ class RuleExecutionPlanTagging(TaggingSession):
                 in_cols = [self._rule_aliases.get(subrule) for subrule in rule.rules]
                 res = df_in[in_cols].any(axis=1).rename(rule_alias)
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': in_cols, 'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': in_cols,
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Disjunction',
+                     })
                 return res
 
             return disjunction_op
@@ -176,7 +224,11 @@ class RuleExecutionPlanTagging(TaggingSession):
             def tag_application_op(df_in) -> pd.Series:
                 res = df_in[self._rule_aliases.get(rule.depends_on)].apply(lambda b: [rule.tag_name] if b else [])
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': str(rule.depends_on), 'out': "tags", 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': str(rule.depends_on),
+                     'out': "tags",
+                     'alias': rule_alias,
+                     'type': 'Tag',})
                 return res
 
             return tag_application_op
@@ -371,7 +423,12 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
                 res = df_in[field].apply(trans_op).rename(
                     f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': field,
+                     'out': f"{field}.{trans_op.name}",
+                     'alias': rule_alias,
+                     'type': 'Transformation'
+                     })
                 return res
 
             return tranform_op
@@ -384,8 +441,12 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
                 res = df_in[f"{rule.field}.{rule.transformation_operation.name}"].apply(comp_f).rename(
                     rule_alias)  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': f"{rule.field}.{rule.transformation_operation.name}",
-                     'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': f"{rule.field}.{rule.transformation_operation.name}",
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Condition'
+                     })
                 return res
 
             return condition_op
