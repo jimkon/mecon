@@ -114,13 +114,25 @@ class RuleExecutionPlanMonitor:
         all_true = df.all()
         all_false = ~df.any()
 
-        df_all = pd.DataFrame({
+        sums_true = df.replace({True: 1, False: 0}).sum()
+        sums_false = df.replace({False: 1, True: 0}).sum()
+
+        df_stats = pd.DataFrame({
             'condition': all_true.index.tolist(),
             'all_true': all_true.values.tolist(),
             'all_false': all_false.values.tolist(),
+            'total_true': sums_true.values.tolist(),
+            'total_false': sums_false.values.tolist(),
         })
 
-        return df_all
+        df_stats_merged = df_stats.merge(self.df_operations, left_on='condition', right_on='out')
+
+        df_stats_merged.rename(columns={'in': 'depending on'}, inplace=True)
+        del df_stats_merged['out'], df_stats_merged['alias']
+
+        df_stats_merged.sort_values(by=['all_true', 'all_false'], ascending=[True, False], inplace=True)
+
+        return df_stats_merged
 
     def save(self):
         if self.df_calculations is not None:

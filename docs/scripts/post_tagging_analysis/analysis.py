@@ -14,9 +14,8 @@ if __name__ == '__main__':
     tag_name = all_monitored_tags[0]
     df = monitor.get_tag_conditions(tag_name).copy()
 
-    res = monitor.get_conditions_stats()
-
-    stats = monitor.get_conditions_stats()
+    # stats = monitor.get_conditions_stats()
+    therapy_stats = monitor.get_conditions_stats(tag_name='Therapy')
 
     df = df[:100]
 
