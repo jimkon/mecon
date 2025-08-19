@@ -240,6 +240,11 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.info(f"Re-applying tag '{tag.name}' on transactions... Done")
         return new_transactions
 
+    def read_monitor_from_files():
+        monitor = RuleExecutionPlanMonitor(dataset)
+        monitor.load()
+        return monitor
+
     @reactive.effect
     def load():
         if current_tag_value.get() == None:
@@ -348,9 +353,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def condition_stats_output_df():
-        diff, monitor = changed_transactions()
+        monitor = read_monitor_from_files()
         df = monitor.get_conditions_stats(tag_name=fetch_tag_name())
-        # monitor.
         return shiny_app.render_table_standard(df, format_columns=True, format_boolean_values=True)
 
     @reactive.effect
