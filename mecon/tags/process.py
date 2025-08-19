@@ -69,7 +69,9 @@ class RuleExecutionPlanMonitor:
         self.op_path = self.path / 'op_monitoring.csv'
         self.path.mkdir(parents=True, exist_ok=True)
 
-    def populate(self, df_calculations: pd.DataFrame, df_operations: pd.DataFrame):
+    def populate(self,
+                 df_calculations: pd.DataFrame,
+                 df_operations: pd.DataFrame):
         self.df_calculations = df_calculations
         self.df_operations = df_operations
         self.save()
@@ -343,7 +345,11 @@ class RuleExecutionPlanTagging(TaggingSession):
         new_transactions = Transactions(df_in[transactions.dataframe().columns])
 
         if monitor:
-            monitor.populate(df_in, self.operation_monitoring_table())
+            op_table = self.operation_monitoring_table()
+            plan = self.plan.copy()[['rule', 'priority']]
+            plan['rule'] = plan['rule'].astype(str)
+            enriched_op_table = op_table.merge(plan, left_on='out', right_on='rule')
+            monitor.populate(df_in, enriched_op_table)
 
         return new_transactions
 
