@@ -390,7 +390,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         logging.info("Save")
         tag_json_str = get_target_tag_json()
-        warning = f"Warning: There is unsaved progress!!!" if tag_json_str != input.tag_json_text() else ''
+        unsaved_rules = ''.join([c1 for c1, c2 in zip(tag_json_str, input.tag_json_text()) if c1!=c2])
+        warning = f"Warning: There is unsaved progress!!!\n\n{unsaved_rules}" if len(unsaved_rules)>0 else '' # if tag_json_str != input.tag_json_text() else ''
         m = ui.modal(
             ui.markdown(
                 f"# {warning}\n   "
