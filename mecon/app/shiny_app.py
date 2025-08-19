@@ -403,7 +403,21 @@ datatable_styles = [
 ]
 
 
-def render_table_standard(df):
+def column_name_formating(col_name: str) -> str:
+    return col_name.replace('_', ' ').title()
+
+
+def render_table_standard(df,
+                          format_columns=False,
+                          format_boolean_values=False):
+    if format_columns:
+        df = df.copy()
+        df.columns = [column_name_formating(col) for col in df.columns]
+
+    if format_boolean_values:
+        df = df.copy()
+        df.replace({True: 'True', False: 'False'}, inplace=True)
+
     return render.DataTable(
         df,
         selection_mode="none",

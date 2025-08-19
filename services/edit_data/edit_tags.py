@@ -121,6 +121,12 @@ app_ui = shiny_app.app_ui_factory(
                         ui.output_data_frame(
                             id='untagged_transactions_output_df',
                         )
+                    ),
+                    ui.nav_panel(
+                        "Condition   stats",
+                        ui.output_data_frame(
+                            id='condition_stats_output_df',
+                        )
                     )
                 ),
                 height='100%'
@@ -321,6 +327,13 @@ def server(input: Inputs, output: Outputs, session: Session):
         formatted_date_str = f"📅{date_str}\t🕑{time}"
         return formatted_date_str
 
+    @render.text
+    def tagged_transactions_stats():
+        _tagged_transactions = tagged_transactions()
+        if _tagged_transactions.size() == 0:
+            raise ValueError(f"Empty tagged_transactions")
+        return ui.markdown(reports.transactions_stats_markdown(tagged_transactions()))
+
     @render.data_frame
     def tagged_transactions_output_df():
         df = tagged_transactions().dataframe().copy()
@@ -333,12 +346,12 @@ def server(input: Inputs, output: Outputs, session: Session):
         df['datetime'] = df['datetime'].apply(format_dt)
         return shiny_app.render_table_standard(df)
 
-    @render.text
-    def tagged_transactions_stats():
-        _tagged_transactions = tagged_transactions()
-        if _tagged_transactions.size() == 0:
-            raise ValueError(f"Empty tagged_transactions")
-        return ui.markdown(reports.transactions_stats_markdown(tagged_transactions()))
+    @render.data_frame
+    def condition_stats_output_df():
+        diff, monitor = changed_transactions()
+        df = monitor.get_conditions_stats(tag_name=fetch_tag_name())
+        # monitor.
+        return shiny_app.render_table_standard(df, format_columns=True, format_boolean_values=True)
 
     @reactive.effect
     @reactive.event(input.reset_button)
@@ -430,7 +443,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
     @reactive.effect
     @reactive.event(input.condition_add_button)
     def _():
-        # TODO it doesn;t remove the empty disjunctions
+        # TODO it doesn't remove the empty disjunctions
         value_str = input.condition_value_input_text()
         value = value_str if not value_str.isnumeric() else int(value_str) if value_str.isdigit() else float(value_str)
 
