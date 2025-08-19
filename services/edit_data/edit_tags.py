@@ -343,19 +343,22 @@ def server(input: Inputs, output: Outputs, session: Session):
     def tagged_transactions_output_df():
         df = tagged_transactions().dataframe().copy()
         df['datetime'] = df['datetime'].apply(format_dt)
-        return shiny_app.render_table_standard(df)
+        return shiny_app.render_table_standard(df, empty_message='No tagged transactions')
 
     @render.data_frame
     def untagged_transactions_output_df():
         df = untagged_transactions().dataframe().copy()
         df['datetime'] = df['datetime'].apply(format_dt)
-        return shiny_app.render_table_standard(df)
+        return shiny_app.render_table_standard(df, empty_message='No UNtagged transactions')
 
     @render.data_frame
     def condition_stats_output_df():
         monitor = read_monitor_from_files()
         df = monitor.get_conditions_stats(tag_name=fetch_tag_name())
-        return shiny_app.render_table_standard(df, format_columns=True, format_boolean_values=True)
+        return shiny_app.render_table_standard(df,
+                                               format_columns=True,
+                                               format_boolean_values=True,
+                                               empty_message='No conditions stats')
 
     @reactive.effect
     @reactive.event(input.reset_button)

@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import pandas as pd
 from shiny import ui, Inputs, Outputs, Session, reactive, render
 
 from mecon import config
@@ -409,7 +410,11 @@ def column_name_formating(col_name: str) -> str:
 
 def render_table_standard(df,
                           format_columns=False,
-                          format_boolean_values=False):
+                          format_boolean_values=False,
+                          empty_message=None):
+    if len(df)==0 and empty_message is not None:
+        return pd.DataFrame({empty_message: ['0 rows']})
+
     if format_columns:
         df = df.copy()
         df.columns = [column_name_formating(col) for col in df.columns]
