@@ -8,6 +8,7 @@ from mecon.app import shiny_app
 from mecon.app.current_data import WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
 # from mecon.app.current_data import WorkingDatasetDirInfo
 from mecon.etl import transformers
+from mecon.tags.process import RuleExecutionPlanMonitor
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -114,7 +115,10 @@ app_ui = shiny_app.app_ui_factory(
                         ui.output_data_frame("transactions_info_dataframe")
                     )),
                     ui.accordion_panel('Tags', ui.card(
-                        ui.output_data_frame("tags_info_dataframe")
+                        ui.h3("Tagging report"),
+                        ui.output_data_frame("tags_info_dataframe"),
+                        ui.h3("Tagging conditions stats"),
+                        ui.output_data_frame("tag_conditions_stats_dataframe"),
                     )),
                     ui.accordion_panel('Tagged Transactions', ui.card(
                         ui.output_data_frame("tagged_transactions_info_dataframe")
@@ -275,6 +279,24 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_tags_info = data_manager.get_tags_metadata()
         res = render.DataGrid(df_tags_info, selection_mode="row")
         return res
+
+    @render.data_frame
+    def tag_conditions_stats_dataframe():
+        monitor = RuleExecutionPlanMonitor(dataset)
+        monitor.load()
+        df_stats = monitor.get_conditions_stats()
+        df_sel = df_stats[df_stats['all_true'] | df_stats['all_false']]
+        df_sel.replace([False, True], value=['False', 'True'], inplace=True)
+
+        # df_sel['tag'] = df_sel['tag'].apply(lambda tag_name: f'<a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit {tag_name}</a>')
+        def make_link(tag_name: str):
+            href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
+            # rel=noopener is a small security best-practice with target=_blank
+            return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit {tag_name}</a>')
+        # Make sure every row becomes HTML (fill NAs if needed)
+        df_sel["tag"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
+
+        return shiny_app.render_table_standard(df_sel)
 
     @render.data_frame
     def tagged_transactions_info_dataframe():
