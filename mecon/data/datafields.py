@@ -368,6 +368,15 @@ class TagsColumnMixin(ColumnMixin):
         tagging.Tagger.tag(tag, new_df)
         return self._df_wrapper_obj.factory(new_df)
 
+    def apply_tags(self, tags: Iterable[tagging.Tag]) -> DataframeWrapper:
+        from mecon.tags.process import OptREPTagging
+        sess = OptREPTagging(tags) \
+            .create_rule_execution_plan() \
+            .create_optimised_rule_execution_plan()
+        tx_tagged = sess.tag(self, monitor=None)
+        return tx_tagged
+
+
     def tag_row_wise_equality(self,
               other_tags: list[str],
               target_tags: list[str] | None = None
