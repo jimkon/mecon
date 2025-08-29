@@ -5,6 +5,7 @@ import time
 from collections import namedtuple
 from itertools import chain
 from typing import Any
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -32,6 +33,14 @@ def timeit(func):
 class TaggingSession(abc.ABC):
     def __init__(self, tags: list[Tag]):
         self.tags = tags
+        self.validate_tags()
+
+    def validate_tags(self):
+        tag_names = [t.name for t in self.tags]
+        counter = Counter(tag_names)
+        non_unique_items = {tag_name: cnt for tag_name, cnt in counter.items() if cnt > 1}
+        if len(non_unique_items) > 0:
+            raise ValueError(f"Some Tag names appear more than once: {non_unique_items}")
 
     @abc.abstractmethod
     def tag(self, transactions: Transactions) -> Transactions:
