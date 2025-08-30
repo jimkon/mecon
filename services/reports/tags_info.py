@@ -75,7 +75,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         else:
             raise ValueError(f"Invalid category: {category}")
 
-        logging.info(f"calc_tags_graph-> {len(tg.tags_df)=},{tg.has_cycles()=}")
+        logging.info(f"calc_tags_graph-> {len(tg.custom_tags_df)=},{tg.has_cycles()=}")
         return tg
 
     @render.data_frame

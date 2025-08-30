@@ -864,7 +864,7 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         non_existing_tag = self.dm.get_tag('test_tag3')
         self.assertEqual(non_existing_tag.name, 'test_tag3')
         self.assertEqual(non_existing_tag.rule.to_json(), [{}])
-        self.assertEqual(self.dm.tags_df['date_created'].isna().sum(), 0)
+        self.assertEqual(self.dm.custom_tags_df['date_created'].isna().sum(), 0)
 
     def test_delete_tag(self):
         self.assertIsNotNone(self.dm.get_tag('test_tag'))

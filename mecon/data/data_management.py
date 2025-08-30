@@ -234,13 +234,19 @@ class CachedFileDataManager:
         self.dataset = dataset
         self.statements_dirpath = self.dataset.statements
 
-        self.transactions = None
         self._transactions_path = self.dataset.current_data / 'transactions.csv'
+        self.transactions = None
         self._load_transactions()
 
-        self.tags_df = None
+        self.custom_tags_df = None
         self._tags_path = self.dataset.current_data / 'tags.csv'
         self._load_tags()
+
+        self.additional_tags_df = None
+        self._load_additional_tags()
+
+        self.all_tags_df = None
+        self._load_all_tags()
 
         self.tags_metadata_df = None
         self._tags_metadata_path = self.dataset.current_data / 'tags_metadata.csv'
@@ -250,18 +256,48 @@ class CachedFileDataManager:
     def _load_transactions(self):
         self.transactions = Transactions.from_csv(self._transactions_path) if self._transactions_path.exists() else None
 
+    def _save_transactions(self):
+        logging.info(f"Saving transactions file to {self._transactions_path}")
+        self.transactions.to_csv(self._transactions_path)
+
     def _load_tags(self):
-        self.tags_df = pd.read_csv(self._tags_path, index_col=None) if self._tags_path.exists() else None
+        self.custom_tags_df = pd.read_csv(self._tags_path, index_col=None) if self._tags_path.exists() else None
+        self.custom_tags_df['type'] = 'Custom'
+
+    def _save_tags(self):
+        logging.info(f"Saving tags file to {self._tags_path}")
+        self.custom_tags_df.to_csv(self._tags_path, index=False)
+
+    def _load_additional_tags(self):
+        custom_tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in
+                       self.custom_tags_df.iterrows()]
+        custom_tags_names = [tag.name for tag in custom_tags]
+        if len(custom_tags_names) != len(set(custom_tags_names)):
+            logging.warning(
+                f"Found non unique tag names in the custom tag set, that will probably raise an error while tagging data")
+
+        basic_tags = additional_tags.get_additional_tags(self.dataset)
+        self.additional_tags_df = pd.DataFrame([{'name':tag.name,
+                                                'conditions_json':json.dumps(tag.rule.to_json())} for tag in basic_tags])
+        self.additional_tags_df['type'] = 'Built-in'
+
+    def _load_all_tags(self):
+        custom_tags_names = self.custom_tags_df['name']
+        if len(custom_tags_names) != len(set(custom_tags_names)):
+            logging.warning(
+                f"Found non unique tag names in the custom tag set, that will probably raise an error while tagging data")
+
+        not_overridden_basic_tags_df = self.additional_tags_df[~self.additional_tags_df['name'].isin(custom_tags_names)].copy()
+
+        self.all_tags_df = pd.concat([self.custom_tags_df, not_overridden_basic_tags_df])
+        logging.info(f"Found {len(self.custom_tags_df)} custom tags, "
+                     f"{len(self.additional_tags_df)} basic tags "
+                     f"({len(self.additional_tags_df) - len(not_overridden_basic_tags_df)} of which are overridden by the custom ones) "
+                     f"and merged them in {len(self.all_tags_df)} tags")
 
     def _load_tags_metadata(self):
         self.tags_metadata_df = pd.read_csv(self._tags_metadata_path,
                                             index_col=None) if self._tags_metadata_path.exists() else None
-
-    def _save_transactions(self):
-        self.transactions.to_csv(self._transactions_path)
-
-    def _save_tags(self):
-        self.tags_df.to_csv(self._tags_path, index=False)
 
     def _save_tags_metadata(self):
         logging.info(f"Saving tags metadata file to {self._tags_metadata_path}")
@@ -306,7 +342,7 @@ class CachedFileDataManager:
         return self.transactions
 
     def get_tag(self, tag_name) -> Tag | None:
-        tags_dict = self.tags_df.set_index('name').to_dict('index')
+        tags_dict = self.custom_tags_df.set_index('name').to_dict('index')
 
         if tag_name not in tags_dict:
             return None
@@ -316,7 +352,7 @@ class CachedFileDataManager:
         return tag
 
     def update_tag(self, tag: Tag, update_tags=True):
-        tags_dict = self.tags_df.set_index('name').to_dict('index')
+        tags_dict = self.custom_tags_df.set_index('name').to_dict('index')
 
         tag_name = tag.name
         if tag_name not in tags_dict:
@@ -325,20 +361,20 @@ class CachedFileDataManager:
                 'date_created': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
             }
         tags_dict[tag_name]['conditions_json'] = json.dumps(tag.rule.to_json())
-        self.tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
+        self.custom_tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
         if update_tags:
             self.reset_transaction_tags()
 
         self._save_tags()
 
     def delete_tag(self, tag_name: str, update_tags=True):
-        tags_dict = self.tags_df.set_index('name').to_dict('index')
+        tags_dict = self.custom_tags_df.set_index('name').to_dict('index')
 
         if tag_name not in tags_dict:
             return
 
         del tags_dict[tag_name]
-        self.tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
+        self.custom_tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
 
         if update_tags:
             self.reset_transaction_tags()
@@ -346,21 +382,7 @@ class CachedFileDataManager:
         self._save_tags()
 
     def all_tags(self) -> List[Tag]:
-        custom_tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in self.tags_df.iterrows()]
-        custom_tags_names = [tag.name for tag in custom_tags]
-        if len(custom_tags_names) != len(set(custom_tags_names)):
-            logging.warning(f"Found non unique tag names in the custom tag set, that will probably raise an error while tagging data")
-
-        basic_tags = additional_tags.get_additional_tags(self.dataset)
-        not_overridden_basic_tags = [tag
-                      for tag in basic_tags
-                      if tag.name not in custom_tags_names] #
-        all_tags = custom_tags
-        all_tags.extend(not_overridden_basic_tags)
-        logging.info(f"Found {len(all_tags)} custom tags, "
-                     f"{len(basic_tags)} basic tags "
-                     f"({len(basic_tags)-len(not_overridden_basic_tags)} of which are overridden by the custom ones) "
-                     f"and merged them in {len(all_tags)} tags")
+        all_tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in self.all_tags_df.iterrows()]
         return all_tags
 
     def reset_transaction_tags(self):
@@ -368,7 +390,7 @@ class CachedFileDataManager:
         all_tags = self.all_tags()
 
         tagged_transactions = transactions.apply_tags(all_tags, monitor=RuleExecutionPlanMonitor(self.dataset))
-        
+
         self.transactions = tagged_transactions
         self._save_transactions()
 
@@ -376,11 +398,10 @@ class CachedFileDataManager:
         self.replace_tags_metadata(tags_metadata)
 
     def get_tags_metadata(self):
-        if self.tags_metadata_df is None:
+        if self.tags_metadata_df is None: # TODO redundant?
             self.tags_metadata_df = pd.read_csv(self._tags_metadata_path, index_col=None)
 
-        self.all_tags()  # load tags if not already loaded
-        df_metadata = self.tags_df.merge(self.tags_metadata_df, on='name')
+        df_metadata = self.all_tags_df.merge(self.tags_metadata_df, on='name')
         del df_metadata['conditions_json']
 
         return df_metadata
@@ -389,7 +410,6 @@ class CachedFileDataManager:
         self.tags_metadata_df = metadata_df
         self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
         self._save_tags_metadata()
-
 
     def reset(self):
         self.reset_transactions()
@@ -566,7 +586,6 @@ class CachedFileDataManagerLegacy:
         self.tags_metadata_df = metadata_df
         self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
         self._save_tags_metadata()
-
 
     def reset(self):
         self.reset_transactions()
