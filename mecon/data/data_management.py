@@ -269,13 +269,6 @@ class CachedFileDataManager:
         self.custom_tags_df.to_csv(self._tags_path, index=False)
 
     def _load_additional_tags(self):
-        custom_tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in
-                       self.custom_tags_df.iterrows()]
-        custom_tags_names = [tag.name for tag in custom_tags]
-        if len(custom_tags_names) != len(set(custom_tags_names)):
-            logging.warning(
-                f"Found non unique tag names in the custom tag set, that will probably raise an error while tagging data")
-
         basic_tags = additional_tags.get_additional_tags(self.dataset)
         self.additional_tags_df = pd.DataFrame([{'name':tag.name,
                                                 'conditions_json':json.dumps(tag.rule.to_json())} for tag in basic_tags])
@@ -342,7 +335,7 @@ class CachedFileDataManager:
         return self.transactions
 
     def get_tag(self, tag_name) -> Tag | None:
-        tags_dict = self.custom_tags_df.set_index('name').to_dict('index')
+        tags_dict = self.all_tags_df.set_index('name').to_dict('index')
 
         if tag_name not in tags_dict:
             return None
