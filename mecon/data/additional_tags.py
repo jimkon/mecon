@@ -23,15 +23,15 @@ CALENDAR_WEEK_TAG_SET = ({
 } \
     .union({
     Tag.from_json('Weekend', [
-        {"datetime.day_of_week": {"equal": cu.DayOfWeek.SATURDAY}},
-        {"datetime.day_of_week": {"equal": cu.DayOfWeek.SUNDAY}}
+        {"datetime.day_of_week": {"equal": cu.DayOfWeek.SATURDAY.value}},
+        {"datetime.day_of_week": {"equal": cu.DayOfWeek.SUNDAY.value}}
     ]),
     Tag.from_json('Weekday', [
-        {"datetime.day_of_week": {"equal": cu.DayOfWeek.MONDAY}},
-        {"datetime.day_of_week": {"equal": cu.DayOfWeek.TUESDAY}},
-        {"datetime.day_of_week": {"equal": cu.DayOfWeek.WEDNESDAY}},
-        {"datetime.day_of_week": {"equal": cu.DayOfWeek.THURSDAY}},
-        {"datetime.day_of_week": {"equal": cu.DayOfWeek.FRIDAY}},
+        {"datetime.day_of_week": {"equal": cu.DayOfWeek.MONDAY.value}},
+        {"datetime.day_of_week": {"equal": cu.DayOfWeek.TUESDAY.value}},
+        {"datetime.day_of_week": {"equal": cu.DayOfWeek.WEDNESDAY.value}},
+        {"datetime.day_of_week": {"equal": cu.DayOfWeek.THURSDAY.value}},
+        {"datetime.day_of_week": {"equal": cu.DayOfWeek.FRIDAY.value}},
     ])
 }))
 # .union({
