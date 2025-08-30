@@ -1,5 +1,6 @@
 import abc
 import logging
+import pathlib
 import time
 from collections import namedtuple
 from itertools import chain
@@ -55,31 +56,85 @@ class RuleExecutionPlanMonitor:
     * find redundant rules (never true, always true, conditions of the same Tag conjunction that can be removes (a>10, a>100  << redundant))
     """
 
-    def __init__(self, dataset: Dataset, df_calculations=None, df_operations=None):
+    def __init__(self, dest_path_or_dataset: str | pathlib.Path | Dataset, df_calculations=None, df_operations=None):
         self.df_calculations = df_calculations
         self.df_operations = df_operations
-        self.path = dataset.statements.parent / 'monitoring'
+
+        if isinstance(dest_path_or_dataset, str) or isinstance(dest_path_or_dataset, pathlib.Path):
+            self.path = pathlib.Path(dest_path_or_dataset)
+        else:
+            self.path = dest_path_or_dataset.current_data
+
         self.calc_path = self.path / 'calc_monitoring.csv'
         self.op_path = self.path / 'op_monitoring.csv'
         self.path.mkdir(parents=True, exist_ok=True)
 
-    def populate(self, df_calculations: pd.DataFrame, df_operations: pd.DataFrame):
+    def populate(self,
+                 df_calculations: pd.DataFrame,
+                 df_operations: pd.DataFrame):
         self.df_calculations = df_calculations
         self.df_operations = df_operations
         self.save()
         self.load()
 
-    def get_tag_calculations(self, tag_name: str) -> pd.DataFrame:
+    def get_tag_calculations(self,
+                             tag_name: str,
+                             only_calcs=False,
+                             ) -> pd.DataFrame:
         ops = self.df_operations[self.df_operations['tag']==tag_name]
         in_and_out_ops = ops['in'].to_list()+ops['out'].to_list()
         valid_cols = [col for col in self.df_calculations.columns.to_list() if col in in_and_out_ops]
         all_valid_cols = Transactions.columns+valid_cols
         ordered_cols = list(dict.fromkeys(all_valid_cols))
-        calcs = self.df_calculations[ordered_cols]
+
+        if only_calcs:
+            final_cols = [col for col in ordered_cols
+                          if col not in Transactions.columns]
+        else:
+            final_cols = ordered_cols
+
+        calcs = self.df_calculations[final_cols]
         return calcs
+
+    def get_tag_conditions(self,
+                           tag_name: str,
+                           ):
+        calcs = self.get_tag_calculations(tag_name, only_calcs=True)
+        cond_columns = [col for col in calcs.columns
+                        if calcs[col].dtype== bool]
+
+        return calcs[cond_columns]
 
     def all_monitored_tag_names(self) -> list[str]:
         return self.df_operations['tag'].unique().tolist()
+
+    def get_conditions_stats(self, tag_name: str | None = None) -> pd.DataFrame:
+        selected_tags = [tag_name] if tag_name is not None else self.all_monitored_tag_names()
+        condition_cols = self.df_operations[self.df_operations['type'].isin(['Condition', 'Conjunction', 'Disjunction'])
+                            & self.df_operations['tag'].isin(selected_tags)]['out'].unique()
+        df = self.df_calculations[condition_cols]
+        all_true = df.all()
+        all_false = ~df.any()
+
+        sums_true = df.replace({True: 1, False: 0}).sum()
+        sums_false = df.replace({False: 1, True: 0}).sum()
+
+        df_stats = pd.DataFrame({
+            'condition': all_true.index.tolist(),
+            'all_true': all_true.values.tolist(),
+            'all_false': all_false.values.tolist(),
+            'total_true': sums_true.values.tolist(),
+            'total_false': sums_false.values.tolist(),
+        })
+
+        df_stats_merged = df_stats.merge(self.df_operations, left_on='condition', right_on='out')
+
+        df_stats_merged.rename(columns={'in': 'depending on'}, inplace=True)
+        del df_stats_merged['out'], df_stats_merged['alias']
+
+        df_stats_merged.sort_values(by=['all_true', 'all_false'], ascending=[True, False], inplace=True)
+
+        return df_stats_merged
 
     def save(self):
         if self.df_calculations is not None:
@@ -144,7 +199,12 @@ class RuleExecutionPlanTagging(TaggingSession):
                                                                  rule.value)
                 res = df_in[f"{rule.field}"].apply(comp_f).rename(rule_alias)  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': f"{rule.field}", 'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': f"{rule.field}",
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Condition',
+                     })
                 return res
 
             return condition_op
@@ -153,7 +213,12 @@ class RuleExecutionPlanTagging(TaggingSession):
                 in_cols = [self._rule_aliases.get(subrule) for subrule in rule.rules]
                 res = df_in[in_cols].all(axis=1).rename(rule_alias)
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': in_cols, 'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': in_cols,
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Conjunction',
+                     })
                 return res
 
             return conjunction_op
@@ -162,7 +227,12 @@ class RuleExecutionPlanTagging(TaggingSession):
                 in_cols = [self._rule_aliases.get(subrule) for subrule in rule.rules]
                 res = df_in[in_cols].any(axis=1).rename(rule_alias)
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': in_cols, 'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': in_cols,
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Disjunction',
+                     })
                 return res
 
             return disjunction_op
@@ -170,7 +240,11 @@ class RuleExecutionPlanTagging(TaggingSession):
             def tag_application_op(df_in) -> pd.Series:
                 res = df_in[self._rule_aliases.get(rule.depends_on)].apply(lambda b: [rule.tag_name] if b else [])
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': str(rule.depends_on), 'out': "tags", 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': str(rule.depends_on),
+                     'out': "tags",
+                     'alias': rule_alias,
+                     'type': 'Tag',})
                 return res
 
             return tag_application_op
@@ -271,7 +345,11 @@ class RuleExecutionPlanTagging(TaggingSession):
         new_transactions = Transactions(df_in[transactions.dataframe().columns])
 
         if monitor:
-            monitor.populate(df_in, self.operation_monitoring_table())
+            op_table = self.operation_monitoring_table()
+            plan = self.plan.copy()[['rule', 'priority']]
+            plan['rule'] = plan['rule'].astype(str)
+            enriched_op_table = op_table.merge(plan, left_on='out', right_on='rule')
+            monitor.populate(df_in, enriched_op_table)
 
         return new_transactions
 
@@ -365,7 +443,12 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
                 res = df_in[field].apply(trans_op).rename(
                     f"{field}.{trans_op.name}")  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': field, 'out': f"{field}.{trans_op.name}", 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': field,
+                     'out': f"{field}.{trans_op.name}",
+                     'alias': rule_alias,
+                     'type': 'Transformation'
+                     })
                 return res
 
             return tranform_op
@@ -378,8 +461,12 @@ class OptimisedRuleExecutionPlanTagging(RuleExecutionPlanTagging):
                 res = df_in[f"{rule.field}.{rule.transformation_operation.name}"].apply(comp_f).rename(
                     rule_alias)  # TODO optimise, np.vectorise maybe
                 self._op_monitoring.append(
-                    {'tag': rule.parent_tag, 'in': f"{rule.field}.{rule.transformation_operation.name}",
-                     'out': rule_alias, 'allias': rule_alias})
+                    {'tag': rule.parent_tag,
+                     'in': f"{rule.field}.{rule.transformation_operation.name}",
+                     'out': rule_alias,
+                     'alias': rule_alias,
+                     'type': 'Condition'
+                     })
                 return res
 
             return condition_op

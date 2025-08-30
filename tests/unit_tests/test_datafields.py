@@ -177,6 +177,20 @@ class TestTagsColumnMixin(unittest.TestCase):
         self.assertEqual(example_wrapper.invalid_tags().to_list(),
                          [False, False, False, True, True, True])
 
+    def test_tag_row_wise_equality(self):
+        a_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3', 'tag4', 'tag5', 'tag6,tag7']
+        }))
+        b_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'tags': ['', 'tag1', 'tag1,tag2', 'tag3', 'not_tag4', '', 'tag6']
+        }))
+
+        pd.testing.assert_series_equal(a_wrapper.tag_row_wise_equality(b_wrapper.tags),
+                         pd.Series([True, True, True, True, False, False, False]))
+
+        pd.testing.assert_series_equal(a_wrapper.tag_row_wise_equality(b_wrapper.tags, target_tags=['tag1', 'tag6']),
+                                       pd.Series([True, True, True, True, True, True, True]))
+
 
 
 class TestDateTimeColumnMixin(unittest.TestCase):
@@ -441,6 +455,18 @@ class TestIDColumnMixin(unittest.TestCase):
 
         self.assertEqual(example_wrapper.invalid_ids().to_list(),
                          [True, True, True, True, False, True, True])
+
+
+    def test_select_by_ids(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'id': ['id1', 'id2', 'id3', 'id4', 'id5'],
+        }))
+        selected_ids_wrapper = example_wrapper.select_by_ids(['id1', 'id4', 'non_existent_id'])
+        expected_wrapper_df = pd.DataFrame({
+            'id': ['id1', 'id4'],
+        })
+        pd.testing.assert_frame_equal(selected_ids_wrapper.dataframe().reset_index(drop=True),
+                                      expected_wrapper_df.reset_index(drop=True))
 
 
 if __name__ == '__main__':

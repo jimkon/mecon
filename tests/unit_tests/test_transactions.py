@@ -96,6 +96,10 @@ class TestTransactions(unittest.TestCase):
         transactions_a = Transactions(pd.DataFrame([  # the tags col will be reset, just keeping it for reference
             {'amount': -400, 'amount_cur': -400, 'currency': 'GBP', 'datetime': Timestamp('2020-01-01 00:00:00'),
              'description': 'landlord',
+             'id': 'id_0',
+             'tags': 'Rent,Accommodation,Online payments'},
+            {'amount': -400, 'amount_cur': -400, 'currency': 'GBP', 'datetime': Timestamp('2020-01-01 00:00:00'),
+             'description': 'landlord',
              'id': 'id_1',
              'tags': 'Rent,Accommodation,Online payments'},
             {'amount': -400, 'amount_cur': -400, 'currency': 'GBP', 'datetime': Timestamp('2020-01-01 00:00:00'),
@@ -113,16 +117,19 @@ class TestTransactions(unittest.TestCase):
              'description': 'landlord',
              'id': 'id_2',
              'tags': 'Rent,Online payments'},
+            {'amount': -400, 'amount_cur': -400, 'currency': 'GBP', 'datetime': Timestamp('2020-01-01 00:00:00'),
+             'description': 'landlord',
+             'id': 'id_3',
+             'tags': 'Rent,Online payments'},
         ]))
 
         self.assertTupleEqual(transactions_a.tags_diff(transactions_a).dataframe().shape, (0, 7))
         self.assertTupleEqual(transactions_a.tags_diff(transactions_a.copy()).dataframe().shape, (0, 7))
 
         self.assertTupleEqual(transactions_a.tags_diff(transactions_b).dataframe().shape, (1, 7))
-        self.assertTupleEqual(transactions_a.tags_diff(transactions_b, target_tags='Accommodation').dataframe().shape, (1, 7))
-
-        self.assertTupleEqual(transactions_a.tags_diff(transactions_b, target_tags='Rent').dataframe().shape, (0, 7))
+        self.assertTupleEqual(transactions_a.tags_diff(transactions_b, target_tags=['Accommodation']).dataframe().shape, (1, 7))
         self.assertTupleEqual(transactions_a.tags_diff(transactions_b, target_tags=['Rent']).dataframe().shape, (0, 7))
+
 
 
 if __name__ == '__main__':

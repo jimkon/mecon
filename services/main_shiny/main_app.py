@@ -5,8 +5,10 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDatasetDirInfo, WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
+from mecon.app.current_data import WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
+# from mecon.app.current_data import WorkingDatasetDirInfo
 from mecon.etl import transformers
+from mecon.tags.process import RuleExecutionPlanMonitor
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -23,6 +25,30 @@ if not datasets_dir.exists():
 datasets_obj = WorkingDatasetDir()
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 dataset = datasets_obj.working_dataset
+
+def source_info_df(source):
+    df = dataset.statement_files_info_df()
+    df_res = df[df['source'] == source]
+    return df_res
+
+# def source_panel_factory(source_name, *args):
+#     element_name_id = source_name.lower().replace(' ', '_')
+#     """
+#     @render.data_frame
+#     def 'element_name_id'_api_source_info_text():
+#         df = source_info_df(source_name)
+#         logging.info(f"Source: {df=}")
+#         return shiny_app.render_table_standard(df)
+#     """
+#
+#     return ui.nav_panel(
+#         source_name,
+#         ui.card(
+#             ui.output_data_frame(f"{element_name_id}_source_info_text"),
+#             *args
+#         )
+#     )
+
 
 app_ui = shiny_app.app_ui_factory(
     ui.card(
@@ -60,16 +86,11 @@ app_ui = shiny_app.app_ui_factory(
                             ui.nav_panel("All", ui.output_data_frame('all_sources_info_text')),
                             ui.nav_panel("HSBC", ui.card(ui.output_data_frame('hsbc_source_info_text'))),
                             ui.nav_panel("Monzo",
-                                         ui.input_radio_buttons(
-                                             "monzo_source_radio",
-                                             "Choose between Monzo sources",
-                                             {"Monzo API": "MonzoAPI", "Monzo": "Monzo"},
-                                             selected=dataset.settings['sources']['Monzo']
-                                         ),
                                          ui.card(
                                              ui.h3("Monzo Export"),
                                              ui.output_data_frame('monzo_export_source_info_text'),
-                                         ),
+                                         )),
+                            ui.nav_panel("MonzoAPI",
                                          ui.card(
                                              ui.h3("Monzo API (*not integrated yet)"),
                                              ui.tags.a('Monzo authentication and fetching...',
@@ -94,7 +115,10 @@ app_ui = shiny_app.app_ui_factory(
                         ui.output_data_frame("transactions_info_dataframe")
                     )),
                     ui.accordion_panel('Tags', ui.card(
-                        ui.output_data_frame("tags_info_dataframe")
+                        ui.h3("Tagging report"),
+                        ui.output_data_frame("tags_info_dataframe"),
+                        ui.h3("Tagging conditions stats"),
+                        ui.output_data_frame("tag_conditions_stats_dataframe"),
                     )),
                     ui.accordion_panel('Tagged Transactions', ui.card(
                         ui.output_data_frame("tagged_transactions_info_dataframe")
@@ -106,12 +130,6 @@ app_ui = shiny_app.app_ui_factory(
         )
     )
 )
-
-
-def source_info_df(source):
-    df = WorkingDatasetDirInfo().statement_files_info_df()
-    df_res = df[df['source'] == source]
-    return df_res
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -164,7 +182,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.ui
     def statements_info_text():
         # TODO df['rows'].sum() is LESS than the numbers of transactions tagged as 'All', how?
-        df = WorkingDatasetDirInfo().statement_files_info_df()
+        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
 
         text = ui.HTML(
             f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> (* rows might not be 100% accurate).
@@ -173,7 +191,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def all_sources_info_text():
-        df = WorkingDatasetDirInfo().statement_files_info_df()
+        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
         df_agg = df.groupby('source').agg({'filename': 'count', 'rows': 'sum'}).reset_index()
         return shiny_app.render_table_standard(df_agg)
 
@@ -225,7 +243,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def statements_info_dataframe():
-        df = WorkingDatasetDirInfo().statement_files_info_df()
+        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
         res = render.DataGrid(df, selection_mode="row")
         return res
 
@@ -263,6 +281,24 @@ def server(input: Inputs, output: Outputs, session: Session):
         return res
 
     @render.data_frame
+    def tag_conditions_stats_dataframe():
+        monitor = RuleExecutionPlanMonitor(dataset)
+        monitor.load()
+        df_stats = monitor.get_conditions_stats()
+        df_sel = df_stats[df_stats['all_true'] | df_stats['all_false']]
+        df_sel.replace([False, True], value=['False', 'True'], inplace=True)
+
+        # df_sel['tag'] = df_sel['tag'].apply(lambda tag_name: f'<a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit {tag_name}</a>')
+        def make_link(tag_name: str):
+            href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
+            # rel=noopener is a small security best-practice with target=_blank
+            return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit {tag_name}</a>')
+        # Make sure every row becomes HTML (fill NAs if needed)
+        df_sel["tag"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
+
+        return shiny_app.render_table_standard(df_sel)
+
+    @render.data_frame
     def tagged_transactions_info_dataframe():
         df_tags_info = pd.DataFrame.from_dict(data_manager.get_tagged_transactions().all_tag_counts(),
                                               orient='index').reset_index()
@@ -277,19 +313,33 @@ def server(input: Inputs, output: Outputs, session: Session):
         filepaths = data_manager.get_statement_filepaths()
         statement_source = set(filepaths.keys())
         transformer_sources = set(transformers.StatementTransformer.SOURCES)
-        unparsed_sources = statement_source.difference(transformer_sources)
-        if len(unparsed_sources) > 0:
-            message = f"No parser for sources: {unparsed_sources}\n"
+        sources_with_no_transformers = statement_source.difference(transformer_sources)
+        if len(sources_with_no_transformers) > 0:
+            message = f"No parser for sources: {sources_with_no_transformers}\n"
             message += '\n'.join(
                 [f" -> Skipping {len(filepaths[source])} statement file from  source '{source}'" for source in
-                 unparsed_sources])
-            logging.info(f"Unparsed sources: {unparsed_sources}, {message=}")
+                 sources_with_no_transformers])
+            logging.info(f"App warning while resetting the data: {sources_with_no_transformers}, {message=}")
             ui.notification_show(
                 f"WARNING:\n{message}",
                 type="warning",
                 duration=10,
                 close_button=True
             )
+        unparsed_sources = transformer_sources.difference(statement_source)
+        if len(unparsed_sources) > 0:
+            message = f"Source not parsed: {unparsed_sources}\n"
+            # message += '\n'.join(
+            #     [f" -> Skipping {len(filepaths[source])} statement file from  source '{source}'" for source in
+            #      unparsed_sources])
+            logging.info(f"App warning while resetting the data: {unparsed_sources}, {message=}")
+            ui.notification_show(
+                f"WARNING:\n{message}",
+                type="warning",
+                duration=10,
+                close_button=True
+            )
+
         data_manager.reset()
 
 

@@ -66,11 +66,11 @@ class SubfolderCSVTest(unittest.TestCase):
         self.assertEqual(self.subfolder_csv_files, expected_content, "Subfolder CSV files content mismatch")
 
 
-class DatasetTestCase(unittest.TestCase):
+class DatasetV1TestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
         self.temp_path = Path(self.temp_dir)
-        self.dataset = fs.Dataset.from_dirpath(self.temp_path)
+        self.dataset = fs.DatasetV1.from_dirpath(self.temp_path)
 
     def tearDown(self):
         shutil.rmtree(self.temp_path)
@@ -121,6 +121,66 @@ class DatasetTestCase(unittest.TestCase):
 
         # Clean up temporary files
         expected_path.unlink()
+
+
+class DatasetV2TestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.mkdtemp()
+        self.temp_path = Path(self.temp_dir)
+        self.dataset = fs.DatasetV2(self.temp_path)
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_path)
+
+    def test_data_path(self):
+        self.assertEqual(self.dataset.data, self.temp_path / 'data')
+
+    def test_current_data_path(self):
+        self.assertEqual(self.dataset.current_data, self.temp_path / 'data/current')
+
+    def test_statements_path(self):
+        self.assertEqual(self.dataset.statements, self.temp_path / 'data/statements')
+
+    def test_db_path(self):
+        with self.assertRaises(DeprecationWarning):
+            self.dataset.db
+
+    def test_file_structure(self):
+        self.assertTrue(self.dataset.data.exists())
+        self.assertTrue(self.dataset.current_data.exists())
+        self.assertTrue(self.dataset.statements.exists())
+        self.assertIsNotNone(self.dataset.settings)
+
+    def test_statement_files(self):
+        self.assertEqual(self.dataset.statement_files(), {})
+
+        temp_fp = tempfile.NamedTemporaryFile(suffix='.csv', delete=False)
+        temp_fp.write(b'data')
+        temp_fp.close()
+
+        bank_name, statement_path = 'test_bank', temp_fp.name
+        statement_path = Path(statement_path)
+        filename = statement_path.name
+        new_statement_path = self.dataset.statements / bank_name / filename
+        new_statement_path.parent.mkdir(parents=True, exist_ok=True)
+        new_statement_path.write_bytes(statement_path.read_bytes())
+
+        statement_files = self.dataset.statement_files()
+        self.assertEqual(list(statement_files.keys()), ['test_bank'])
+        self.assertEqual(len(statement_files['test_bank']), 1)
+        csv_file = pathlib.Path(temp_fp.name)
+        self.assertEqual(statement_files['test_bank'][0].name, str(csv_file.name))
+
+        statement_files_info = self.dataset.statement_files_info()
+        self.assertEqual(len(statement_files_info), 1)
+        self.assertTrue('test_bank' in statement_files_info)
+
+        statement_files_info_df = self.dataset.statement_files_info_df()
+        self.assertEqual(statement_files_info_df.shape, (1, 4))
+        self.assertEqual(statement_files_info_df['source'].tolist(), ['test_bank'])
+        self.assertEqual(statement_files_info_df['rows'].tolist(), [0])
+
+        csv_file.unlink()
 
 
 if __name__ == '__main__':

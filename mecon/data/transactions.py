@@ -30,6 +30,8 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     columns = ['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description', 'tags']
 
     def __init__(self, df: pd.DataFrame):
+        if set(self.columns) != set(df.columns):
+            raise ValueError(f"A Transaction object needs all {self.columns} columns: {set(self.columns).difference(df.columns)} is missing")
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)
         fields.AmountColumnMixin.__init__(self, df_wrapper=self)
@@ -73,6 +75,14 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     @classmethod
     def factory(cls, df: pd.DataFrame):
         return super().factory(df)
+
+    @classmethod
+    def empty_transactions_factory(cls):
+        empty_df = pd.DataFrame({col: [] for col in cls.columns})
+        return cls(empty_df)
+
+    def __repr__(self):
+        return f"Transactions({len(self.dataframe())}, {self.date_range()})"
 
     def to_html(self, df_transformer=None):# TODO remove
         styles = """
@@ -202,21 +212,12 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def tags_diff(self,
                   transactions: Transactions,
                   target_tags: list[str] | str | None = None,
-                  # comparison: Literal['']
                   ) -> Transactions:
-        # TODO decide if this is in transactions or fields.TagsColumn
-        target_tags = [target_tags] if target_tags is not None and isinstance(target_tags, str) else target_tags
-        df_this, df_other = self.dataframe(), transactions.dataframe()
-        comparison_results = []
-        for tags_this, tags_other in zip(df_this['tags'], df_other['tags']):
-            tags_this_set, tags_other_set = set(tags_this.split(',')), set(tags_other.split(','))
-            tags_this_focused = tags_this_set.intersection(target_tags) if target_tags is not None else tags_this_set
-            tags_other_focused = tags_other_set.intersection(target_tags) if target_tags is not None else tags_other_set
-            is_different = tags_this_focused != tags_other_focused#len(this_tags_focused.intersection(tags_other_set)) != len(this_tags_focused)
-            comparison_results.append(is_different)
-
-        the_other_minus_this = df_other[comparison_results]
-        diff_trans = Transactions(the_other_minus_this)
+        common_ids = set(self.id).intersection(transactions.id)
+        self_subset, other_subset = self.select_by_ids(common_ids), transactions.select_by_ids(common_ids)
+        res_indices = self_subset.tag_row_wise_diffs(other_subset.tags, target_tags)
+        res_df = self_subset.dataframe()[res_indices]
+        diff_trans = Transactions(res_df)
         return diff_trans
 
     def equals(self,
@@ -230,7 +231,15 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def from_csv(cls, path) -> Transactions:
         df = pd.read_csv(path, index_col=None)
         df['datetime'] = pd.to_datetime(df['datetime'])
+        if 'tags' not in df.columns:
+            logging.warning(f"'tags' column was missing from Transaction object, and it was added with 'empty tags' value.")
+            df['tags'] = ''
+        else:
+            df['tags'].fillna('', inplace=True)
         return cls(df)
+
+    def to_csv(self, path) -> None:
+        self.dataframe().to_csv(path, index=False)
 
 
 # TODO:v3 move other Transaction related classes here like TransactionAggregators

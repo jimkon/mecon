@@ -5,7 +5,7 @@ import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDatasetDirInfo
+# from mecon.app.current_data import WorkingDatasetDirInfo
 from mecon.etl.transformers import MonzoFileStatementTransformer
 
 import monzo_api_lib as monzo
@@ -155,9 +155,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             minutes_since_token_creation = int(
                 monzo_client.minutes_passed_from_token_creation()) if monzo_client.minutes_passed_from_token_creation() else '[None]'
 
-            WorkingDatasetDirInfo().statement_files_info()
-            dataset_dir_info = WorkingDatasetDirInfo()
-            prev_statements = [path for path, *_ in dataset_dir_info.statement_files_info()['MonzoAPI']]# if str(path).startswith('monzo_api_transactions')]
+            prev_statements = [path for path, *_ in dataset.statement_files_info()['MonzoAPI']]# if str(path).startswith('monzo_api_transactions')]
             logging.info(f"{prev_statements=}")
             if prev_statements:
                 df_prev = pd.concat([pd.read_csv(file, index_col=None) for file in prev_statements])

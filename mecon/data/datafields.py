@@ -7,7 +7,7 @@ import logging
 from collections import Counter
 from datetime import datetime, date
 from itertools import chain
-from typing import List, Literal
+from typing import List, Literal, Iterable
 
 import pandas as pd
 
@@ -130,6 +130,17 @@ class IdColumnMixin(ColumnMixin):
 
     def invalid_ids(self):
         return self.id.isna() | self.id.isnull() | self.id.duplicated(keep=False) | self.id.apply(lambda x: not isinstance(x, str))
+
+    def select_by_ids(self, ids: Iterable[str]):
+        rule = tagging.Condition.from_string_values(
+            'id',
+            'none',
+            'in',
+            ids
+        )
+        index_col = tagging.Tagger.get_index_for_rule(self._df_wrapper_obj.dataframe(), rule)
+        df = self.dataframe_wrapper_obj.dataframe()[index_col].reset_index(drop=True)
+        return self._df_wrapper_obj.factory(df)
 
 
 class DateTimeColumnMixin(ColumnMixin):
@@ -357,6 +368,28 @@ class TagsColumnMixin(ColumnMixin):
         tagging.Tagger.tag(tag, new_df)
         return self._df_wrapper_obj.factory(new_df)
 
+    def tag_row_wise_equality(self,
+              other_tags: list[str],
+              target_tags: list[str] | None = None
+              ) -> pd.Series:
+        if len(self.tags) != len(other_tags):
+            raise ValueError(f"Different number of tags lists: {len(self.tags)} != {len(other_tags)}")
+
+        tags_this_set = [set(ts.split(',')) for ts in self.tags]
+        tags_other_set = [set(ts.split(',')) for ts in other_tags]
+        if target_tags is not None:
+            tags_this_set = [ts.intersection(target_tags) for ts in tags_this_set]
+            tags_other_set = [ts.intersection(target_tags) for ts in tags_other_set]
+
+        comps = [tags_this==tags_other for tags_this, tags_other in zip(tags_this_set, tags_other_set)]
+        return pd.Series(comps)
+
+    def tag_row_wise_diffs(self,
+              other_tags: list[str],
+              target_tags: list[str] | None = None
+              ) -> pd.Series:
+        return ~self.tag_row_wise_equality(other_tags, target_tags)
+
 
 class Grouping(abc.ABC):
     @logging_utils.codeflow_log_wrapper('#data#transactions#process')
@@ -431,12 +464,22 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
 
     def _validate_datetime_order(self):
         if not self.datetime.is_monotonic_increasing:
-            raise UnorderedDatedDataframeWrapper
+            raise UnorderedDatedDataframeWrapper(f"Transaction data must be in ascending order.")
 
-    def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:  # TODO add to DataframeWrapper too
-        not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if
-                         len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
-        df = pd.concat(not_empty_dfs).drop_duplicates()
+    # def merge(self, df_wrapper: DatedDataframeWrapper) -> DatedDataframeWrapper:  # TODO add to DataframeWrapper too
+    #     not_empty_dfs = [df for df in [self.dataframe(), df_wrapper.dataframe()] if len(df) > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
+    #     df = pd.concat(not_empty_dfs).drop_duplicates()
+    #     df.sort_values(by='datetime', inplace=True)
+    #     return self.factory(df)
+
+    def merge(self, df_wrappers: DatedDataframeWrapper | list[DatedDataframeWrapper], dedup_cols=None) -> DatedDataframeWrapper:  # TODO untested
+        df_wrappers_list = df_wrappers if isinstance(df_wrappers, list) else [df_wrappers]
+        df_wrappers_list.insert(0, self)
+        not_empty_dfs = [df_wrp.dataframe() for df_wrp in df_wrappers_list if df_wrp.size() > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
+        df = pd.concat(not_empty_dfs)
+        if dedup_cols:
+            df.drop_duplicates(subset=dedup_cols, inplace=True)
+
         df.sort_values(by='datetime', inplace=True)
         return self.factory(df)
 
