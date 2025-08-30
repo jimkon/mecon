@@ -27,12 +27,19 @@ app_ui = shiny_app.app_ui_factory(
 
 
 
-def tag_actions(tag_name):
+def tag_actions(tag_name, edit_enabled=True):
+    tag_info_href = f"""<a href="{shiny_app.url_for_tag_report(filter_in_tags=tag_name)}" target="_blank">Info</a>"""
+
+    if edit_enabled:
+        tag_edit_href = f"""<a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit</a>"""
+    else:
+        tag_edit_href = f"""Editing disabled"""
+
     return HTML(
         f"""
-        <a href="{shiny_app.url_for_tag_report(filter_in_tags=tag_name)}" target="_blank">Info</a>
+        {tag_info_href}
         &nbsp;|&nbsp;
-        <a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit</a>
+        {tag_edit_href}
         """
     )
 
@@ -51,23 +58,22 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def menu_tags_table():
-        tags = data_manager.all_tags()
-        tags_df = pd.DataFrame([tag.name for tag in tags], columns=['Name'])
+        tags_df = data_manager.all_tags_df
 
-        tag_stats_df = tags_metadata_reactive.get()
-        tag_stats_df.columns = [col.capitalize().replace('_', ' ') for col in tag_stats_df.columns]
-        tag_stats_df = tags_df.merge(tag_stats_df, on='Name', how='left')
-        tag_stats_df.sort_values(by=['Name'], ascending=True, inplace=True)
+        tag_stats_df = data_manager.get_tags_metadata()
+        tag_merged_info_df = tags_df.merge(tag_stats_df, on=['name', 'type', 'date_created'], how='left')
+        tag_merged_info_df.columns = [col.capitalize().replace('_', ' ') for col in tag_merged_info_df.columns]
+        tag_merged_info_df.sort_values(by=['Name'], ascending=True, inplace=True)
 
-        tag_stats_df['i'] = list(range(len(tag_stats_df)))
-        tag_stats_df['Actions'] = tag_stats_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
+        tag_merged_info_df['i'] = list(range(len(tag_merged_info_df)))
+        tag_merged_info_df['Actions'] = tag_merged_info_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
 
-        tag_stats_df['Total money in'] = tag_stats_df['Total money in'].apply(lambda x: f"£ {float(x):.2f}")
-        tag_stats_df['Total money out'] = tag_stats_df['Total money out'].apply(lambda x: f"£ {float(x):.2f}")
+        tag_merged_info_df['Total money in'] = tag_merged_info_df['Total money in'].apply(lambda x: f"£ {float(x):.2f}")
+        tag_merged_info_df['Total money out'] = tag_merged_info_df['Total money out'].apply(
+            lambda x: f"£ {float(x):.2f}")
 
 
-        # tags_df['Actions'] = tags_df['Name'].apply(lambda tag_name: tag_actions(tag_name))
-        # tag_stats_df = tags_df.merge(tag_stats_df, on='Name', how='left')
+        tag_merged_info_df['Actions'] = tag_merged_info_df.apply(lambda row: tag_actions(row['Name'], edit_enabled=row['Type']=='Custom'), axis=1)
 
         cols_to_show = ['i',
                         'Name',
@@ -76,8 +82,9 @@ def server(input: Inputs, output: Outputs, session: Session):
                         'Total money out',
                         'Date created',
                         'Date modified',
+                        'Type',
                         'Actions']
-        return tag_stats_df[cols_to_show]
+        return tag_merged_info_df[cols_to_show]
 
     @reactive.effect
     @reactive.event(input.create_button)

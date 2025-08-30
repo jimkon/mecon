@@ -27,6 +27,7 @@ from mecon.utils.datatype_transformations import normalise_df_column_names
 class AccountStatementsSource:
     id = None
     dir_name = None
+    original_provider = None
 
     def __init__(self,
                  working_dir: str | Path,
@@ -102,6 +103,8 @@ class AccountStatementsSource:
 class HSBCAccountStatementsSource(AccountStatementsSource):
     id = 'HSBC'
     dir_name = 'HSBC'
+    original_provider = 'HSBC'
+
 
     def __init__(self, working_dir: str | Path):
         trans_transformer = transformers.HSBCFileStatementTransformer()
@@ -117,6 +120,7 @@ class HSBCAccountStatementsSource(AccountStatementsSource):
 class HSBCSaverAccountStatementsSource(AccountStatementsSource):
     id = 'HSBCSVR'
     dir_name = 'HSBCSVR'
+    original_provider = 'HSBC'
 
     def __init__(self, working_dir: str | Path):
         trans_transformer = transformers.HSBCFileStatementTransformer()
@@ -133,6 +137,7 @@ class HSBCSaverAccountStatementsSource(AccountStatementsSource):
 class MonzoAccountStatementsSource(AccountStatementsSource):
     id = 'MZN'
     dir_name = 'Monzo'
+    original_provider = 'Monzo'
 
     def __init__(self, working_dir: str | Path):
         trans_transformer = transformers.MonzoFileStatementTransformer()
@@ -142,6 +147,7 @@ class MonzoAccountStatementsSource(AccountStatementsSource):
 class RevolutAccountStatementsSource(AccountStatementsSource):
     id = 'REVO'
     dir_name = 'Revolut'
+    original_provider = 'Revolut'
 
     def __init__(self, working_dir: str | Path):
         trans_transformer = transformers.RevoFileStatementTransformer()
@@ -151,6 +157,7 @@ class RevolutAccountStatementsSource(AccountStatementsSource):
 class InvestEngineAccountStatementsSource(AccountStatementsSource):
     id = 'INVENG'
     dir_name = 'INVENG'
+    original_provider = 'InvestEngine'
 
     def __init__(self, working_dir: str | Path):
         trans_transformer = transformers.InvestEngineStatementTransformer()
@@ -160,6 +167,7 @@ class InvestEngineAccountStatementsSource(AccountStatementsSource):
 class Trading212AccountStatementsSource(AccountStatementsSource):
     id = 'TRD212'
     dir_name = 'TRD212'
+    original_provider = 'Trading212'
 
     def __init__(self, working_dir: str | Path):
         trans_transformer = transformers.Trading212StatementTransformer()
@@ -236,6 +244,7 @@ class TrueLayerStatements(APIAccountStatementsSource):
 class TrueLayerHSBCStatements(TrueLayerStatements):
     id = 'TLHSBC'
     dir_name = 'TrueLayerHSBC'
+    original_provider = 'HSBC'
     bank = 'ob-hsbc'
     account_id = 'd4aa58643585c1e3a5f7d3e24cf5e829'
 
@@ -243,6 +252,7 @@ class TrueLayerHSBCStatements(TrueLayerStatements):
 class TrueLayerHSBCSSaverStatements(TrueLayerStatements):
     id = 'TLHSBCSVR'
     dir_name = 'TrueLayerHSBCSaver'
+    original_provider = 'HSBC'
     bank = 'ob-hsbc'
     account_id = '875dba485407b435dfddccc5a91e772b'
 
@@ -250,6 +260,7 @@ class TrueLayerHSBCSSaverStatements(TrueLayerStatements):
 class TrueLayerRevolutGBPStatements(TrueLayerStatements):
     id = 'TLREVOGBP'
     dir_name = 'TrueLayerRevolutGBP'
+    original_provider = 'Revolut'
     bank = 'ob-revolut'
     account_id = '3b2038675f58008e4e58c43a5d8d103c'
 
@@ -257,6 +268,7 @@ class TrueLayerRevolutGBPStatements(TrueLayerStatements):
 class TrueLayerRevolutEURStatements(TrueLayerStatements):
     id = 'TLREVOEUR'
     dir_name = 'TrueLayerRevolutEUR'
+    original_provider = 'Revolut'
     bank = 'ob-revolut'
     account_id = '5f2ed9feaf603a7a7a904469f37b260a'
 
@@ -264,6 +276,7 @@ class TrueLayerRevolutEURStatements(TrueLayerStatements):
 class TrueLayerRevolutRONStatements(TrueLayerStatements):
     id = 'TLREVORON'
     dir_name = 'TrueLayerRevolutRON'
+    original_provider = 'Revolut'
     bank = 'ob-revolut'
     account_id = 'fa5ddbfc7431ffd009445263b4259094'
 
@@ -271,6 +284,7 @@ class TrueLayerRevolutRONStatements(TrueLayerStatements):
 class TrueLayerRevolutHUFStatements(TrueLayerStatements):
     id = 'TLREVOHUF'
     dir_name = 'TrueLayerRevolutHUF'
+    original_provider = 'Revolut'
     bank = 'ob-revolut'
     account_id = '3ea5d7076b553a642d47c90ab5efec8b'
 
@@ -278,6 +292,7 @@ class TrueLayerRevolutHUFStatements(TrueLayerStatements):
 class TrueLayerMonzoStatements(TrueLayerStatements):
     id = 'TLMONZO'
     dir_name = 'TrueLayerMonzo'
+    original_provider = 'Monzo'
     bank = 'ob-monzo'
     account_id = 'bee16ba99227a5079f78408115b05686'
 
@@ -285,6 +300,7 @@ class TrueLayerMonzoStatements(TrueLayerStatements):
 class Trading212APIStatements(APIAccountStatementsSource):
     id = 'Trading212API'
     dir_name = 'Trading212API'
+    original_provider = 'Trading212'
 
     @classmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
@@ -315,6 +331,7 @@ class Trading212APIStatements(APIAccountStatementsSource):
 class MonzoAPIStatements(APIAccountStatementsSource):
     id = 'MonzoAPI'
     dir_name = 'MonzoAPI'
+    original_provider = 'Monzo'
 
     @classmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):

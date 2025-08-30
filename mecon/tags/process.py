@@ -5,6 +5,7 @@ import time
 from collections import namedtuple
 from itertools import chain
 from typing import Any
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -32,6 +33,14 @@ def timeit(func):
 class TaggingSession(abc.ABC):
     def __init__(self, tags: list[Tag]):
         self.tags = tags
+        self.validate_tags()
+
+    def validate_tags(self):
+        tag_names = [t.name for t in self.tags]
+        counter = Counter(tag_names)
+        non_unique_items = {tag_name: cnt for tag_name, cnt in counter.items() if cnt > 1}
+        if len(non_unique_items) > 0:
+            raise ValueError(f"Some Tag names appear more than once: {non_unique_items}")
 
     @abc.abstractmethod
     def tag(self, transactions: Transactions) -> Transactions:
@@ -331,9 +340,8 @@ class RuleExecutionPlanTagging(TaggingSession):
                 # # TODO fix: PerformanceWarning: DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
                 # df_in[f"tags_list_{priority}"] = df_in['new_tags_list']
 
-                new_tags_col_series = df_temp.apply(
-                    # DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
-                    lambda row: list(chain(*[row[col] for col in df_temp.columns])), axis=1).rename(new_tags_col)
+                # DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`
+                new_tags_col_series = df_temp.apply(lambda row: list(chain(*row.values)), axis=1).rename(new_tags_col)
                 df_in = pd.concat([df_in, new_tags_col_series], axis=1)
                 df_in['new_tags_list'] = df_in.apply(lambda row: row['new_tags_list'] + row[new_tags_col], axis=1)
                 df_in['tags'] = df_in['new_tags_list'].apply(lambda tags: ','.join(tags))

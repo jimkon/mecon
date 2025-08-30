@@ -13,6 +13,7 @@ from mecon.tags.process import OptREPTagging, RuleExecutionPlanMonitor
 from mecon.tags.tag_helpers import tag_stats_from_transactions
 from mecon.tags.tagging import Tag
 from mecon.etl import transformers
+from mecon.data import additional_tags
 
 
 class BaseDataManager:
@@ -233,13 +234,19 @@ class CachedFileDataManager:
         self.dataset = dataset
         self.statements_dirpath = self.dataset.statements
 
-        self.transactions = None
         self._transactions_path = self.dataset.current_data / 'transactions.csv'
+        self.transactions = None
         self._load_transactions()
 
-        self.tags_df = None
+        self.custom_tags_df = None
         self._tags_path = self.dataset.current_data / 'tags.csv'
         self._load_tags()
+
+        self.additional_tags_df = None
+        self._load_additional_tags()
+
+        self.all_tags_df = None
+        self._load_all_tags()
 
         self.tags_metadata_df = None
         self._tags_metadata_path = self.dataset.current_data / 'tags_metadata.csv'
@@ -249,20 +256,46 @@ class CachedFileDataManager:
     def _load_transactions(self):
         self.transactions = Transactions.from_csv(self._transactions_path) if self._transactions_path.exists() else None
 
+    def _save_transactions(self):
+        logging.info(f"Saving transactions file to {self._transactions_path}")
+        self.transactions.to_csv(self._transactions_path)
+
     def _load_tags(self):
-        self.tags_df = pd.read_csv(self._tags_path, index_col=None) if self._tags_path.exists() else None
+        self.custom_tags_df = pd.read_csv(self._tags_path, index_col=None) if self._tags_path.exists() else None
+        self.custom_tags_df['type'] = 'Custom'
+
+    def _save_tags(self):
+        logging.info(f"Saving tags file to {self._tags_path}")
+        self.custom_tags_df.to_csv(self._tags_path, index=False)
+
+    def _load_additional_tags(self):
+        basic_tags = additional_tags.get_additional_tags(self.dataset)
+        self.additional_tags_df = pd.DataFrame([{'name': tag.name,
+                                                 'conditions_json': json.dumps(tag.rule.to_json())} for tag in
+                                                basic_tags])
+        self.additional_tags_df['type'] = 'Built-in'
+
+    def _load_all_tags(self):
+        custom_tags_names = self.custom_tags_df['name']
+        if len(custom_tags_names) != len(set(custom_tags_names)):
+            logging.warning(
+                f"Found non unique tag names in the custom tag set, that will probably raise an error while tagging data")
+
+        not_overridden_basic_tags_df = self.additional_tags_df[
+            ~self.additional_tags_df['name'].isin(custom_tags_names)].copy()
+
+        self.all_tags_df = pd.concat([self.custom_tags_df, not_overridden_basic_tags_df])
+        logging.info(f"Found {len(self.custom_tags_df)} custom tags, "
+                     f"{len(self.additional_tags_df)} basic tags "
+                     f"({len(self.additional_tags_df) - len(not_overridden_basic_tags_df)} of which are overridden by the custom ones) "
+                     f"and merged them in {len(self.all_tags_df)} tags")
 
     def _load_tags_metadata(self):
         self.tags_metadata_df = pd.read_csv(self._tags_metadata_path,
                                             index_col=None) if self._tags_metadata_path.exists() else None
 
-    def _save_transactions(self):
-        self.transactions.to_csv(self._transactions_path)
-
-    def _save_tags(self):
-        self.tags_df.to_csv(self._tags_path, index=False)
-
     def _save_tags_metadata(self):
+        logging.info(f"Saving tags metadata file to {self._tags_metadata_path}")
         self.tags_metadata_df.to_csv(self._tags_metadata_path, index=False)
 
     def _create_statement_manager(self):
@@ -304,7 +337,7 @@ class CachedFileDataManager:
         return self.transactions
 
     def get_tag(self, tag_name) -> Tag | None:
-        tags_dict = self.tags_df.set_index('name').to_dict('index')
+        tags_dict = self.all_tags_df.set_index('name').to_dict('index')
 
         if tag_name not in tags_dict:
             return None
@@ -314,61 +347,57 @@ class CachedFileDataManager:
         return tag
 
     def update_tag(self, tag: Tag, update_tags=True):
-        tags_dict = self.tags_df.set_index('name').to_dict('index')
+        if tag.name not in self.custom_tags_df['name']:
+            date_created = self.custom_tags_df['date_created'].iloc[0]
+        else:
+            date_created = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 
-        tag_name = tag.name
-        if tag_name not in tags_dict:
-            tags_dict[tag_name] = {
-                'conditions_json': None,
-                'date_created': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
-            }
-        tags_dict[tag_name]['conditions_json'] = json.dumps(tag.rule.to_json())
-        self.tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
+        updated_tag_df = pd.DataFrame([{'name': tag.name,
+                                        'conditions_json': json.dumps(tag.rule.to_json()),
+                                        'date_created': date_created}])
+
+        self.custom_tags_df = pd.concat([
+            self.custom_tags_df[self.custom_tags_df['name'] != tag.name].copy(), # removed old tag if existed
+            updated_tag_df
+        ])
+
+        self._load_all_tags()
+
         if update_tags:
             self.reset_transaction_tags()
 
         self._save_tags()
 
     def delete_tag(self, tag_name: str, update_tags=True):
-        tags_dict = self.tags_df.set_index('name').to_dict('index')
+        self.custom_tags_df = self.custom_tags_df[self.custom_tags_df['name'] != tag_name].copy()
 
-        if tag_name not in tags_dict:
-            return
-
-        del tags_dict[tag_name]
-        self.tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
-
+        self._load_all_tags()  # instead of doing: self.all_tags_df = self.all_tags_df[self.all_tags_df['name'] != tag_name].copy()
         if update_tags:
             self.reset_transaction_tags()
 
         self._save_tags()
 
     def all_tags(self) -> List[Tag]:
-        tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in self.tags_df.iterrows()]
-        return tags
+        all_tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in self.all_tags_df.iterrows()]
+        return all_tags
 
     def reset_transaction_tags(self):
         transactions = self.get_transactions().reset_tags()
         all_tags = self.all_tags()
 
-        sess = OptREPTagging(all_tags) \
-            .create_rule_execution_plan() \
-            .create_optimised_rule_execution_plan()
-        transactions = sess.tag(transactions,
-                                monitor=RuleExecutionPlanMonitor(self.dataset))
-        self.transactions = transactions
+        tagged_transactions = transactions.apply_tags(all_tags, monitor=RuleExecutionPlanMonitor(self.dataset))
+
+        self.transactions = tagged_transactions
         self._save_transactions()
 
         tags_metadata = tag_stats_from_transactions(transactions)
         self.replace_tags_metadata(tags_metadata)
 
     def get_tags_metadata(self):
-        if self.tags_metadata_df is None:
-            path = self.dataset.current_data / 'tags_metadata.csv'
-            self.tags_metadata_df = pd.read_csv(path, index_col=None)
+        if self.tags_metadata_df is None:  # TODO redundant?
+            self.tags_metadata_df = pd.read_csv(self._tags_metadata_path, index_col=None)
 
-        self.all_tags()  # load tags if not already loaded
-        df_metadata = self.tags_df.merge(self.tags_metadata_df, on='name')
+        df_metadata = self.all_tags_df.merge(self.tags_metadata_df, on='name')
         del df_metadata['conditions_json']
 
         return df_metadata
@@ -377,7 +406,6 @@ class CachedFileDataManager:
         self.tags_metadata_df = metadata_df
         self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
         self._save_tags_metadata()
-
 
     def reset(self):
         self.reset_transactions()
@@ -554,7 +582,6 @@ class CachedFileDataManagerLegacy:
         self.tags_metadata_df = metadata_df
         self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
         self._save_tags_metadata()
-
 
     def reset(self):
         self.reset_transactions()
