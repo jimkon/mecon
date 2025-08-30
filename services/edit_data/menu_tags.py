@@ -74,7 +74,6 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
         tag_merged_info_df['Actions'] = tag_merged_info_df.apply(lambda row: tag_actions(row['Name'], edit_enabled=row['Type']=='Custom'), axis=1)
-        # tag_stats_df = tags_df.merge(tag_stats_df, on='Name', how='left')
 
         cols_to_show = ['i',
                         'Name',
