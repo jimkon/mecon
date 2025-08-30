@@ -117,7 +117,7 @@ app_ui = shiny_app.app_ui_factory(
                     ui.accordion_panel('Tags', ui.card(
                         ui.h3("Tagging report"),
                         ui.output_data_frame("tags_info_dataframe"),
-                        ui.h3("Tagging conditions stats"),
+                        ui.h3("Problematic Tagging conditions stats"),
                         ui.output_data_frame("tag_conditions_stats_dataframe"),
                     )),
                     ui.accordion_panel('Tagged Transactions', ui.card(
@@ -285,6 +285,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         monitor = RuleExecutionPlanMonitor(dataset)
         monitor.load()
         df_stats = monitor.get_conditions_stats()
+        # df_sel = df_stats.copy()
         df_sel = df_stats[df_stats['all_true'] | df_stats['all_false']]
         df_sel.replace([False, True], value=['False', 'True'], inplace=True)
 
@@ -292,7 +293,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         def make_link(tag_name: str):
             href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
             # rel=noopener is a small security best-practice with target=_blank
-            return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit {tag_name}</a>')
+            return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit \'{tag_name}\'</a>')
         # Make sure every row becomes HTML (fill NAs if needed)
         df_sel["tag"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
 
