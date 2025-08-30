@@ -270,8 +270,9 @@ class CachedFileDataManager:
 
     def _load_additional_tags(self):
         basic_tags = additional_tags.get_additional_tags(self.dataset)
-        self.additional_tags_df = pd.DataFrame([{'name':tag.name,
-                                                'conditions_json':json.dumps(tag.rule.to_json())} for tag in basic_tags])
+        self.additional_tags_df = pd.DataFrame([{'name': tag.name,
+                                                 'conditions_json': json.dumps(tag.rule.to_json())} for tag in
+                                                basic_tags])
         self.additional_tags_df['type'] = 'Built-in'
 
     def _load_all_tags(self):
@@ -280,7 +281,8 @@ class CachedFileDataManager:
             logging.warning(
                 f"Found non unique tag names in the custom tag set, that will probably raise an error while tagging data")
 
-        not_overridden_basic_tags_df = self.additional_tags_df[~self.additional_tags_df['name'].isin(custom_tags_names)].copy()
+        not_overridden_basic_tags_df = self.additional_tags_df[
+            ~self.additional_tags_df['name'].isin(custom_tags_names)].copy()
 
         self.all_tags_df = pd.concat([self.custom_tags_df, not_overridden_basic_tags_df])
         logging.info(f"Found {len(self.custom_tags_df)} custom tags, "
@@ -345,30 +347,31 @@ class CachedFileDataManager:
         return tag
 
     def update_tag(self, tag: Tag, update_tags=True):
-        tags_dict = self.custom_tags_df.set_index('name').to_dict('index')
+        if tag.name not in self.custom_tags_df['name']:
+            date_created = self.custom_tags_df['date_created'].iloc[0]
+        else:
+            date_created = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
 
-        tag_name = tag.name
-        if tag_name not in tags_dict:
-            tags_dict[tag_name] = {
-                'conditions_json': None,
-                'date_created': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
-            }
-        tags_dict[tag_name]['conditions_json'] = json.dumps(tag.rule.to_json())
-        self.custom_tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
+        updated_tag_df = pd.DataFrame([{'name': tag.name,
+                                        'conditions_json': json.dumps(tag.rule.to_json()),
+                                        'date_created': date_created}])
+
+        self.custom_tags_df = pd.concat([
+            self.custom_tags_df[self.custom_tags_df['name'] != tag.name].copy(), # removed old tag if existed
+            updated_tag_df
+        ])
+
+        self._load_all_tags()
+
         if update_tags:
             self.reset_transaction_tags()
 
         self._save_tags()
 
     def delete_tag(self, tag_name: str, update_tags=True):
-        tags_dict = self.custom_tags_df.set_index('name').to_dict('index')
+        self.custom_tags_df = self.custom_tags_df[self.custom_tags_df['name'] != tag_name].copy()
 
-        if tag_name not in tags_dict:
-            return
-
-        del tags_dict[tag_name]
-        self.custom_tags_df = pd.DataFrame.from_dict(tags_dict, orient='index').reset_index().rename(columns={'index': 'name'})
-
+        self._load_all_tags()  # instead of doing: self.all_tags_df = self.all_tags_df[self.all_tags_df['name'] != tag_name].copy()
         if update_tags:
             self.reset_transaction_tags()
 
@@ -391,7 +394,7 @@ class CachedFileDataManager:
         self.replace_tags_metadata(tags_metadata)
 
     def get_tags_metadata(self):
-        if self.tags_metadata_df is None: # TODO redundant?
+        if self.tags_metadata_df is None:  # TODO redundant?
             self.tags_metadata_df = pd.read_csv(self._tags_metadata_path, index_col=None)
 
         df_metadata = self.all_tags_df.merge(self.tags_metadata_df, on='name')
