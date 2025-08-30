@@ -13,6 +13,7 @@ from mecon.tags.process import OptREPTagging, RuleExecutionPlanMonitor
 from mecon.tags.tag_helpers import tag_stats_from_transactions
 from mecon.tags.tagging import Tag
 from mecon.etl import transformers
+from mecon.data import additional_tags
 
 
 class BaseDataManager:
@@ -263,6 +264,7 @@ class CachedFileDataManager:
         self.tags_df.to_csv(self._tags_path, index=False)
 
     def _save_tags_metadata(self):
+        logging.info(f"Saving tags metadata file to {self._tags_metadata_path}")
         self.tags_metadata_df.to_csv(self._tags_metadata_path, index=False)
 
     def _create_statement_manager(self):
@@ -344,19 +346,30 @@ class CachedFileDataManager:
         self._save_tags()
 
     def all_tags(self) -> List[Tag]:
-        tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in self.tags_df.iterrows()]
-        return tags
+        custom_tags = [Tag.from_json_string(row['name'], row['conditions_json']) for i, row in self.tags_df.iterrows()]
+        custom_tags_names = [tag.name for tag in custom_tags]
+        if len(custom_tags_names) != len(set(custom_tags_names)):
+            logging.warning(f"Found non unique tag names in the custom tag set, that will probably raise an error while tagging data")
+
+        basic_tags = additional_tags.get_additional_tags(self.dataset)
+        not_overridden_basic_tags = [tag
+                      for tag in basic_tags
+                      if tag.name not in custom_tags_names] #
+        all_tags = custom_tags
+        all_tags.extend(not_overridden_basic_tags)
+        logging.info(f"Found {len(all_tags)} custom tags, "
+                     f"{len(basic_tags)} basic tags "
+                     f"({len(basic_tags)-len(not_overridden_basic_tags)} of which are overridden by the custom ones) "
+                     f"and merged them in {len(all_tags)} tags")
+        return all_tags
 
     def reset_transaction_tags(self):
         transactions = self.get_transactions().reset_tags()
         all_tags = self.all_tags()
 
-        sess = OptREPTagging(all_tags) \
-            .create_rule_execution_plan() \
-            .create_optimised_rule_execution_plan()
-        transactions = sess.tag(transactions,
-                                monitor=RuleExecutionPlanMonitor(self.dataset))
-        self.transactions = transactions
+        tagged_transactions = transactions.apply_tags(all_tags, monitor=RuleExecutionPlanMonitor(self.dataset))
+        
+        self.transactions = tagged_transactions
         self._save_transactions()
 
         tags_metadata = tag_stats_from_transactions(transactions)
@@ -364,8 +377,7 @@ class CachedFileDataManager:
 
     def get_tags_metadata(self):
         if self.tags_metadata_df is None:
-            path = self.dataset.current_data / 'tags_metadata.csv'
-            self.tags_metadata_df = pd.read_csv(path, index_col=None)
+            self.tags_metadata_df = pd.read_csv(self._tags_metadata_path, index_col=None)
 
         self.all_tags()  # load tags if not already loaded
         df_metadata = self.tags_df.merge(self.tags_metadata_df, on='name')
