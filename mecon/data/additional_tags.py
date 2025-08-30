@@ -86,8 +86,9 @@ CURRENCY_TAG_SET = {
     Tag.from_json('£', [{"currency": {'equal': 'GBP'}}]),
     Tag.from_json('€', [{"currency": {'equal': 'EUR'}}]),
     Tag.from_json('$', [{"currency": {'equal': 'USD'}}]),
-    Tag.from_json('HUF', [{"currency": {'equal': 'HUF'}}]),
-    Tag.from_json('RON', [{"currency": {'equal': 'RON'}}]),
+    Tag.from_json('Hungarian Forint', [{"currency": {'equal': 'HUF'}}]), # 0 HUF transactions
+    Tag.from_json('Romanian Leu', [{"currency": {'equal': 'RON'}}]),
+    Tag.from_json('Swiss Franc', [{"currency": {'equal': 'CHF'}}]),
     # or use a list of all currencies
 }
 
