@@ -171,7 +171,7 @@ def create_tag_conditions_stats_dataframe(compact=True):
 
     if compact:
         def agg_strings_in_bulletpoints(arr):
-            arr_str = map(str, arr)
+            arr_str = [str(el).replace('<', '').replace('>', '') for el in arr]
             html_list = f"<ol><li>{'</li><li>'.join(arr_str)}</li></ol>"
             return ui.HTML(html_list)
 
@@ -193,6 +193,7 @@ def create_tag_conditions_stats_dataframe(compact=True):
 
     logging.info(f"tag_conditions_stats_dataframe-> {df_res.shape=}, {compact=}")
     return df_res
+create_tag_conditions_stats_dataframe()
 
 
 def server(input: Inputs, output: Outputs, session: Session):
