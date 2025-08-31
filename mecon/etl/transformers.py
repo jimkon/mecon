@@ -37,7 +37,7 @@ def transaction_id_formula(transaction, source, txid=None):
     #     raise ValueError(f"Invalid or unknown transaction source name: {source}")
 
     datetime_str = transaction['datetime'].strftime("d%Y%m%dt%H%M%S")
-    amount_str = f"a{'p' if transaction['amount'] > 0 else 'n'}{int(100 * abs(transaction['amount']))}"
+    amount_str = f"a{'p' if transaction['amount'] > 0 else 'n'}{int(100 * abs(transaction['amount']))}" # TODO use amount curr as amount will differ based on currency rates and conversions
     if txid is None:
         id_string = f"id.{transaction['id']}"  # TODO that can change depending on the dataset. maybe get different counter for each day
     else:
