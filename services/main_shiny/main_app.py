@@ -183,7 +183,7 @@ def create_tag_conditions_stats_dataframe(compact=True):
             'priority': set,
         }).reset_index()
         df_compact['actions'] = df_compact["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
-        df_res = df_compact
+        df_res = df_compact[['tag', 'actions', 'type', 'all_true', 'all_false', 'depending on', 'rule', 'priority']]
     else:
         df_res = df_sel
 
