@@ -6,6 +6,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from mecon import config
 from mecon.app import shiny_app
 from mecon.app.current_data import WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
+from mecon.data.data_management import CachedFileDataManager
 # from mecon.app.current_data import WorkingDatasetDirInfo
 from mecon.etl import transformers
 from mecon.tags.process import RuleExecutionPlanMonitor
@@ -19,17 +20,21 @@ logging.getLogger().setLevel(logging.INFO)
 # TODO settings are not refreshed if i change something manually. maybe shiny is caching stuff, because something similar happens to the data in the reports
 # TODO need to rework the etl. statements should be treated as unique, don't check for duplicate rows between different statements. also, i should instantly convert them to transactions and add them to transactions table, skipping the bank statement tables entirely. the will reduce the db size, and complexity, and it will allow any data to be added by only adding the parser/etl converted
 
-datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
+datasets_dir = config.DEFAULT_DATASETS_DIR_PATH #
 if not datasets_dir.exists():
     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
 datasets_obj = WorkingDatasetDir()
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 dataset = datasets_obj.working_dataset
+# dataset = shiny_app.get_working_dataset()
+# datasets_dict = {dataset.name: dataset.name for dataset in shiny_app.get_all_datasets()}
+
 
 def source_info_df(source):
     df = dataset.statement_files_info_df()
     df_res = df[df['source'] == source]
     return df_res
+
 
 # def source_panel_factory(source_name, *args):
 #     element_name_id = source_name.lower().replace(' ', '_')
@@ -130,6 +135,32 @@ app_ui = shiny_app.app_ui_factory(
         )
     )
 )
+
+def create_tag_conditions_stats_dataframe():
+    monitor = RuleExecutionPlanMonitor(dataset)
+    monitor.load()
+
+    dm = CachedFileDataManager(dataset)
+    df_stats = monitor.get_conditions_stats()
+    # df_sel = df_stats.copy()
+    df_stats = df_stats.merge(dm.all_tags_df[['name', 'type']].rename(columns={'name':'tag', 'type': 'tag_type'}), how='left', on='tag')
+
+    df_sel = df_stats[(df_stats['all_true']) | (df_stats['all_false']) & (df_stats['tag_type']=='Custom')].copy()
+    df_sel.replace([False, True], value=['False', 'True'], inplace=True)
+
+    # df_sel['tag'] = df_sel['tag'].apply(lambda tag_name: f'<a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit {tag_name}</a>')
+    def make_link(tag_name: str):
+        href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
+        # rel=noopener is a small security best-practice with target=_blank
+        return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit \'{tag_name}\'</a>')
+    # Make sure every row becomes HTML (fill NAs if needed)
+    df_sel["actions"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
+
+
+    return df_sel
+
+# create_tag_conditions_stats_dataframe()
+# breakpoint()
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -282,22 +313,23 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def tag_conditions_stats_dataframe():
-        monitor = RuleExecutionPlanMonitor(dataset)
-        monitor.load()
-        df_stats = monitor.get_conditions_stats()
-        # df_sel = df_stats.copy()
-        df_sel = df_stats[df_stats['all_true'] | df_stats['all_false']]
-        df_sel.replace([False, True], value=['False', 'True'], inplace=True)
+        # monitor = RuleExecutionPlanMonitor(dataset)
+        # monitor.load()
+        # df_stats = monitor.get_conditions_stats()
+        # # df_sel = df_stats.copy()
+        # df_sel = df_stats[df_stats['all_true'] | df_stats['all_false']]
+        # df_sel.replace([False, True], value=['False', 'True'], inplace=True)
+        #
+        # # df_sel['tag'] = df_sel['tag'].apply(lambda tag_name: f'<a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit {tag_name}</a>')
+        # def make_link(tag_name: str):
+        #     href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
+        #     # rel=noopener is a small security best-practice with target=_blank
+        #     return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit \'{tag_name}\'</a>')
+        # # Make sure every row becomes HTML (fill NAs if needed)
+        # df_sel["tag"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
+        df_sel = create_tag_conditions_stats_dataframe()
 
-        # df_sel['tag'] = df_sel['tag'].apply(lambda tag_name: f'<a href="{shiny_app.url_for_tag_edit(filter_in_tags=tag_name)}" target="_blank">Edit {tag_name}</a>')
-        def make_link(tag_name: str):
-            href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
-            # rel=noopener is a small security best-practice with target=_blank
-            return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit \'{tag_name}\'</a>')
-        # Make sure every row becomes HTML (fill NAs if needed)
-        df_sel["tag"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
-
-        return shiny_app.render_table_standard(df_sel)
+        return shiny_app.render_table_standard(df_sel, format_columns=True)
 
     @render.data_frame
     def tagged_transactions_info_dataframe():

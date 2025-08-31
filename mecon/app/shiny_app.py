@@ -20,6 +20,14 @@ logging.getLogger().setLevel(logging.INFO)
 # datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 # dataset = datasets_obj.working_dataset
 
+def get_all_datasets():
+    datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
+    if not datasets_dir.exists():
+        raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
+    datasets_obj = WorkingDatasetDir()
+    return datasets_obj.datasets()
+
+
 def get_working_dataset():
     datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
     if not datasets_dir.exists():
