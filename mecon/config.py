@@ -1,5 +1,6 @@
 # TODO:v3 work with relative files
 import logging
+import os
 import pathlib
 from os import getenv
 from pathlib import Path
@@ -23,10 +24,18 @@ if MECON_ROOT_DIRPATH is None or MECON_ROOT_DIRPATH == "":
     else:
         raise ValueError(f"Cannot find 'mecon' root dir in path: {_file_path}")
 
+_mecon_dotenv_path = pathlib.Path(MECON_ROOT_DIRPATH) / '.env'
+if _mecon_dotenv_path.exists():
+    logging.info(f"Found .env file at {_mecon_dotenv_path}. Reading it...")
+    import dotenv
+    dotenv.load_dotenv(str(_mecon_dotenv_path))
+
 MECON_VERSION = '3.0.0'
 
 
-DEFAULT_DATASETS_DIR_PATH = MECON_ROOT_DIRPATH / "datasets"
+DEFAULT_DATASETS_DIR_PATH = pathlib.Path(os.getenv('MECON_DATASETS_DIR', default=MECON_ROOT_DIRPATH / "datasets"))
+logging.info(f"DEFAULT_DATASETS_DIR_PATH={DEFAULT_DATASETS_DIR_PATH=}")
+
 SETTINGS_JSON_FILENAME = r"settings.json"
 SETTINGS_JSON_FILEPATH = Path(DEFAULT_DATASETS_DIR_PATH, SETTINGS_JSON_FILENAME)
 
@@ -70,3 +79,4 @@ EXPECTED_MONZO_COLUMNS_IN_RAW_STATEMENT = {'Transaction',
 SHINY_DEFAULT_FILTER_PERIOD = 'All'
 SHINY_DEFAULT_FILTER_TIME_UNIT = 'month'
 
+logging.info(f"Configuration has been set.")

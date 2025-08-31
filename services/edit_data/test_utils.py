@@ -82,7 +82,7 @@
 #
 #         datasets_dir = pathlib.Path(__file__).parent.parent.parent / 'datasets'
 #         settings = Settings()
-#         settings['DATASETS_DIR'] = str(datasets_dir)
+#         settings['MECON_DATASETS_DIR'] = str(datasets_dir)
 #         data_manager = WorkingDataManager()
 #         self.transactions = data_manager.get_transactions()
 #

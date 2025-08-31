@@ -7,7 +7,7 @@ services:
       - 8000:8000
     volumes:
 #      - ./datasets:/mecon/datasets
-      - "${DATASETS_DIR}:/mecon/datasets"
+      - "${MECON_DATASETS_DIR}:/mecon/datasets"
 
   reports_app:
     build:
@@ -16,7 +16,7 @@ services:
       - 8001:8000
     volumes:
 #      - ./datasets:/mecon/datasets
-      - "${DATASETS_DIR}:/mecon/datasets"
+      - "${MECON_DATASETS_DIR}:/mecon/datasets"
   edit_data_app:
     build:
       dockerfile: services/edit_data/Dockerfile
@@ -24,5 +24,5 @@ services:
       - 8002:8000
     volumes:
 #      - ./datasets:/mecon/datasets
-      - "${DATASETS_DIR}:/mecon/datasets"
+      - "${MECON_DATASETS_DIR}:/mecon/datasets"
 
