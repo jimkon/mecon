@@ -156,7 +156,6 @@ def create_tag_conditions_stats_dataframe(compact=True):
     df_merged = df_stats.merge(df_types, how='left', on='tag')
     df_merged['tag_type'].fillna('Unknown', inplace=True)
 
-
     df_sel = df_merged[
         (df_merged['tag_type'] != 'Built-in') & ((df_merged['all_true']) | (df_merged['all_false']))].copy()
     df_sel.replace([False, True], value=['False', 'True'], inplace=True)
@@ -171,16 +170,21 @@ def create_tag_conditions_stats_dataframe(compact=True):
     df_sel["actions"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
 
     if compact:
-        import json
+        def agg_strings_in_bulletpoints(arr):
+            arr_str = map(str, arr)
+            html_list = f"<ol><li>{'</li><li>'.join(arr_str)}</li></ol>"
+            return ui.HTML(html_list)
+
+
         df_sel['all_true'] = df_sel['all_true'].replace({'True': 1, 'False': 0})
         df_sel['all_false'] = df_sel['all_false'].replace({'True': 1, 'False': 0})
         df_compact = df_sel.groupby('tag').agg({
-            'type': lambda x: ' and '.join([f"{v}x{k}" for k,v in pd.Series.value_counts(x).to_dict().items()]),
+            'type': lambda x: agg_strings_in_bulletpoints([f"{v}x {k}{'s' if v>1 else ''}" for k, v in pd.Series.value_counts(x).to_dict().items()]),
             'all_true': 'sum',
             'all_false': 'sum',
-            'depending on': set,
-            'rule': set,
-            'priority': set,
+            'depending on': agg_strings_in_bulletpoints,
+            'rule': agg_strings_in_bulletpoints,
+            'priority': agg_strings_in_bulletpoints,
         }).reset_index()
         df_compact['actions'] = df_compact["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
         df_res = df_compact[['tag', 'actions', 'type', 'all_true', 'all_false', 'depending on', 'rule', 'priority']]
@@ -342,7 +346,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def tag_conditions_stats_dataframe():
         df = create_tag_conditions_stats_dataframe(compact=input.compact_tag_conditions_stats_dataframe_checkbox())
-        logging.info(f"Tag conditions stats: {df=}")
         return shiny_app.render_table_standard(df, format_columns=True)
 
     @render.data_frame
