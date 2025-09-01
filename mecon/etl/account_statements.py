@@ -429,10 +429,17 @@ class StatementsManager:
             logging.warning(f"Unknown source directory in {dataset} statements dir: {sub_dirs.difference(source_dir_names)}")
         return found_sources
 
-    def fetch_from_apis(self):
+    def get_sources_with_fetch_operation(self):
+        f_sources = []
         for source in self.sources:
             if issubclass(source.__class__, APIAccountStatementsSource) and hasattr(source, 'fetch'):
-                source.fetch()
+                f_sources.append(source)
+        logging.info(f"Fetched {len(f_sources)} sources that can fetch data, {f_sources}")
+        return f_sources
+
+    def fetch_from_apis(self):
+        for source in self.get_sources_with_fetch_operation():
+            source.fetch()
 
     def collect_statement_files(self):
         return {s.id: s.statement_filepaths for s in self.sources}

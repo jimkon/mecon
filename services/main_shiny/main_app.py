@@ -85,6 +85,7 @@ app_ui = shiny_app.app_ui_factory(
                          )),
             ui.nav_panel(
                 'Data Flow',
+                ui.input_task_button(id='fetch_data_button', label='Fetch new transaction data from providers'),
                 ui.input_task_button(id='reset_button', label='Reset data from statements'),
                 ui.accordion(
                     ui.accordion_panel('Sources', ui.card(
@@ -355,6 +356,19 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_tags_info.columns = ['tag', 'name']
         res = render.DataGrid(df_tags_info, selection_mode="row")
         return res
+
+    @reactive.effect
+    @reactive.event(input.fetch_data_button)
+    def _():
+        logging.info(f"Fetch data button")
+        am = data_manager.get_statement_manager()
+        fsources = am.get_sources_with_fetch_operation()
+        for source in fsources:
+            try:
+                source.fetch()
+            except Exception as e:
+                logging.error(f"Failed to fetch source {source}: {e}")
+
 
     @reactive.effect
     @reactive.event(input.reset_button)

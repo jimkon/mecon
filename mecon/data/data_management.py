@@ -298,28 +298,28 @@ class CachedFileDataManager:
         logging.info(f"Saving tags metadata file to {self._tags_metadata_path}")
         self.tags_metadata_df.to_csv(self._tags_metadata_path, index=False)
 
-    def _create_statement_manager(self):
+    def get_statement_manager(self):
         source_names_to_look_for = [source for source, flag in self.dataset.settings['sources'].items() if flag]
         am = account_statements.StatementsManager.from_dataset(self.dataset, source_names_to_look_for)
         return am
 
     def get_statement_filepaths(self) -> dict[str, list[pathlib.Path]]:
-        am = self._create_statement_manager()
+        am = self.get_statement_manager()
         sources_and_filenames = am.collect_statement_files()
         return sources_and_filenames
 
     def get_statements(self) -> dict[str, list[pd.DataFrame]]:
-        am = self._create_statement_manager()
+        am = self.get_statement_manager()
         sources_and_statements = am.collect_statement_dataframes()
         return sources_and_statements
 
     def get_transformed_statements(self) -> dict[str, pd.DataFrame]:
-        am = self._create_statement_manager()
+        am = self.get_statement_manager()
         sources_and_transactions = am.collect_transactions()
         return sources_and_transactions
 
     def reset_transactions(self):
-        am = self._create_statement_manager()
+        am = self.get_statement_manager()
         self.transactions = am.collect_and_merge_transactions()
         if self.transactions.size() == 0:
             raise ValueError(f"No transactions found for this {len(am.sources)} source: {am.sources}")
