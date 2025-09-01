@@ -300,6 +300,7 @@ class CachedFileDataManager:
 
     def get_statement_manager(self):
         source_names_to_look_for = [source for source, flag in self.dataset.settings['sources'].items() if flag]
+        logging.info(f"Creating new StatementsManager with {len(source_names_to_look_for)} sources: {source_names_to_look_for}")
         am = account_statements.StatementsManager.from_dataset(self.dataset, source_names_to_look_for)
         return am
 

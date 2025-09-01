@@ -174,6 +174,16 @@ class Trading212AccountStatementsSource(AccountStatementsSource):
         super().__init__(working_dir, trans_transformer)
 
 
+class Trading212CashISAAccountStatementsSource(AccountStatementsSource):
+    id = 'TRD212_CASH_ISA'
+    dir_name = 'TRD212_CASH_ISA'
+    original_provider = 'Trading212'
+
+    def __init__(self, working_dir: str | Path):
+        trans_transformer = transformers.Trading212StatementTransformer()
+        super().__init__(working_dir, trans_transformer)
+
+
 class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
     def __init__(self,
                  working_dir: str | Path,
@@ -364,6 +374,7 @@ ACCOUNT_STATEMENT_SOURCES = [
     RevolutAccountStatementsSource,
     InvestEngineAccountStatementsSource,
     Trading212AccountStatementsSource,
+    Trading212CashISAAccountStatementsSource,
     TrueLayerHSBCStatements,
     TrueLayerHSBCSSaverStatements,
     TrueLayerRevolutGBPStatements,
