@@ -193,7 +193,6 @@ def create_tag_conditions_stats_dataframe(compact=True):
 
     logging.info(f"tag_conditions_stats_dataframe-> {df_res.shape=}, {compact=}")
     return df_res
-create_tag_conditions_stats_dataframe()
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -341,8 +340,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def tags_info_dataframe():
         df_tags_info = data_manager.get_tags_metadata()
-        res = render.DataGrid(df_tags_info, selection_mode="row")
-        return res
+        # res = render.DataGrid(df_tags_info, selection_mode="row")
+        return shiny_app.render_table_standard(df_tags_info, format_columns=True)
 
     @render.data_frame
     def tag_conditions_stats_dataframe():
