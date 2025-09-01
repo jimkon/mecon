@@ -368,6 +368,9 @@ class Trading212StatementTransformer(StatementTransformer):
     source_name = 'TRD212'
     source_name_abr = 'TRD212'
 
+    def __init__(self, specific_source=None):
+        self._specific_source = specific_source if specific_source is not None else self.source_name
+
     def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Trading212 raw transactions ({df.shape} shape)")
         df = df.copy()
@@ -382,7 +385,7 @@ class Trading212StatementTransformer(StatementTransformer):
         df['other_description'] = df[cols_to_concat].to_dict(orient='records')
 
         df_transformed['description'] = df.apply(
-            lambda row: f'bank:{self.source_name}, ' + f' other_fields:{row["other_description"]}',
+            lambda row: f'bank:{self._specific_source}, ' + f' other_fields:{row["other_description"]}',
             axis=1)
 
         df_transformed['id'] = df['id']

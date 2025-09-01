@@ -78,7 +78,9 @@ class AccountStatementsSource:
 
                 tx = Transactions(df_tx)
                 txs.append(tx)
-            statement_transactions = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:], dedup_cols=['id'])
+            statement_transactions = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:],
+                                                                                                          dedup_cols=[
+                                                                                                              'id'])
 
         logging.info(f"AccountStatements({self.name}) "
                      f"transformed {len(all_dfs)} files "
@@ -104,7 +106,6 @@ class HSBCAccountStatementsSource(AccountStatementsSource):
     id = 'HSBC'
     dir_name = 'HSBC'
     original_provider = 'HSBC'
-
 
     def __init__(self, working_dir: str | Path):
         trans_transformer = transformers.HSBCFileStatementTransformer()
@@ -170,7 +171,7 @@ class Trading212AccountStatementsSource(AccountStatementsSource):
     original_provider = 'Trading212'
 
     def __init__(self, working_dir: str | Path):
-        trans_transformer = transformers.Trading212StatementTransformer()
+        trans_transformer = transformers.Trading212StatementTransformer(self.id)
         super().__init__(working_dir, trans_transformer)
 
 
@@ -180,7 +181,7 @@ class Trading212CashISAAccountStatementsSource(AccountStatementsSource):
     original_provider = 'Trading212'
 
     def __init__(self, working_dir: str | Path):
-        trans_transformer = transformers.Trading212StatementTransformer()
+        trans_transformer = transformers.Trading212StatementTransformer(self.id)
         super().__init__(working_dir, trans_transformer)
 
 
@@ -240,15 +241,14 @@ class TrueLayerStatements(APIAccountStatementsSource):
         json_transactions = self.api_handler.get_transactions(self.bank.lower(), self.account_id)
         df = json_to_csv(json_transactions)
         if len(df) == 0:
-            logging.info(f"{self.__class__.__name__}: No transactions fetched for {self.bank}:{self.id} and {self.account_id}. No file added to {self.dir_name}.")
+            logging.info(
+                f"{self.__class__.__name__}: No transactions fetched for {self.bank}:{self.id} and {self.account_id}. No file added to {self.dir_name}.")
             return
 
         filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
         filepath.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(filepath, index_label=None)
         logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
-
-
 
 
 class TrueLayerHSBCStatements(TrueLayerStatements):
@@ -316,10 +316,9 @@ class Trading212APIStatements(APIAccountStatementsSource):
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
         return cls(
             working_dir=working_dir,
-            trans_transformer=transformers.Trading212StatementTransformer(),
+            trans_transformer=transformers.Trading212StatementTransformer(cls.id),
             api_handler=Trading212Client(creds)
         )
-
 
     def fetch(self, since=dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)):
         fetch_datetime = datetime.now().date()
@@ -335,7 +334,6 @@ class Trading212APIStatements(APIAccountStatementsSource):
         filepath.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(filepath, index_label=None)
         logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
-
 
 
 class MonzoAPIStatements(APIAccountStatementsSource):
@@ -395,7 +393,6 @@ def account_statements_factory(dataset, source) -> "AccountStatementsSource":
         raise ValueError(
             f"Invalid or unknown transaction source name '{source}', must be one of {ACCOUNT_STATEMENT_SOURCE_MAPPING.keys()}")
 
-
     acc_statement_class = ACCOUNT_STATEMENT_SOURCE_MAPPING[source]
     if issubclass(acc_statement_class, APIAccountStatementsSource):
         acc_statement_source = acc_statement_class.from_path_and_creds(dir_path, creds=dataset.creds)
@@ -429,15 +426,19 @@ class StatementsManager:
 
     @staticmethod
     def discover_statement_sources(dataset, source_names_to_look_for=None):
-        source_names_to_look_for = list(ACCOUNT_STATEMENT_SOURCE_MAPPING.keys()) if source_names_to_look_for is None else source_names_to_look_for
+        source_names_to_look_for = list(
+            ACCOUNT_STATEMENT_SOURCE_MAPPING.keys()) if source_names_to_look_for is None else source_names_to_look_for
 
         sub_dirs = set([p.name for p in dataset.statements.glob('*') if p.is_dir()])
-        source_dir_names = set([ACCOUNT_STATEMENT_SOURCE_MAPPING[source_name].dir_name for source_name in source_names_to_look_for])
+        source_dir_names = set(
+            [ACCOUNT_STATEMENT_SOURCE_MAPPING[source_name].dir_name for source_name in source_names_to_look_for])
         found_sources = [account_statements_factory(dataset, _dir) for _dir in sub_dirs.intersection(source_dir_names)]
 
-        logging.info(f"Discovered {len(found_sources)} of {len(source_dir_names)} sources, {source_dir_names.difference(sub_dirs)} missing")
+        logging.info(
+            f"Discovered {len(found_sources)} of {len(source_dir_names)} sources, {source_dir_names.difference(sub_dirs)} missing")
         if len(found_sources) < len(source_dir_names):
-            logging.warning(f"Unknown source directory in {dataset} statements dir: {sub_dirs.difference(source_dir_names)}")
+            logging.warning(
+                f"Unknown source directory in {dataset} statements dir: {sub_dirs.difference(source_dir_names)}")
         return found_sources
 
     def get_sources_with_fetch_operation(self):
@@ -460,23 +461,26 @@ class StatementsManager:
 
     def collect_transactions(self, source_ids_to_exclude=None):
         source_ids_to_exclude = source_ids_to_exclude or []
-        txs = []
+        txs = {}
         for source in self.sources:
             if source.id in source_ids_to_exclude:
-                logging.info(f"Skipping {source.id} from fetching all transactions because it is found in the exclude list")
+                logging.info(
+                    f"Skipping {source.id} from fetching all transactions because it is found in the exclude list")
                 continue
             try:
                 tx = source.to_transactions()
                 if tx is None:
                     continue
-                txs.append(tx)
+                txs[source.name] = tx
             except Exception as e:
                 logging.error(f"{e.__class__} {e}: Error while fetching {source.name} ({source})")
                 raise
         return txs
 
     def collect_and_merge_transactions(self):
-        txs = self.collect_transactions()
+        txs_dict = self.collect_transactions()
+        txs = list(txs_dict.values())
+        txs_totals = {tx_name: tx.size() for tx_name, tx in txs_dict.items()}
+        logging.info(f"Merging transactions ({sum(txs_totals.values())}): {txs_totals}")
         merged_tx = None if len(txs) == 0 else txs[0] if len(txs) == 1 else txs[0].merge(txs[1:])
         return merged_tx
-
