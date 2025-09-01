@@ -24,6 +24,8 @@ from mecon.utils.datatype_transformations import json_to_csv
 from mecon.utils.datatype_transformations import normalise_df_column_names
 
 
+# TODO Clear out sources and providers, id prefixes and banks mentioned in descriptions
+
 class AccountStatementsSource:
     id = None
     dir_name = None
