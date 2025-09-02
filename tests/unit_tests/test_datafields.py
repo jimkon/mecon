@@ -31,6 +31,34 @@ class ExampleDataframeWrapper(datafields.DataframeWrapper,
         # super(datafields.TagsColumnMixin, self).__init__(df_wrapper=self)
 
 
+class TestColumnMixinValidation(unittest.TestCase):
+    class _IdWrapper(datafields.DataframeWrapper, datafields.IdColumnMixin):
+        def __init__(self, df):
+            datafields.DataframeWrapper.__init__(self, df)
+            datafields.IdColumnMixin.__init__(self, df_wrapper=self, validate=True)
+
+    class _NoRequiredWrapper(datafields.DataframeWrapper, datafields.ColumnMixin):
+        def __init__(self, df):
+            datafields.DataframeWrapper.__init__(self, df)
+            datafields.ColumnMixin.__init__(self, df_wrapper=self, validate=True)
+
+    def test_missing_required_column_raises(self):
+        with self.assertRaises(datafields.MissingRequiredColumnInDataframeWrapperError):
+            self._IdWrapper(pd.DataFrame({'not_id': ['a']}))
+
+    def test_present_required_column_passes(self):
+        try:
+            self._IdWrapper(pd.DataFrame({'id': ['a']}))
+        except datafields.MissingRequiredColumnInDataframeWrapperError as e:
+            self.fail(f"Unexpected exception raised: {e}")
+
+    def test_no_required_columns_passes(self):
+        try:
+            self._NoRequiredWrapper(pd.DataFrame({'not_id': ['a']}))
+        except datafields.MissingRequiredColumnInDataframeWrapperError as e:
+            self.fail(f"Unexpected exception raised: {e}")
+
+
 class TestTagsColumnMixin(unittest.TestCase):
     def test_tags_stats(self):
         result_set = ExampleDataframeWrapper(pd.DataFrame({

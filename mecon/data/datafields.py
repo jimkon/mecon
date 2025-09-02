@@ -112,7 +112,7 @@ class ColumnMixin:
         if self._required_columns is not None:
             _req_set = set(self._required_columns) if isinstance(self._required_columns, list) else {
                 self._required_columns}
-            if _req_set.issubset(self._df_wrapper_obj.dataframe().columns):
+            if not _req_set.issubset(self._df_wrapper_obj.dataframe().columns):
                 raise MissingRequiredColumnInDataframeWrapperError(
                     f"Column '{self._required_columns}' is required from {self.__class__.__name__}")
 
