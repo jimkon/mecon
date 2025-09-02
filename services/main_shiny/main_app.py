@@ -360,14 +360,26 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.fetch_data_button)
     def _():
-        logging.info(f"Fetch data button")
         am = data_manager.get_statement_manager()
         fsources = am.get_sources_with_fetch_operation()
+        logging.info(f"Fetching {len(fsources)} sources...")
         for source in fsources:
             try:
                 source.fetch()
+                logging.error(f"Successfully fetched source {source}")
+                ui.notification_show(
+                    f"Successfully fetched source {source}",
+                    type='message',
+                    duration=5
+                )
             except Exception as e:
-                logging.error(f"Failed to fetch source {source}: {e}")
+                logging.exception(f"Failed to fetch source {source}: {e}")
+                ui.notification_show(
+                    f"Failed to fetch source {source}: {e}",
+                    type='error',
+                    duration=None
+                )
+        logging.info(f"Fetching finished")
 
 
     @reactive.effect
