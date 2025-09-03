@@ -87,6 +87,13 @@ def _plus_seconds(rfc3339: str, secs: int) -> str:
 
 class MonzoClient:
     def __init__(self, creds_file: "DictFile", force_new_token=False):
+        """
+        creds_file: DictFile instance pointing to a YAML/JSON file with a 'monzo-api' section.
+        force_new_token: If True, ignore any existing token and start fresh (for OAuth flow).
+
+        Loads credentials and initializes the Authentication object.
+        Raises MonzoCredentialsError if credentials are missing or invalid.
+        """
         self.creds_file = creds_file
 
         try:
@@ -139,6 +146,9 @@ class MonzoClient:
         return self.has_token()
 
     def refresh_token(self):
+        if not self.has_token():
+            raise MonzoTokenRefreshError("No access token available to refresh. OAuth flow required.")
+
         logging.info("Refreshing token...")
         try:
             self.monzo_auth.refresh_access()
@@ -168,6 +178,10 @@ class MonzoClient:
 
     # -------- OAuth helpers --------
     def get_authentication_url(self):
+        """
+        Returns the URL to start the OAuth authentication flow.
+        Raises MonzoCredentialsError if credentials are missing or invalid.
+        """
         return self.monzo_auth.authentication_url
 
     def get_authentication_url_and_state(self):
@@ -176,6 +190,12 @@ class MonzoClient:
         return url, state
 
     def set_authentication_code_from_url(self, response_url):
+        """
+        Given the full redirect URL from Monzo after user authentication,
+        extracts the authorization code and state, completes the OAuth flow,
+        and saves the new tokens to the credentials file.
+        Raises MonzoCredentialsError if credentials are missing or invalid.
+        """
         code_and_state = response_url.split('code=')[1]
         code, state = code_and_state.split('&state=')
         logging.info("Authenticating with Monzo...")
@@ -348,6 +368,10 @@ class MonzoClient:
         return all_transactions
 
     def download_full_history(self, batch_size=100, since="2019-01-01T00:00:00Z"):
+        """
+        Download full transaction history across all accounts.
+        Combines results from all accounts into a single DataFrame.
+        """
         dfs = []
         for account in self.get_accounts():
             account_id = account['account_id']
