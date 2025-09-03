@@ -14,8 +14,56 @@ from mecon.settings import DictFile
 logging.basicConfig(level=logging.INFO)
 
 
+#-------- custom exceptions --------
+# Possible Error Cases
+
+# * Missing Credentials
+#       No 'monzo-api' section in creds file.
+#       Missing or invalid client_id, client_secret, or redirect_url.
+
+# * Network Errors
+#       Connection issues when calling Monzo endpoints (token refresh, authentication, transactions).
+
+# * Invalid Credentials
+#       Wrong client_id/client_secret (Monzo returns 401/403).
+#       Invalid/expired/incorrect refresh_token.
+
+# * Expired Tokens
+#       Access token expired and refresh fails (e.g., refresh token also expired).
+
+# * OAuth Flow Required
+#       Refresh token is invalid or revoked, so user must re-authenticate.
+
+# * API Errors
+#       Forbidden (SCA required, account locked, etc.).
+#       Bad request (malformed request, invalid time range).
+
+# * Unexpected Response
+#       Monzo API returns unexpected data or missing fields.
+
+# * File I/O Errors
+#       Unable to read/write credentials file.
+
 class MonzoCredentialsError(Exception):
+    """Raised when credentials are missing or invalid."""
     pass
+
+class MonzoNetworkError(Exception):
+    """Raised for network-related errors."""
+    pass
+
+class MonzoTokenRefreshError(Exception):
+    """Raised when token refresh fails and OAuth flow is required."""
+    pass
+
+class MonzoAPIError(Exception):
+    """Raised for unexpected API errors."""
+    pass
+
+class MonzoFileIOError(Exception):
+    """Raised for file read/write errors."""
+    pass
+#-------- custom exceptions --------
 
 
 def _fmt_rfc3339_seconds(value) -> str:
@@ -41,10 +89,15 @@ class MonzoClient:
     def __init__(self, creds_file: "DictFile", force_new_token=False):
         self.creds_file = creds_file
 
-        if 'monzo-api' not in creds_file:
-            raise MonzoCredentialsError("No credentials for 'monzo-api' found in the creds file")
-
-        self.monzo_creds = self.creds_file['monzo-api']
+        try:
+            if 'monzo-api' not in creds_file:
+                raise MonzoCredentialsError("No credentials for 'monzo-api' found in the creds file")
+            self.monzo_creds = self.creds_file['monzo-api']
+            for key in ['client_id', 'client_secret', 'redirect_url']:
+                if not self.monzo_creds.get(key):
+                    raise MonzoCredentialsError(f"Missing required credential: {key}")
+        except Exception as e:
+            raise MonzoCredentialsError(f"Error loading credentials: {e}") from e
 
         token = {} if force_new_token else self.monzo_creds.get('token', {})
         self.monzo_auth = Authentication(
@@ -87,20 +140,31 @@ class MonzoClient:
 
     def refresh_token(self):
         logging.info("Refreshing token...")
-        self.monzo_auth.refresh_access()
-        self._refresh_token_in_creds()
-        logging.info("Refreshing token... Done")
+        try:
+            self.monzo_auth.refresh_access()
+            self._refresh_token_in_creds()
+            logging.info("Refreshing token... Done")
+        except ForbiddenError as e:
+            raise MonzoTokenRefreshError("Token refresh forbidden. OAuth flow required.") from e
+        except BadRequestError as e:
+            raise MonzoTokenRefreshError("Bad request during token refresh. OAuth flow required.") from e
+        except Exception as e:
+            raise MonzoNetworkError(f"Network or unexpected error during token refresh: {e}") from e
 
     def _refresh_token_in_creds(self):
-        self.monzo_creds['created_at'] = datetime.datetime.now().timestamp()
-        self.monzo_creds['token'] = {
-            'access_token': self.monzo_auth.access_token,
-            'expiry': self.monzo_auth.access_token_expiry,
-            'expires_at': self.expires_at(),
-            'refresh_token': self.monzo_auth.refresh_token,
-        }
-        logging.info(f"Saving new token...")
-        self.creds_file.save()
+        try:
+            self.monzo_creds['created_at'] = datetime.datetime.now().timestamp()
+            self.monzo_creds['token'] = {
+                'access_token': self.monzo_auth.access_token,
+                'expiry': self.monzo_auth.access_token_expiry,
+                'expires_at': self.expires_at(),
+                'refresh_token': self.monzo_auth.refresh_token,
+            }
+            logging.info(f"Saving new token...")
+            self.creds_file.save()
+        except Exception as e:
+            raise MonzoFileIOError(f"Failed to save credentials: {e}") from e
+
 
     # -------- OAuth helpers --------
     def get_authentication_url(self):
@@ -292,11 +356,3 @@ class MonzoClient:
             ))
         return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
-
-if __name__ == "__main__":
-    from mecon.etl.dataset import Dataset
-
-    d = Dataset(r"C:\Users\dimitris\PycharmProjects\datasets\20250812")
-    mc = MonzoClient(d.creds, force_new_token=True)
-    auth_code_url = input(f"{mc.get_authentication_url()} -> ")
-    mc.set_authentication_code_from_url(auth_code_url)
