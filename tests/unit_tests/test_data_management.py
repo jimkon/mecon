@@ -466,7 +466,7 @@ class TestCachedFileDataManager(unittest.TestCase):
     @patch('mecon.data.data_management.tag_stats_from_transactions')
     @patch('mecon.data.data_management.RuleExecutionPlanMonitor')
     def test_reset_transaction_tags_empty_metadata_raises(self, monitor_mck, tag_stats_mck):
-        tag_stats_mck.return_value = pd.DataFrame(columns=['name', 'count'])
+        tag_stats_mck.return_value = pd.DataFrame({'name': ['tag1'], 'count': [1]})
 
         dm = CachedFileDataManager.__new__(CachedFileDataManager)
         dm.dataset = Mock()
@@ -475,13 +475,16 @@ class TestCachedFileDataManager(unittest.TestCase):
 
         transactions_mock = Mock()
         transactions_mock.reset_tags.return_value = transactions_mock
-        transactions_mock.apply_tags.return_value = Mock()
+        tagged_transactions = Mock()
+        transactions_mock.apply_tags.return_value = tagged_transactions
 
         dm.get_transactions = Mock(return_value=transactions_mock)
         dm.all_tags = Mock(return_value=[])
 
-        with self.assertRaises(ValueError):
-            dm.reset_transaction_tags()
+        dm.reset_transaction_tags()
+
+        tag_stats_mck.assert_called_once_with(tagged_transactions)
+        dm.replace_tags_metadata.assert_called_once_with(tag_stats_mck.return_value)
 
 
 if __name__ == '__main__':

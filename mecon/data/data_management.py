@@ -392,10 +392,6 @@ class CachedFileDataManager:
         self._save_transactions()
 
         tags_metadata = tag_stats_from_transactions(tagged_transactions)
-        if tags_metadata.empty:
-            raise ValueError(
-                "Calculated empty tags metadata. Ensure tags exist and are applied to transactions before recalculating."
-            )
         self.replace_tags_metadata(tags_metadata)
 
     def get_tags_metadata(self):
@@ -408,6 +404,8 @@ class CachedFileDataManager:
         return df_metadata
 
     def replace_tags_metadata(self, metadata_df: pd.DataFrame):
+        if metadata_df.empty:
+            logging.warning(f"An empty metadata dataframe was found for this {self.dataset.name} and will replace the old one")
         self.tags_metadata_df = metadata_df
         self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
         self._save_tags_metadata()
