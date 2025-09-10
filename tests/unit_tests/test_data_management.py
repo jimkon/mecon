@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch, call
 
 import pandas as pd
 
-from mecon.data.data_management import DataManager, CachedDataManager
+from mecon.data.data_management import DataManager, CachedDataManager, CachedFileDataManager
 from mecon.tags.tagging import Tag
 
 
@@ -437,6 +437,51 @@ class TestCachedDataManager(unittest.TestCase):
         self.data_manager.replace_tags_metadata(metadata_df)
         self.tags_metadata_io.replace_all_metadata.assert_called_once_with(metadata_df)
         self.data_manager._cache.reset_tags_metadata.assert_called_once()
+
+
+class TestCachedFileDataManager(unittest.TestCase):
+    @patch('mecon.data.data_management.tag_stats_from_transactions')
+    @patch('mecon.data.data_management.RuleExecutionPlanMonitor')
+    def test_reset_transaction_tags_uses_tagged_transactions(self, monitor_mck, tag_stats_mck):
+        tag_stats_mck.return_value = pd.DataFrame({'name': ['tag1'], 'count': [1]})
+
+        dm = CachedFileDataManager.__new__(CachedFileDataManager)
+        dm.dataset = Mock()
+        dm._save_transactions = Mock()
+        dm.replace_tags_metadata = Mock()
+
+        transactions_mock = Mock()
+        transactions_mock.reset_tags.return_value = transactions_mock
+        tagged_transactions = Mock()
+        transactions_mock.apply_tags.return_value = tagged_transactions
+
+        dm.get_transactions = Mock(return_value=transactions_mock)
+        dm.all_tags = Mock(return_value=[])
+
+        dm.reset_transaction_tags()
+
+        tag_stats_mck.assert_called_once_with(tagged_transactions)
+        dm.replace_tags_metadata.assert_called_once_with(tag_stats_mck.return_value)
+
+    @patch('mecon.data.data_management.tag_stats_from_transactions')
+    @patch('mecon.data.data_management.RuleExecutionPlanMonitor')
+    def test_reset_transaction_tags_empty_metadata_raises(self, monitor_mck, tag_stats_mck):
+        tag_stats_mck.return_value = pd.DataFrame(columns=['name', 'count'])
+
+        dm = CachedFileDataManager.__new__(CachedFileDataManager)
+        dm.dataset = Mock()
+        dm._save_transactions = Mock()
+        dm.replace_tags_metadata = Mock()
+
+        transactions_mock = Mock()
+        transactions_mock.reset_tags.return_value = transactions_mock
+        transactions_mock.apply_tags.return_value = Mock()
+
+        dm.get_transactions = Mock(return_value=transactions_mock)
+        dm.all_tags = Mock(return_value=[])
+
+        with self.assertRaises(ValueError):
+            dm.reset_transaction_tags()
 
 
 if __name__ == '__main__':

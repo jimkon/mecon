@@ -391,7 +391,11 @@ class CachedFileDataManager:
         self.transactions = tagged_transactions
         self._save_transactions()
 
-        tags_metadata = tag_stats_from_transactions(transactions)
+        tags_metadata = tag_stats_from_transactions(tagged_transactions)
+        if tags_metadata.empty:
+            raise ValueError(
+                "Calculated empty tags metadata. Ensure tags exist and are applied to transactions before recalculating."
+            )
         self.replace_tags_metadata(tags_metadata)
 
     def get_tags_metadata(self):
