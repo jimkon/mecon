@@ -18,7 +18,7 @@ from mecon.etl import transformers
 # from mecon.etl.true_layer import TrueLayerAccount, TrueLayerAPIHandler
 from mecon.etl.true_layer_client_by_o3 import TrueLayerClient
 from mecon.etl.trading212_client_by_o3 import Trading212Client
-from mecon.etl.monzo_api_client import MonzoClient
+from mecon.etl.monzo_api_client import MonzoClient, MonzoCredentialsError
 from mecon.settings import DictFile
 from mecon.utils.datatype_transformations import json_to_csv
 from mecon.utils.datatype_transformations import normalise_df_column_names
@@ -345,7 +345,12 @@ class MonzoAPIStatements(APIAccountStatementsSource):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
-        df = self.api_handler.download_full_history(since=since)
+        try:
+            df = self.api_handler.download_full_history(since=since)
+        except MonzoCredentialsError as e:
+            logging.error(f"{self.__class__.__name__}: {e}")
+            return
+
         if len(df) == 0:
             logging.info(
                 f"{self.__class__.__name__}: No transactions fetched for Monzo-API since {self}. No file added to {self.dir_name}.")
