@@ -223,12 +223,12 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
         files and fetches data only for the missing days.
         """
 
-        existing_transactions = self.to_transactions()
-        _, last_date = existing_transactions.date_range()
-
         if force_fetch:
             self.fetch()
             return self.to_transactions()
+
+        existing_transactions = self.to_transactions()
+        _, last_date = existing_transactions.date_range()
 
         today = datetime.now().date()
         if last_date is None or last_date < today:
