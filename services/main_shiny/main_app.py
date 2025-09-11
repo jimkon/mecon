@@ -366,10 +366,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.info(f"Fetching {len(fsources)} sources...")
         for source in fsources:
             try:
-                source.fetch()
-                logging.error(f"Successfully fetched source {source}")
+                _, fetched_flag = source.fetch_if_needed_and_transform()
+                if fetched_flag:
+                    message = f"Successfully fetched source {source}"
+                else:
+                    message = f"SKIPPED fetching source {source}, was fetched recently"
+                logging.info(message)
                 ui.notification_show(
-                    f"Successfully fetched source {source}",
+                    message,
                     type='message',
                     duration=5
                 )
