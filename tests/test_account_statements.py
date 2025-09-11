@@ -100,7 +100,7 @@ class FetchIfNeededTests(unittest.TestCase):
             source.to_transactions = mock.MagicMock(side_effect=[existing, final])
             source.fetch = mock.MagicMock()
 
-            result = source.fetch_if_needed_and_transform()
+            result, fetched = source.fetch_if_needed_and_transform()
 
         expected_since = dt.datetime.combine(
             last_date + dt.timedelta(days=1),
@@ -108,7 +108,28 @@ class FetchIfNeededTests(unittest.TestCase):
         ).replace(tzinfo=dt.timezone.utc)
         source.fetch.assert_called_once_with(since=expected_since)
         self.assertEqual(result, final)
+        self.assertTrue(fetched)
         self.assertEqual(source.to_transactions.call_count, 2)
+
+    def test_fetch_if_needed_and_transform_skips_when_up_to_date(self):
+        with TemporaryDirectory() as tmpdir:
+            source = DummyAPIAccount(
+                working_dir=Path(tmpdir),
+                trans_transformer=mock.MagicMock(),
+                api_handler=mock.MagicMock(),
+            )
+            last_date = dt.date.today()
+            existing = mock.Mock()
+            existing.date_range.return_value = (None, last_date)
+            source.to_transactions = mock.MagicMock(return_value=existing)
+            source.fetch = mock.MagicMock()
+
+            result, fetched = source.fetch_if_needed_and_transform()
+
+        source.fetch.assert_not_called()
+        self.assertFalse(fetched)
+        self.assertEqual(result, existing)
+        source.to_transactions.assert_called_once()
 
 
 if __name__ == "__main__":

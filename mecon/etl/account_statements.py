@@ -214,18 +214,20 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
         """
         pass
 
-    def fetch_if_needed_and_transform(self, *, force_fetch: bool = False) -> Transactions:
+    def fetch_if_needed_and_transform(
+            self, *, force_fetch: bool = False
+    ) -> tuple[Transactions, bool]:
         """Fetch missing statement data and return transformed transactions.
 
-        If ``force_fetch`` is ``True`` all data will be fetched from the API
-        regardless of what is already stored locally. Otherwise this method
-        determines the maximum transaction date from the currently available
-        files and fetches data only for the missing days.
+        Returns a tuple ``(transactions, fetched)`` where ``transactions`` is
+        the latest ``Transactions`` object and ``fetched`` indicates whether a
+        remote fetch was performed. If ``force_fetch`` is ``True`` all data will
+        be fetched regardless of what is already stored locally.
         """
 
         if force_fetch:
             self.fetch()
-            return self.to_transactions()
+            return self.to_transactions(), True
 
         existing_transactions = self.to_transactions()
         _, last_date = existing_transactions.date_range()
@@ -239,9 +241,8 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
                     datetime.min.time(),
                 ).replace(tzinfo=dt.timezone.utc)
             self.fetch(since=since_dt)
-            return self.to_transactions()
-        return existing_transactions
-
+            return self.to_transactions(), True
+        return existing_transactions, False
 
 class TrueLayerStatements(APIAccountStatementsSource):
     bank = None
