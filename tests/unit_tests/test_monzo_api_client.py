@@ -1,8 +1,9 @@
 import json
+import tempfile
 import time
-from unittest.mock import MagicMock
-
-import pytest
+from pathlib import Path
+import unittest
+from unittest.mock import MagicMock, patch
 
 from mecon.settings import DictFile
 from mecon.etl.monzo_api_client import MonzoClient, MonzoCredentialsError
@@ -10,8 +11,8 @@ from oauthlib.oauth2.rfc6749.errors import InvalidClientIdError
 from monzo.authentication import Authentication
 
 
-def _make_creds(tmp_path):
-    creds_path = tmp_path / "creds.json"
+def _make_creds(tmp_dir):
+    creds_path = Path(tmp_dir) / "creds.json"
     creds_path.write_text(json.dumps({
         "monzo-api": {
             "client_id": "id",
@@ -27,28 +28,25 @@ def _make_creds(tmp_path):
     return DictFile(creds_path)
 
 
-def test_refresh_token_failure_raises_credentials_error(tmp_path, monkeypatch):
-    creds = _make_creds(tmp_path)
-    client = MonzoClient(creds)
+class TestMonzoApiClient(unittest.TestCase):
+    def test_refresh_token_failure_raises_credentials_error(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            creds = _make_creds(tmp_dir)
+            client = MonzoClient(creds)
 
-    def boom(self):
-        raise Exception("boom")
+            with patch.object(Authentication, "refresh_access", side_effect=Exception("boom")):
+                with self.assertRaises(MonzoCredentialsError):
+                    client.refresh_token()
 
-    monkeypatch.setattr(Authentication, "refresh_access", boom)
+    def test_download_history_invalid_client_raises_credentials_error(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            creds = _make_creds(tmp_dir)
+            client = MonzoClient(creds)
 
-    with pytest.raises(MonzoCredentialsError):
-        client.refresh_token()
+            mock_monzo = MagicMock()
+            mock_monzo.get_transactions.side_effect = [InvalidClientIdError("bad"), InvalidClientIdError("bad")]
 
-
-def test_download_history_invalid_client_raises_credentials_error(tmp_path, monkeypatch):
-    creds = _make_creds(tmp_path)
-    client = MonzoClient(creds)
-
-    mock_monzo = MagicMock()
-    mock_monzo.get_transactions.side_effect = [InvalidClientIdError("bad"), InvalidClientIdError("bad")]
-
-    monkeypatch.setattr(client, "_new_monzo_client", lambda: mock_monzo)
-    monkeypatch.setattr(client, "refresh_token", lambda: None)
-
-    with pytest.raises(MonzoCredentialsError):
-        client.download_accounts_transaction_history("acc")
+            with patch.object(client, "_new_monzo_client", return_value=mock_monzo):
+                with patch.object(client, "refresh_token", return_value=None):
+                    with self.assertRaises(MonzoCredentialsError):
+                        client.download_accounts_transaction_history("acc")
