@@ -366,7 +366,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.info(f"Fetching {len(fsources)} sources...")
         for source in fsources:
             try:
-                source.fetch()
+                source.fetch_if_needed_and_transform()
                 logging.error(f"Successfully fetched source {source}")
                 ui.notification_show(
                     f"Successfully fetched source {source}",
