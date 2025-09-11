@@ -54,7 +54,7 @@ class TestMonzoApiClient(unittest.TestCase):
 
 
 class TestMonzoAPIStatements(unittest.TestCase):
-    def test_fetch_handles_credentials_error(self):
+    def test_fetch_propagates_credentials_error(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             mock_client = MagicMock()
             mock_client.download_full_history.side_effect = MonzoCredentialsError("bad")
@@ -64,7 +64,7 @@ class TestMonzoAPIStatements(unittest.TestCase):
                 api_handler=mock_client,
             )
 
-            result = source.fetch()
+            with self.assertRaises(MonzoCredentialsError):
+                source.fetch()
 
-            self.assertIsNone(result)
             self.assertEqual(list(Path(tmp_dir).glob("*.csv")), [])
