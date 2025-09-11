@@ -356,6 +356,7 @@ class MonzoAPIStatements(APIAccountStatementsSource):
         fetch_job_id = str(uuid.uuid4())
 
         df = self.api_handler.download_full_history(since=since)
+
         if len(df) == 0:
             logging.info(
                 f"{self.__class__.__name__}: No transactions fetched for Monzo-API since {self}. No file added to {self.dir_name}.")
