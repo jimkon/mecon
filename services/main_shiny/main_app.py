@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
@@ -374,8 +375,9 @@ def server(input: Inputs, output: Outputs, session: Session):
                 )
             except Exception as e:
                 logging.exception(f"Failed to fetch source {source}: {e}")
+                trace = ''.join(traceback.format_stack())
                 ui.notification_show(
-                    f"Failed to fetch source {source}: {e}",
+                    f"Failed to fetch source {source}: {e}\n{trace}",
                     type='error',
                     duration=None
                 )
