@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from mecon.settings import DictFile
 from mecon.etl.monzo_api_client import MonzoClient, MonzoCredentialsError
+from mecon.etl.account_statements import MonzoAPIStatements
 from oauthlib.oauth2.rfc6749.errors import InvalidClientIdError
 from monzo.authentication import Authentication
 
@@ -50,3 +51,20 @@ class TestMonzoApiClient(unittest.TestCase):
                 with patch.object(client, "refresh_token", return_value=None):
                     with self.assertRaises(MonzoCredentialsError):
                         client.download_accounts_transaction_history("acc")
+
+
+class TestMonzoAPIStatements(unittest.TestCase):
+    def test_fetch_handles_credentials_error(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            mock_client = MagicMock()
+            mock_client.download_full_history.side_effect = MonzoCredentialsError("bad")
+            source = MonzoAPIStatements(
+                working_dir=tmp_dir,
+                trans_transformer=MagicMock(),
+                api_handler=mock_client,
+            )
+
+            result = source.fetch()
+
+            self.assertIsNone(result)
+            self.assertEqual(list(Path(tmp_dir).glob("*.csv")), [])
