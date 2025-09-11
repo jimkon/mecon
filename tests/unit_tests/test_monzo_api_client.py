@@ -68,3 +68,7 @@ class TestMonzoAPIStatements(unittest.TestCase):
                 source.fetch()
 
             self.assertEqual(list(Path(tmp_dir).glob("*.csv")), [])
+
+
+if __name__ == '__main__':
+    unittest.main()
