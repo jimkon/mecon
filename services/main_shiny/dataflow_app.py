@@ -81,11 +81,11 @@ app_ui = shiny_app.app_ui_factory(
 )
 
 
-def create_tag_conditions_stats_dataframe(compact=True):
-    monitor = RuleExecutionPlanMonitor(dataset)
+def create_tag_conditions_stats_dataframe(_dataset, compact=True):
+    monitor = RuleExecutionPlanMonitor(_dataset)
     monitor.load()
 
-    dm = CachedFileDataManager(dataset)
+    dm = CachedFileDataManager(_dataset)
     df_stats = monitor.get_conditions_stats()
     df_types = dm.all_tags_df[['name', 'type']].rename(columns={'name': 'tag', 'type': 'tag_type'})
     df_merged = df_stats.merge(df_types, how='left', on='tag')
@@ -219,7 +219,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def tag_conditions_stats_dataframe():
-        df = create_tag_conditions_stats_dataframe(compact=input.compact_tag_conditions_stats_dataframe_checkbox())
+        df = create_tag_conditions_stats_dataframe(
+            dataset,
+            compact=input.compact_tag_conditions_stats_dataframe_checkbox())
         return shiny_app.render_table_standard(df, format_columns=True)
 
     @render.data_frame
