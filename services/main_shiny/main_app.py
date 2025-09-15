@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 from shiny import App, Inputs, Outputs, Session, render, ui
 
@@ -40,7 +41,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             where='beforeEnd'
         )
         return 'links'
-
+      
 
 main_app = App(app_ui, server)
 

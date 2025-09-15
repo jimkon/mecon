@@ -8,6 +8,7 @@ from monzo.authentication import Authentication
 from monzo.endpoints.account import Account
 from monzo.monzo import Monzo
 from monzo.errors import ForbiddenError, BadRequestError
+from oauthlib.oauth2.rfc6749.errors import InvalidClientIdError
 
 from mecon.settings import DictFile
 
@@ -87,7 +88,13 @@ class MonzoClient:
 
     def refresh_token(self):
         logging.info("Refreshing token...")
-        self.monzo_auth.refresh_access()
+        try:
+            self.monzo_auth.refresh_access()
+        except Exception as e:
+            raise MonzoCredentialsError(
+                "Could not refresh the Monzo access token. "
+                "Please re-authenticate to obtain new credentials."
+            ) from e
         self._refresh_token_in_creds()
         logging.info("Refreshing token... Done")
 
@@ -161,6 +168,10 @@ class MonzoClient:
             end_dt = min(window_end, now_dt)
             return end_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+        # Ensure we have a valid access token before making any requests
+        now_ts = datetime.datetime.now().timestamp()
+        if not self.monzo_auth.access_token or self.monzo_auth.access_token_expiry <= now_ts:
+            self.refresh_token()
         monzo = self._new_monzo_client()
 
         # Normalize the incoming 'since' to second precision Z
@@ -201,6 +212,21 @@ class MonzoClient:
                     continue
                 # Other 400s: re-raise so you can see them
                 raise
+            except InvalidClientIdError as e:
+                logging.info(f"Monzo error ({type(e).__name__}): {e}. Trying a token refresh and retry...")
+                try:
+                    self.refresh_token()
+                    monzo = self._new_monzo_client()
+                    transactions = monzo.get_transactions(
+                        account_id,
+                        before=before,
+                        since=since,
+                        limit=min(int(batch_size), 100)
+                    )
+                except (InvalidClientIdError, MonzoCredentialsError) as err:
+                    raise MonzoCredentialsError(
+                        "Could not refresh the Monzo access token. Please re-authenticate to obtain new credentials."
+                    ) from err
             except ForbiddenError as e:
                 # Verification required / SCA window etc.
                 logging.info(f"Monzo error ({type(e).__name__}): {e}. Trying a token refresh and retry...")

@@ -205,9 +205,44 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
         pass
 
     @abc.abstractmethod
-    def fetch(self):
+    def fetch(self, since: dt.datetime | None = None):
+        """Fetch new statement data from the remote API.
+
+        Args:
+            since: Fetch transactions occurring after this datetime. If ``None``
+                the implementation should fetch all available data.
+        """
         pass
 
+    def fetch_if_needed_and_transform(
+            self, *, force_fetch: bool = False
+    ) -> tuple[Transactions, bool]:
+        """Fetch missing statement data and return transformed transactions.
+
+        Returns a tuple ``(transactions, fetched)`` where ``transactions`` is
+        the latest ``Transactions`` object and ``fetched`` indicates whether a
+        remote fetch was performed. If ``force_fetch`` is ``True`` all data will
+        be fetched regardless of what is already stored locally.
+        """
+
+        if force_fetch:
+            self.fetch()
+            return self.to_transactions(), True
+
+        existing_transactions = self.to_transactions()
+        _, last_date = existing_transactions.date_range()
+
+        today = datetime.now().date()
+        if last_date is None or last_date < today:
+            since_dt = None
+            if last_date is not None:
+                since_dt = datetime.combine(
+                    last_date + dt.timedelta(days=1),
+                    datetime.min.time(),
+                ).replace(tzinfo=dt.timezone.utc)
+            self.fetch(since=since_dt)
+            return self.to_transactions(), True
+        return existing_transactions, False
 
 class TrueLayerStatements(APIAccountStatementsSource):
     bank = None
@@ -236,11 +271,14 @@ class TrueLayerStatements(APIAccountStatementsSource):
             api_handler=TrueLayerClient(creds)
         )
 
-    def fetch(self):
+    def fetch(self, since: dt.datetime | None = None):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
-        json_transactions = self.api_handler.get_transactions(self.bank.lower(), self.account_id)
+        from_date = since.date() if since else None
+        json_transactions = self.api_handler.get_transactions(
+            self.bank.lower(), self.account_id, from_date=from_date
+        )
         df = json_to_csv(json_transactions)
         if len(df) == 0:
             logging.info(
@@ -322,10 +360,11 @@ class Trading212APIStatements(APIAccountStatementsSource):
             api_handler=Trading212Client(creds)
         )
 
-    def fetch(self, since=dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)):
+    def fetch(self, since: dt.datetime | None = None):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
+        since = since or dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)
         df = self.api_handler.fetch_history_dataframe(since=since)
         if len(df) == 0:
             logging.info(
@@ -351,11 +390,16 @@ class MonzoAPIStatements(APIAccountStatementsSource):
             api_handler=MonzoClient(creds)
         )
 
-    def fetch(self, since="2019-01-01T00:00:00Z"):
+    def fetch(self, since: dt.datetime | None = None):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
-        df = self.api_handler.download_full_history(since=since)
+        since_str = (
+            since.isoformat().replace("+00:00", "Z")
+            if since
+            else "2019-01-01T00:00:00Z"
+        )
+        df = self.api_handler.download_full_history(since=since_str)
         if len(df) == 0:
             logging.info(
                 f"{self.__class__.__name__}: No transactions fetched for Monzo-API since {self}. No file added to {self.dir_name}.")
