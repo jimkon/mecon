@@ -1,0 +1,2 @@
+transaction_id,timestamp,amount,currency,description,transaction_type,transaction_category
+saver_001,2024-03-05T09:00:00Z,1.50,GBP,Monthly interest payment,Credit,interest
