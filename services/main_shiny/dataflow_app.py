@@ -5,7 +5,7 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon import config
 from mecon.app import shiny_app
-from mecon.app.current_data import WorkingDatasetDir, WorkingDataManagerInfo, WorkingDataManager
+from mecon.app.current_data import WorkingDatasetDir
 from mecon.data.data_management import CachedFileDataManager
 from mecon.etl import transformers
 from mecon.tags.process import RuleExecutionPlanMonitor
@@ -23,10 +23,105 @@ datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets
 dataset = datasets_obj.working_dataset
 
 
-def source_info_df(source):
-    df = dataset.statement_files_info_df()
+def get_statement_files_info_dataframe(_dataset):
+    return _dataset.statement_files_info_df()
+
+
+def summarize_statement_files_info(df: pd.DataFrame) -> dict:
+    return {
+        'file_count': len(df),
+        'row_count': df['rows'].sum(),
+        'source_count': df['source'].nunique(),
+    }
+
+
+def aggregate_statement_sources_info(df: pd.DataFrame) -> pd.DataFrame:
+    return df.groupby('source').agg({'filename': 'count', 'rows': 'sum'}).reset_index()
+
+
+def source_info_df(_dataset, source):
+    df = get_statement_files_info_dataframe(_dataset)
     df_res = df[df['source'] == source]
     return df_res
+
+
+def load_statement_dataframe(path: str) -> pd.DataFrame:
+    return pd.read_csv(path, index_col=None)
+
+
+def create_transactions_summary_dataframe(data_manager) -> pd.DataFrame:
+    df_trans = data_manager.get_transactions().dataframe()
+    return df_trans.describe(include='all').reset_index()
+
+
+def get_tags_metadata_dataframe(data_manager) -> pd.DataFrame:
+    return data_manager.get_tags_metadata()
+
+
+def create_tagged_transactions_info_dataframe(data_manager) -> pd.DataFrame:
+    df_tags_info = pd.DataFrame.from_dict(
+        data_manager.get_tagged_transactions().all_tag_counts(),
+        orient='index').reset_index()
+    df_tags_info.columns = ['tag', 'name']
+    return df_tags_info
+
+
+def fetch_statement_sources(data_manager):
+    statement_manager = data_manager.get_statement_manager()
+    fetchable_sources = statement_manager.get_sources_with_fetch_operation()
+    logging.info(f"Fetching {len(fetchable_sources)} sources...")
+
+    results = []
+    for source in fetchable_sources:
+        try:
+            source.fetch()
+            logging.error(f"Successfully fetched source {source}")
+            results.append({'source': source, 'error': None})
+        except Exception as exc:
+            logging.exception(f"Failed to fetch source {source}: {exc}")
+            results.append({'source': source, 'error': exc})
+
+    logging.info("Fetching finished")
+    return results
+
+
+def build_sources_without_transformers_warning(sources_with_no_transformers, filepaths) -> str:
+    message = f"No parser for sources: {sources_with_no_transformers}\\n"
+    message += '\\n'.join(
+        [
+            f" -> Skipping {len(filepaths[source])} statement file from  source '{source}'"
+            for source in sources_with_no_transformers
+        ]
+    )
+    return message
+
+
+def build_unparsed_sources_warning(unparsed_sources) -> str:
+    return f"Source not parsed: {unparsed_sources}\\n"
+
+
+def reset_dataset(data_manager):
+    logging.info(f"Reset data")
+    filepaths = data_manager.get_statement_filepaths()
+    transformer_sources = set(transformers.StatementTransformer.SOURCES)
+
+    statement_sources = set(filepaths.keys())
+    warnings = []
+
+    sources_with_no_transformers = statement_sources.difference(transformer_sources)
+    if len(sources_with_no_transformers) > 0:
+        message = build_sources_without_transformers_warning(sources_with_no_transformers, filepaths)
+        logging.info(f"App warning while resetting the data: {sources_with_no_transformers}, {message=}")
+        warnings.append(message)
+
+    unparsed_sources = transformer_sources.difference(statement_sources)
+    if len(unparsed_sources) > 0:
+        message = build_unparsed_sources_warning(unparsed_sources)
+        logging.info(f"App warning while resetting the data: {unparsed_sources}, {message=}")
+        warnings.append(message)
+
+    data_manager.reset()
+    return warnings
 
 
 app_ui = shiny_app.app_ui_factory(
@@ -131,57 +226,58 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.ui
     def statements_info_text():
-        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
+        df = get_statement_files_info_dataframe(dataset)
+        summary = summarize_statement_files_info(df)
         text = ui.HTML(
-            f"""<p>Found <b>{len(df)} files</b>, containing <b>{df['rows'].sum()} rows</b> (* rows might not be 100% accurate). in total and <b>{df['source'].nunique()} different sources</b></p>"""
+            f"""<p>Found <b>{summary['file_count']} files</b>, containing <b>{summary['row_count']} rows</b> (* rows might not be 100% accurate). in total and <b>{summary['source_count']} different sources</b></p>"""
         )
         return text
 
     @render.data_frame
     def all_sources_info_text():
-        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
-        df_agg = df.groupby('source').agg({'filename': 'count', 'rows': 'sum'}).reset_index()
+        df = get_statement_files_info_dataframe(dataset)
+        df_agg = aggregate_statement_sources_info(df)
         return shiny_app.render_table_standard(df_agg)
 
     @render.data_frame
     def hsbc_source_info_text():
-        df = source_info_df('HSBC')
+        df = source_info_df(dataset, 'HSBC')
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def monzo_export_source_info_text():
-        df = source_info_df('Monzo')
+        df = source_info_df(dataset, 'Monzo')
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def monzo_api_source_info_text():
-        df = source_info_df('MonzoAPI')
+        df = source_info_df(dataset, 'MonzoAPI')
         logging.info(f"Source: {df=}")
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def revo_source_info_text():
-        df = source_info_df('Revolut')
+        df = source_info_df(dataset, 'Revolut')
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def hsbcsvr_source_info_text():
-        df = source_info_df('HSBCSVR')
+        df = source_info_df(dataset, 'HSBCSVR')
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def trd212_source_info_text():
-        df = source_info_df('TRD212')
+        df = source_info_df(dataset, 'TRD212')
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def inveng_source_info_text():
-        df = source_info_df('INVENG')
+        df = source_info_df(dataset, 'INVENG')
         return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def statements_info_dataframe():
-        df = WorkingDatasetDir().working_dataset.statement_files_info_df()
+        df = get_statement_files_info_dataframe(dataset)
         res = render.DataGrid(df, selection_mode="row")
         return res
 
@@ -202,19 +298,18 @@ def server(input: Inputs, output: Outputs, session: Session):
 
             @render.data_frame
             def showing_statement_output_df():
-                df_stat = pd.read_csv(statement_dict['path'], index_col=None)
+                df_stat = load_statement_dataframe(statement_dict['path'])
                 return df_stat
 
     @render.data_frame
     def transactions_info_dataframe():
-        df_trans = data_manager.get_transactions().dataframe()
-        df_info = df_trans.describe(include='all').reset_index()
+        df_info = create_transactions_summary_dataframe(data_manager)
         res = render.DataGrid(df_info, selection_mode="row")
         return res
 
     @render.data_frame
     def tags_info_dataframe():
-        df_tags_info = data_manager.get_tags_metadata()
+        df_tags_info = get_tags_metadata_dataframe(data_manager)
         return shiny_app.render_table_standard(df_tags_info, format_columns=True)
 
     @render.data_frame
@@ -226,68 +321,41 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def tagged_transactions_info_dataframe():
-        df_tags_info = pd.DataFrame.from_dict(
-            data_manager.get_tagged_transactions().all_tag_counts(),
-            orient='index').reset_index()
-        df_tags_info.columns = ['tag', 'name']
+        df_tags_info = create_tagged_transactions_info_dataframe(data_manager)
         res = render.DataGrid(df_tags_info, selection_mode="row")
         return res
 
     @reactive.effect
     @reactive.event(input.fetch_data_button)
     def _():
-        am = data_manager.get_statement_manager()
-        fsources = am.get_sources_with_fetch_operation()
-        logging.info(f"Fetching {len(fsources)} sources...")
-        for source in fsources:
-            try:
-                source.fetch()
-                logging.error(f"Successfully fetched source {source}")
+        fetch_results = fetch_statement_sources(data_manager)
+        for result in fetch_results:
+            source = result['source']
+            error = result['error']
+            if error is None:
                 ui.notification_show(
                     f"Successfully fetched source {source}",
                     type='message',
                     duration=5
                 )
-            except Exception as e:
-                logging.exception(f"Failed to fetch source {source}: {e}")
+            else:
                 ui.notification_show(
-                    f"Failed to fetch source {source}: {e}",
+                    f"Failed to fetch source {source}: {error}",
                     type='error',
                     duration=None
                 )
-        logging.info(f"Fetching finished")
 
     @reactive.effect
     @reactive.event(input.reset_button)
     def _():
-        logging.info(f"Reset data")
-        filepaths = data_manager.get_statement_filepaths()
-        statement_source = set(filepaths.keys())
-        transformer_sources = set(transformers.StatementTransformer.SOURCES)
-        sources_with_no_transformers = statement_source.difference(transformer_sources)
-        if len(sources_with_no_transformers) > 0:
-            message = f"No parser for sources: {sources_with_no_transformers}\n"
-            message += '\n'.join(
-                [f" -> Skipping {len(filepaths[source])} statement file from  source '{source}'" for source in sources_with_no_transformers])
-            logging.info(f"App warning while resetting the data: {sources_with_no_transformers}, {message=}")
+        warning_messages = reset_dataset(data_manager)
+        for message in warning_messages:
             ui.notification_show(
                 f"WARNING:\n{message}",
                 type="warning",
                 duration=10,
                 close_button=True
             )
-        unparsed_sources = transformer_sources.difference(statement_source)
-        if len(unparsed_sources) > 0:
-            message = f"Source not parsed: {unparsed_sources}\n"
-            logging.info(f"App warning while resetting the data: {unparsed_sources}, {message=}")
-            ui.notification_show(
-                f"WARNING:\n{message}",
-                type="warning",
-                duration=10,
-                close_button=True
-            )
-
-        data_manager.reset()
 
 
 dataflow_app = App(app_ui, server)
