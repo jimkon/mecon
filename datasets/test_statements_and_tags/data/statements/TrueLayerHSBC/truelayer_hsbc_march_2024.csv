@@ -1,4 +1,0 @@
-transaction_id,timestamp,amount,currency,description,transaction_type,transaction_category
-hsbc_001,2024-03-01T08:00:00Z,3000.50,GBP,Salary payment from Deloitte,Credit,income
-hsbc_002,2024-03-03T10:30:00Z,-1200.00,GBP,Rent payment to Landlord,Debit,rent
-hsbc_003,2024-03-06T07:15:00Z,-45.60,GBP,TFL Travelcard renewal,Debit,transport

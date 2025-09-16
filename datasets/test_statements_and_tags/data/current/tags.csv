@@ -1,2 +1,0 @@
-name,conditions_json,date_created
-Commute,"[{""description.lower"":{""contains"":""tfl""}}]",2024-03-01 00:00:00

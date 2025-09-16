@@ -1,4 +1,0 @@
-id,created,local_currency,local_amount,amount,description,merchant,category
-tx_0001,2024-03-02T08:15:00.000Z,GBP,250000,250000,Monthly salary payment from ITV,None,income
-tx_0002,2024-03-04T07:45:00.000Z,GBP,-320,-320,TFL Travel - Zone 1 to 3,TfL,transport
-tx_0003,2024-03-05T18:20:00.000Z,GBP,-4520,-4520,Tesco Supermarket groceries,Tesco,shopping

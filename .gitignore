@@ -5,8 +5,8 @@
 /misc/reports_history/
 
 /datasets/*
-!/datasets/test_statements_and_tags/
-!/datasets/test_statements_and_tags/**
+!/tests/test_datasets/test_statements_and_tags/
+!/tests/test_datasets/test_statements_and_tags/**
 !/datasets/test_statements_and_tags/**/*.csv
 /creds/
 /.env
@@ -18,7 +18,7 @@ example_path
 /templates/
 /static/
 settings.json
-!/datasets/test_statements_and_tags/settings.json
+!/tests/test_datasets/test_statements_and_tags/settings.json
 /misc/misc_scripts/
 /misc/
 /todo.txt
