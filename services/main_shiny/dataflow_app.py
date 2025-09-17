@@ -10,10 +10,8 @@ from mecon.data.data_management import CachedFileDataManager
 from mecon.etl import transformers
 from mecon.tags.process import RuleExecutionPlanMonitor
 
-
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
-
 
 datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
 if not datasets_dir.exists():
@@ -124,6 +122,52 @@ def reset_dataset(data_manager):
     return warnings
 
 
+def create_tag_conditions_stats_dataframe(_dataset, compact=True):
+    monitor = RuleExecutionPlanMonitor(_dataset)
+    monitor.load()
+
+    dm = CachedFileDataManager(_dataset)
+    df_stats = monitor.get_conditions_stats()
+    df_types = dm.all_tags_df[['name', 'type']].rename(columns={'name': 'tag', 'type': 'tag_type'})
+    df_merged = df_stats.merge(df_types, how='left', on='tag')
+    df_merged['tag_type'].fillna('Unknown', inplace=True)
+
+    df_sel = df_merged[
+        (df_merged['tag_type'] != 'Built-in') & ((df_merged['all_true']) | (df_merged['all_false']))].copy()
+    df_sel.replace([False, True], value=['False', 'True'], inplace=True)
+
+    def make_link(tag_name: str):
+        href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
+        return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit \'{tag_name}\'</a>')
+
+    df_sel["actions"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
+
+    if compact:
+        def agg_strings_in_bulletpoints(arr):
+            arr_str = [str(el).replace('<', '').replace('>', '') for el in arr]
+            html_list = f"<ol><li>{'</li><li>'.join(arr_str)}</li></ol>"
+            return ui.HTML(html_list)
+
+        df_sel['all_true'] = df_sel['all_true'].replace({'True': 1, 'False': 0})
+        df_sel['all_false'] = df_sel['all_false'].replace({'True': 1, 'False': 0})
+        df_compact = df_sel.groupby('tag').agg({
+            'type': lambda x: agg_strings_in_bulletpoints(
+                [f"{v}x {k}{'s' if v > 1 else ''}" for k, v in pd.Series.value_counts(x).to_dict().items()]),
+            'all_true': 'sum',
+            'all_false': 'sum',
+            'depending on': agg_strings_in_bulletpoints,
+            'rule': agg_strings_in_bulletpoints,
+            'priority': agg_strings_in_bulletpoints,
+        }).reset_index()
+        df_compact['actions'] = df_compact["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
+        df_res = df_compact[['tag', 'actions', 'type', 'all_true', 'all_false', 'depending on', 'rule', 'priority']]
+    else:
+        df_res = df_sel
+
+    logging.info(f"tag_conditions_stats_dataframe-> {df_res.shape=}, {compact=}")
+    return df_res
+
+
 app_ui = shiny_app.app_ui_factory(
     ui.input_task_button(id='fetch_data_button', label='Fetch new transaction data from providers'),
     ui.input_task_button(id='reset_button', label='Reset data from statements'),
@@ -174,51 +218,6 @@ app_ui = shiny_app.app_ui_factory(
         open=False
     )
 )
-
-
-def create_tag_conditions_stats_dataframe(_dataset, compact=True):
-    monitor = RuleExecutionPlanMonitor(_dataset)
-    monitor.load()
-
-    dm = CachedFileDataManager(_dataset)
-    df_stats = monitor.get_conditions_stats()
-    df_types = dm.all_tags_df[['name', 'type']].rename(columns={'name': 'tag', 'type': 'tag_type'})
-    df_merged = df_stats.merge(df_types, how='left', on='tag')
-    df_merged['tag_type'].fillna('Unknown', inplace=True)
-
-    df_sel = df_merged[
-        (df_merged['tag_type'] != 'Built-in') & ((df_merged['all_true']) | (df_merged['all_false']))].copy()
-    df_sel.replace([False, True], value=['False', 'True'], inplace=True)
-
-    def make_link(tag_name: str):
-        href = shiny_app.url_for_tag_edit(filter_in_tags=tag_name)
-        return ui.HTML(f'<a href="{href}" target="_blank" rel="noopener">Edit \'{tag_name}\'</a>')
-
-    df_sel["actions"] = df_sel["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
-
-    if compact:
-        def agg_strings_in_bulletpoints(arr):
-            arr_str = [str(el).replace('<', '').replace('>', '') for el in arr]
-            html_list = f"<ol><li>{'</li><li>'.join(arr_str)}</li></ol>"
-            return ui.HTML(html_list)
-
-        df_sel['all_true'] = df_sel['all_true'].replace({'True': 1, 'False': 0})
-        df_sel['all_false'] = df_sel['all_false'].replace({'True': 1, 'False': 0})
-        df_compact = df_sel.groupby('tag').agg({
-            'type': lambda x: agg_strings_in_bulletpoints([f"{v}x {k}{'s' if v>1 else ''}" for k, v in pd.Series.value_counts(x).to_dict().items()]),
-            'all_true': 'sum',
-            'all_false': 'sum',
-            'depending on': agg_strings_in_bulletpoints,
-            'rule': agg_strings_in_bulletpoints,
-            'priority': agg_strings_in_bulletpoints,
-        }).reset_index()
-        df_compact['actions'] = df_compact["tag"].apply(lambda t: ui.HTML("") if t is None else make_link(t))
-        df_res = df_compact[['tag', 'actions', 'type', 'all_true', 'all_false', 'depending on', 'rule', 'priority']]
-    else:
-        df_res = df_sel
-
-    logging.info(f"tag_conditions_stats_dataframe-> {df_res.shape=}, {compact=}")
-    return df_res
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -359,4 +358,3 @@ def server(input: Inputs, output: Outputs, session: Session):
 
 
 dataflow_app = App(app_ui, server)
-
