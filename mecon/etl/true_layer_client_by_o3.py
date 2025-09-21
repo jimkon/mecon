@@ -18,6 +18,9 @@ def _create_s256_code_challenge(verifier: str) -> str:
 
 
 # ---------- exceptions --------------------------------------------------------
+class TrueLayerCredentialsError(Exception):
+    pass
+
 
 class TrueLayerError(Exception):
     """Base‑class for any TrueLayer integration error."""
@@ -91,6 +94,10 @@ class TrueLayerClient:
 
     def __init__(self, creds_file: "DictFile", sandbox: bool = False) -> None:
         self._creds_full = creds_file
+
+        if "truelayer" not in creds_file:
+            raise TrueLayerCredentialsError("No TrueLayer credentials found")
+
         self._creds = self._creds_full["truelayer"]
         self._client = httpx.Client(
             timeout=10,
