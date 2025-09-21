@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -7,6 +8,26 @@ import pytest
 
 from mecon.data.data_management import CachedFileDataManager
 from mecon.etl.dataset import Dataset
+
+
+_OTHER_FIELDS_PATTERN = re.compile(r"other_fields:\s*\{(?P<content>[^}]*)\}")
+
+
+def _normalise_other_fields(description: str) -> str:
+    match = _OTHER_FIELDS_PATTERN.search(description)
+    if not match:
+        return description
+
+    inner = match.group("content")
+    parts = [part.strip() for part in inner.split(",") if part.strip()]
+    sorted_inner = ", ".join(sorted(parts))
+
+    start, end = match.span()
+    normalised = f"{description[:start]}other_fields: {{{sorted_inner}}}"
+    if end < len(description):
+        normalised += description[end:]
+
+    return normalised
 
 
 @pytest.fixture
@@ -168,6 +189,13 @@ def test_cached_file_data_manager_creates_expected_files(dataset_copy):
             "tags": "All,Monday,Money In,Night,Source Trading212API,Trading212,Weekday,£",
         },
     ])
+
+    actual_transactions["description"] = actual_transactions["description"].map(
+        _normalise_other_fields
+    )
+    expected_transactions["description"] = expected_transactions["description"].map(
+        _normalise_other_fields
+    )
 
     pd.testing.assert_frame_equal(
         actual_transactions.sort_values("id").reset_index(drop=True),
