@@ -27,6 +27,11 @@ def _to_rfc3339_z(d: dt.datetime) -> str:
     return d.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _sleep(n: float) -> None:
+    logging.info(f"Sleeping {n} seconds...")
+    time.sleep(n)
+
+
 @dataclass
 class T212Creds:
     api_key: str
@@ -70,7 +75,7 @@ class Trading212Client:
         wait = self._last_history_call + gap - now
         if wait > 0:
             logging.info(f"Sleeping for {wait} seconds before it call the API again")
-            time.sleep(wait)
+            _sleep(wait)
 
     def _mark_history_call(self):
         self._last_history_call = time.monotonic()
@@ -108,7 +113,7 @@ class Trading212Client:
                     break
                 backoff = self._retry_after_seconds(resp, self._HISTORY_GAP_SEC if history else 5.0)
                 logging.info(f"{resp.status_code} on {url} – retrying in {backoff:.1f}s (attempt {attempt+1}/{self._RETRY_MAX})")
-                time.sleep(backoff)
+                _sleep(backoff)
                 continue
 
             # Non-retryable
@@ -211,7 +216,7 @@ class Trading212Client:
             rids.append(self.request_csv_export(cur, year_end))
             cur = dt.datetime(cur.year + 1, 1, 1, tzinfo=timezone.utc)
             logging.info(f"Sleeping for 30 seconds before it call the API again for {cur}")
-            time.sleep(30)
+            _sleep(30)
         return rids
 
     def get_exports(self) -> List[Dict[str, Any]]:
@@ -439,14 +444,14 @@ class Trading212Client:
             created_ids.append(rid)
             links_or_ids.append((rid, None, frm, to))
             if i < len(need_to_create) - 1:
-                time.sleep(post_gap_sec)
+                _sleep(post_gap_sec)
 
         # -------- poll until new ones ready (respect GET 1/min)
         if created_ids:
             deadline = time.time() + timeout_sec
             pending = set(created_ids)
             while pending and time.time() < deadline:
-                time.sleep(poll_interval_sec)
+                _sleep(poll_interval_sec)
                 lst = self.get_exports()
                 by_id = {it["reportId"]: it for it in lst}
                 for i, (rid, link, frm, to) in enumerate(links_or_ids):
