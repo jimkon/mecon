@@ -1,0 +1,6 @@
+{
+    "CURRENT_DATASET": "test_apis_providers_and_fetch",
+    "sources": {
+        "Trading212API": true
+    }
+}

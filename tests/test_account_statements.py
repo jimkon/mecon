@@ -1,4 +1,6 @@
 import datetime as dt
+import json
+import shutil
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -12,6 +14,7 @@ from mecon.etl.account_statements import (
     Trading212APIStatements,
     MonzoAPIStatements,
 )
+from mecon.etl.dataset import Dataset
 
 
 class DummyTrueLayer(TrueLayerStatements):
@@ -183,6 +186,125 @@ class FetchIfNeededTests(unittest.TestCase):
         self.assertFalse(fetched)
         self.assertEqual(result, existing)
         source.to_transactions.assert_called_once()
+
+
+class _QueueTrading212Client:
+    """Simple FIFO client stub returning preconfigured dataframes."""
+
+    def __init__(self, frames: list[pd.DataFrame]):
+        self._frames = list(frames)
+        self.calls: list[dict[str, object]] = []
+
+    def fetch_history_dataframe(self, *, since, request_ids_to_skip):
+        self.calls.append(
+            {
+                "since": since,
+                "request_ids_to_skip": list(request_ids_to_skip),
+            }
+        )
+        if not self._frames:
+            raise AssertionError("No more responses configured for Trading212 client stub.")
+        return self._frames.pop(0)
+
+
+class Trading212FetchDatasetFlowTests(unittest.TestCase):
+    def test_fetch_flow_appends_files_and_reuses_cached_exports(self):
+        first_chunk_to = dt.datetime(2020, 1, 31, 23, 59, 59, tzinfo=dt.timezone.utc)
+        second_chunk_to = dt.datetime(2020, 2, 29, 23, 59, 59, tzinfo=dt.timezone.utc)
+
+        responses = [
+            pd.DataFrame(
+                {
+                    "_reportId": ["alpha"],
+                    "_chunk_to": [first_chunk_to.isoformat()],
+                    "value": [1],
+                }
+            ),
+            pd.DataFrame(
+                {
+                    "_reportId": ["beta"],
+                    "_chunk_to": [second_chunk_to.isoformat()],
+                    "value": [2],
+                }
+            ),
+            pd.DataFrame(columns=["_reportId", "_chunk_to", "value"]),
+            pd.DataFrame(columns=["_reportId", "_chunk_to", "value"]),
+        ]
+
+        api_client = _QueueTrading212Client(responses)
+
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            dataset_template = (
+                Path(__file__).parent
+                / "test_datasets"
+                / "test_apis_providers_and_fetch"
+            )
+            dataset_path = tmp_path / "test_apis_providers_and_fetch"
+            shutil.copytree(dataset_template, dataset_path)
+
+            creds_path = tmp_path / "credentials.json"
+            creds_path.write_text(
+                json.dumps({"trading212": {"api_key": "dummy", "mode": "demo"}})
+            )
+
+            dataset = Dataset.from_dirpath(dataset_path)
+            working_dir = dataset.statements / "Trading212API"
+
+            source = Trading212APIStatements(
+                working_dir=working_dir,
+                trans_transformer=mock.MagicMock(),
+                api_handler=api_client,
+            )
+
+            since_initial = dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)
+            source.fetch(since=since_initial)
+            files_after_first = list(working_dir.glob("*.csv"))
+            self.assertEqual(len(files_after_first), 1)
+            first_written = pd.read_csv(files_after_first[0])
+            self.assertIn("alpha", first_written["_reportId"].tolist())
+
+            since_recent = dt.datetime(2020, 2, 1, tzinfo=dt.timezone.utc)
+            source.fetch(since=since_recent)
+            files_after_second = list(working_dir.glob("*.csv"))
+            self.assertEqual(len(files_after_second), 2)
+            combined_reports = pd.concat(
+                (pd.read_csv(path) for path in files_after_second), ignore_index=True
+            )
+            self.assertCountEqual(
+                combined_reports["_reportId"].dropna().tolist(), ["alpha", "beta"]
+            )
+
+            since_future = dt.datetime(2020, 3, 5, tzinfo=dt.timezone.utc)
+            source.fetch(since=since_future)
+            self.assertEqual(len(list(working_dir.glob("*.csv"))), 2)
+
+            source.fetch()
+            self.assertEqual(len(list(working_dir.glob("*.csv"))), 2)
+
+        expected_calls = [
+            {
+                "since": since_initial,
+                "request_ids_to_skip": [],
+            },
+            {
+                "since": since_recent,
+                "request_ids_to_skip": ["alpha"],
+            },
+            {
+                "since": since_future,
+                "request_ids_to_skip": ["alpha", "beta"],
+            },
+            {
+                "since": second_chunk_to + dt.timedelta(seconds=1),
+                "request_ids_to_skip": ["alpha", "beta"],
+            },
+        ]
+
+        self.assertEqual(len(api_client.calls), len(expected_calls))
+        for recorded, expected in zip(api_client.calls, expected_calls):
+            self.assertEqual(recorded["since"], expected["since"])
+            self.assertEqual(recorded["request_ids_to_skip"], expected["request_ids_to_skip"])
 
 
 if __name__ == "__main__":
