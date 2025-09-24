@@ -1,7 +1,7 @@
 import datetime as dt
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
 
 import pandas as pd
@@ -68,7 +68,34 @@ class FetchImplementationTests(unittest.TestCase):
             )
             since = dt.datetime(2021, 5, 4, tzinfo=dt.timezone.utc)
             source.fetch(since=since)
-        api_handler.fetch_history_dataframe.assert_called_once_with(since=since)
+        api_handler.fetch_history_dataframe.assert_called_once()
+        _, kwargs = api_handler.fetch_history_dataframe.call_args
+        self.assertEqual(kwargs["since"], since)
+        self.assertEqual(kwargs["request_ids_to_skip"], [])
+
+    def test_trading212_fetch_collects_existing_report_ids(self):
+        df = pd.DataFrame({"foo": [1]})
+        api_handler = mock.MagicMock(return_value=df)
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            pd.DataFrame({"_reportId": ["111", None]}).to_csv(
+                tmp_path / "existing_upper.csv", index=False
+            )
+            pd.DataFrame({"_reportid": ["222"]}).to_csv(
+                tmp_path / "existing_lower.csv", index=False
+            )
+            source = Trading212APIStatements(
+                working_dir=tmp_path,
+                trans_transformer=mock.MagicMock(),
+                api_handler=api_handler,
+            )
+            since = dt.datetime(2022, 1, 1, tzinfo=dt.timezone.utc)
+            source.fetch(since=since)
+
+        api_handler.fetch_history_dataframe.assert_called_once()
+        _, kwargs = api_handler.fetch_history_dataframe.call_args
+        self.assertEqual(kwargs["since"], since)
+        self.assertEqual(kwargs["request_ids_to_skip"], ["111", "222"])
 
     def test_monzo_fetch_passes_since_string(self):
         api_handler = mock.MagicMock(return_value=pd.DataFrame())
