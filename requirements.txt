@@ -11,3 +11,4 @@ tqdm==4.67.1
 httpx==0.28.1
 Monzo-API==0.3.0
 monzo==0.10.0
+httpx==0.28.1
