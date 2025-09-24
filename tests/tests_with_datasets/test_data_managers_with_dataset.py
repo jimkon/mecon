@@ -34,8 +34,8 @@ def _normalise_other_fields(description: str) -> str:
 @pytest.fixture
 def dataset_copy(tmp_path):
     source_dataset = (
-        Path(__file__).resolve().parent.parent
-        / "test_datasets"
+        Path(__file__).resolve().parent
+        / "datasets"
         / "test_statements_and_tags"
     )
     dataset_path = tmp_path / "test_statements_and_tags"

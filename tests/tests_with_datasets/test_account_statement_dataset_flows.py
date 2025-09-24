@@ -101,8 +101,8 @@ class Trading212DatasetFlowTests(unittest.TestCase):
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             dataset_template = (
-                Path(__file__).resolve().parent.parent
-                / "test_datasets"
+                Path(__file__).resolve().parent
+                / "datasets"
                 / "test_apis_providers_and_fetch"
             )
             dataset_path = tmp_path / "test_apis_providers_and_fetch"
