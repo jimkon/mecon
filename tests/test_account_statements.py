@@ -59,7 +59,8 @@ class FetchImplementationTests(unittest.TestCase):
         )
 
     def test_trading212_fetch_passes_since_datetime(self):
-        api_handler = mock.MagicMock(return_value=pd.DataFrame())
+        api_handler = mock.MagicMock()
+        api_handler.fetch_history_dataframe.return_value = pd.DataFrame()
         with TemporaryDirectory() as tmpdir:
             source = Trading212APIStatements(
                 working_dir=Path(tmpdir),
@@ -75,7 +76,8 @@ class FetchImplementationTests(unittest.TestCase):
 
     def test_trading212_fetch_collects_existing_report_ids(self):
         df = pd.DataFrame({"foo": [1]})
-        api_handler = mock.MagicMock(return_value=df)
+        api_handler = mock.MagicMock()
+        api_handler.fetch_history_dataframe.return_value = df
         with TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             pd.DataFrame({"_reportId": ["111", None]}).to_csv(
@@ -96,6 +98,30 @@ class FetchImplementationTests(unittest.TestCase):
         _, kwargs = api_handler.fetch_history_dataframe.call_args
         self.assertEqual(kwargs["since"], since)
         self.assertEqual(kwargs["request_ids_to_skip"], ["111", "222"])
+
+    def test_trading212_fetch_defaults_since_from_cached_chunk(self):
+        api_handler = mock.MagicMock()
+        api_handler.fetch_history_dataframe.return_value = pd.DataFrame({"foo": [1]})
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            pd.DataFrame(
+                {
+                    "_reportId": ["555"],
+                    "_chunk_to": ["2020-12-31 23:59:59+00:00"],
+                }
+            ).to_csv(tmp_path / "existing.csv", index=False)
+            source = Trading212APIStatements(
+                working_dir=tmp_path,
+                trans_transformer=mock.MagicMock(),
+                api_handler=api_handler,
+            )
+            source.fetch()
+
+        api_handler.fetch_history_dataframe.assert_called_once()
+        _, kwargs = api_handler.fetch_history_dataframe.call_args
+        expected_since = dt.datetime(2021, 1, 1, tzinfo=dt.timezone.utc)
+        self.assertEqual(kwargs["since"], expected_since)
+        self.assertEqual(kwargs["request_ids_to_skip"], ["555"])
 
     def test_monzo_fetch_passes_since_string(self):
         api_handler = mock.MagicMock(return_value=pd.DataFrame())
