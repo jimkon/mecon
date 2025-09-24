@@ -199,6 +199,11 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
         if auto_fetch:
             self.fetch()
 
+    def _log_fetch_banner(self) -> None:
+        """Emit a visible log line so users can track remote fetches easily."""
+
+        logging.info(f"##### {self.id} FETCHING DATA FROM THE INTERNET #####")
+
     @classmethod
     @abc.abstractmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
@@ -274,6 +279,8 @@ class TrueLayerStatements(APIAccountStatementsSource):
     def fetch(self, since: dt.datetime | None = None):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
+
+        self._log_fetch_banner()
 
         from_date = since.date() if since else None
         json_transactions = self.api_handler.get_transactions(
@@ -364,8 +371,81 @@ class Trading212APIStatements(APIAccountStatementsSource):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
-        since = since or dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)
-        df = self.api_handler.fetch_history_dataframe(since=since)
+        self._log_fetch_banner()
+
+        existing_report_ids: set[str] = set()
+        cached_chunk_tos: list[dt.datetime] = []
+        columns_of_interest = {"_reportId", "_reportid", "_chunk_to"}
+        for csv_path in self.statement_filepaths:
+            try:
+                df_meta = pd.read_csv(
+                    csv_path,
+                    dtype=str,
+                    usecols=lambda col: col in columns_of_interest,
+                )
+            except ValueError:
+                # None of the requested columns are present – nothing to reuse.
+                continue
+            except Exception as exc:
+                logging.warning(
+                    "Unable to inspect Trading212 statement file %s for cached metadata: %s",
+                    csv_path,
+                    exc,
+                )
+                continue
+
+            for col in ("_reportId", "_reportid"):
+                if col in df_meta:
+                    existing_report_ids.update(
+                        rid for rid in df_meta[col].dropna() if str(rid).strip()
+                    )
+
+            if "_chunk_to" in df_meta:
+                chunk_tos = pd.to_datetime(df_meta["_chunk_to"], errors="coerce", utc=True)
+                chunk_tos = chunk_tos.dropna()
+                if not chunk_tos.empty:
+                    cached_chunk_tos.append(chunk_tos.max().to_pydatetime())
+
+        existing_report_ids = {str(rid).strip() for rid in existing_report_ids if str(rid).strip()}
+        if existing_report_ids:
+            preview_ids = sorted(str(rid) for rid in existing_report_ids)
+            preview = ", ".join(preview_ids[:5])
+            if len(preview_ids) > 5:
+                preview += ", …"
+            logging.info(
+                "Trading212API: detected %d cached export id(s) locally (%s).",
+                len(existing_report_ids),
+                preview,
+            )
+
+        if since is None:
+            now_utc = dt.datetime.now(dt.timezone.utc)
+            if cached_chunk_tos:
+                latest_chunk_to = max(cached_chunk_tos)
+                if latest_chunk_to.tzinfo is None:
+                    latest_chunk_to = latest_chunk_to.replace(tzinfo=dt.timezone.utc)
+                next_since = latest_chunk_to + dt.timedelta(seconds=1)
+                if next_since >= now_utc:
+                    logging.info(
+                        "Trading212API: cached statements already cover up to %s; nothing to fetch.",
+                        latest_chunk_to,
+                    )
+                    return
+                logging.info(
+                    "Trading212API: defaulting fetch 'since' to %s based on cached chunk ending at %s.",
+                    next_since,
+                    latest_chunk_to,
+                )
+                since = next_since
+            else:
+                since = dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)
+
+        if since.tzinfo is None:
+            since = since.replace(tzinfo=dt.timezone.utc)
+        df = self.api_handler.fetch_history_dataframe(
+            since=since,
+            request_ids_to_skip=sorted(str(rid) for rid in existing_report_ids),
+        )
         if len(df) == 0:
             logging.info(
                 f"{self.__class__.__name__}: No transactions fetched for Trading212 since {self}. No file added to {self.dir_name}.")
@@ -393,6 +473,8 @@ class MonzoAPIStatements(APIAccountStatementsSource):
     def fetch(self, since: dt.datetime | None = None):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
+
+        self._log_fetch_banner()
 
         since_str = (
             since.isoformat().replace("+00:00", "Z")
