@@ -260,6 +260,25 @@ class Trading212Client:
 
         request_ids_to_skip = request_ids_to_skip if request_ids_to_skip is not None else []
 
+        skip_ids: set[str] = set()
+        if not force_request:
+            skip_ids = {str(rid) for rid in request_ids_to_skip if rid is not None}
+            if skip_ids:
+                preview = ", ".join(sorted(skip_ids)[:5])
+                if len(skip_ids) > 5:
+                    preview += ", …"
+                logging.info(
+                    "Skipping re-download for %d previously cached export(s): %s",
+                    len(skip_ids),
+                    preview,
+                )
+        else:
+            if request_ids_to_skip:
+                logging.info(
+                    "force_request=True – ignoring %d cached export id(s).",
+                    len(request_ids_to_skip),
+                )
+
         if since.tzinfo is None:
             since = since.replace(tzinfo=timezone.utc)
         now = dt.datetime.now(timezone.utc)
@@ -309,12 +328,17 @@ class Trading212Client:
             except Exception:
                 continue
 
+        def _is_skipped(it: dict) -> bool:
+            rid = it.get("reportId")
+            return str(rid) in skip_ids if rid is not None else False
+
         # helper: find exact match
         def _find_exact(frm: dt.datetime, to: dt.datetime) -> dict | None:
-            for it in completed_wanted:
-                if it["_from"] == frm and it["_to"] == to:
-                    return it
-            return None
+            matches = [it for it in completed_wanted if it["_from"] == frm and it["_to"] == to]
+            if not matches:
+                return None
+            matches.sort(key=lambda it: (_is_skipped(it), it["_to"]))
+            return matches[0]
 
         # helper: for the current-year chunk, reuse if any Completed export covers "today"
         def _find_covers_today_for_chunk(frm: dt.datetime) -> dict | None:
@@ -326,17 +350,43 @@ class Trading212Client:
             ]
             if not candidates:
                 return None
-            # prefer the one with the latest '_to'
-            return max(candidates, key=lambda x: x["_to"])
+            candidates.sort(key=lambda it: it["_to"], reverse=True)
+            for cand in candidates:
+                if not _is_skipped(cand):
+                    return cand
+            return candidates[0]
 
         # -------- reuse existing / decide which to create
         links_or_ids: list[tuple[int | None, str | None, dt.datetime, dt.datetime]] = []
         need_to_create: list[tuple[dt.datetime, dt.datetime]] = []
+        reused_existing = 0
+        skipped_existing = 0
 
         for idx, (frm, to) in enumerate(chunks):
             exact = _find_exact(frm, to)
             if exact:
-                links_or_ids.append((exact["reportId"], exact["downloadLink"], frm, to))
+                rid = exact.get("reportId")
+                if _is_skipped(exact):
+                    skipped_existing += 1
+                    logging.info(
+                        "Chunk %d/%d (%s → %s) already stored locally via export %s; skipping download.",
+                        idx + 1,
+                        len(chunks),
+                        frm.date(),
+                        to.date(),
+                        rid,
+                    )
+                    continue
+                reused_existing += 1
+                logging.info(
+                    "Chunk %d/%d (%s → %s) reusing completed export %s.",
+                    idx + 1,
+                    len(chunks),
+                    frm.date(),
+                    to.date(),
+                    rid,
+                )
+                links_or_ids.append((rid, exact["downloadLink"], frm, to))
                 continue
 
             is_last_chunk = (idx == len(chunks) - 1)
@@ -344,9 +394,41 @@ class Trading212Client:
                 covers = _find_covers_today_for_chunk(frm)
                 if covers:
                     # treat as covered: reuse that link to avoid re-requesting
-                    links_or_ids.append((covers["reportId"], covers["downloadLink"], covers["_from"], covers["_to"]))
+                    rid = covers.get("reportId")
+                    if _is_skipped(covers):
+                        skipped_existing += 1
+                        logging.info(
+                            "Chunk %d/%d (%s → %s) already satisfied locally by export %s covering %s → %s; skipping download.",
+                            idx + 1,
+                            len(chunks),
+                            frm.date(),
+                            to.date(),
+                            rid,
+                            covers["_from"].date(),
+                            covers["_to"].date(),
+                        )
+                        continue
+                    reused_existing += 1
+                    logging.info(
+                        "Chunk %d/%d (%s → %s) reusing export %s covering %s → %s.",
+                        idx + 1,
+                        len(chunks),
+                        frm.date(),
+                        to.date(),
+                        rid,
+                        covers["_from"].date(),
+                        covers["_to"].date(),
+                    )
+                    links_or_ids.append((rid, covers["downloadLink"], covers["_from"], covers["_to"]))
                     continue
 
+            logging.info(
+                "Chunk %d/%d (%s → %s) not covered; scheduling new export request.",
+                idx + 1,
+                len(chunks),
+                frm.date(),
+                to.date(),
+            )
             need_to_create.append((frm, to))
 
         # -------- create missing (respect POST 1/30s)
@@ -425,7 +507,13 @@ class Trading212Client:
                 df["_chunk_to"] = to
                 frames.append(df)
 
-        logging.info(f"Found {len(links_or_ids)} links to be fetched.")
+        logging.info(
+            "Preparing to download %d export(s): %d reused, %d newly requested. %d export(s) already cached locally.",
+            len(links_or_ids),
+            reused_existing,
+            len(created_ids),
+            skipped_existing,
+        )
 
         for rid, link, frm, to in links_or_ids:
             if not link:

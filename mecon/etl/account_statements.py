@@ -199,6 +199,11 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
         if auto_fetch:
             self.fetch()
 
+    def _log_fetch_banner(self) -> None:
+        """Emit a visible log line so users can track remote fetches easily."""
+
+        logging.info(f"##### {self.id} FETCHING DATA FROM THE INTERNET #####")
+
     @classmethod
     @abc.abstractmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
@@ -274,6 +279,8 @@ class TrueLayerStatements(APIAccountStatementsSource):
     def fetch(self, since: dt.datetime | None = None):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
+
+        self._log_fetch_banner()
 
         from_date = since.date() if since else None
         json_transactions = self.api_handler.get_transactions(
@@ -364,8 +371,44 @@ class Trading212APIStatements(APIAccountStatementsSource):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
+        self._log_fetch_banner()
+
+        existing_report_ids: set[str] = set()
+        for csv_path in self.statement_filepaths:
+            try:
+                df_ids = pd.read_csv(csv_path, usecols=["_reportId"], dtype=str)
+                existing_report_ids.update(rid for rid in df_ids["_reportId"].dropna())
+                continue
+            except ValueError:
+                try:
+                    df_ids = pd.read_csv(csv_path, usecols=["_reportid"], dtype=str)
+                    existing_report_ids.update(rid for rid in df_ids["_reportid"].dropna())
+                except ValueError:
+                    continue
+            except Exception as exc:
+                logging.warning(
+                    "Unable to inspect Trading212 statement file %s for cached export ids: %s",
+                    csv_path,
+                    exc,
+                )
+
+        existing_report_ids = {rid for rid in existing_report_ids if str(rid).strip()}
+        if existing_report_ids:
+            preview_ids = sorted(str(rid) for rid in existing_report_ids)
+            preview = ", ".join(preview_ids[:5])
+            if len(preview_ids) > 5:
+                preview += ", …"
+            logging.info(
+                "Trading212API: detected %d cached export id(s) locally (%s).",
+                len(existing_report_ids),
+                preview,
+            )
+
         since = since or dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)
-        df = self.api_handler.fetch_history_dataframe(since=since)
+        df = self.api_handler.fetch_history_dataframe(
+            since=since,
+            request_ids_to_skip=sorted(str(rid) for rid in existing_report_ids),
+        )
         if len(df) == 0:
             logging.info(
                 f"{self.__class__.__name__}: No transactions fetched for Trading212 since {self}. No file added to {self.dir_name}.")
@@ -393,6 +436,8 @@ class MonzoAPIStatements(APIAccountStatementsSource):
     def fetch(self, since: dt.datetime | None = None):
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
+
+        self._log_fetch_banner()
 
         since_str = (
             since.isoformat().replace("+00:00", "Z")

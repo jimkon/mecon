@@ -73,7 +73,7 @@ def fetch_statement_sources(data_manager):
     for source in fetchable_sources:
         try:
             source.fetch()
-            logging.error(f"Successfully fetched source {source}")
+            logging.info(f"Successfully fetched source {source}")
             results.append({'source': source, 'error': None})
         except Exception as exc:
             logging.exception(f"Failed to fetch source {source}: {exc}")
