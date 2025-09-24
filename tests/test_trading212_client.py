@@ -48,6 +48,7 @@ class Trading212ClientTests(unittest.TestCase):
 
     @mock.patch("mecon.etl.trading212_client_by_o3.httpx.Client")
     def test_fetch_history_dataframe_reuses_completed_export(self, mock_httpx_client):
+        """Reuse an already completed export and avoid requesting new reports."""
         client, _, dl_client = self._build_client(mock_httpx_client)
         client.request_csv_export = mock.MagicMock()
 
@@ -92,6 +93,7 @@ class Trading212ClientTests(unittest.TestCase):
     @mock.patch("mecon.etl.trading212_client_by_o3.time.sleep", return_value=None)
     @mock.patch("mecon.etl.trading212_client_by_o3.httpx.Client")
     def test_fetch_history_dataframe_requests_missing_exports(self, mock_httpx_client, _sleep):
+        """Request a fresh export, poll until ready, and download the new report."""
         client, _, dl_client = self._build_client(mock_httpx_client)
         client.request_csv_export = mock.MagicMock(return_value=321)
 

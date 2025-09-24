@@ -49,6 +49,7 @@ class DummyAPIAccount(APIAccountStatementsSource):
 
 class FetchImplementationTests(unittest.TestCase):
     def test_truelayer_fetch_passes_from_date(self):
+        """Ensure TrueLayer fetch forwards the since date as a date object."""
         api_handler = mock.MagicMock()
         with TemporaryDirectory() as tmpdir:
             source = DummyTrueLayer(Path(tmpdir), api_handler)
@@ -62,6 +63,7 @@ class FetchImplementationTests(unittest.TestCase):
         )
 
     def test_trading212_fetch_passes_since_datetime(self):
+        """Verify Trading212 fetch passes the datetime and empty skip list through."""
         api_handler = mock.MagicMock()
         api_handler.fetch_history_dataframe.return_value = pd.DataFrame()
         with TemporaryDirectory() as tmpdir:
@@ -78,6 +80,7 @@ class FetchImplementationTests(unittest.TestCase):
         self.assertEqual(kwargs["request_ids_to_skip"], [])
 
     def test_trading212_fetch_collects_existing_report_ids(self):
+        """Confirm fetch gathers cached report IDs from disk before calling the API."""
         df = pd.DataFrame({"foo": [1]})
         api_handler = mock.MagicMock()
         api_handler.fetch_history_dataframe.return_value = df
@@ -103,6 +106,7 @@ class FetchImplementationTests(unittest.TestCase):
         self.assertEqual(kwargs["request_ids_to_skip"], ["111", "222"])
 
     def test_trading212_fetch_defaults_since_from_cached_chunk(self):
+        """Ensure cached chunk metadata advances the implicit since datetime."""
         api_handler = mock.MagicMock()
         api_handler.fetch_history_dataframe.return_value = pd.DataFrame({"foo": [1]})
         with TemporaryDirectory() as tmpdir:
@@ -127,6 +131,7 @@ class FetchImplementationTests(unittest.TestCase):
         self.assertEqual(kwargs["request_ids_to_skip"], ["555"])
 
     def test_monzo_fetch_passes_since_string(self):
+        """Check Monzo fetch converts the datetime to the expected ISO string."""
         api_handler = mock.MagicMock(return_value=pd.DataFrame())
         with TemporaryDirectory() as tmpdir:
             source = MonzoAPIStatements(
@@ -143,6 +148,7 @@ class FetchImplementationTests(unittest.TestCase):
 
 class FetchIfNeededTests(unittest.TestCase):
     def test_fetch_if_needed_and_transform_fetches_missing_days(self):
+        """Fetch when data is stale and re-run transformation to include new rows."""
         with TemporaryDirectory() as tmpdir:
             source = DummyAPIAccount(
                 working_dir=Path(tmpdir),
@@ -168,6 +174,7 @@ class FetchIfNeededTests(unittest.TestCase):
         self.assertEqual(source.to_transactions.call_count, 2)
 
     def test_fetch_if_needed_and_transform_skips_when_up_to_date(self):
+        """Skip fetching when latest transactions already cover today's date."""
         with TemporaryDirectory() as tmpdir:
             source = DummyAPIAccount(
                 working_dir=Path(tmpdir),
@@ -209,6 +216,7 @@ class _QueueTrading212Client:
 
 class Trading212FetchDatasetFlowTests(unittest.TestCase):
     def test_fetch_flow_appends_files_and_reuses_cached_exports(self):
+        """Run dataset flow to cover append, incremental fetch, and cache-only runs."""
         first_chunk_to = dt.datetime(2020, 1, 31, 23, 59, 59, tzinfo=dt.timezone.utc)
         second_chunk_to = dt.datetime(2020, 2, 29, 23, 59, 59, tzinfo=dt.timezone.utc)
 
