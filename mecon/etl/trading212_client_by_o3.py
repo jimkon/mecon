@@ -263,42 +263,113 @@ class Trading212Client:
 
         logging.info(f"Fetching full history of transactions from the Trading212 API since {since=}...")
 
-        request_ids_to_skip = request_ids_to_skip if request_ids_to_skip is not None else []
+        since = self._normalize_since(since)
+        include = self._resolve_include(include)
+        skip_ids = self._resolve_skip_ids(request_ids_to_skip, force_request)
 
-        skip_ids: set[str] = set()
-        if not force_request:
-            skip_ids = {str(rid) for rid in request_ids_to_skip if rid is not None}
-            if skip_ids:
-                preview = ", ".join(sorted(skip_ids)[:5])
-                if len(skip_ids) > 5:
-                    preview += ", …"
-                logging.info(
-                    "Skipping re-download for %d previously cached export(s): %s",
-                    len(skip_ids),
-                    preview,
-                )
-        else:
-            if request_ids_to_skip:
-                logging.info(
-                    "force_request=True – ignoring %d cached export id(s).",
-                    len(request_ids_to_skip),
-                )
+        now = dt.datetime.now(timezone.utc)
+        chunks = self._build_chunks(since, now)
+        completed_exports = self._collect_completed_exports(include)
 
+        (
+            links_or_ids,
+            need_to_create,
+            reused_existing,
+            skipped_existing,
+        ) = self._plan_exports(
+            chunks,
+            completed_exports,
+            skip_ids,
+            today_utc=now.date(),
+            force_request=force_request,
+        )
+
+        created_ids = self._create_missing_exports(need_to_create, include, post_gap_sec, links_or_ids)
+
+        self._wait_for_exports(
+            links_or_ids,
+            created_ids,
+            poll_interval_sec=poll_interval_sec,
+            timeout_sec=timeout_sec,
+        )
+
+        frames = self._download_export_frames(
+            links_or_ids,
+            reused_existing=reused_existing,
+            created_count=len(created_ids),
+            skipped_existing=skipped_existing,
+        )
+
+        if not frames:
+            import pandas as pd
+            return pd.DataFrame()
+
+        import pandas as pd
+
+        out = pd.concat(frames, ignore_index=True)
+
+        # for col in ("Time", "CreatedAt", "Date", "ExecutionTime"):
+        #     if col in out.columns:
+        #         out[col] = pd.to_datetime(out[col], errors="coerce", utc=True)
+
+        logging.info(
+            f"Found a total of {out.shape[0]} rows and {out.shape[1]} columns from {out['Time'].min()} to {out['Time'].max()}"
+        )
+
+        return out
+
+    # ───────── fetch helpers ─────────
+    def _normalize_since(self, since: dt.datetime) -> dt.datetime:
+        logging.info("Normalizing 'since' parameter for Trading212 history fetch.")
         if since.tzinfo is None:
             since = since.replace(tzinfo=timezone.utc)
-        now = dt.datetime.now(timezone.utc)
-        today_utc = now.date()
+        return since
 
-        include = include or {
+    def _resolve_include(self, include: Dict[str, bool] | None) -> Dict[str, bool]:
+        logging.info("Resolving include flags for Trading212 history fetch.")
+        default_include = {
             "includeTransactions": True,
             "includeOrders": True,
             "includeDividends": True,
             "includeInterest": True,
         }
+        if include is None:
+            return default_include
+        return include
 
-        # -------- build calendar-year chunks [from, to] up to 'now'
+    def _resolve_skip_ids(
+        self,
+        request_ids_to_skip: list[str] | None,
+        force_request: bool,
+    ) -> set[str]:
+        logging.info("Resolving cached export ids to skip for Trading212 history fetch.")
+        request_ids_to_skip = request_ids_to_skip or []
+        if force_request:
+            if request_ids_to_skip:
+                logging.info(
+                    "force_request=True – ignoring %d cached export id(s).",
+                    len(request_ids_to_skip),
+                )
+            return set()
+
+        skip_ids = {str(rid) for rid in request_ids_to_skip if rid is not None}
+        if skip_ids:
+            preview = ", ".join(sorted(skip_ids)[:5])
+            if len(skip_ids) > 5:
+                preview += ", …"
+            logging.info(
+                "Skipping re-download for %d previously cached export(s): %s",
+                len(skip_ids),
+                preview,
+            )
+        else:
+            logging.info("No cached export ids provided for skipping.")
+        return skip_ids
+
+    def _build_chunks(self, since: dt.datetime, now: dt.datetime) -> list[tuple[dt.datetime, dt.datetime]]:
+        logging.info("Building calendar-year chunks for Trading212 history fetch.")
         chunks: list[tuple[dt.datetime, dt.datetime]] = []
-        cur = dt.datetime(max(since.year, since.year), 1, 1, tzinfo=timezone.utc)
+        cur = dt.datetime(since.year, 1, 1, tzinfo=timezone.utc)
         if since > cur:
             cur = since
         while cur < now:
@@ -308,18 +379,21 @@ class Trading212Client:
             )
             chunks.append((cur, year_end))
             cur = dt.datetime(cur.year + 1, 1, 1, tzinfo=timezone.utc)
+        logging.info("Constructed %d chunk(s) for Trading212 history fetch.", len(chunks))
+        return chunks
 
-        # -------- index existing exports
-        DONE_STATUSES = {"Finished", "Completed", "Complete", "Succeeded"}
+    def _collect_completed_exports(self, include: Dict[str, bool]) -> list[dict]:
+        logging.info("Collecting completed exports for Trading212 history fetch.")
 
         def _norm_included(d: dict) -> tuple:
             keys = ("includeOrders", "includeTransactions", "includeDividends", "includeInterest")
             return tuple(bool(d.get(k, False)) for k in keys)
 
         want_di = _norm_included(include)
-        existing = self.get_exports()  # call once
+        DONE_STATUSES = {"Finished", "Completed", "Complete", "Succeeded"}
+
         completed_wanted: list[dict] = []
-        for it in existing:
+        for it in self.get_exports():
             try:
                 if it.get("status") not in DONE_STATUSES:
                     continue
@@ -330,38 +404,57 @@ class Trading212Client:
                 it["_from"] = dt.datetime.fromisoformat(it["timeFrom"].replace("Z", "+00:00")).astimezone(timezone.utc)
                 it["_to"] = dt.datetime.fromisoformat(it["timeTo"].replace("Z", "+00:00")).astimezone(timezone.utc)
                 completed_wanted.append(it)
-            except Exception:
+            except Exception as exc:  # pragma: no cover - defensive
+                logging.debug("Skipping malformed export metadata: %s", exc)
                 continue
+
+        logging.info(
+            "Identified %d completed export(s) matching requested include flags.",
+            len(completed_wanted),
+        )
+        return completed_wanted
+
+    def _plan_exports(
+        self,
+        chunks: list[tuple[dt.datetime, dt.datetime]],
+        completed_wanted: list[dict],
+        skip_ids: set[str],
+        *,
+        today_utc: dt.date,
+        force_request: bool,
+    ) -> tuple[
+        list[tuple[int | None, str | None, dt.datetime, dt.datetime]],
+        list[tuple[dt.datetime, dt.datetime]],
+        int,
+        int,
+    ]:
+        logging.info("Planning Trading212 export usage across %d chunk(s).", len(chunks))
 
         def _is_skipped(it: dict) -> bool:
             rid = it.get("reportId")
             return str(rid) in skip_ids if rid is not None else False
 
-        # helper: find exact match
         def _find_exact(frm: dt.datetime, to: dt.datetime) -> dict | None:
-            matches = [it for it in completed_wanted if it["_from"] == frm and it["_to"] == to]
+            matches = [it for it in completed_wanted if it.get("_from") == frm and it.get("_to") == to]
             if not matches:
                 return None
-            matches.sort(key=lambda it: (_is_skipped(it), it["_to"]))
+            matches.sort(key=lambda it: (_is_skipped(it), it.get("_to")))
             return matches[0]
 
-        # helper: for the current-year chunk, reuse if any Completed export covers "today"
         def _find_covers_today_for_chunk(frm: dt.datetime) -> dict | None:
-            # accept any export where _from <= frm (same year or earlier)
-            # and its timeTo falls on today's date (UTC)
             candidates = [
-                it for it in completed_wanted
-                if it["_from"] <= frm and it["_to"].date() == today_utc and it["_from"].year == frm.year
+                it
+                for it in completed_wanted
+                if it.get("_from") <= frm and it.get("_to").date() == today_utc and it.get("_from").year == frm.year
             ]
             if not candidates:
                 return None
-            candidates.sort(key=lambda it: it["_to"], reverse=True)
+            candidates.sort(key=lambda it: it.get("_to"), reverse=True)
             for cand in candidates:
                 if not _is_skipped(cand):
                     return cand
             return candidates[0]
 
-        # -------- reuse existing / decide which to create
         links_or_ids: list[tuple[int | None, str | None, dt.datetime, dt.datetime]] = []
         need_to_create: list[tuple[dt.datetime, dt.datetime]] = []
         reused_existing = 0
@@ -391,14 +484,13 @@ class Trading212Client:
                     to.date(),
                     rid,
                 )
-                links_or_ids.append((rid, exact["downloadLink"], frm, to))
+                links_or_ids.append((rid, exact.get("downloadLink"), frm, to))
                 continue
 
-            is_last_chunk = (idx == len(chunks) - 1)
+            is_last_chunk = idx == len(chunks) - 1
             if is_last_chunk and not force_request:
                 covers = _find_covers_today_for_chunk(frm)
                 if covers:
-                    # treat as covered: reuse that link to avoid re-requesting
                     rid = covers.get("reportId")
                     if _is_skipped(covers):
                         skipped_existing += 1
@@ -409,8 +501,8 @@ class Trading212Client:
                             frm.date(),
                             to.date(),
                             rid,
-                            covers["_from"].date(),
-                            covers["_to"].date(),
+                            covers.get("_from").date(),
+                            covers.get("_to").date(),
                         )
                         continue
                     reused_existing += 1
@@ -421,10 +513,10 @@ class Trading212Client:
                         frm.date(),
                         to.date(),
                         rid,
-                        covers["_from"].date(),
-                        covers["_to"].date(),
+                        covers.get("_from").date(),
+                        covers.get("_to").date(),
                     )
-                    links_or_ids.append((rid, covers["downloadLink"], covers["_from"], covers["_to"]))
+                    links_or_ids.append((rid, covers.get("downloadLink"), covers.get("_from"), covers.get("_to")))
                     continue
 
             logging.info(
@@ -436,110 +528,145 @@ class Trading212Client:
             )
             need_to_create.append((frm, to))
 
-        # -------- create missing (respect POST 1/30s)
+        return links_or_ids, need_to_create, reused_existing, skipped_existing
+
+    def _create_missing_exports(
+        self,
+        need_to_create: list[tuple[dt.datetime, dt.datetime]],
+        include: Dict[str, bool],
+        post_gap_sec: int,
+        links_or_ids: list[tuple[int | None, str | None, dt.datetime, dt.datetime]],
+    ) -> list[int]:
+        logging.info("Creating %d missing Trading212 export(s) if required.", len(need_to_create))
         created_ids: list[int] = []
         for i, (frm, to) in enumerate(need_to_create):
             rid = self.request_csv_export(frm, to, include=include)
-            logging.info(f"New export was requested: request_id={rid}")
+            logging.info("New export was requested: request_id=%s", rid)
             created_ids.append(rid)
             links_or_ids.append((rid, None, frm, to))
             if i < len(need_to_create) - 1:
                 _sleep(post_gap_sec)
+        return created_ids
 
-        # -------- poll until new ones ready (respect GET 1/min)
-        if created_ids:
-            deadline = time.time() + timeout_sec
-            pending = set(created_ids)
-            while pending and time.time() < deadline:
-                _sleep(poll_interval_sec)
-                lst = self.get_exports()
-                by_id = {it["reportId"]: it for it in lst}
-                for i, (rid, link, frm, to) in enumerate(links_or_ids):
-                    if rid in pending and rid in by_id:
-                        it = by_id[rid]
-                        if it.get("status") == "Completed" and it.get("downloadLink"):
-                            links_or_ids[i] = (rid, it["downloadLink"], frm, to)
-                            pending.discard(rid)
-            if pending:
-                raise ApiError(f"Timed out waiting for exports: {sorted(pending)}")
+    def _wait_for_exports(
+        self,
+        links_or_ids: list[tuple[int | None, str | None, dt.datetime, dt.datetime]],
+        created_ids: list[int],
+        *,
+        poll_interval_sec: int,
+        timeout_sec: int,
+    ) -> None:
+        logging.info("Waiting for %d Trading212 export(s) to complete.", len(created_ids))
+        if not created_ids:
+            return
 
-        # -------- download & merge
-        import pandas as pd
+        deadline = time.time() + timeout_sec
+        pending = set(created_ids)
+        while pending and time.time() < deadline:
+            _sleep(poll_interval_sec)
+            lst = self.get_exports()
+            by_id = {it["reportId"]: it for it in lst}
+            for i, (rid, link, frm, to) in enumerate(links_or_ids):
+                if rid in pending and rid in by_id:
+                    it = by_id[rid]
+                    if it.get("status") == "Completed" and it.get("downloadLink"):
+                        links_or_ids[i] = (rid, it["downloadLink"], frm, to)
+                        pending.discard(rid)
+        if pending:
+            raise ApiError(f"Timed out waiting for exports: {sorted(pending)}")
 
-        frames: list[pd.DataFrame] = []
-
-        def _read_one(link: str, rid: int | None, frm: dt.datetime, to: dt.datetime):
-            r = self._dl.get(link, timeout=60)
-            r.raise_for_status()
-            buf = r.content
-            if len(buf) >= 4 and buf[:2] == b"PK":
-                with zipfile.ZipFile(BytesIO(buf)) as zf:
-                    for name in zf.namelist():
-                        if not name.lower().endswith(".csv"):
-                            continue
-                        info = zf.getinfo(name)
-                        if info.file_size == 0:
-                            # empty CSV inside the zip
-                            continue
-                        with zf.open(name) as f:
-                            try:
-                                df = pd.read_csv(f)
-                            except Exception as e:
-                                logging.warning(
-                                    f"Error while trying to pd.read_csv(BytesIO(buf)) after reading {link=}: {e}")
-                                continue
-                            if df.empty:
-                                continue
-                            df["_file_name"] = name
-                            df["_reportId"] = rid
-                            df["_chunk_from"] = frm
-                            df["_chunk_to"] = to
-                            frames.append(df)
-            else:
-                if len(buf) == 0:
-                    return
-                try:
-                    df = pd.read_csv(BytesIO(buf))
-                except Exception as e:
-                    logging.warning(
-                        f"Error while trying to pd.read_csv(BytesIO(buf)) after reading {link=}: {e}")
-                    return
-                if df.empty:
-                    return
-                df["_file_name"] = None
-                df["_reportId"] = rid
-                df["_chunk_from"] = frm
-                df["_chunk_to"] = to
-                frames.append(df)
-
+    def _download_export_frames(
+        self,
+        links_or_ids: list[tuple[int | None, str | None, dt.datetime, dt.datetime]],
+        *,
+        reused_existing: int,
+        created_count: int,
+        skipped_existing: int,
+    ) -> list[pd.DataFrame]:
+        logging.info("Downloading Trading212 export data frames.")
         logging.info(
             "Preparing to download %d export(s): %d reused, %d newly requested. %d export(s) already cached locally.",
             len(links_or_ids),
             reused_existing,
-            len(created_ids),
+            created_count,
             skipped_existing,
         )
+
+        frames: list[pd.DataFrame] = []
 
         for rid, link, frm, to in links_or_ids:
             if not link:
                 raise ApiError(f"Export {rid} has no downloadLink.")
-            _read_one(link, rid if isinstance(rid, int) else None, frm, to)
+            frames.extend(self._read_export(link, rid if isinstance(rid, int) else None, frm, to))
 
-        if not frames:
-            import pandas as pd
-            return pd.DataFrame()
+        return frames
 
-        out = pd.concat(frames, ignore_index=True)
+    def _read_export(
+        self,
+        link: str,
+        rid: int | None,
+        frm: dt.datetime,
+        to: dt.datetime,
+    ) -> list[pd.DataFrame]:
+        logging.info(
+            "Downloading Trading212 export %s for chunk %s → %s.",
+            rid,
+            frm,
+            to,
+        )
+        response = self._dl.get(link, timeout=60)
+        response.raise_for_status()
+        buf = response.content
 
+        frames: list[pd.DataFrame] = []
 
-        # for col in ("Time", "CreatedAt", "Date", "ExecutionTime"):
-        #     if col in out.columns:
-        #         out[col] = pd.to_datetime(out[col], errors="coerce", utc=True)
+        if len(buf) >= 4 and buf[:2] == b"PK":
+            with zipfile.ZipFile(BytesIO(buf)) as zf:
+                for name in zf.namelist():
+                    if not name.lower().endswith(".csv"):
+                        continue
+                    info = zf.getinfo(name)
+                    if info.file_size == 0:
+                        continue
+                    with zf.open(name) as f:
+                        try:
+                            df = pd.read_csv(f)
+                        except Exception as exc:  # pragma: no cover - defensive
+                            logging.warning(
+                                "Error while trying to pd.read_csv(BytesIO(buf)) after reading %s: %s",
+                                link,
+                                exc,
+                            )
+                            continue
+                        if df.empty:
+                            continue
+                        df["_file_name"] = name
+                        df["_reportId"] = rid
+                        df["_chunk_from"] = frm
+                        df["_chunk_to"] = to
+                        frames.append(df)
+            return frames
 
-        logging.info(f"Found a total of {out.shape[0]} rows and {out.shape[1]} columns from {out['Time'].min()} to {out['Time'].max()}")
+        if len(buf) == 0:
+            return frames
 
-
-        return out
+        try:
+            df = pd.read_csv(BytesIO(buf))
+        except Exception as exc:  # pragma: no cover - defensive
+            logging.warning(
+                "Error while trying to pd.read_csv(BytesIO(buf)) after reading %s: %s",
+                link,
+                exc,
+            )
+            return frames
+        if df.empty:
+            return frames
+        df["_file_name"] = None
+        df["_reportId"] = rid
+        df["_chunk_from"] = frm
+        df["_chunk_to"] = to
+        frames.append(df)
+        return frames
 
     # ───────── creds persistence (future-proof) ─────────
     def _save(self) -> None:

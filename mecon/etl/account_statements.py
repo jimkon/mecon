@@ -373,6 +373,30 @@ class Trading212APIStatements(APIAccountStatementsSource):
 
         self._log_fetch_banner()
 
+        existing_report_ids, cached_chunk_tos = self._collect_cached_metadata()
+        self._log_cached_report_ids(existing_report_ids)
+
+        since = self._determine_since(since, cached_chunk_tos)
+        if since is None:
+            return
+
+        df = self.api_handler.fetch_history_dataframe(
+            since=since,
+            request_ids_to_skip=sorted(str(rid) for rid in existing_report_ids),
+        )
+        if len(df) == 0:
+            logging.info(
+                f"{self.__class__.__name__}: No transactions fetched for Trading212 since {self}. No file added to {self.dir_name}.")
+            return
+
+        filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(filepath, index_label=None)
+        logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
+
+    def _collect_cached_metadata(self) -> tuple[set[str], list[dt.datetime]]:
+        logging.info("Trading212APIStatements: Collecting cached metadata from statement files.")
+
         existing_report_ids: set[str] = set()
         cached_chunk_tos: list[dt.datetime] = []
         columns_of_interest = {"_reportId", "_reportid", "_chunk_to"}
@@ -407,54 +431,49 @@ class Trading212APIStatements(APIAccountStatementsSource):
                     cached_chunk_tos.append(chunk_tos.max().to_pydatetime())
 
         existing_report_ids = {str(rid).strip() for rid in existing_report_ids if str(rid).strip()}
+        return existing_report_ids, cached_chunk_tos
+
+    def _log_cached_report_ids(self, existing_report_ids: set[str]) -> None:
+        logging.info("Trading212APIStatements: Logging cached report IDs.")
         if existing_report_ids:
-            preview_ids = sorted(str(rid) for rid in existing_report_ids)
-            preview = ", ".join(preview_ids[:5])
-            if len(preview_ids) > 5:
-                preview += ", …"
             logging.info(
-                "Trading212API: detected %d cached export id(s) locally (%s).",
-                len(existing_report_ids),
-                preview,
+                f"Trading212API: detected {len(existing_report_ids)} cached export id(s) locally {existing_report_ids}."
             )
 
-        if since is None:
-            now_utc = dt.datetime.now(dt.timezone.utc)
-            if cached_chunk_tos:
-                latest_chunk_to = max(cached_chunk_tos)
-                if latest_chunk_to.tzinfo is None:
-                    latest_chunk_to = latest_chunk_to.replace(tzinfo=dt.timezone.utc)
-                next_since = latest_chunk_to + dt.timedelta(seconds=1)
-                if next_since >= now_utc:
-                    logging.info(
-                        "Trading212API: cached statements already cover up to %s; nothing to fetch.",
-                        latest_chunk_to,
-                    )
-                    return
-                logging.info(
-                    "Trading212API: defaulting fetch 'since' to %s based on cached chunk ending at %s.",
-                    next_since,
-                    latest_chunk_to,
-                )
-                since = next_since
-            else:
-                since = dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)
+    def _determine_since(
+        self,
+        since: dt.datetime | None,
+        cached_chunk_tos: list[dt.datetime],
+    ) -> dt.datetime | None:
+        logging.info("Trading212APIStatements: Determining since parameter.")
 
-        if since.tzinfo is None:
-            since = since.replace(tzinfo=dt.timezone.utc)
-        df = self.api_handler.fetch_history_dataframe(
-            since=since,
-            request_ids_to_skip=sorted(str(rid) for rid in existing_report_ids),
-        )
-        if len(df) == 0:
+        if since is not None:
+            if since.tzinfo is None:
+                return since.replace(tzinfo=dt.timezone.utc)
+            return since
+
+        if not cached_chunk_tos:
+            return dt.datetime(2020, 1, 1, tzinfo=dt.timezone.utc)
+
+        latest_chunk_to = max(cached_chunk_tos)
+        if latest_chunk_to.tzinfo is None:
+            latest_chunk_to = latest_chunk_to.replace(tzinfo=dt.timezone.utc)
+
+        next_since = latest_chunk_to + dt.timedelta(seconds=1)
+        now_utc = dt.datetime.now(dt.timezone.utc)
+        if next_since >= now_utc:
             logging.info(
-                f"{self.__class__.__name__}: No transactions fetched for Trading212 since {self}. No file added to {self.dir_name}.")
-            return
+                "Trading212API: cached statements already cover up to %s; nothing to fetch.",
+                latest_chunk_to,
+            )
+            return None
 
-        filepath = self.working_dir / f"transactions_{fetch_datetime}_{fetch_job_id}.csv"
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(filepath, index_label=None)
-        logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
+        logging.info(
+            "Trading212API: defaulting fetch 'since' to %s based on cached chunk ending at %s.",
+            next_since,
+            latest_chunk_to,
+        )
+        return next_since
 
 
 class MonzoAPIStatements(APIAccountStatementsSource):
