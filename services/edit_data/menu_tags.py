@@ -20,6 +20,7 @@ app_ui = shiny_app.app_ui_factory(
         ui.input_task_button(id='create_button', label='Create new tag'),
         ui.input_task_button(id='recalculate_button', label='Recalculate all tags', label_busy='Recalculating...'),
         ui.input_task_button(id='delete_button', label='Delete a tag', type='warning'),
+        ui.tags.a("Manual tagging", href=f"http://127.0.0.1:8002/edit_data/tags/manual/"),
         ui.h2(ui.output_text(id='menu_title_text')),
         ui.output_data_frame(id='menu_tags_table'),
     )
