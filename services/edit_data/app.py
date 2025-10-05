@@ -2,7 +2,7 @@ from starlette.applications import Starlette
 from starlette.responses import RedirectResponse
 from starlette.routing import Mount, Route
 
-from manual_tagging import manual_tagging_app
+from manual_tagging_app import manual_tagging_app
 from edit_tags import edit_tags_app
 from menu_tags import menu_tags_app
 
