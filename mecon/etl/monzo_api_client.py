@@ -2,6 +2,7 @@
 
 import logging
 import datetime
+from urllib.parse import urlparse, parse_qs
 import pandas as pd
 
 from monzo.authentication import Authentication
@@ -118,11 +119,35 @@ class MonzoClient:
         url, state = url_and_state.split('&state=')
         return url, state
 
-    def set_authentication_code_from_url(self, response_url):
-        code_and_state = response_url.split('code=')[1]
-        code, state = code_and_state.split('&state=')
+    def set_authentication_code_from_url(self, response_url: str):
+        """
+        Expect the *final redirect URL* that hit your redirect_url, e.g.
+        http://localhost:8000/callback?code=...&state=...
+        """
+        parsed = urlparse(response_url)
+        qs = parse_qs(parsed.query)
+
+        code_list = qs.get("code")
+        state_list = qs.get("state")
+        if not code_list or not state_list:
+            raise MonzoCredentialsError(
+                "The URL you pasted doesn't contain ?code=...&state=... . "
+                "Make sure you pasted the FINAL redirect to your redirect_url (not the email link)."
+            )
+
+        code = code_list[0]
+        state = state_list[0]
+
         logging.info("Authenticating with Monzo...")
-        self.monzo_auth.authenticate(authorization_token=code, state_token=state)
+        try:
+            self.monzo_auth.authenticate(authorization_token=code, state_token=state)
+        except Exception as e:
+            # Provide a clearer error including the common causes
+            raise MonzoCredentialsError(
+                "Could not fetch a valid access token. "
+                "Common causes: (1) redirect_url mismatch, (2) expired code, or (3) wrong URL pasted."
+            ) from e
+
         self._refresh_token_in_creds()
         logging.info("Authentication complete. Token expires at: %s", self.expires_at())
 
@@ -323,6 +348,8 @@ if __name__ == "__main__":
     from mecon.etl.dataset import Dataset
 
     d = Dataset(r"C:\Users\dimitris\PycharmProjects\datasets\20250812")
+
     mc = MonzoClient(d.creds, force_new_token=True)
     auth_code_url = input(f"{mc.get_authentication_url()} -> ")
     mc.set_authentication_code_from_url(auth_code_url)
+    txs = mc.download_full_history()
