@@ -98,7 +98,7 @@ def dataset_manager(tmp_path, monkeypatch):
 @pytest.fixture
 def shiny_helpers(dataset_manager):
     import services.edit_data.edit_tags as edit_tags_module
-    import services.edit_data.manual_tagging as manual_tagging_module
+    import services.edit_data.manual_tagging_app as manual_tagging_module
     import services.edit_data.menu_tags as menu_tags_module
     import services.main_shiny.main_app as main_app_module
 
@@ -114,7 +114,9 @@ def test_create_markdown_menu_from_links(dataset_manager, shiny_helpers):
     dataset, _, _ = dataset_manager
     links = dataset.settings.get("links", {})
     markdown = shiny_helpers.main_app.create_markdown_menu_from_links(links)
+    assert "### Comparisons" in markdown
     assert "### Reports" in markdown
+    assert "### Tagging" in markdown
     assert "[Commute]" in markdown
 
 
