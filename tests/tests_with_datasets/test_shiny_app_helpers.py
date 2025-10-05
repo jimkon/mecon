@@ -120,21 +120,6 @@ def test_create_markdown_menu_from_links(dataset_manager, shiny_helpers):
     assert "[Commute]" in markdown
 
 
-def test_parse_url_query_params(shiny_helpers):
-    params = shiny_helpers.edit_tags.parse_url_query_params("?filter_in_tags=Commute")
-    assert params["filter_in_tags"] == ["Commute"]
-
-
-def test_extract_tag_name_from_params_success(shiny_helpers):
-    params = {"filter_in_tags": ["Commute"]}
-    assert shiny_helpers.edit_tags.extract_tag_name_from_params(params) == "Commute"
-
-
-def test_extract_tag_name_from_params_missing(shiny_helpers):
-    with pytest.raises(ValueError):
-        shiny_helpers.edit_tags.extract_tag_name_from_params({})
-
-
 def test_fetch_tag_from_manager(dataset_manager, shiny_helpers):
     _, manager, _ = dataset_manager
     tag = shiny_helpers.edit_tags.fetch_tag_from_manager(manager, "Commute")

@@ -1,5 +1,6 @@
 import datetime
 import logging
+from urllib.parse import urlparse, parse_qs
 
 import pandas as pd
 from shiny import ui, Inputs, Outputs, Session, reactive, render
@@ -156,21 +157,33 @@ class ShinyTransactionFilterError(ValueError):
         super().__init__(message)
 
 
+def _parse_params(input_url:str,
+                  ensure_exists:str|list[str]|None=None):
+    urlparse_result = urlparse(input_url)
+    _url_params = parse_qs(urlparse_result.query)
+
+    if ensure_exists is not None:
+        ensure_exists = [ensure_exists] if isinstance(ensure_exists, str) else ensure_exists
+        missing_params = [param for param in ensure_exists if param not in _url_params]
+        if missing_params:
+            raise ValueError(f"Missing '{missing_params}' required query parameters")
+
+    return _url_params
+
+
 def url_params_function_factory(input: Inputs,
                                 output: Outputs,
                                 session: Session,
-                                data_manager: WorkingDataManager, ):
-    from urllib.parse import urlparse, parse_qs
+                                data_manager: WorkingDataManager,
+                                ensure_exists=None):
 
     @reactive.calc
-    def url_params() -> dict:
+    def get_url_params() -> dict:
         logging.info(f"{input['.clientdata_url_search'].get()=}")
-        urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
-        logging.info(f"Fetched URL params: {urlparse_result=}")
-        _url_params = parse_qs(urlparse_result.query)
+        _url_params = _parse_params(input['.clientdata_url_search'].get(), ensure_exists=ensure_exists)  # TODO move to a reactive.calc func
         logging.info(f"Input params: {_url_params=}")
         return _url_params
-    return url_params
+    return get_url_params
 
 def filter_url_params_function_factory(input: Inputs,
                                 output: Outputs,

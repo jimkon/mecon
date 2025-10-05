@@ -18,18 +18,6 @@ logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
 
-def parse_url_query_params(url_search: str) -> dict:
-    urlparse_result = urlparse(url_search)
-    return parse_qs(urlparse_result.query)
-
-
-def extract_tag_name_from_params(params: dict) -> str:
-    tag_values = params.get('filter_in_tags')
-    if not tag_values:
-        raise ValueError("Missing 'filter_in_tags' query parameter")
-    return tag_values[0]
-
-
 def fetch_tag_from_manager(data_manager, tag_name: str):
     tag = data_manager.get_tag(tag_name)
     if tag is None:
@@ -159,6 +147,7 @@ def parse_condition_value(value_str: str):
     if value_str.isdigit():
         return int(value_str)
     return float(value_str)
+
 
 app_ui = shiny_app.app_ui_factory(
     ui.page_fillable(
@@ -347,17 +336,16 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     current_tag_value = reactive.Value(None)
 
-    @reactive.calc
-    def url_params() -> dict:
-        url_search = input['.clientdata_url_search'].get()
-        logging.info(url_search)
-        params = parse_url_query_params(url_search)
-        logging.info(f"Input params: {params}")
-        return params
+    get_url_params = shiny_app.url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager,
+        ensure_exists=['filter_in_tags'])
 
     @reactive.calc
     def fetch_tag_name():
-        return extract_tag_name_from_params(url_params())
+        return get_url_params()['filter_in_tags'][0]
 
     @reactive.calc
     def fetch_tag():
@@ -553,7 +541,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
         return shiny_app.render_table_standard(diff_df)
-
 
     @render.data_frame
     def rule_calculations_table():
