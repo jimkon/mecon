@@ -18,6 +18,15 @@ datasets_obj = WorkingDatasetDir()
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 
 
+def format_current_dataset_directory_text(path) -> str:
+    return f"Current directory: {path}" if path else 'No working directory found'
+
+
+def update_working_dataset_selection(datasets_obj, dataset_name: str):
+    datasets_obj.set_working_dataset(dataset_name)
+    datasets_obj.settings['CURRENT_DATASET'] = dataset_name
+
+
 app_ui = shiny_app.app_ui_factory(
     ui.card(
         ui.h3("Working Directory"),
@@ -41,13 +50,12 @@ app_ui = shiny_app.app_ui_factory(
 def server(input: Inputs, output: Outputs, session: Session):
     @render.text
     def current_dataset_directory() -> object:
-        return f"Current directory: " + str(datasets_dir) if datasets_dir else 'No working directory found'
+        return format_current_dataset_directory_text(datasets_dir)
 
     @reactive.effect
     @reactive.event(input.dataset_select)
     def dataset_input_select_click_event():
-        datasets_obj.set_working_dataset(input.dataset_select())
-        datasets_obj.settings['CURRENT_DATASET'] = input.dataset_select()
+        update_working_dataset_selection(datasets_obj, input.dataset_select())
 
 
 datasets_app = App(app_ui, server)

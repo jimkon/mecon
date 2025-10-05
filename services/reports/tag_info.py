@@ -82,6 +82,56 @@ app_ui = shiny_app.app_ui_factory(
 )
 
 
+def validate_report_name(new_report_name: str, saved_reports: dict) -> tuple[bool, str]:
+    if not new_report_name:
+        return False, 'Empty name'
+    if new_report_name in saved_reports:
+        return False, f"Report name already exists, all existing names: {', '.join(saved_reports.keys())}"
+    return True, ''
+
+
+def persist_tag_report(settings, report_name: str, filter_params: dict):
+    new_report_url = shiny_app.url_for_tag_report(**filter_params)
+    settings['links']['Reports'][report_name] = new_report_url
+    settings.save()
+    return new_report_url
+
+
+def aggregate_transactions(transactions, time_unit: str):
+    return transactions.group_and_fill_transactions(
+        grouping_key=time_unit,
+        aggregation_key='sum',
+        fill_dates_after_groupagg=True,
+    )
+
+
+def build_transactions_stats(transactions, time_unit: str):
+    aggregated = aggregate_transactions(transactions, time_unit)
+    return reports.transactions_stats_markdown(aggregated, time_unit.lower())
+
+
+def build_balance_graph(transactions, time_unit: str):
+    aggregated = aggregate_transactions(transactions, time_unit)
+    return graphs.balance_graph_fig(
+        aggregated.datetime,
+        aggregated.amount,
+        fit_line=time_unit != 'none'
+    )
+
+
+def build_histogram_graph(transactions, time_unit: str, show_bin_edges: bool):
+    aggregated = aggregate_transactions(transactions, time_unit)
+    return graphs.histogram_and_contributions_fig(
+        aggregated.amount,
+        show_bin_edges=show_bin_edges
+    )
+
+
+def render_transactions_table(transactions, time_unit: str):
+    aggregated = aggregate_transactions(transactions, time_unit)
+    return shiny_app.render_table_standard(aggregated.dataframe())
+
+
 def server(input: Inputs, output: Outputs, session: Session):
     data_manager = WorkingDataManager()
 
@@ -110,19 +160,15 @@ def server(input: Inputs, output: Outputs, session: Session):
         saved_reports = settings['links']['Reports']
 
         new_report_name = input.save_report_name()
-        if new_report_name is None or new_report_name == "" or new_report_name in saved_reports:
-            message = 'Empty name' if (
-                    new_report_name is None or new_report_name == "") else f"Report name already exists, all existing names: {', '.join(saved_reports.keys())}"
+        is_valid, message = validate_report_name(new_report_name, saved_reports)
+        if not is_valid:
             ui.notification_show(
                 f"Invalid name for the new report '{new_report_name}', {message=}",
                 type="error",
             )
             return
 
-        new_report_url = shiny_app.url_for_tag_report(**filter_params)
-        saved_reports[
-            new_report_name] = new_report_url  # TODO maybe make a class that deals with DatasetSettings for easier use and testing
-        settings.save()
+        new_report_url = persist_tag_report(settings, new_report_name, filter_params)
 
         ui.notification_show(
             f"Report '{new_report_name}' has been created successfully.",
@@ -143,15 +189,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.ui
     def info_stats():
         logging.info(f"Info stats")
-        total_amount_transactions = filtered_transactions().group_and_fill_transactions(
-            grouping_key=input.time_unit_select(),
-            aggregation_key='sum',
-            fill_dates_after_groupagg=True,
-        )
-        logging.info(f"Info stats: {total_amount_transactions.size()=}")
-
-        transactions_stats_markdown = reports.transactions_stats_markdown(total_amount_transactions,
-                                                                          input.time_unit_select().lower())
+        transactions_stats_markdown = build_transactions_stats(filtered_transactions(), input.time_unit_select())
         return ui.markdown(transactions_stats_markdown)
 
     @render_widget
@@ -180,46 +218,19 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render_widget
     def balance_plot() -> object:
         logging.info('balance_plot')
-        grouping = input.time_unit_select()
-        total_amount_transactions = filtered_transactions().group_and_fill_transactions(
-            grouping_key=input.time_unit_select(),
-            aggregation_key='sum',
-            fill_dates_after_groupagg=True,
-        )
-        logging.info(f"balance_plot: {total_amount_transactions.size()=}")
-
-        graph = graphs.balance_graph_fig(
-            total_amount_transactions.datetime,
-            total_amount_transactions.amount,
-            fit_line=grouping != 'none'
-        )
+        graph = build_balance_graph(filtered_transactions(), input.time_unit_select())
         return graph
 
     @render_widget
     def histogram_plot() -> object:
         logging.info('histogram_plot')
-        total_amount_transactions = filtered_transactions().group_and_fill_transactions(
-            grouping_key=input.time_unit_select(),
-            aggregation_key='sum',
-            fill_dates_after_groupagg=True,
-        )
-        logging.info(f"histogram_plot: {total_amount_transactions.size()=}")
-        graph = graphs.histogram_and_contributions_fig(
-            total_amount_transactions.amount,
-            show_bin_edges=input.show_bin_edges_flag()
-        )
+        graph = build_histogram_graph(filtered_transactions(), input.time_unit_select(), input.show_bin_edges_flag())
         return graph
 
     @render.data_frame
     def transactions_table():
         logging.info('transactions_table')
-        total_amount_transactions = filtered_transactions().group_and_fill_transactions(
-            grouping_key=input.time_unit_select(),
-            aggregation_key='sum',
-            fill_dates_after_groupagg=True,
-        )
-        df = total_amount_transactions.dataframe()
-        return shiny_app.render_table_standard(df)
+        return render_transactions_table(filtered_transactions(), input.time_unit_select())
 
 
 tag_info_app = App(app_ui, server)
