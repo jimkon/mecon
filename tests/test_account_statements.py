@@ -127,6 +127,79 @@ class FetchImplementationTests(unittest.TestCase):
         self.assertEqual(kwargs["since"], expected_since)
         self.assertEqual(kwargs["request_ids_to_skip"], ["555"])
 
+    def test_trading212_collect_cached_metadata(self):
+        """Collect cached report IDs and chunk metadata from existing files."""
+        api_handler = mock.MagicMock()
+        with TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            pd.DataFrame({"_reportId": ["111", " 222 "]}).to_csv(
+                tmp_path / "existing_upper.csv", index=False
+            )
+            pd.DataFrame({"_reportid": [None, "333"], "_chunk_to": ["2021-01-01T00:00:00Z", None]}).to_csv(
+                tmp_path / "existing_lower.csv", index=False
+            )
+            source = Trading212APIStatements(
+                working_dir=tmp_path,
+                trans_transformer=mock.MagicMock(),
+                api_handler=api_handler,
+            )
+
+            with self.assertLogs(level="INFO") as captured_logs:
+                existing_report_ids, cached_chunk_tos = source._collect_cached_metadata()
+
+        self.assertSetEqual(existing_report_ids, {"111", "222", "333"})
+        self.assertEqual(len(cached_chunk_tos), 1)
+        self.assertIn("Collecting cached metadata", "".join(captured_logs.output))
+
+    def test_trading212_log_cached_report_ids(self):
+        """Log a summary of the cached report IDs when present."""
+        source = Trading212APIStatements(
+            working_dir=Path("/tmp"),
+            trans_transformer=mock.MagicMock(),
+            api_handler=mock.MagicMock(),
+        )
+        with self.assertLogs(level="INFO") as captured_logs:
+            source._log_cached_report_ids({"111", "222"})
+
+        log_output = "".join(captured_logs.output)
+        self.assertIn("Logging cached report IDs", log_output)
+        self.assertIn("detected 2 cached export id(s)", log_output)
+
+    def test_trading212_determine_since(self):
+        """Derive an appropriate since datetime based on cached metadata."""
+        source = Trading212APIStatements(
+            working_dir=Path("/tmp"),
+            trans_transformer=mock.MagicMock(),
+            api_handler=mock.MagicMock(),
+        )
+        cached_chunk_to = dt.datetime(2021, 1, 1, tzinfo=dt.timezone.utc)
+        with self.assertLogs(level="INFO") as captured_logs:
+            result = source._determine_since(None, [cached_chunk_to])
+
+        expected = cached_chunk_to + dt.timedelta(seconds=1)
+        self.assertEqual(result, expected)
+        self.assertIn("Determining since parameter", "".join(captured_logs.output))
+
+    def test_trading212_determine_since_returns_none_when_up_to_date(self):
+        """Return None when cached metadata already covers the current time."""
+        source = Trading212APIStatements(
+            working_dir=Path("/tmp"),
+            trans_transformer=mock.MagicMock(),
+            api_handler=mock.MagicMock(),
+        )
+        latest_chunk_to = dt.datetime(2023, 1, 1, tzinfo=dt.timezone.utc)
+        now_value = latest_chunk_to + dt.timedelta(seconds=1)
+        with mock.patch("mecon.etl.account_statements.dt.datetime") as mocked_datetime:
+            mocked_datetime.now.return_value = now_value
+            mocked_datetime.side_effect = lambda *args, **kwargs: dt.datetime(*args, **kwargs)
+            mocked_datetime.timezone = dt.timezone
+            mocked_datetime.timedelta = dt.timedelta
+            with self.assertLogs(level="INFO") as captured_logs:
+                result = source._determine_since(None, [latest_chunk_to])
+
+        self.assertIsNone(result)
+        self.assertIn("nothing to fetch", "".join(captured_logs.output))
+
     def test_monzo_fetch_passes_since_string(self):
         """Check Monzo fetch converts the datetime to the expected ISO string."""
         api_handler = mock.MagicMock(return_value=pd.DataFrame())
