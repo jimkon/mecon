@@ -25,16 +25,16 @@ PAGE_SIZE = 100
 app_ui = shiny_app.app_ui_factory(
     ui.layout_sidebar(
         ui.sidebar(
-            ui.navset_card_tab(
-                ui.nav_panel(
-                    "Rows",
+            ui.accordion(
+                ui.accordion_panel(
+                    "Filter transactions",
                     shiny_app.transactions_intersection_filtered_factory(
                         default_period='Last 30 days',
-                        # TODO not set correctly, check mecon.app.shiny_app.init for that
+
                         fixed_time_unit=True,
                         default_time_unit='none'),
                 ),
-                ui.nav_panel(
+                ui.accordion_panel(
                     "Groups",
                     ui.input_select(
                         id='transaction_order_select',
