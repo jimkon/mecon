@@ -27,14 +27,6 @@ app_ui = shiny_app.app_ui_factory(
         ui.sidebar(
             ui.accordion(
                 ui.accordion_panel(
-                    "Filter transactions",
-                    shiny_app.transactions_intersection_filtered_factory(
-                        default_period='Last 30 days',
-
-                        fixed_time_unit=True,
-                        default_time_unit='none'),
-                ),
-                ui.accordion_panel(
                     "Groups",
                     ui.input_select(
                         id='transaction_order_select',
@@ -56,16 +48,28 @@ app_ui = shiny_app.app_ui_factory(
                             selected='0'
                         ),
                     ),
-                    ui.input_selectize(
-                        id='input_tags_select',
-                        label='Select tags',
-                        choices=[],
-                        selected=None,
-                        multiple=True
-                    ),
                     ui.input_action_button(
                         id='review_and_save_button',
                         label='Review and save changes...',
+                    ),
+                ),
+                ui.accordion_panel(
+                    "Filter transactions",
+                    ui.input_selectize(
+                        id='filter_in_tags_select',
+                        label='Select tags to filter IN',
+                        choices=[],
+                        # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
+                        selected=None,
+                        multiple=True
+                    ),
+                    ui.input_selectize(
+                        id='filter_out_tags_select',
+                        label='Select tags to filter OUT',
+                        choices=[],
+                        # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
+                        selected=None,
+                        multiple=True
                     ),
                 ),
             ),
@@ -73,7 +77,8 @@ app_ui = shiny_app.app_ui_factory(
 
         ui.page_fluid(
             ui.card(
-                ui.card_header(ui.output_text(id='transactions_header_text'))
+                ui.card_header(ui.output_text(id='transactions_header_text')),
+                ui.card_body(ui.output_data_frame(id='transactions_output_df'))
             ),
         ),
     )
@@ -186,31 +191,100 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     transactions = data_manager.get_transactions()
 
-    filter_url_params = shiny_app.filter_url_params_function_factory(
-        input,
-        output,
-        session,
-        data_manager)
+    get_url_params = shiny_app.url_params_function_factory(input,
+                                                           output,
+                                                           session,
+                                                           data_manager)
 
-    (get_filter_params,
-     default_transactions,
-     init,
-     filtered_transactions_calc) = shiny_app.filter_funcs_factory(
-        input,
-        output,
-        session,
-        data_manager)
+    @reactive.calc
+    def get_filter_url_params():
+        _url_params = get_url_params()
+        params = {}
+        params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
+        params['filter_in_tags'] = params['filter_in_tags'].split(',') if len(params['filter_in_tags']) > 0 else []
+        params['filter_out_tags'] = _url_params.get('filter_out_tags', [''])[0]
+        params['filter_out_tags'] = params['filter_out_tags'].split(',') if len(params['filter_out_tags']) > 0 else []
+
+        params['page_number'] = int(_url_params.get('page_number', '0'))
+
+        logging.info(f"Input params: {params=}")
+        return params
+
+    @reactive.calc
+    def default_transactions():
+        filter_url_params = get_filter_url_params()
+        filter_in_tags = filter_url_params['filter_in_tags']
+        filter_out_tags = filter_url_params['filter_out_tags']
+        transactions = data_manager.get_transactions()
+        filtered_in_transactions = transactions.containing_tags(filter_in_tags)
+        if filtered_in_transactions.size() == 0:
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {filter_url_params['filter_in_tags']} tags."
+            raise shiny_app.ShinyTransactionFilterError(error_msg)
+
+        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
+                                                                                        empty_tags_strategy='all_true')
+        if filtered_in_and_out_transactions.size() == 0:
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {filter_url_params['filter_in_tags']} tags."
+            raise shiny_app.ShinyTransactionFilterError(error_msg)
+
+        logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
+        return filtered_in_and_out_transactions
+
+    @reactive.effect
+    def init():
+        logging.info('Init')
+        filter_url_params = get_filter_url_params()
+        transactions = default_transactions()
+        all_tags_names = [tag.name for tag in data_manager.all_tags()]
+        new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
+                       cnt > 0]
+
+        if len(input.filter_in_tags_select()) == 0:
+            logging.info(f"Updating filter In tags: {len(new_choices)} {filter_url_params['filter_in_tags']}")
+            ui.update_selectize(id='filter_in_tags_select',
+                                choices=sorted(new_choices),
+                                selected=filter_url_params['filter_in_tags'])
+
+        if len(input.filter_out_tags_select()) == 0:
+            logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {filter_url_params['filter_out_tags']}")
+            ui.update_selectize(id='filter_out_tags_select',
+                                choices=all_tags_names,
+                                selected=filter_url_params['filter_out_tags'])
+
+        logging.info(f"init->{input.filter_in_tags_select()=} {input.compare_tags_select()=}")
+
+    @reactive.calc
+    def filtered_transactions_calc():
+        filter_url_params = get_filter_url_params()
+        filter_in_tags, filter_out_tags = filter_url_params['filter_in_tags'], filter_url_params['filter_out_tags']
+        transactions = data_manager.get_transactions()
+
+        filtered_in_transactions = transactions.containing_tags(filter_in_tags)
+        if filtered_in_transactions.size() == 0:
+            error_msg = f"No transactions containing {filter_in_tags} tags."
+            raise shiny_app.ShinyTransactionFilterError(error_msg)
+
+        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
+                                                                                        empty_tags_strategy='all_true')
+        if filtered_in_and_out_transactions.size() == 0:
+            error_msg = f"No transactions found after filtering out {filter_out_tags} tags."
+            raise shiny_app.ShinyTransactionFilterError(error_msg)
+
+        logging.info(
+            f"Filtered transactions size: {filtered_in_and_out_transactions.size()=} for filter params=({filter_in_tags, filter_out_tags})")
+
+        return filtered_in_and_out_transactions
 
     @render.text
     def transactions_header_text():
         filtered_transactions_tx: Transactions = filtered_transactions_calc()
-        filtered_transactions_df =filtered_transactions_tx.dataframe()
+        filtered_transactions_df = filtered_transactions_tx.dataframe()
         start_date, end_date = filtered_transactions_tx.date_range()
         unique_tags = filtered_transactions_tx.all_tags()
 
-        title= f"{len(filtered_transactions_df)} transactions from {start_date} to {end_date} containing {len(unique_tags)}" \
-               f" page={input.page_number_select()}," \
-               f" page_size={PAGE_SIZE}"
+        title = f"{len(filtered_transactions_df)} transactions from {start_date} to {end_date} containing {len(unique_tags)}" \
+                f" page={input.page_number_select()}," \
+                f" page_size={PAGE_SIZE}"
         return title
 
     # @reactive.effect
