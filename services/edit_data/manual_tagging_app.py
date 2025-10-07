@@ -29,7 +29,7 @@ app_ui = shiny_app.app_ui_factory(
                 ui.nav_panel(
                     "Rows",
                     shiny_app.transactions_intersection_filtered_factory(
-                        default_period='Last 30 days',
+                        default_period='Last 30 days', # TODO not set correctly, check mecon.app.shiny_app.init for that
                         fixed_time_unit=True,
                         default_time_unit='none'),
                 ),
