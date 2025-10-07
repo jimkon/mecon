@@ -29,7 +29,8 @@ app_ui = shiny_app.app_ui_factory(
                 ui.nav_panel(
                     "Rows",
                     shiny_app.transactions_intersection_filtered_factory(
-                        default_period='Last 30 days', # TODO not set correctly, check mecon.app.shiny_app.init for that
+                        default_period='Last 30 days',
+                        # TODO not set correctly, check mecon.app.shiny_app.init for that
                         fixed_time_unit=True,
                         default_time_unit='none'),
                 ),
@@ -71,8 +72,9 @@ app_ui = shiny_app.app_ui_factory(
         ),
 
         ui.page_fluid(
-            ui.output_text(id='transactions_header_text'),
-
+            ui.card(
+                ui.card_header(ui.output_text(id='transactions_header_text'))
+            ),
         ),
     )
 )
@@ -193,93 +195,105 @@ def server(input: Inputs, output: Outputs, session: Session):
     (get_filter_params,
      default_transactions,
      init,
-     filtered_transactions) = shiny_app.filter_funcs_factory(
+     filtered_transactions_calc) = shiny_app.filter_funcs_factory(
         input,
         output,
         session,
         data_manager)
 
-    @reactive.effect
-    def load():
-        ui.update_selectize(
-            id='input_tags_select',
-            choices=build_tag_choices(all_tags)
-        )
-
-    @reactive.calc
-    def tag_filtered_transactions() -> Transactions:
-        logging.info(
-            f"Filtering transactions, order: UNKNOWN, tags subset: {','.join(input.input_tags_select())}, page: , window: ")
-        return filter_transactions_by_selected_tags(transactions, input.input_tags_select())
-
-    @reactive.calc
-    def filtered_transactions_df() -> pd.DataFrame:
-        # trans = tag_filtered_transactions()
-        trans = filtered_transactions()
-
-        transactions_dfs = paginate_transactions(
-            trans,
-            input.transaction_order_select(),
-            int(input.page_number_select()),
-            PAGE_SIZE,
-        )
-        transactions_dfs['id'] = transactions_dfs['id'].apply(_transform_id)
-
-        global shown_transactions
-        clear_rendered_transactions(shown_transactions)
-        shown_transactions = transactions_dfs
-
-        for i, transaction in transactions_dfs.iterrows():
-            ui.insert_ui(
-                ui=new_transaction_row(transaction, all_tags),
-                selector='#transactions_header_text',
-                where="beforeEnd",
-            )
-
-        for transaction_id in transactions_dfs['id']:
-            register_selectize_change_handler(input, transaction_id)
-
-        logging.info(f"Filtering Done")
-
-        return transactions_dfs
-
-    def remove_transaction_rows():
-        global shown_transactions
-        clear_rendered_transactions(shown_transactions)
-        shown_transactions = None
-
-    @reactive.effect
-    @reactive.event(input.transaction_order_select)
-    def _():
-        label, choices = build_page_choices(tag_filtered_transactions(), input.transaction_order_select(), PAGE_SIZE)
-        ui.update_select(id='page_number_select', label=label, choices=choices)
-
-    @reactive.effect
-    @reactive.event(input.page_number_select)
-    def _():
-        logging.info(f"Changing page...")
-        remove_transaction_rows()
-
     @render.text
     def transactions_header_text():
-        return f"Transactions: {len(filtered_transactions_df())}," \
+        filtered_transactions_tx: Transactions = filtered_transactions_calc()
+        filtered_transactions_df =filtered_transactions_tx.dataframe()
+        start_date, end_date = filtered_transactions_tx.date_range()
+        unique_tags = filtered_transactions_tx.all_tags()
+
+        title= f"{len(filtered_transactions_df)} transactions from {start_date} to {end_date} containing {len(unique_tags)}" \
                f" page={input.page_number_select()}," \
                f" page_size={PAGE_SIZE}"
+        return title
 
-    @reactive.effect
-    @reactive.event(input.review_and_save_button)
-    def _():
-        global added_tags, removed_tags
-        added_tags, removed_tags = determine_tag_changes(filtered_transactions_df(), input)
-        ui.modal_show(build_review_changes_modal(added_tags, removed_tags))
-
-    @reactive.effect
-    @reactive.event(input.save_button)
-    def save_changes():
-        global added_tags, removed_tags
-        utils.save_tag_changes(added_tags,
-                               removed_tags,
-                               data_manager)
+    # @reactive.effect
+    # def load():
+    #     ui.update_selectize(
+    #         id='input_tags_select',
+    #         choices=build_tag_choices(all_tags)
+    #     )
+    #
+    # @reactive.calc
+    # def tag_filtered_transactions() -> Transactions:
+    #     logging.info(
+    #         f"Filtering transactions, order: UNKNOWN, tags subset: {','.join(input.input_tags_select())}, page: , window: ")
+    #     return filter_transactions_by_selected_tags(transactions, input.input_tags_select())
+    #
+    # @reactive.calc
+    # def filtered_transactions_df() -> pd.DataFrame:
+    #     # trans = tag_filtered_transactions()
+    #     trans = filtered_transactions()
+    #
+    #     transactions_dfs = paginate_transactions(
+    #         trans,
+    #         input.transaction_order_select(),
+    #         int(input.page_number_select()),
+    #         PAGE_SIZE,
+    #     )
+    #     transactions_dfs['id'] = transactions_dfs['id'].apply(_transform_id)
+    #
+    #     global shown_transactions
+    #     clear_rendered_transactions(shown_transactions)
+    #     shown_transactions = transactions_dfs
+    #
+    #     for i, transaction in transactions_dfs.iterrows():
+    #         ui.insert_ui(
+    #             ui=new_transaction_row(transaction, all_tags),
+    #             selector='#transactions_header_text',
+    #             where="beforeEnd",
+    #         )
+    #
+    #     for transaction_id in transactions_dfs['id']:
+    #         register_selectize_change_handler(input, transaction_id)
+    #
+    #     logging.info(f"Filtering Done")
+    #
+    #     return transactions_dfs
+    #
+    # def remove_transaction_rows():
+    #     global shown_transactions
+    #     clear_rendered_transactions(shown_transactions)
+    #     shown_transactions = None
+    #
+    # @reactive.effect
+    # @reactive.event(input.transaction_order_select)
+    # def _():
+    #     label, choices = build_page_choices(tag_filtered_transactions(), input.transaction_order_select(), PAGE_SIZE)
+    #     ui.update_select(id='page_number_select', label=label, choices=choices)
+    #
+    # @reactive.effect
+    # @reactive.event(input.page_number_select)
+    # def _():
+    #     logging.info(f"Changing page...")
+    #     remove_transaction_rows()
+    #
+    # @render.text
+    # def transactions_header_text():
+    #     return f"Transactions: {len(filtered_transactions_df())}," \
+    #            f" page={input.page_number_select()}," \
+    #            f" page_size={PAGE_SIZE}"
+    #
+    # @reactive.effect
+    # @reactive.event(input.review_and_save_button)
+    # def _():
+    #     global added_tags, removed_tags
+    #     added_tags, removed_tags = determine_tag_changes(filtered_transactions_df(), input)
+    #     ui.modal_show(build_review_changes_modal(added_tags, removed_tags))
+    #
+    # @reactive.effect
+    # @reactive.event(input.save_button)
+    # def save_changes():
+    #     global added_tags, removed_tags
+    #     utils.save_tag_changes(added_tags,
+    #                            removed_tags,
+    #                            data_manager)
 
 
 manual_tagging_app = App(app_ui, server)
