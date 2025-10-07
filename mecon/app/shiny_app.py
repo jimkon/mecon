@@ -241,13 +241,13 @@ def filter_funcs_factory(
         transactions = data_manager.get_transactions()
         filtered_in_transactions = transactions.containing_tags(filter_in_tags)
         if filtered_in_transactions.size() == 0:
-            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {params['filter_in_tags']} tags."
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {filter_url_params['filter_in_tags']} tags."
             raise ShinyTransactionFilterError(error_msg)
 
         filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
                                                                                         empty_tags_strategy='all_true')
         if filtered_in_and_out_transactions.size() == 0:
-            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags."
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {filter_url_params['filter_in_tags']} tags."
             raise ShinyTransactionFilterError(error_msg)
 
         logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
@@ -256,7 +256,7 @@ def filter_funcs_factory(
     @reactive.effect
     def init():
         logging.info('Init')
-        ui.update_select(id='date_period_input_select', selected=DEFAULT_FILTER_PERIOD)
+        ui.update_select(id='date_period_input_select', selected=DEFAULT_FILTER_PERIOD)# TODO not set correctly, check mecon.app.shiny_app.init for that
         filter_url_params = filter_url_params_function_factory(input, output, session, data_manager)()
         transactions = default_transactions()
         all_tags_names = [tag.name for tag in data_manager.all_tags()]
