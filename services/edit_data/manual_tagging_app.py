@@ -14,7 +14,6 @@ from mecon.data.transactions import Transactions
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-
 change_tracker = []
 added_tags, removed_tags = {}, {}
 
@@ -23,48 +22,64 @@ shown_transactions = None
 DEFAULT_TIME_UNIT = 'month'
 PAGE_SIZE = 100
 
-
 app_ui = shiny_app.app_ui_factory(
     ui.layout_sidebar(
         ui.sidebar(
-            ui.input_select(
-                id='transaction_order_select',
-                label='Order by:',
-                choices=['Newest transactions', 'Least tagged'],
-                selected='Newest'
-            ),
-            ui.card(
-                # ui.input_select(
-                #     id='page_group_select',
-                #     label='Groups:',
-                #     choices=['100 transactions', '7 days', '30 days'],
-                #     selected='100 transactions'
-                # ),
-                ui.input_select(
-                    id='page_number_select',
-                    label='Page number:',
-                    choices={'0': '0'},
-                    selected='0'
+            ui.navset_card_tab(
+                ui.nav_panel(
+                    "Rows",
+                    shiny_app.transactions_intersection_filtered_factory(
+                        default_period='Last 30 days',
+                        fixed_time_unit=True,
+                        default_time_unit='none'),
+                ),
+                ui.nav_panel(
+                    "Groups",
+                    ui.input_select(
+                        id='transaction_order_select',
+                        label='Order by:',
+                        choices=['Newest transactions', 'Least tagged'],
+                        selected='Newest'
+                    ),
+                    ui.card(
+                        # ui.input_select(
+                        #     id='page_group_select',
+                        #     label='Groups:',
+                        #     choices=['100 transactions', '7 days', '30 days'],
+                        #     selected='100 transactions'
+                        # ),
+                        ui.input_select(
+                            id='page_number_select',
+                            label='Page number:',
+                            choices={'0': '0'},
+                            selected='0'
+                        ),
+                    ),
+                    ui.input_selectize(
+                        id='input_tags_select',
+                        label='Select tags',
+                        choices=[],
+                        selected=None,
+                        multiple=True
+                    ),
+                    ui.input_action_button(
+                        id='review_and_save_button',
+                        label='Review and save changes...',
+                    ),
                 ),
             ),
-            ui.input_selectize(
-                id='input_tags_select',
-                label='Select tags',
-                choices=[],
-                selected=None,
-                multiple=True
-            ),
-            ui.input_action_button(
-                id='review_and_save_button',
-                label='Review and save changes...',
-            )
         ),
+
         ui.page_fluid(
             ui.output_text(id='transactions_header_text'),
 
         ),
     )
 )
+
+
+def _transform_id(id_str):
+    return id_str.replace('.', '[dot]').replace('-', '_')
 
 
 def new_transaction_row(transaction, all_tags):
@@ -148,9 +163,11 @@ def determine_tag_changes(current_transactions_df, input_obj):
 
 def build_review_changes_modal(added, removed):
     added_message = '\n'.join(
-        [' * <span style="color:green">' + f"{', '.join(tags)} added to transaction \'{tid}\'</span>" for tid, tags in added.items()])
+        [' * <span style="color:green">' + f"{', '.join(tags)} added to transaction \'{tid}\'</span>" for tid, tags in
+         added.items()])
     removed_message = '\n'.join(
-        [' * <span style="color:red">' + f"{', '.join(tags)} removed from transaction \'{tid}\'</span>" for tid, tags in removed.items()])
+        [' * <span style="color:red">' + f"{', '.join(tags)} removed from transaction \'{tid}\'</span>" for tid, tags in
+         removed.items()])
 
     return ui.modal(
         ui.markdown(f'{added_message}\n{removed_message}'),
@@ -167,6 +184,21 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     transactions = data_manager.get_transactions()
 
+    filter_url_params = shiny_app.filter_url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager)
+
+    (get_filter_params,
+     default_transactions,
+     init,
+     filtered_transactions) = shiny_app.filter_funcs_factory(
+        input,
+        output,
+        session,
+        data_manager)
+
     @reactive.effect
     def load():
         ui.update_selectize(
@@ -182,7 +214,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.calc
     def filtered_transactions_df() -> pd.DataFrame:
-        trans = tag_filtered_transactions()
+        # trans = tag_filtered_transactions()
+        trans = filtered_transactions()
 
         transactions_dfs = paginate_transactions(
             trans,
@@ -190,6 +223,7 @@ def server(input: Inputs, output: Outputs, session: Session):
             int(input.page_number_select()),
             PAGE_SIZE,
         )
+        transactions_dfs['id'] = transactions_dfs['id'].apply(_transform_id)
 
         global shown_transactions
         clear_rendered_transactions(shown_transactions)
@@ -225,7 +259,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         logging.info(f"Changing page...")
         remove_transaction_rows()
-
 
     @render.text
     def transactions_header_text():

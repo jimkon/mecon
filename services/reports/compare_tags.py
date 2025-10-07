@@ -20,7 +20,7 @@ logging.getLogger().setLevel(logging.INFO)
 app_ui = shiny_app.app_ui_factory(
     ui.layout_sidebar(
         ui.sidebar(
-            shiny_app.transactions_intersection_filted_factory()
+            shiny_app.transactions_intersection_filtered_factory()
         ),
         ui.page_fluid(
             ui.input_selectize(

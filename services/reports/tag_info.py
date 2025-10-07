@@ -6,7 +6,6 @@ from urllib.parse import urlparse, parse_qs
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 from shinywidgets import output_widget, render_widget
 
-from mecon.app import shiny_app
 from mecon.app.current_data import WorkingDataManager
 from mecon.app import shiny_app
 from mecon.data import graphs
@@ -24,7 +23,7 @@ app_ui = shiny_app.app_ui_factory(
     ui.h5(ui.output_text('title_output')),
     ui.layout_sidebar(
         ui.sidebar(
-            shiny_app.transactions_intersection_filted_factory()
+            shiny_app.transactions_intersection_filtered_factory()
         ),
         ui.page_fluid(
             ui.navset_tab(

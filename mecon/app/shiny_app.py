@@ -97,17 +97,24 @@ DEFAULT_FILTER_PERIOD = config.SHINY_DEFAULT_FILTER_PERIOD
 DEFAULT_FILTER_TIME_UNIT = config.SHINY_DEFAULT_FILTER_TIME_UNIT
 
 
-def transactions_intersection_filted_factory():
+def transactions_intersection_filtered_factory(
+        default_period=None,
+        fixed_time_unit=True,
+        default_time_unit=None,
+):
     # TODO add custom date period option
     # TODO add date period in url params, with higher priority from the date range one
     # TODO move filter to shiny_apps, have to understand how the reactive will be modularized
 
+    selected_period = DEFAULT_FILTER_PERIOD if default_period is None else default_period
+    selected_time_unit = DEFAULT_FILTER_TIME_UNIT if default_time_unit is None else default_time_unit
+    time_unit_choices = ['none', 'day', 'week', 'month', 'year'] if not fixed_time_unit else [selected_time_unit]
     return ui.card(
         ui.input_select(
             id='date_period_input_select',
             label='Select date period',
             choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'],
-            selected=DEFAULT_FILTER_PERIOD
+            selected=selected_period
         ),
         ui.input_date_range(
             id='transactions_date_range',
@@ -120,8 +127,8 @@ def transactions_intersection_filted_factory():
         ui.input_radio_buttons(
             id='time_unit_select',
             label='Time unit',
-            choices=['none', 'day', 'week', 'month', 'year'],
-            selected=DEFAULT_FILTER_TIME_UNIT
+            choices=time_unit_choices,
+            selected=selected_time_unit,
         ),
         ui.input_selectize(
             id='filter_in_tags_select',
