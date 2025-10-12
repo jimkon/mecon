@@ -7,6 +7,7 @@ import utils
 from mecon.app import shiny_app
 from mecon.data import groupings
 from mecon.data.transactions import Transactions
+import mecon.utils.calendar_utils as cu
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -25,56 +26,8 @@ PAGE_SIZE = 100
 app_ui = shiny_app.app_ui_factory(
     ui.layout_sidebar(
         ui.sidebar(
-            ui.accordion(
-                ui.accordion_panel(
-                    "Groups",
-                    ui.input_select(
-                        id='transaction_order_select',
-                        label='Order by:',
-                        choices=['Newest transactions', 'Least tagged'],
-                        selected='Newest'
-                    ),
-                    ui.card(
-                        # ui.input_select(
-                        #     id='page_group_select',
-                        #     label='Groups:',
-                        #     choices=['100 transactions', '7 days', '30 days'],
-                        #     selected='100 transactions'
-                        # ),
-                        ui.input_select(
-                            id='page_number_select',
-                            label='Page number:',
-                            choices={'0': '0'},
-                            selected='0'
-                        ),
-                    ),
-                    ui.input_action_button(
-                        id='review_and_save_button',
-                        label='Review and save changes...',
-                    ),
-                ),
-                ui.accordion_panel(
-                    "Filter transactions",
-                    ui.input_selectize(
-                        id='filter_in_tags_select',
-                        label='Select tags to filter IN',
-                        choices=[],
-                        # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
-                        selected=None,
-                        multiple=True
-                    ),
-                    ui.input_selectize(
-                        id='filter_out_tags_select',
-                        label='Select tags to filter OUT',
-                        choices=[],
-                        # sorted([tag_name for tag_name, cnt in all_transactions.all_tag_counts().items() if cnt > 0]),
-                        selected=None,
-                        multiple=True
-                    ),
-                ),
-            ),
+            shiny_app.transactions_intersection_filtered_factory(),
         ),
-
         ui.page_fluid(
             ui.card(
                 ui.card_header(ui.output_text(id='transactions_header_text')),
@@ -85,104 +38,154 @@ app_ui = shiny_app.app_ui_factory(
 )
 
 
-def _transform_id(id_str):
-    return id_str.replace('.', '[dot]').replace('-', '_')
+# def _transform_id(id_str):
+#     return id_str.replace('.', '[dot]').replace('-', '_')
+#
+#
+# def new_transaction_row(transaction, all_tags):
+#     amount = transaction['amount']
+#     amount_str = f"{'⮝' if amount < 0 else '⮟'} {amount} GBP   " + \
+#                  (f"({transaction['amount_cur']} {transaction['currency']})" if transaction[
+#                                                                                     'currency'] != 'GBP' else '')
+#     _dt = transaction['datetime'].to_pydatetime()
+#     date_str, time = _dt.date().strftime('%a %d %B, %Y'), _dt.time()
+#     res_ui = ui.card(
+#         ui.row(
+#             ui.column(4, ui.h4(amount_str, style=f"color:{'red' if transaction['amount'] < 0 else 'green'}")),
+#             ui.column(6, ui.h3(f"📅{date_str} - 🕑{time}")),
+#             ui.column(2, ui.h6(transaction['id']), height='5px', style=f"background-color: grey")),
+#         ui.row(ui.column(12, ui.h4(ui.card(transaction['description'])))),
+#         ui.card_footer(ui.row(ui.h2(ui.input_selectize(id=f"tags_{transaction['id']}", label='Tags', multiple=True,
+#                                                        choices=[tag.name for tag in all_tags],
+#                                                        selected=transaction['tags'].split(','), width='100%')))),
+#         # max_height='10%',
+#         style="border-color: grey", id=transaction['id']
+#     )
+#     change_tracker.clear()
+#     return res_ui
+#
+#
+# def build_tag_choices(all_tags):
+#     return sorted([tag.name for tag in all_tags])
+#
+#
+# def filter_transactions_by_selected_tags(transactions: Transactions, selected_tags) -> Transactions:
+#     return transactions.containing_tags(selected_tags)
+#
+#
+# def paginate_transactions(transactions: Transactions, order_option: str, page_number: int, page_size: int):
+#     return utils.sort_and_filter_transactions_df(transactions, order_option, page_number, page_size)
+#
+#
+# def build_page_choices(transactions: Transactions, order_option: str, page_size: int):
+#     if order_option == 'Newest transactions':
+#         groups = transactions.group(groupings.WEEK)
+#         label = 'Choose week'
+#         ranges = [(str(week.date.min()), str(week.date.max())) for week in groups]
+#     elif order_option == 'Least tagged':
+#         groups = transactions.group(groupings.IndexGrouping.equal_size_groups(page_size, transactions.size()))
+#         label = f"Choose page (size: {page_size})"
+#         ranges = [(str(group.date.min()), str(group.date.max())) for group in groups]
+#     else:
+#         raise ValueError(f"Invalid ordering: {order_option}")
+#
+#     range_strings = {str(i): f"{i} ({rng[0]}, {rng[1]})" for i, rng in enumerate(ranges)}
+#     return label, range_strings
+#
+#
+# def clear_rendered_transactions(_shown_transactions):
+#     if _shown_transactions is None:
+#         return
+#     for _id in _shown_transactions['id']:
+#         ui.remove_ui(selector=f"#{_id}")
+#
+#
+# def register_selectize_change_handler(input_obj, transaction_id):
+#     def on_change():
+#         change_tracker.append(transaction_id)
+#
+#     reactive.effect(reactive.event(getattr(input_obj, f"tags_{transaction_id}"))(on_change))
+#
+#
+# def determine_tag_changes(current_transactions_df, input_obj):
+#     changed_transaction_ids = set(change_tracker[len(current_transactions_df):])
+#     old_changed_transactions_df = current_transactions_df[
+#         current_transactions_df['id'].isin(changed_transaction_ids)]
+#     new_tags = {_id: set(getattr(input_obj, f"tags_{_id}")()) for _id in changed_transaction_ids}
+#     old_tags = old_changed_transactions_df[['id', 'tags']].set_index('id').to_dict('index')
+#     old_tags = {_id: set(tags['tags'].split(',')) for _id, tags in old_tags.items()}
+#     added = {_id: new_tags[_id].difference(old_tags[_id]) for _id in changed_transaction_ids if
+#              len(new_tags[_id].difference(old_tags[_id]))}
+#     removed = {_id: old_tags[_id].difference(new_tags[_id]) for _id in changed_transaction_ids if
+#                len(old_tags[_id].difference(new_tags[_id]))}
+#     return added, removed
+#
+#
+# def build_review_changes_modal(added, removed):
+#     added_message = '\n'.join(
+#         [' * <span style="color:green">' + f"{', '.join(tags)} added to transaction \'{tid}\'</span>" for tid, tags in
+#          added.items()])
+#     removed_message = '\n'.join(
+#         [' * <span style="color:red">' + f"{', '.join(tags)} removed from transaction \'{tid}\'</span>" for tid, tags in
+#          removed.items()])
+#
+#     return ui.modal(
+#         ui.markdown(f'{added_message}\n{removed_message}'),
+#         title="Review changes before saving",
+#         easy_close=True,
+#         size='xl',
+#         footer=ui.input_action_button(id='save_button', label='Save'),
+#     )
 
 
-def new_transaction_row(transaction, all_tags):
-    amount = transaction['amount']
-    amount_str = f"{'⮝' if amount < 0 else '⮟'} {amount} GBP   " + \
-                 (f"({transaction['amount_cur']} {transaction['currency']})" if transaction[
+def construct_amount_str(transaction_series):
+    transaction_dict = transaction_series.to_dict()
+    is_amount_positive = transaction_dict['amount']>0
+    amount_str = f"{abs(transaction_dict['amount']):.1f}"
+    amount_full_info_str = f"{'⮝' if is_amount_positive else '⮟'} {amount_str} GBP   " + \
+                 (f"({transaction_dict['amount_cur']} {transaction_dict['currency']})" if transaction_dict[
                                                                                     'currency'] != 'GBP' else '')
-    _dt = transaction['datetime'].to_pydatetime()
-    date_str, time = _dt.date().strftime('%a %d %B, %Y'), _dt.time()
-    res_ui = ui.card(
-        ui.row(
-            ui.column(4, ui.h4(amount_str, style=f"color:{'red' if transaction['amount'] < 0 else 'green'}")),
-            ui.column(6, ui.h3(f"📅{date_str} - 🕑{time}")),
-            ui.column(2, ui.h6(transaction['id']), height='5px', style=f"background-color: grey")),
-        ui.row(ui.column(12, ui.h4(ui.card(transaction['description'])))),
-        ui.card_footer(ui.row(ui.h2(ui.input_selectize(id=f"tags_{transaction['id']}", label='Tags', multiple=True,
-                                                       choices=[tag.name for tag in all_tags],
-                                                       selected=transaction['tags'].split(','), width='100%')))),
-        # max_height='10%',
-        style="border-color: grey", id=transaction['id']
-    )
-    change_tracker.clear()
-    return res_ui
+
+    return amount_full_info_str.strip()
 
 
-def build_tag_choices(all_tags):
-    return sorted([tag.name for tag in all_tags])
+def ui_id_transformation(id_str, short_str_len=5):
+    id_str_short = id_str[:min(short_str_len, len(id_str)) - 1]+'...'
+    res = ui.tooltip(ui.HTML(f"<label>{id_str_short}</label>"), id_str, placement='top')
+    return res
+
+def ui_description_transformation(desc_str, short_str_len=10):
+    desc_str_short = desc_str[:min(short_str_len, len(desc_str)) - 1]+'...'
+    res = ui.tooltip(ui.HTML(f"<label>{desc_str_short}</label>"), desc_str, placement='top')
+    return res
+
+def ui_tags_transformation(tags_Str):
+    tags_list = tags_Str.split(',')
+    res = ui.input_selectize(
+        "tags_selectize",
+        "tags...",
+        tags_list,
+        multiple=True,
+    ),
+    return res
 
 
-def filter_transactions_by_selected_tags(transactions: Transactions, selected_tags) -> Transactions:
-    return transactions.containing_tags(selected_tags)
+def enhance_transactions_df(df_tx):
+    df_ench = df_tx.copy()
+    df_ench['date'] = df_tx['datetime'].apply(lambda dt: dt.date().strftime('%Y-%m-%d'))
+    df_ench['time'] = df_tx['datetime'].apply(lambda dt: dt.time().strftime('%H:%M:%S'))
+    df_ench['amount'] = df_tx.apply(lambda row: construct_amount_str(row), axis=1)
+    df_ench['week_id'] = df_tx['datetime'].apply(lambda dt: f"{dt.date().strftime('%Y-%m-%d')}/{cu.week_of_year(dt)}")
+    df_ench['n_tags'] = df_tx['tags'].apply(lambda tags: len(tags.split(',')))
+
+    df_ench['Tx_ID'] = df_ench['id'].apply(ui_id_transformation)
+    df_ench['short_desc'] = df_tx['description'].apply(ui_description_transformation)
+    df_ench['select_tags'] = df_tx['tags'].apply(ui_tags_transformation)
 
 
-def paginate_transactions(transactions: Transactions, order_option: str, page_number: int, page_size: int):
-    return utils.sort_and_filter_transactions_df(transactions, order_option, page_number, page_size)
-
-
-def build_page_choices(transactions: Transactions, order_option: str, page_size: int):
-    if order_option == 'Newest transactions':
-        groups = transactions.group(groupings.WEEK)
-        label = 'Choose week'
-        ranges = [(str(week.date.min()), str(week.date.max())) for week in groups]
-    elif order_option == 'Least tagged':
-        groups = transactions.group(groupings.IndexGrouping.equal_size_groups(page_size, transactions.size()))
-        label = f"Choose page (size: {page_size})"
-        ranges = [(str(group.date.min()), str(group.date.max())) for group in groups]
-    else:
-        raise ValueError(f"Invalid ordering: {order_option}")
-
-    range_strings = {str(i): f"{i} ({rng[0]}, {rng[1]})" for i, rng in enumerate(ranges)}
-    return label, range_strings
-
-
-def clear_rendered_transactions(_shown_transactions):
-    if _shown_transactions is None:
-        return
-    for _id in _shown_transactions['id']:
-        ui.remove_ui(selector=f"#{_id}")
-
-
-def register_selectize_change_handler(input_obj, transaction_id):
-    def on_change():
-        change_tracker.append(transaction_id)
-
-    reactive.effect(reactive.event(getattr(input_obj, f"tags_{transaction_id}"))(on_change))
-
-
-def determine_tag_changes(current_transactions_df, input_obj):
-    changed_transaction_ids = set(change_tracker[len(current_transactions_df):])
-    old_changed_transactions_df = current_transactions_df[
-        current_transactions_df['id'].isin(changed_transaction_ids)]
-    new_tags = {_id: set(getattr(input_obj, f"tags_{_id}")()) for _id in changed_transaction_ids}
-    old_tags = old_changed_transactions_df[['id', 'tags']].set_index('id').to_dict('index')
-    old_tags = {_id: set(tags['tags'].split(',')) for _id, tags in old_tags.items()}
-    added = {_id: new_tags[_id].difference(old_tags[_id]) for _id in changed_transaction_ids if
-             len(new_tags[_id].difference(old_tags[_id]))}
-    removed = {_id: old_tags[_id].difference(new_tags[_id]) for _id in changed_transaction_ids if
-               len(old_tags[_id].difference(new_tags[_id]))}
-    return added, removed
-
-
-def build_review_changes_modal(added, removed):
-    added_message = '\n'.join(
-        [' * <span style="color:green">' + f"{', '.join(tags)} added to transaction \'{tid}\'</span>" for tid, tags in
-         added.items()])
-    removed_message = '\n'.join(
-        [' * <span style="color:red">' + f"{', '.join(tags)} removed from transaction \'{tid}\'</span>" for tid, tags in
-         removed.items()])
-
-    return ui.modal(
-        ui.markdown(f'{added_message}\n{removed_message}'),
-        title="Review changes before saving",
-        easy_close=True,
-        size='xl',
-        footer=ui.input_action_button(id='save_button', label='Save'),
-    )
+    cols_to_keep = ['Tx_ID', 'amount', 'date', 'time', 'week_id', 'n_tags', 'select_tags', 'short_desc']
+    df_res = df_ench[cols_to_keep]
+    return df_res
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -191,89 +194,20 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     transactions = data_manager.get_transactions()
 
-    get_url_params = shiny_app.url_params_function_factory(input,
-                                                           output,
-                                                           session,
-                                                           data_manager)
+    filter_url_params = shiny_app.filter_url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager)
 
-    @reactive.calc
-    def get_filter_url_params():
-        _url_params = get_url_params()
-        params = {}
-        params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
-        params['filter_in_tags'] = params['filter_in_tags'].split(',') if len(params['filter_in_tags']) > 0 else []
-        params['filter_out_tags'] = _url_params.get('filter_out_tags', [''])[0]
-        params['filter_out_tags'] = params['filter_out_tags'].split(',') if len(params['filter_out_tags']) > 0 else []
-
-        params['page_number'] = int(_url_params.get('page_number', '0'))
-
-        logging.info(f"Input params: {params=}")
-        return params
-
-    @reactive.calc
-    def default_transactions():
-        filter_url_params = get_filter_url_params()
-        filter_in_tags = filter_url_params['filter_in_tags']
-        filter_out_tags = filter_url_params['filter_out_tags']
-        transactions = data_manager.get_transactions()
-        filtered_in_transactions = transactions.containing_tags(filter_in_tags)
-        if filtered_in_transactions.size() == 0:
-            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {filter_url_params['filter_in_tags']} tags."
-            raise shiny_app.ShinyTransactionFilterError(error_msg)
-
-        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
-                                                                                        empty_tags_strategy='all_true')
-        if filtered_in_and_out_transactions.size() == 0:
-            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {filter_url_params['filter_in_tags']} tags."
-            raise shiny_app.ShinyTransactionFilterError(error_msg)
-
-        logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
-        return filtered_in_and_out_transactions
-
-    @reactive.effect
-    def init():
-        logging.info('Init')
-        filter_url_params = get_filter_url_params()
-        transactions = default_transactions()
-        all_tags_names = [tag.name for tag in data_manager.all_tags()]
-        new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
-                       cnt > 0]
-
-        if len(input.filter_in_tags_select()) == 0:
-            logging.info(f"Updating filter In tags: {len(new_choices)} {filter_url_params['filter_in_tags']}")
-            ui.update_selectize(id='filter_in_tags_select',
-                                choices=sorted(new_choices),
-                                selected=filter_url_params['filter_in_tags'])
-
-        if len(input.filter_out_tags_select()) == 0:
-            logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {filter_url_params['filter_out_tags']}")
-            ui.update_selectize(id='filter_out_tags_select',
-                                choices=all_tags_names,
-                                selected=filter_url_params['filter_out_tags'])
-
-        logging.info(f"init->{input.filter_in_tags_select()=} {input.compare_tags_select()=}")
-
-    @reactive.calc
-    def filtered_transactions_calc():
-        filter_url_params = get_filter_url_params()
-        filter_in_tags, filter_out_tags = filter_url_params['filter_in_tags'], filter_url_params['filter_out_tags']
-        transactions = data_manager.get_transactions()
-
-        filtered_in_transactions = transactions.containing_tags(filter_in_tags)
-        if filtered_in_transactions.size() == 0:
-            error_msg = f"No transactions containing {filter_in_tags} tags."
-            raise shiny_app.ShinyTransactionFilterError(error_msg)
-
-        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
-                                                                                        empty_tags_strategy='all_true')
-        if filtered_in_and_out_transactions.size() == 0:
-            error_msg = f"No transactions found after filtering out {filter_out_tags} tags."
-            raise shiny_app.ShinyTransactionFilterError(error_msg)
-
-        logging.info(
-            f"Filtered transactions size: {filtered_in_and_out_transactions.size()=} for filter params=({filter_in_tags, filter_out_tags})")
-
-        return filtered_in_and_out_transactions
+    (get_filter_params,
+     default_transactions,
+     init,
+     filtered_transactions_calc) = shiny_app.filter_funcs_factory(
+        input,
+        output,
+        session,
+        data_manager)
 
     @render.text
     def transactions_header_text():
@@ -283,9 +217,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         unique_tags = filtered_transactions_tx.all_tags()
 
         title = f"{len(filtered_transactions_df)} transactions from {start_date} to {end_date} containing {len(unique_tags)}" \
-                f" page={input.page_number_select()}," \
-                f" page_size={PAGE_SIZE}"
+                # f" page={input.page_number_select()}," \
+                # f" page_size={PAGE_SIZE}"
         return title
+
+    @render.data_frame
+    def transactions_output_df():
+        df = enhance_transactions_df(filtered_transactions_calc().dataframe())
+        return shiny_app.render_table_standard(df)
 
     # @reactive.effect
     # def load():
