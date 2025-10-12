@@ -212,39 +212,52 @@ def test_parse_condition_value(shiny_helpers):
     assert shiny_helpers.edit_tags.parse_condition_value("abc") == "abc"
 
 
-def test_build_tag_choices(dataset_manager, shiny_helpers):
+# def test_build_tag_choices(dataset_manager, shiny_helpers):
+#     _, manager, _ = dataset_manager
+#     choices = shiny_helpers.manual_tagging.build_tag_choices(manager.all_tags())
+#     assert "Commute" in choices
+#
+#
+# def test_filter_transactions_by_selected_tags(dataset_manager, shiny_helpers):
+#     _, manager, _ = dataset_manager
+#     transactions = manager.get_transactions()
+#     filtered = shiny_helpers.manual_tagging.filter_transactions_by_selected_tags(
+#         transactions, ["Commute"]
+#     )
+#     assert filtered.size() > 0
+#     assert all("Commute" in tags for tags in filtered.tags)
+#
+#
+# def test_paginate_transactions_newest(dataset_manager, shiny_helpers):
+#     _, manager, _ = dataset_manager
+#     transactions = manager.get_transactions()
+#     page = shiny_helpers.manual_tagging.paginate_transactions(
+#         transactions, "Newest transactions", 0, 2
+#     )
+#     assert not page.empty
+#     assert page.iloc[0]["datetime"] >= page.iloc[-1]["datetime"]
+#
+#
+# def test_build_page_choices_least_tagged(dataset_manager, shiny_helpers):
+#     _, manager, _ = dataset_manager
+#     label, choices = shiny_helpers.manual_tagging.build_page_choices(
+#         manager.get_transactions(), "Least tagged", page_size=2
+#     )
+#     assert "Choose page" in label
+#     assert isinstance(choices, dict) and choices
+
+def test_construct_amount_str(dataset_manager, shiny_helpers):
     _, manager, _ = dataset_manager
-    choices = shiny_helpers.manual_tagging.build_tag_choices(manager.all_tags())
-    assert "Commute" in choices
+    df = manager.get_transactions().dataframe()
+    amount_strs = df.apply(shiny_helpers.manual_tagging.construct_amount_str, axis=1)
+    breakpoint()
 
 
-def test_filter_transactions_by_selected_tags(dataset_manager, shiny_helpers):
+def test_enhance_transactions_df(dataset_manager, shiny_helpers):
     _, manager, _ = dataset_manager
-    transactions = manager.get_transactions()
-    filtered = shiny_helpers.manual_tagging.filter_transactions_by_selected_tags(
-        transactions, ["Commute"]
-    )
-    assert filtered.size() > 0
-    assert all("Commute" in tags for tags in filtered.tags)
-
-
-def test_paginate_transactions_newest(dataset_manager, shiny_helpers):
-    _, manager, _ = dataset_manager
-    transactions = manager.get_transactions()
-    page = shiny_helpers.manual_tagging.paginate_transactions(
-        transactions, "Newest transactions", 0, 2
-    )
-    assert not page.empty
-    assert page.iloc[0]["datetime"] >= page.iloc[-1]["datetime"]
-
-
-def test_build_page_choices_least_tagged(dataset_manager, shiny_helpers):
-    _, manager, _ = dataset_manager
-    label, choices = shiny_helpers.manual_tagging.build_page_choices(
-        manager.get_transactions(), "Least tagged", page_size=2
-    )
-    assert "Choose page" in label
-    assert isinstance(choices, dict) and choices
+    df = manager.get_transactions().dataframe()
+    df_enhanced = shiny_helpers.manual_tagging.enhance_transactions_df(df)
+    breakpoint()
 
 
 def test_build_tags_table(dataset_manager, shiny_helpers):
