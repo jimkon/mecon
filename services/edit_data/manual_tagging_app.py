@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
@@ -22,6 +23,102 @@ shown_transactions = None
 
 DEFAULT_TIME_UNIT = 'month'
 PAGE_SIZE = 100
+
+TRANSACTION_TABLE_COLUMN_WIDTHS = {
+    'Tx_ID': '10ch',
+    'amount': '14ch',
+    'date': '12ch',
+    'time': '10ch',
+    'week_id': '16ch',
+    'n_tags': '8ch',
+    'select_tags': '26ch',
+    'short_desc': '28ch',
+}
+
+TRANSACTION_TABLE_BASE_STYLES = [
+    {
+        "location": "header",
+        "style": {
+            "backgroundColor": "#212529",
+            "color": "#f8f9fa",
+            "fontWeight": "600",
+            "fontSize": "13px",
+            "textTransform": "uppercase",
+        },
+    },
+    {
+        "location": "body",
+        "style": {
+            "backgroundColor": "#f8f9fa",
+            "borderBottom": "1px solid #dee2e6",
+            "fontSize": "14px",
+            "color": "#212529",
+        },
+    },
+]
+
+
+def build_column_width_styles(column_names: list[str], width_overrides: dict[str, str | int], *, include_header: bool = True):
+    if not width_overrides:
+        return []
+
+    name_to_index = {name: idx for idx, name in enumerate(column_names)}
+    styles: list[dict] = []
+
+    for column_name, width in width_overrides.items():
+        if column_name not in name_to_index or width is None:
+            continue
+
+        column_index = name_to_index[column_name]
+        width_value = str(width)
+        style_payload = {
+            "cols": [column_index],
+            "style": {
+                "minWidth": width_value,
+                "maxWidth": width_value,
+                "whiteSpace": "nowrap",
+            },
+        }
+
+        styles.append({"location": "body", **style_payload})
+        if include_header:
+            styles.append({"location": "header", **style_payload})
+
+    return styles
+
+
+def combine_table_styles(*style_groups: list[dict] | dict | None):
+    combined: list[dict] = []
+    for styles in style_groups:
+        if not styles:
+            continue
+        if isinstance(styles, list):
+            combined.extend(styles)
+        else:
+            combined.append(styles)
+    return combined
+
+
+def render_table_customised_width(
+    df: pd.DataFrame,
+    *,
+    width: str | float | None = "100%",
+    height: str | float | None = "600px",
+    column_widths: dict[str, str | int] | None = None,
+    base_styles: list[dict] | None = None,
+):
+    column_width_styles = build_column_width_styles(df.columns.tolist(), column_widths or {})
+    resolved_base_styles = TRANSACTION_TABLE_BASE_STYLES if base_styles is None else base_styles
+    table_styles = combine_table_styles(resolved_base_styles, column_width_styles)
+
+    return render.DataTable(
+        df,
+        width=width,
+        height=height,
+        filters=True,
+        selection_mode="none",
+        styles=table_styles,
+    )
 
 app_ui = shiny_app.app_ui_factory(
     ui.layout_sidebar(
@@ -159,18 +256,42 @@ def ui_description_transformation(desc_str, short_str_len=10):
     res = ui.tooltip(ui.HTML(f"<label>{desc_str_short}</label>"), desc_str, placement='top')
     return res
 
-def ui_tags_transformation(tags_Str):
-    tags_list = tags_Str.split(',')
-    res = ui.input_selectize(
-        "tags_selectize",
-        "tags...",
-        tags_list,
+def sanitize_input_id(raw_id: str) -> str:
+    """Convert transaction identifiers into valid Shiny input ids."""
+
+    sanitized = re.sub(r'[^0-9a-zA-Z_]', '_', str(raw_id))
+    if not sanitized:
+        sanitized = 'tags_input'
+    if sanitized[0].isdigit():
+        sanitized = f"_{sanitized}"
+    return sanitized
+
+
+def ui_tags_transformation(transaction_id: str, tags_str: str, tag_choices: list[str]):
+    tags_list = [tag.strip() for tag in tags_str.split(',') if tag.strip()] if tags_str else []
+    selectize_id = sanitize_input_id(f"tags_{transaction_id}")
+    selectize_input = ui.input_selectize(
+        id=selectize_id,
+        label=None,
+        choices=tag_choices,
+        selected=tags_list,
         multiple=True,
-    ),
-    return res
+        width='100%',
+        remove_button=True,
+        options={
+            'placeholder': 'Search or add tags…',
+        }
+    )
+
+    container = ui.div(
+        selectize_input,
+        {'class': 'transaction-tags-selectize', 'data-transaction-id': str(transaction_id)}
+    )
+
+    return container
 
 
-def enhance_transactions_df(df_tx):
+def enhance_transactions_df(df_tx, tag_choices):
     df_ench = df_tx.copy()
     df_ench['date'] = df_tx['datetime'].apply(lambda dt: dt.date().strftime('%Y-%m-%d'))
     df_ench['time'] = df_tx['datetime'].apply(lambda dt: dt.time().strftime('%H:%M:%S'))
@@ -180,7 +301,10 @@ def enhance_transactions_df(df_tx):
 
     df_ench['Tx_ID'] = df_ench['id'].apply(ui_id_transformation)
     df_ench['short_desc'] = df_tx['description'].apply(ui_description_transformation)
-    df_ench['select_tags'] = df_tx['tags'].apply(ui_tags_transformation)
+    df_ench['select_tags'] = df_tx.apply(
+        lambda row: ui_tags_transformation(row['id'], row['tags'], tag_choices),
+        axis=1
+    )
 
 
     cols_to_keep = ['Tx_ID', 'amount', 'date', 'time', 'week_id', 'n_tags', 'select_tags', 'short_desc']
@@ -223,8 +347,14 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def transactions_output_df():
-        df = enhance_transactions_df(filtered_transactions_calc().dataframe())
-        return shiny_app.render_table_standard(df)
+        tag_choices = sorted({tag.name for tag in all_tags})
+        df = enhance_transactions_df(filtered_transactions_calc().dataframe(), tag_choices)
+        return render_table_customised_width(
+            df,
+            width='100%',
+            height='600px',
+            column_widths=TRANSACTION_TABLE_COLUMN_WIDTHS,
+        )
 
     # @reactive.effect
     # def load():

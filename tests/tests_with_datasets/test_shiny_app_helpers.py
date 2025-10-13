@@ -256,7 +256,8 @@ def test_construct_amount_str(dataset_manager, shiny_helpers):
 def test_enhance_transactions_df(dataset_manager, shiny_helpers):
     _, manager, _ = dataset_manager
     df = manager.get_transactions().dataframe()
-    df_enhanced = shiny_helpers.manual_tagging.enhance_transactions_df(df)
+    tag_choices = [tag.name for tag in manager.all_tags()]
+    df_enhanced = shiny_helpers.manual_tagging.enhance_transactions_df(df, tag_choices)
     breakpoint()
 
 
