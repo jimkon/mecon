@@ -113,7 +113,7 @@ def transactions_intersection_filtered_factory(
         ui.input_select(
             id='date_period_input_select',
             label='Select date period',
-            choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'],
+            choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'], # TODO last week, q1-4 (if exist), <2020, 2020, 2021, 2022, etc...
             selected=selected_period
         ),
         ui.input_date_range(
