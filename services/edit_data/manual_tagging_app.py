@@ -221,7 +221,6 @@ def enhance_transactions_df(df_tx, all_tags: set[str]):
     df_ench['selectize_id'] = df_tx['id'].apply(lambda tx_id: f"selectize_" + sanitize_tx_id(tx_id))
     df_ench['add_tags'] = df_ench.apply(
         lambda row: ui_tags_transformation(row['id'], row['tags'], all_tags, row['selectize_id']),
-        # TODO all non built in tags
         axis=1
     )
 
@@ -248,19 +247,19 @@ def transform_tag_diffs(tag_diffs):
 
 def server(input: Inputs, output: Outputs, session: Session):
     data_manager = shiny_app.create_data_manager()
-    all_tags = data_manager.all_tags()
+    # all_tags = data_manager.all_tags()
 
     custom_tags = set(data_manager.custom_tags_df['name'])
 
     addable_tags_set = {tag for tag in custom_tags}
 
-    transactions = data_manager.get_transactions()
-
-    filter_url_params = shiny_app.filter_url_params_function_factory(
-        input,
-        output,
-        session,
-        data_manager)
+    # transactions = data_manager.get_transactions()
+    #
+    # filter_url_params = shiny_app.filter_url_params_function_factory(
+    #     input,
+    #     output,
+    #     session,
+    #     data_manager)
 
     (get_filter_params,
      default_transactions,
