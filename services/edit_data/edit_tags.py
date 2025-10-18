@@ -17,6 +17,138 @@ from mecon.tags.process import RuleExecutionPlanMonitor
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
+
+def fetch_tag_from_manager(data_manager, tag_name: str):
+    tag = data_manager.get_tag(tag_name)
+    if tag is None:
+        raise ValueError(f"Tag '{tag_name}' does not exist")
+    return tag
+
+
+def calculate_transactions_for_tag(data_manager, tag: tagging.Tag) -> Transactions:
+    transactions = data_manager.get_transactions()
+    df_trans = transactions.dataframe()
+    tagging.Tagger.tag(tag, df_trans, remove_old_tags=True)
+    return Transactions(df_trans)
+
+
+def load_monitor(dataset):
+    monitor = RuleExecutionPlanMonitor(dataset)
+    monitor.load()
+    return monitor
+
+
+def build_new_transactions_and_monitor(data_manager, dataset, all_tags, tag_name: str, tag_json_str: str):
+    new_tag = parse_tag_from_json(tag_name, tag_json_str)
+    new_tags = [new_tag] + [tag for tag in all_tags if tag.name != tag_name]
+
+    orep = process.OptimisedRuleExecutionPlanTagging(new_tags)
+    orep.create_rule_execution_plan()
+    orep.create_optimised_rule_execution_plan()
+
+    transactions = data_manager.get_transactions()
+    monitor = load_monitor(dataset)
+    new_trans = orep.tag(transactions, monitor=monitor)
+    return new_trans, monitor
+
+
+def compute_transactions_diff(original_transactions, new_transactions, tag_name: str):
+    return original_transactions.tags_diff(new_transactions, target_tags=[tag_name])
+
+
+def serialise_tag_to_json(tag: tagging.Tag) -> str:
+    return json.dumps(tag.rule.to_json(), indent=4)
+
+
+def format_transaction_datetime(dt):
+    date_str, time = dt.date().strftime('%a %d %b, %Y'), dt.time()
+    return f"📅{date_str}\t🕑{time}"
+
+
+def build_invalid_transactions_modal():
+    return ui.modal(
+        ui.output_data_frame(id='invalid_transactions_output_df'),
+        title="Warning: Invalid transactions",
+        easy_close=True,
+        size='xl'
+    )
+
+
+def build_save_confirmation_modal(tag_name: str, warning: str, tag_json_str: str):
+    return ui.modal(
+        ui.markdown(
+            f"# {warning}\n   "
+            f"Tag {tag_name} is about to be saved to the DB:   "
+            f"   \n"
+            f"   \n"
+            f"{tag_json_str}"
+        ),
+        title=f"Saving {tag_name}",
+        easy_close=True,
+        footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
+        size='xl'
+    )
+
+
+def build_recalculation_modal(tag_name: str, diff_df, monitor):
+    all_monitored_tags = sorted(monitor.all_monitored_tag_names())
+    return ui.modal(
+        ui.navset_tab(
+            ui.nav_panel(f"{len(diff_df)} rows added (regarding to '{tag_name}' tag)",
+                         ui.output_data_frame(id='transactions_diff_added_output_df')),
+            ui.nav_panel(f"{len(diff_df)} rows removed (regarding to '{tag_name}' tag)",
+                         ui.output_data_frame(id='transactions_diff_removed_output_df')),
+            ui.nav_panel('Calcs',
+                         ui.input_select(
+                             id='tag_select_for_calc_monitor',
+                             label='Tags',
+                             choices=all_monitored_tags,
+                             selected=tag_name
+                         ),
+                         ui.output_data_frame(id='calculation_monitor_output_df')),
+        ),
+        title="Recalculated transaction tags",
+        easy_close=True,
+        size='xl'
+    )
+
+
+def build_unsaved_warning(original_json: str, current_json: str) -> str:
+    if original_json == current_json:
+        return ''
+    unsaved_rules = ''.join([c1 for c1, c2 in zip(original_json, current_json) if c1 != c2])
+    if len(unsaved_rules) == 0:
+        return ''
+    return f"Warning: There is unsaved progress!!!\n\n{unsaved_rules}"
+
+
+def add_ids_to_tag(tag: tagging.Tag, ids_to_add):
+    return tag_helpers.add_rule_for_id(tag=tag, ids_to_add=ids_to_add)
+
+
+def append_condition_to_tag(tag: tagging.Tag, *, field: str, transformation_key: str, compare_key: str, value):
+    condition_to_add = tagging.Condition.from_string_values(
+        field=field,
+        transformation_op_key=transformation_key,
+        compare_op_key=compare_key,
+        value=value,
+    )
+    new_rule = tag.rule.append(condition_to_add)
+    return tagging.Tag(tag.name, new_rule)
+
+
+def parse_tag_from_json(tag_name: str, tag_json_str: str) -> tagging.Tag:
+    return tagging.Tag.from_json_string(tag_name, tag_json_str)
+
+
+def parse_condition_value(value_str: str):
+    if not value_str.isnumeric():
+        return value_str
+    if value_str.isdigit():
+        return int(value_str)
+    return float(value_str)
+
+
 app_ui = shiny_app.app_ui_factory(
     ui.page_fillable(
         ui.h1(ui.output_text(id='title_output_text')),
@@ -204,70 +336,38 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     current_tag_value = reactive.Value(None)
 
-    @reactive.calc
-    def url_params() -> dict:
-        logging.info(input['.clientdata_url_search'])
-        urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
-        params = parse_qs(urlparse_result.query)
-        logging.info(f"Input params: {params}")
-        return params
+    get_url_params = shiny_app.url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager,
+        ensure_exists=['filter_in_tags'])
 
     @reactive.calc
     def fetch_tag_name():
-        params = url_params()
-        tag_name = params['filter_in_tags'][0]
-        return tag_name
+        return get_url_params()['filter_in_tags'][0]
 
     @reactive.calc
     def fetch_tag():
-        params = url_params()
-        tag_name = params['filter_in_tags'][0]
+        tag_name = fetch_tag_name()
         logging.info(f"Fetching tag '{tag_name}' from the DB...")
-        tag = data_manager.get_tag(tag_name)
-        if tag is None:
-            ValueError(f"Tag {params['filter_in_tags']} does not exists")
-
-        return tag
-
-    def calculate_transaction_for_tag(tag):
-        logging.info(f"Fetching transactions from the DB...")
-        transactions = data_manager.get_transactions()
-        df_trans = transactions.dataframe()
-
-        logging.info(f"Re-applying tag '{tag.name}' on transactions...")
-        tagging.Tagger.tag(tag, df_trans, remove_old_tags=True)
-        new_transactions = Transactions(df_trans)
-        logging.info(f"Re-applying tag '{tag.name}' on transactions... Done")
-        return new_transactions
-
-    def read_monitor_from_files():
-        monitor = RuleExecutionPlanMonitor(dataset)
-        monitor.load()
-        return monitor
+        return fetch_tag_from_manager(data_manager, tag_name)
 
     @reactive.effect
     def load():
-        if current_tag_value.get() == None:
+        if current_tag_value.get() is None:
             logging.info(f"Loading tag {fetch_tag_name()} from DB...")
-            tag = fetch_tag()
-            current_tag_value.set(tag)
+            current_tag_value.set(fetch_tag())
         logging.info(f"Updating UI according to tag '{current_tag_value.get().name}'...")
         ui.update_text_area(id='tag_json_text', value=get_target_tag_json())
-        ui.update_selectize(id='id_add_selectize',
-                            choices={_id: _id for _id in untagged_transactions().dataframe()['id']})
+        ui.update_selectize(
+            id='id_add_selectize',
+            choices={_id: _id for _id in untagged_transactions().dataframe()['id']}
+        )
 
-        transactions = data_manager.get_transactions()
-        invalid_transactions = transactions.invalid_transactions()
+        invalid_transactions = data_manager.get_transactions().invalid_transactions()
         if invalid_transactions is not None:
-            m = ui.modal(
-                ui.output_data_frame(id='invalid_transactions_output_df'),
-                # ui.HTML(diff_df.to_html()),
-                title=f"Warning: Invalid transactions",
-                easy_close=True,
-                # footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
-                size='xl'
-            )
-            ui.modal_show(m)
+            ui.modal_show(build_invalid_transactions_modal())
 
     @render.data_frame
     def invalid_transactions_output_df():
@@ -282,8 +382,8 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.calc
     def current_transactions():
-        new_transactions = calculate_transaction_for_tag(current_tag_value.get())
-        return new_transactions
+        tag = current_tag_value.get()
+        return calculate_transactions_for_tag(data_manager, tag)
 
     @reactive.calc
     def tagged_transactions():
@@ -294,30 +394,19 @@ def server(input: Inputs, output: Outputs, session: Session):
         return current_transactions().not_containing_tags(current_tag_value.get().name)
 
     def new_transactions_and_monitor():
-        transactions = data_manager.get_transactions()
-        monitor = RuleExecutionPlanMonitor(dataset)
         tag_name, tag_json_str = fetch_tag_name(), input.tag_json_text()
-        new_tag = tagging.Tag.from_json_string(tag_name, tag_json_str)
-        new_tags = [new_tag] + [tag for tag in all_tags if tag.name != tag_name]
-
-        orep = process.OptimisedRuleExecutionPlanTagging(new_tags)
-        orep.create_rule_execution_plan()
-        orep.create_optimised_rule_execution_plan()
-        new_trans = orep.tag(transactions, monitor=monitor)
-
-        return new_trans, monitor
+        return build_new_transactions_and_monitor(data_manager, dataset, all_tags, tag_name, tag_json_str)
 
     @reactive.calc
     def changed_transactions():
         transactions = data_manager.get_transactions()
         new_trans, monitor = new_transactions_and_monitor()
-
-        diff = transactions.tags_diff(new_trans, target_tags=[fetch_tag_name()])
+        diff = compute_transactions_diff(transactions, new_trans, fetch_tag_name())
         return diff, monitor
 
     @reactive.calc
     def get_target_tag_json():
-        return json.dumps(current_tag_value.get().rule.to_json(), indent=4)
+        return serialise_tag_to_json(current_tag_value.get())
 
     @render.text
     def title_output_text():
@@ -326,11 +415,6 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.ui
     def tag_info_link():
         return ui.tags.a("Tag info", href=shiny_app.url_for_tag_report(filter_in_tags=fetch_tag_name()))
-
-    def format_dt(dt):
-        date_str, time = dt.date().strftime('%a %d %b, %Y'), dt.time()
-        formatted_date_str = f"📅{date_str}\t🕑{time}"
-        return formatted_date_str
 
     @render.text
     def tagged_transactions_stats():
@@ -342,18 +426,18 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def tagged_transactions_output_df():
         df = tagged_transactions().dataframe().copy()
-        df['datetime'] = df['datetime'].apply(format_dt)
+        df['datetime'] = df['datetime'].apply(format_transaction_datetime)
         return shiny_app.render_table_standard(df, empty_message='No tagged transactions')
 
     @render.data_frame
     def untagged_transactions_output_df():
         df = untagged_transactions().dataframe().copy()
-        df['datetime'] = df['datetime'].apply(format_dt)
+        df['datetime'] = df['datetime'].apply(format_transaction_datetime)
         return shiny_app.render_table_standard(df, empty_message='No UNtagged transactions')
 
     @render.data_frame
     def condition_stats_output_df():
-        monitor = read_monitor_from_files()
+        monitor = load_monitor(dataset)
         df = monitor.get_conditions_stats(tag_name=fetch_tag_name())
         return shiny_app.render_table_standard(df,
                                                format_columns=True,
@@ -372,8 +456,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.info("Recalculate")
         tag_name, tag_json_str = fetch_tag_name(), input.tag_json_text()
         try:
-            new_tag = tagging.Tag.from_json_string(tag_name, tag_json_str)
-            current_tag_value.set(new_tag)
+            current_tag_value.set(parse_tag_from_json(tag_name, tag_json_str))
         except json.decoder.JSONDecodeError as e:
             import traceback
             m = ui.modal(
@@ -389,23 +472,9 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.event(input.save_button)
     def _():
         logging.info("Save")
-        tag_json_str = get_target_tag_json()
-        unsaved_rules = ''.join([c1 for c1, c2 in zip(tag_json_str, input.tag_json_text()) if c1!=c2])
-        warning = f"Warning: There is unsaved progress!!!\n\n{unsaved_rules}" if len(unsaved_rules)>0 else '' # if tag_json_str != input.tag_json_text() else ''
-        m = ui.modal(
-            ui.markdown(
-                f"# {warning}\n   "
-                f"Tag {fetch_tag_name()} is about to be saved to the DB:   "
-                f"   \n"
-                f"   \n"
-                f"{tag_json_str}"
-            ),
-            title=f"Saving {fetch_tag_name()}",
-            easy_close=True,
-            footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
-            size='xl'
-        )
-        ui.modal_show(m)
+        target_json = get_target_tag_json()
+        warning = build_unsaved_warning(target_json, input.tag_json_text())
+        ui.modal_show(build_save_confirmation_modal(fetch_tag_name(), warning, target_json))
 
     @reactive.effect
     @reactive.event(input.confirm_save_button)
@@ -417,86 +486,35 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.id_add_button)
     def _():
-        """ TODO error while adding id
-        INFO:root:Adding IDs (1): ['RVLTd20220810t190439an57500i32747']
-mecon-edit_data_app-1: Traceback (most recent call last):
-mecon-edit_data_app-1:   File "/usr/local/lib/python3.11/site-packages/shiny/reactive/_reactives.py", line 584, in _run
-mecon-edit_data_app-1:     await self._fn()
-mecon-edit_data_app-1:   File "/usr/local/lib/python3.11/site-packages/shiny/_utils.py", line 273, in fn_async
-mecon-edit_data_app-1:     return fn(*args, **kwargs)
-mecon-edit_data_app-1:            ^^^^^^^^^^^^^^^^^^^
-mecon-edit_data_app-1:   File "/usr/local/lib/python3.11/site-packages/shiny/reactive/_reactives.py", line 901, in new_user_fn
-mecon-edit_data_app-1:     return user_fn()
-mecon-edit_data_app-1:            ^^^^^^^^^
-mecon-edit_data_app-1:   File "/mecon/services/edit_data/edit_tags.py", line 454, in _
-mecon-edit_data_app-1:     new_tag = tag_helpers.add_rule_for_id(
-mecon-edit_data_app-1:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-mecon-edit_data_app-1:   File "/mecon/mecon/tags/tag_helpers.py", line 11, in add_rule_for_id
-mecon-edit_data_app-1:     potential_id_condition = tag.rule.rules[0].rules[0]
-mecon-edit_data_app-1:                              ^^^^^^^^^^^^^^^^^^^^^^^
-mecon-edit_data_app-1: AttributeError: 'Condition' object has no attribute 'rules'
-mecon-edit_data_app-1: /usr/local/lib/python3.11/site-packages/shiny/reactive/_reactives.py:566: ReactiveWarning: Error in Effect: 'Condition' object has no attribute 'rules'
-mecon-edit_data_app-1:   await self._run()
-mecon-edit_data_app-1: Unhandled error: 'Condition' object has no attribute 'rules'
-mecon-edit_data_app-1: INFO:     connection closed
-mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?filter_in_tags=Rent HTTP/1.1" 200 OK
-        """
         ids_to_add = list(input.id_add_selectize())
         logging.info(f"Adding IDs ({len(ids_to_add)}): {ids_to_add}")
-        new_tag = tag_helpers.add_rule_for_id(
-            tag=current_tag_value.get(),
-            ids_to_add=ids_to_add)
-        current_tag_value.set(new_tag)
+        current_tag_value.set(add_ids_to_tag(current_tag_value.get(), ids_to_add))
 
     @reactive.effect
     @reactive.event(input.condition_add_button)
     def _():
         # TODO it doesn't remove the empty disjunctions
         value_str = input.condition_value_input_text()
-        value = value_str if not value_str.isnumeric() else int(value_str) if value_str.isdigit() else float(value_str)
-
-        condition_to_add = tagging.Condition.from_string_values(
-            field=input.condition_field_select(),
-            transformation_op_key=input.condition_transformation_select(),
-            compare_op_key=input.condition_compare_select(),
-            value=value,
+        value = parse_condition_value(value_str)
+        logging.info("Adding condition")
+        current_tag_value.set(
+            append_condition_to_tag(
+                current_tag_value.get(),
+                field=input.condition_field_select(),
+                transformation_key=input.condition_transformation_select(),
+                compare_key=input.condition_compare_select(),
+                value=value,
+            )
         )
-        logging.info(f"Adding condition: {condition_to_add}")
-
-        new_rule = current_tag_value.get().rule.append(condition_to_add)
-        new_tag = tagging.Tag(fetch_tag_name(), new_rule)
-        current_tag_value.set(new_tag)
 
     @reactive.effect
     @reactive.event(input.check_diffs_button)
     def _():
         # TODO rows added and rows removed are the same, have to change .diff to account for that
         diff, monitor = changed_transactions()
-        all_monitored_tags = sorted(monitor.all_monitored_tag_names())
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
-        m = ui.modal(
-            ui.navset_tab(
-                ui.nav_panel(f"{len(diff_df)} rows added (regarding to '{fetch_tag_name()}' tag)",
-                             ui.output_data_frame(id='transactions_diff_added_output_df')),
-                ui.nav_panel(f"{len(diff_df)} rows removed (regarding to '{fetch_tag_name()}' tag)",
-                             ui.output_data_frame(id='transactions_diff_removed_output_df')),
-                ui.nav_panel('Calcs',
-                             ui.input_select(
-                                 id='tag_select_for_calc_monitor',
-                                 label='Tags',
-                                 choices=all_monitored_tags,
-                                 selected=fetch_tag_name()
-                             ),
-                             ui.output_data_frame(id='calculation_monitor_output_df')),
-            ),
-            # ui.HTML(diff_df.to_html()),
-            title=f"Recalculated transaction tags",
-            easy_close=True,
-            # footer=ui.input_task_button(id='confirm_save_button', label='Confirm', label_buzy='Saving...'),
-            size='xl'
-        )
-        ui.modal_show(m)
+        ui.modal_show(build_recalculation_modal(fetch_tag_name(), diff_df, monitor))
 
     @render.data_frame
     def calculation_monitor_output_df():
@@ -509,7 +527,7 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
 
     @render.data_frame
     def transactions_diff_added_output_df():
-        diff, monitor = changed_transactions()
+        diff, _ = changed_transactions()
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
         return shiny_app.render_table_standard(diff_df)
@@ -519,11 +537,10 @@ mecon-edit_data_app-1: INFO:     172.18.0.1:43444 - "GET /edit_data/tags/edit/?f
         transactions = data_manager.get_transactions()
         new_trans, monitor = new_transactions_and_monitor()
 
-        diff = new_trans.tags_diff(transactions, target_tags=[fetch_tag_name()])
+        diff = compute_transactions_diff(new_trans, transactions, fetch_tag_name())
         diff_df = diff.dataframe()
         logging.info(f"Diff: {diff_df.shape=}")
         return shiny_app.render_table_standard(diff_df)
-
 
     @render.data_frame
     def rule_calculations_table():

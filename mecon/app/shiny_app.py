@@ -1,5 +1,6 @@
 import datetime
 import logging
+from urllib.parse import urlparse, parse_qs
 
 import pandas as pd
 from shiny import ui, Inputs, Outputs, Session, reactive, render
@@ -96,17 +97,24 @@ DEFAULT_FILTER_PERIOD = config.SHINY_DEFAULT_FILTER_PERIOD
 DEFAULT_FILTER_TIME_UNIT = config.SHINY_DEFAULT_FILTER_TIME_UNIT
 
 
-def transactions_intersection_filted_factory():
+def transactions_intersection_filtered_factory(
+        default_period=None,
+        fixed_time_unit=True,
+        default_time_unit=None,
+):
     # TODO add custom date period option
     # TODO add date period in url params, with higher priority from the date range one
     # TODO move filter to shiny_apps, have to understand how the reactive will be modularized
 
+    selected_period = DEFAULT_FILTER_PERIOD if default_period is None else default_period
+    selected_time_unit = DEFAULT_FILTER_TIME_UNIT if default_time_unit is None else default_time_unit
+    time_unit_choices = ['none', 'day', 'week', 'month', 'year'] if not fixed_time_unit else [selected_time_unit]
     return ui.card(
         ui.input_select(
             id='date_period_input_select',
             label='Select date period',
-            choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'],
-            selected=DEFAULT_FILTER_PERIOD
+            choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'], # TODO last week, q1-4 (if exist), <2020, 2020, 2021, 2022, etc...
+            selected=selected_period
         ),
         ui.input_date_range(
             id='transactions_date_range',
@@ -119,8 +127,8 @@ def transactions_intersection_filted_factory():
         ui.input_radio_buttons(
             id='time_unit_select',
             label='Time unit',
-            choices=['none', 'day', 'week', 'month', 'year'],
-            selected=DEFAULT_FILTER_TIME_UNIT
+            choices=time_unit_choices,
+            selected=selected_time_unit,
         ),
         ui.input_selectize(
             id='filter_in_tags_select',
@@ -156,21 +164,33 @@ class ShinyTransactionFilterError(ValueError):
         super().__init__(message)
 
 
+def _parse_params(input_url:str,
+                  ensure_exists:str|list[str]|None=None):
+    urlparse_result = urlparse(input_url)
+    _url_params = parse_qs(urlparse_result.query)
+
+    if ensure_exists is not None:
+        ensure_exists = [ensure_exists] if isinstance(ensure_exists, str) else ensure_exists
+        missing_params = [param for param in ensure_exists if param not in _url_params]
+        if missing_params:
+            raise ValueError(f"Missing '{missing_params}' required query parameters")
+
+    return _url_params
+
+
 def url_params_function_factory(input: Inputs,
                                 output: Outputs,
                                 session: Session,
-                                data_manager: WorkingDataManager, ):
-    from urllib.parse import urlparse, parse_qs
+                                data_manager: WorkingDataManager,
+                                ensure_exists=None):
 
     @reactive.calc
-    def url_params() -> dict:
+    def get_url_params() -> dict:
         logging.info(f"{input['.clientdata_url_search'].get()=}")
-        urlparse_result = urlparse(input['.clientdata_url_search'].get())  # TODO move to a reactive.calc func
-        logging.info(f"Fetched URL params: {urlparse_result=}")
-        _url_params = parse_qs(urlparse_result.query)
+        _url_params = _parse_params(input['.clientdata_url_search'].get(), ensure_exists=ensure_exists)  # TODO move to a reactive.calc func
         logging.info(f"Input params: {_url_params=}")
         return _url_params
-    return url_params
+    return get_url_params
 
 def filter_url_params_function_factory(input: Inputs,
                                 output: Outputs,
@@ -221,13 +241,13 @@ def filter_funcs_factory(
         transactions = data_manager.get_transactions()
         filtered_in_transactions = transactions.containing_tags(filter_in_tags)
         if filtered_in_transactions.size() == 0:
-            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {params['filter_in_tags']} tags."
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {filter_url_params['filter_in_tags']} tags."
             raise ShinyTransactionFilterError(error_msg)
 
         filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
                                                                                         empty_tags_strategy='all_true')
         if filtered_in_and_out_transactions.size() == 0:
-            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {params['filter_in_tags']} tags."
+            error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {filter_url_params['filter_in_tags']} tags."
             raise ShinyTransactionFilterError(error_msg)
 
         logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
@@ -236,7 +256,7 @@ def filter_funcs_factory(
     @reactive.effect
     def init():
         logging.info('Init')
-        ui.update_select(id='date_period_input_select', selected=DEFAULT_FILTER_PERIOD)
+        ui.update_select(id='date_period_input_select', selected=DEFAULT_FILTER_PERIOD)# TODO not set correctly, check mecon.app.shiny_app.init for that
         filter_url_params = filter_url_params_function_factory(input, output, session, data_manager)()
         transactions = default_transactions()
         all_tags_names = [tag.name for tag in data_manager.all_tags()]

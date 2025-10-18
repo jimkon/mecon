@@ -20,6 +20,35 @@ all_tags = data_manager.all_tags()
 tag_graph_all = TagGraph.from_tags(all_tags).remove_cycles()
 tag_roots = tag_graph_all.find_all_root_tags()
 tag_root_groups = {f"root:{tag.name}": f"{tag.name} ({len(tag_graph_all.all_tags_affected_by(tag))})" for tag in tag_roots}
+
+def compute_tag_graph(selection: str, all_tags, tag_graph_all):
+    category, tags_group_key = selection.split(':')
+    logging.info(f"calc_tags_graph: {category=}, {tags_group_key=}")
+    if category == 'group':
+        tg = TagGraph.from_tags(all_tags)
+        logging.info(f"calc_tags_graph -) {tg.has_cycles()=}")
+        if not tg.has_cycles():
+            tg = tg.remove_cycles()
+            tg.add_hierarchy_levels()
+    elif category == 'root':
+        subgraph_tags = tag_graph_all.all_tags_affected_by(tags_group_key)
+        logging.info(f"calc_tags_graph -) subgraphs for {tags_group_key} = {[tag for tag in subgraph_tags]=}")
+        tg = AcyclicTagGraph.from_tags(subgraph_tags)
+        tg.add_hierarchy_levels()
+    else:
+        raise ValueError(f"Invalid category: {category}")
+
+    logging.info(f"calc_tags_graph-> {len(tg.custom_tags_df)=},{tg.has_cycles()=}")
+    return tg
+
+
+def build_tags_graph_plot(tg, show_levels: bool):
+    return tg.create_plotly_graph(
+        k=.5,
+        levels_col='level' if show_levels else None,
+    )
+
+
 # TODO numbers in tag_root_groups are wrong sometimes
 # TODO could sort from largest to smallest
 
@@ -58,25 +87,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @reactive.calc
     def calc_tags_graph():
-        category, tags_group_key = input.tags_graph_select().split(':')
-        logging.info(f"calc_tags_graph: {category=}, {tags_group_key=}")
-        if category == 'group':
-            tg = TagGraph.from_tags(all_tags)
-            logging.info(f"calc_tags_graph -) {tg.has_cycles()=}")
-            if not tg.has_cycles():
-                tg = tg.remove_cycles()
-                tg.add_hierarchy_levels()
-        elif category == 'root':
-            tg_all = TagGraph.from_tags(all_tags).remove_cycles()
-            subgraph_tags = tg_all.all_tags_affected_by(tags_group_key)
-            logging.info(f"calc_tags_graph -) subgraphs for {tags_group_key} = {[tag for tag in subgraph_tags]=}")
-            tg = AcyclicTagGraph.from_tags(subgraph_tags)
-            tg.add_hierarchy_levels()
-        else:
-            raise ValueError(f"Invalid category: {category}")
-
-        logging.info(f"calc_tags_graph-> {len(tg.custom_tags_df)=},{tg.has_cycles()=}")
-        return tg
+        return compute_tag_graph(input.tags_graph_select(), all_tags, tag_graph_all)
 
     @render.data_frame
     def selected_tags_df() -> object:
@@ -87,10 +98,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         tg = calc_tags_graph()
         logging.info(f"tags_graph: {tg.tags=}")
 
-        return tg.create_plotly_graph(
-            k=.5,  # input.tags_graph_k_slider(),
-            levels_col='level' if input.tags_graph_levels() else None,
-        )
+        return build_tags_graph_plot(tg, input.tags_graph_levels())
 
 
 tags_info_app = App(app_ui, server)
