@@ -540,8 +540,9 @@ class Trading212Client:
         logging.info("Creating %d missing Trading212 export(s) if required.", len(need_to_create))
         created_ids: list[int] = []
         for i, (frm, to) in enumerate(need_to_create):
+            logging.info(f"TradingAPI CALL: New export was requested with {frm=} {to=} {include=}...")
             rid = self.request_csv_export(frm, to, include=include)
-            logging.info("New export was requested: request_id=%s", rid)
+            logging.info(f"TradingAPI CALL: New export was requested with {frm=} {to=} {include=} returned request_id={rid}")
             created_ids.append(rid)
             links_or_ids.append((rid, None, frm, to))
             if i < len(need_to_create) - 1:
