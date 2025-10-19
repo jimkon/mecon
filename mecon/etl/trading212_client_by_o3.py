@@ -27,8 +27,11 @@ def _to_rfc3339_z(d: dt.datetime) -> str:
     return d.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _sleep(n: float) -> None:
-    logging.info(f"Sleeping {n} seconds...")
+def _sleep(n: float, *, reason: str | None = None) -> None:
+    if reason:
+        logging.info("Sleeping %.2f second(s) (%s)...", n, reason)
+    else:
+        logging.info("Sleeping %.2f second(s)...", n)
     time.sleep(n)
 
 
@@ -74,8 +77,11 @@ class Trading212Client:
         now = time.monotonic()
         wait = self._last_history_call + gap - now
         if wait > 0:
-            logging.info(f"Sleeping for {wait} seconds before it call the API again")
-            _sleep(wait)
+            logging.info(
+                "History endpoint throttling engaged; need to pause %.2f second(s) before next API call.",
+                wait,
+            )
+            _sleep(wait, reason="respecting /history/* rate limit")
 
     def _mark_history_call(self):
         self._last_history_call = time.monotonic()
@@ -100,11 +106,31 @@ class Trading212Client:
             if history:
                 self._throttle_history()
 
+            log_bits: list[str] = [
+                f"method={method}",
+                f"url={url}",
+                f"attempt={attempt + 1}",
+            ]
+            if "params" in kw and kw["params"] is not None:
+                log_bits.append(f"params={kw['params']}")
+            if "json" in kw and kw["json"] is not None:
+                log_bits.append(f"json={kw['json']}")
+            if "data" in kw and kw["data"] is not None:
+                log_bits.append(f"data={kw['data']}")
+
+            logging.info("TradingAPI CALL: initiating request with %s", ", ".join(log_bits))
+
             resp = self._client.request(method, url, **kw)
 
             if not resp.is_error:
                 if history:
                     self._mark_history_call()
+                logging.info(
+                    "TradingAPI CALL: completed request with method=%s url=%s status=%s",
+                    method,
+                    url,
+                    resp.status_code,
+                )
                 return resp
 
             # Retry only on throttling / transient server issues
@@ -112,24 +138,50 @@ class Trading212Client:
                 if attempt == self._RETRY_MAX:
                     break
                 backoff = self._retry_after_seconds(resp, self._HISTORY_GAP_SEC if history else 5.0)
-                logging.info(f"{resp.status_code} on {url} – retrying in {backoff:.1f}s (attempt {attempt+1}/{self._RETRY_MAX})")
-                _sleep(backoff)
+                logging.info(
+                    "TradingAPI CALL: %s %s received status=%s – retrying in %.1fs (attempt %s/%s)",
+                    method,
+                    url,
+                    resp.status_code,
+                    backoff,
+                    attempt + 1,
+                    self._RETRY_MAX,
+                )
+                _sleep(
+                    backoff,
+                    reason=f"waiting before retrying {method} {url} after status {resp.status_code}",
+                )
                 continue
 
             # Non-retryable
+            logging.info(
+                "TradingAPI CALL: %s %s received non-retryable status=%s", method, url, resp.status_code
+            )
             raise ApiError(f"{method} {url} → {resp.status_code}: {resp.text}")
 
+        logging.info(
+            "TradingAPI CALL: %s %s exhausted retries with last status=%s", method, url, resp.status_code
+        )
         raise ApiError(f"{method} {url} → {resp.status_code}: {resp.text}")
 
     # ───────── simple endpoints ─────────
     def get_account_info(self) -> Dict[str, Any]:
-        return self._request("GET", "/equity/account/info").json()
+        logging.info("Fetching Trading212 equity account info via API.")
+        resp = self._request("GET", "/equity/account/info")
+        logging.info("Received Trading212 equity account info payload.")
+        return resp.json()
 
     def get_cash(self) -> Dict[str, Any]:
-        return self._request("GET", "/equity/account/cash").json()
+        logging.info("Fetching Trading212 cash balances via API.")
+        resp = self._request("GET", "/equity/account/cash")
+        logging.info("Received Trading212 cash balance payload.")
+        return resp.json()
 
     def get_positions(self) -> List[Dict[str, Any]]:
-        return self._request("GET", "/equity/portfolio").json()
+        logging.info("Fetching Trading212 equity positions via API.")
+        resp = self._request("GET", "/equity/portfolio")
+        logging.info("Received Trading212 equity positions payload.")
+        return resp.json()
 
     # ───────── generic paginator for history endpoints ─────────
     def _paged_get(
@@ -141,6 +193,13 @@ class Trading212Client:
         is_transactions: bool = False,
     ) -> List[Dict[str, Any]]:
         params: Dict[str, Any] = {"limit": min(limit, 50)}
+        logging.info(
+            "Starting paginated fetch for %s with params=%s (limit=%d, time_from=%s).",
+            path,
+            params,
+            limit,
+            time_from,
+        )
 
         # /history/transactions quirk: needs both time AND cursor=0 to start
         if is_transactions and time_from:
@@ -154,6 +213,13 @@ class Trading212Client:
             resp = self._request("GET", next_path, params=params if next_path == path else None, history=True)
             payload = resp.json()
             items.extend(payload.get("items", []))
+
+            logging.info(
+                "Fetched %d item(s) from %s; total accumulated=%d.",
+                len(payload.get("items", [])),
+                next_path,
+                len(items),
+            )
 
             next_cursor = payload.get("nextPagePath")
             if not next_cursor:
@@ -179,15 +245,21 @@ class Trading212Client:
     # ───────── public history helpers ─────────
     def get_transactions(self, time_from: Optional[dt.datetime] = None) -> List[Dict[str, Any]]:
         # Cash movements (often empty) – not trades.
+        logging.info(
+            "Requesting Trading212 cash transactions starting from %s.",
+            time_from,
+        )
         return self._paged_get("/history/transactions", time_from=time_from, is_transactions=True)
 
     def get_dividends(self, time_from: Optional[dt.datetime] = None) -> List[Dict[str, Any]]:
         # Dividends history (paginates)
         # Dividends endpoint doesn’t take `time` start; server handles the window via cursor.
+        logging.info("Requesting complete Trading212 dividends history via paginator.")
         return self._paged_get("/history/dividends", time_from=None)
 
     def get_orders(self, time_from: Optional[dt.datetime] = None) -> List[Dict[str, Any]]:
         # Orders (buys/sells). No time param; just page until done.
+        logging.info("Requesting complete Trading212 order history via paginator.")
         return self._paged_get("/equity/history/orders", time_from=None)
 
     # ───────── CSV export helpers (chunked to avoid 500s) ─────────
@@ -207,16 +279,28 @@ class Trading212Client:
 
     def request_csv_export_full(self, since: dt.datetime) -> List[int]:
         """Fire per-year exports to avoid server 500s; returns list of reportIds."""
-        logging.info(f"Requesting a new full export...")
+        logging.info(
+            "Requesting a new full export by year from %s until %s (UTC).",
+            since.isoformat(),
+            end.isoformat(),
+        )
         end = dt.datetime.now(timezone.utc)
         cur = since.astimezone(timezone.utc)
         rids: List[int] = []
         while cur < end:
             year_end = min(dt.datetime(cur.year, 12, 31, 23, 59, 59, tzinfo=timezone.utc), end)
+            logging.info(
+                "Requesting yearly export for window %s → %s.",
+                cur.isoformat(),
+                year_end.isoformat(),
+            )
             rids.append(self.request_csv_export(cur, year_end))
             cur = dt.datetime(cur.year + 1, 1, 1, tzinfo=timezone.utc)
-            logging.info(f"Sleeping for 30 seconds before it call the API again for {cur}")
-            _sleep(30)
+            if cur < end:
+                _sleep(
+                    30,
+                    reason=f"cooldown between yearly export requests before starting {cur.date()} window",
+                )
         return rids
 
     def get_exports(self) -> List[Dict[str, Any]]:
@@ -230,15 +314,28 @@ class Trading212Client:
           - dividends
           - cash transactions (often empty)
         """
+        logging.info(
+            "Initiating full Trading212 history fetch (transactions, orders, dividends) with since=%s.",
+            since,
+        )
         if since and since.tzinfo is None:
             since = since.replace(tzinfo=timezone.utc)
 
         # Transactions: only meaningful if you had cash moves; keep it
+        logging.info("Fetching transaction history chunk...")
         tx = self.get_transactions(time_from=since) if since else self.get_transactions()
 
         # Orders & dividends don’t accept a start time cleanly; just paginate.
+        logging.info("Fetching order history chunk...")
         od = self.get_orders()
+        logging.info("Fetching dividends history chunk...")
         dv = self.get_dividends()
+        logging.info(
+            "Completed Trading212 history fetch: %d transactions, %d orders, %d dividends entries.",
+            len(tx),
+            len(od),
+            len(dv),
+        )
         return {"transactions": tx, "orders": od, "dividends": dv}
 
     def fetch_history_dataframe(
@@ -528,6 +625,12 @@ class Trading212Client:
             )
             need_to_create.append((frm, to))
 
+        logging.info(
+            "Planning complete: %d chunk(s) reuse existing exports, %d require new requests, %d skipped due to local cache.",
+            reused_existing,
+            len(need_to_create),
+            skipped_existing,
+        )
         return links_or_ids, need_to_create, reused_existing, skipped_existing
 
     def _create_missing_exports(
@@ -538,6 +641,9 @@ class Trading212Client:
         links_or_ids: list[tuple[int | None, str | None, dt.datetime, dt.datetime]],
     ) -> list[int]:
         logging.info("Creating %d missing Trading212 export(s) if required.", len(need_to_create))
+        if not need_to_create:
+            logging.info("No new Trading212 exports need to be created; proceeding with existing downloads.")
+            return []
         created_ids: list[int] = []
         for i, (frm, to) in enumerate(need_to_create):
             logging.info(f"TradingAPI CALL: New export was requested with {frm=} {to=} {include=}...")
@@ -546,7 +652,12 @@ class Trading212Client:
             created_ids.append(rid)
             links_or_ids.append((rid, None, frm, to))
             if i < len(need_to_create) - 1:
-                _sleep(post_gap_sec)
+                _sleep(
+                    post_gap_sec,
+                    reason=(
+                        "spacing out export creation requests to avoid API throttling"
+                    ),
+                )
         return created_ids
 
     def _wait_for_exports(
@@ -559,12 +670,21 @@ class Trading212Client:
     ) -> None:
         logging.info("Waiting for %d Trading212 export(s) to complete.", len(created_ids))
         if not created_ids:
+            logging.info("No exports were newly requested; skipping wait loop.")
             return
 
         deadline = time.time() + timeout_sec
         pending = set(created_ids)
         while pending and time.time() < deadline:
-            _sleep(poll_interval_sec)
+            logging.info(
+                "Waiting on %d export(s); polling again in %d second(s).",
+                len(pending),
+                poll_interval_sec,
+            )
+            _sleep(
+                poll_interval_sec,
+                reason="awaiting Trading212 export completion before polling status",
+            )
             lst = self.get_exports()
             by_id = {it["reportId"]: it for it in lst}
             for i, (rid, link, frm, to) in enumerate(links_or_ids):
@@ -575,6 +695,7 @@ class Trading212Client:
                         pending.discard(rid)
         if pending:
             raise ApiError(f"Timed out waiting for exports: {sorted(pending)}")
+        logging.info("All requested Trading212 exports are now ready for download.")
 
     def _download_export_frames(
         self,
@@ -600,6 +721,11 @@ class Trading212Client:
                 raise ApiError(f"Export {rid} has no downloadLink.")
             frames.extend(self._read_export(link, rid if isinstance(rid, int) else None, frm, to))
 
+        logging.info(
+            "Completed download of %d data frame(s) covering %d export(s).",
+            len(frames),
+            len(links_or_ids),
+        )
         return frames
 
     def _read_export(
@@ -615,8 +741,21 @@ class Trading212Client:
             frm,
             to,
         )
+        logging.info(
+            "TradingAPI CALL: initiating download with url=%s report_id=%s chunk_from=%s chunk_to=%s",
+            link,
+            rid,
+            frm,
+            to,
+        )
         response = self._dl.get(link, timeout=60)
         response.raise_for_status()
+        logging.info(
+            "TradingAPI CALL: completed download with url=%s report_id=%s status=%s",
+            link,
+            rid,
+            response.status_code,
+        )
         buf = response.content
 
         frames: list[pd.DataFrame] = []
