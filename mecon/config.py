@@ -30,7 +30,8 @@ if _mecon_dotenv_path.exists():
     import dotenv
     dotenv.load_dotenv(str(_mecon_dotenv_path))
 
-MECON_VERSION = '3.0.0'
+_VERSION_PATH = Path(__file__).resolve().parent.parent / "version.txt"
+MECON_VERSION = _VERSION_PATH.read_text(encoding="utf-8").strip()
 
 
 DEFAULT_DATASETS_DIR_PATH = pathlib.Path(os.getenv('MECON_DATASETS_DIR', default=MECON_ROOT_DIRPATH / "datasets"))
