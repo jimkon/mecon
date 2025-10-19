@@ -20,6 +20,55 @@ datasets_obj = WorkingDatasetDir()
 datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
 dataset = datasets_obj.working_dataset
 
+app_ui = shiny_app.app_ui_factory(
+    ui.input_task_button(id='fetch_data_button', label='Fetch new transaction data from providers'),
+    ui.input_task_button(id='reset_button', label='Reset data from statements'),
+    ui.accordion(
+        ui.accordion_panel('Sources', ui.card(
+            ui.output_ui('statements_info_text'),
+            ui.navset_tab(
+                ui.nav_panel("Info", ui.output_data_frame('all_sources_info_text')),
+                ui.nav_panel("Files", ui.output_data_frame("statements_info_dataframe")),
+                # ui.nav_panel("HSBC", ui.card(ui.output_data_frame('hsbc_source_info_text'))),
+                # ui.nav_panel("Monzo", ui.card(
+                #     ui.h3("Monzo Export"),
+                #     ui.output_data_frame('monzo_export_source_info_text'),
+                # )),
+                # ui.nav_panel("MonzoAPI", ui.card(
+                #     ui.h3("Monzo API (*not integrated yet)"),
+                #     ui.tags.a('Monzo authentication and fetching...', href="http://127.0.0.1:8000/auth/monzo/"),
+                #     ui.output_data_frame('monzo_api_source_info_text'),
+                # )),
+                # ui.nav_panel("Revolut", ui.card(ui.output_data_frame('revo_source_info_text'))),
+                # ui.nav_panel("HSBC Savings account", ui.card(ui.output_data_frame('hsbcsvr_source_info_text'))),
+                # ui.nav_panel("Trading 212", ui.card(ui.output_data_frame('trd212_source_info_text'))),
+                # ui.nav_panel("Invest Engine", ui.card(ui.output_data_frame('inveng_source_info_text'))),
+            )
+        )),
+        ui.accordion_panel('Transactions', ui.card(
+            ui.output_data_frame("transactions_info_dataframe")
+        )),
+        ui.accordion_panel('Tags', ui.card(
+            ui.card(
+                ui.h3("Tagging report"),
+                ui.output_data_frame("tags_info_dataframe"),
+            ),
+            ui.card(
+                ui.h3("Problematic Tagging conditions stats"),
+                ui.input_checkbox('compact_tag_conditions_stats_dataframe_checkbox',
+                                  label='Compact table (grouped by Tag)',
+                                  value=True),
+                ui.output_data_frame("tag_conditions_stats_dataframe"),
+            )
+        )),
+        ui.accordion_panel('Tagged Transactions', ui.card(
+            ui.output_data_frame("tagged_transactions_info_dataframe")
+        )),
+        id='data_flow_acc',
+        open=False
+    )
+)
+
 
 def get_statement_files_info_dataframe(_dataset):
     return _dataset.statement_files_info_df()
@@ -166,58 +215,6 @@ def create_tag_conditions_stats_dataframe(_dataset, compact=True):
 
     logging.info(f"tag_conditions_stats_dataframe-> {df_res.shape=}, {compact=}")
     return df_res
-
-
-app_ui = shiny_app.app_ui_factory(
-    ui.input_task_button(id='fetch_data_button', label='Fetch new transaction data from providers'),
-    ui.input_task_button(id='reset_button', label='Reset data from statements'),
-    ui.accordion(
-        ui.accordion_panel('Sources', ui.card(
-            ui.output_ui('statements_info_text'),
-            ui.navset_tab(
-                ui.nav_panel("All", ui.output_data_frame('all_sources_info_text')),
-                ui.nav_panel("HSBC", ui.card(ui.output_data_frame('hsbc_source_info_text'))),
-                ui.nav_panel("Monzo", ui.card(
-                    ui.h3("Monzo Export"),
-                    ui.output_data_frame('monzo_export_source_info_text'),
-                )),
-                ui.nav_panel("MonzoAPI", ui.card(
-                    ui.h3("Monzo API (*not integrated yet)"),
-                    ui.tags.a('Monzo authentication and fetching...', href="http://127.0.0.1:8000/auth/monzo/"),
-                    ui.output_data_frame('monzo_api_source_info_text'),
-                )),
-                ui.nav_panel("Revolut", ui.card(ui.output_data_frame('revo_source_info_text'))),
-                ui.nav_panel("HSBC Savings account", ui.card(ui.output_data_frame('hsbcsvr_source_info_text'))),
-                ui.nav_panel("Trading 212", ui.card(ui.output_data_frame('trd212_source_info_text'))),
-                ui.nav_panel("Invest Engine", ui.card(ui.output_data_frame('inveng_source_info_text'))),
-            )
-        )),
-        ui.accordion_panel('Statements', ui.card(
-            ui.output_data_frame("statements_info_dataframe")
-        )),
-        ui.accordion_panel('Transactions', ui.card(
-            ui.output_data_frame("transactions_info_dataframe")
-        )),
-        ui.accordion_panel('Tags', ui.card(
-            ui.card(
-                ui.h3("Tagging report"),
-                ui.output_data_frame("tags_info_dataframe"),
-            ),
-            ui.card(
-                ui.h3("Problematic Tagging conditions stats"),
-                ui.input_checkbox('compact_tag_conditions_stats_dataframe_checkbox',
-                                  label='Compact table (grouped by Tag)',
-                                  value=True),
-                ui.output_data_frame("tag_conditions_stats_dataframe"),
-            )
-        )),
-        ui.accordion_panel('Tagged Transactions', ui.card(
-            ui.output_data_frame("tagged_transactions_info_dataframe")
-        )),
-        id='data_flow_acc',
-        open=False
-    )
-)
 
 
 def server(input: Inputs, output: Outputs, session: Session):
