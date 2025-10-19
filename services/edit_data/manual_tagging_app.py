@@ -145,6 +145,9 @@ def render_table_customised_width(
     return df
 
 
+def build_selectize_id(transaction_id: str) -> str:
+    return f"selectize_{sanitize_tx_id(transaction_id)}"
+
 
 def construct_amount_str(transaction_series):
     transaction_dict = transaction_series.to_dict()
@@ -218,7 +221,7 @@ def enhance_transactions_df(df_tx, all_tags: set[str]):
 
     df_ench['Tx_ID'] = df_ench['id'].apply(ui_id_transformation)
     df_ench['short_desc'] = df_tx['description'].apply(ui_description_transformation)
-    df_ench['selectize_id'] = df_tx['id'].apply(lambda tx_id: f"selectize_" + sanitize_tx_id(tx_id))
+    df_ench['selectize_id'] = df_tx['id'].apply(build_selectize_id)
     df_ench['add_tags'] = df_ench.apply(
         lambda row: ui_tags_transformation(row['id'], row['tags'], all_tags, row['selectize_id']),
         axis=1
@@ -241,8 +244,41 @@ def transform_tag_diffs(tag_diffs):
     df_merged = pd.concat(dfs)
 
     transformed_df = df_merged.groupby('tag').agg({'id': list}).reset_index()
-    transformed_dict = {k:v['id'] for k, v in transformed_df.set_index('tag').to_dict('index').items()}
+    transformed_dict = {k: v['id'] for k, v in transformed_df.set_index('tag').to_dict('index').items()}
     return transformed_dict
+
+
+def format_changes_markdown(changes_per_tag: dict[str, list[str]]) -> str:
+    if not changes_per_tag:
+        return "_No pending tag changes to display._"
+
+    header = "| Tag | Transactions |\n| --- | --- |"
+    rows = []
+    for tag_name in sorted(changes_per_tag.keys()):
+        transaction_ids = ", ".join(
+            f"`{tx_id}`" for tx_id in sorted(changes_per_tag[tag_name])
+        ) or "—"
+        rows.append(f"| `{tag_name}` | {transaction_ids} |")
+
+    return "\n".join([header, *rows])
+
+
+def build_tag_diffs_summary(tag_diffs):
+    changes_per_tag = transform_tag_diffs(tag_diffs) if len(tag_diffs) != 0 else {}
+
+    total_assignments = sum(len(ids) for ids in changes_per_tag.values())
+    summary_line = (
+        f"**Pending changes:** {total_assignments} tag assignment{'s' if total_assignments != 1 else ''}"
+        f" across {len(changes_per_tag)} tag{'s' if len(changes_per_tag) != 1 else ''}."
+        if changes_per_tag
+        else "No pending tag changes were detected."
+    )
+
+    modal_contents = [ui.markdown(summary_line)]
+    if changes_per_tag:
+        modal_contents.append(ui.markdown(format_changes_markdown(changes_per_tag)))
+
+    return modal_contents
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -293,8 +329,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         )
 
     def fetch_tag_diffs():
-        ids = filtered_transactions_calc().dataframe()['id'].apply(
-            lambda tx_id: f"selectize_" + tx_id.replace('-', '_').replace('.', '_')).tolist()
+        ids = filtered_transactions_calc().dataframe()['id'].apply(build_selectize_id).tolist()
         tag_diffs = []
         logging.info(f"{dir(input)=}")
         for selectize_id in ids:
@@ -310,17 +345,14 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.see_all_changes_button)
     def see_all_changes_button():
-        # df = enhance_transactions_df(filtered_transactions_calc().dataframe(), addable_tags_set)
-
         tag_diffs = fetch_tag_diffs()
-        changes_per_tag = transform_tag_diffs(tag_diffs)
 
         m = ui.modal(
-            ui.markdown(f"This is a somewhat important message. ({len(tag_diffs)=})  {changes_per_tag}"),
+            *build_tag_diffs_summary(tag_diffs),
             title="Review changes before saving",
             easy_close=True,
             size='xl',
-            footer=ui.input_action_button(id='save_button', label='Save'),
+            footer=ui.input_action_button(id='save_button', label='Save', disabled=len(tag_diffs) == 0),
         )
         ui.modal_show(m)
 
@@ -330,8 +362,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         tag_diffs = fetch_tag_diffs()
         changes_per_tag = transform_tag_diffs(tag_diffs)
         utils.save_tag_changes(changes_per_tag, data_manager)
-
-
 
 
 manual_tagging_app = App(app_ui, server)
