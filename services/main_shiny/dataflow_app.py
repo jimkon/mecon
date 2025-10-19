@@ -62,6 +62,12 @@ app_ui = shiny_app.app_ui_factory(
             )
         )),
         ui.accordion_panel('Tagged Transactions', ui.card(
+            ui.input_selectize(
+                "tagged_transactions_source_select",
+                "Source tags",
+                choices=[],
+                multiple=True,
+            ),
             ui.output_data_frame("tagged_transactions_info_dataframe")
         )),
         id='data_flow_acc',
@@ -111,6 +117,16 @@ def create_tagged_transactions_info_dataframe(data_manager) -> pd.DataFrame:
         orient='index').reset_index()
     df_tags_info.columns = ['tag', 'name']
     return df_tags_info
+
+
+def extract_source_tags(df: pd.DataFrame) -> list[str]:
+    if 'tag' not in df.columns:
+        return []
+
+    return sorted([
+        tag for tag in df['tag'].dropna().tolist()
+        if isinstance(tag, str) and tag.startswith('Source [')
+    ])
 
 
 def fetch_statement_sources(data_manager):
@@ -318,6 +334,33 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def tagged_transactions_info_dataframe():
         df_tags_info = create_tagged_transactions_info_dataframe(data_manager)
+        source_tags = extract_source_tags(df_tags_info)
+
+        if not source_tags:
+            ui.update_selectize(
+                "tagged_transactions_source_select",
+                choices=[],
+                selected=[],
+            )
+            res = render.DataGrid(df_tags_info, selection_mode="row")
+            return res
+
+        selected_sources = input.tagged_transactions_source_select()
+
+        if not selected_sources:
+            selected_sources = source_tags
+        else:
+            selected_sources = [tag for tag in selected_sources if tag in source_tags]
+            if not selected_sources:
+                selected_sources = source_tags
+
+        ui.update_selectize(
+            "tagged_transactions_source_select",
+            choices=source_tags,
+            selected=selected_sources,
+        )
+
+        df_tags_info = df_tags_info[df_tags_info['tag'].isin(selected_sources)]
         res = render.DataGrid(df_tags_info, selection_mode="row")
         return res
 
