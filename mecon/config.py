@@ -2,6 +2,7 @@
 import logging
 import os
 import pathlib
+from . import __version__ as MECON_VERSION
 from os import getenv
 from pathlib import Path
 
@@ -29,9 +30,6 @@ if _mecon_dotenv_path.exists():
     logging.info(f"Found .env file at {_mecon_dotenv_path}. Reading it...")
     import dotenv
     dotenv.load_dotenv(str(_mecon_dotenv_path))
-
-MECON_VERSION = '3.0.0'
-
 
 DEFAULT_DATASETS_DIR_PATH = pathlib.Path(os.getenv('MECON_DATASETS_DIR', default=MECON_ROOT_DIRPATH / "datasets"))
 logging.info(f"DEFAULT_DATASETS_DIR_PATH={DEFAULT_DATASETS_DIR_PATH=}")
