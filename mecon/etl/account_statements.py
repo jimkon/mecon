@@ -1,5 +1,6 @@
 import abc
 import logging
+import pathlib
 import uuid
 from abc import abstractclassmethod
 import datetime as dt
@@ -606,7 +607,7 @@ class StatementsManager:
     def collect_statement_dataframes(self):
         return {s.id: s.fetch_statement_dataframes() for s in self.sources}
 
-    def collect_transactions(self, source_ids_to_exclude=None):
+    def collect_transactions(self, source_ids_to_exclude=None, store_dir=None):
         source_ids_to_exclude = source_ids_to_exclude or []
         txs = {}
         for source in self.sources:
@@ -616,6 +617,8 @@ class StatementsManager:
                 continue
             try:
                 tx = source.to_transactions()
+                if store_dir is not None:
+                    tx.to_csv(pathlib.Path(store_dir) / f"{source.id}.csv")
                 if tx is None:
                     continue
                 txs[source.name] = tx
@@ -624,8 +627,8 @@ class StatementsManager:
                 raise
         return txs
 
-    def collect_and_merge_transactions(self):
-        txs_dict = self.collect_transactions()
+    def collect_and_merge_transactions(self, store_dir=None):
+        txs_dict = self.collect_transactions(store_dir=store_dir)
         txs = list(txs_dict.values())
         txs_totals = {tx_name: tx.size() for tx_name, tx in txs_dict.items()}
         logging.info(f"Merging transactions ({sum(txs_totals.values())}): {txs_totals}")
