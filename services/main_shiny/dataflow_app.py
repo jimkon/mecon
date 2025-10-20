@@ -106,10 +106,32 @@ def get_tags_metadata_dataframe(data_manager) -> pd.DataFrame:
 
 
 def create_tagged_transactions_info_dataframe(data_manager) -> pd.DataFrame:
-    df_tags_info = pd.DataFrame.from_dict(
-        data_manager.get_tagged_transactions().all_tag_counts(),
-        orient='index').reset_index()
-    df_tags_info.columns = ['tag', 'name']
+    transactions = data_manager.get_tagged_transactions().dataframe().copy()
+    if 'tags' not in transactions.columns or transactions.empty:
+        return pd.DataFrame(columns=['tag', 'transaction_count', 'min_date', 'max_date'])
+
+    transactions['tags'] = transactions['tags'].fillna('')
+    tags_series = transactions['tags'].str.split(',')
+    exploded = transactions.assign(tag=tags_series).explode('tag')
+    exploded['tag'] = exploded['tag'].str.strip()
+    exploded = exploded[exploded['tag'] != '']
+
+    if exploded.empty:
+        return pd.DataFrame(columns=['tag', 'transaction_count', 'min_date', 'max_date'])
+
+    exploded['datetime'] = pd.to_datetime(exploded['datetime'])
+    exploded['date'] = exploded['datetime'].dt.date
+
+    df_tags_info = (
+        exploded.groupby('tag')
+        .agg(
+            transaction_count=('tag', 'size'),
+            min_date=('date', 'min'),
+            max_date=('date', 'max'),
+        )
+        .reset_index()
+    )
+
     return df_tags_info
 
 
