@@ -257,41 +257,41 @@ def server(input: Inputs, output: Outputs, session: Session):
         df_agg = aggregate_statement_sources_info(df)
         return shiny_app.render_table_standard(df_agg)
 
-    @render.data_frame
-    def hsbc_source_info_text():
-        df = source_info_df(dataset, 'HSBC')
-        return shiny_app.render_table_standard(df)
-
-    @render.data_frame
-    def monzo_export_source_info_text():
-        df = source_info_df(dataset, 'Monzo')
-        return shiny_app.render_table_standard(df)
-
-    @render.data_frame
-    def monzo_api_source_info_text():
-        df = source_info_df(dataset, 'MonzoAPI')
-        logging.info(f"Source: {df=}")
-        return shiny_app.render_table_standard(df)
-
-    @render.data_frame
-    def revo_source_info_text():
-        df = source_info_df(dataset, 'Revolut')
-        return shiny_app.render_table_standard(df)
-
-    @render.data_frame
-    def hsbcsvr_source_info_text():
-        df = source_info_df(dataset, 'HSBCSVR')
-        return shiny_app.render_table_standard(df)
-
-    @render.data_frame
-    def trd212_source_info_text():
-        df = source_info_df(dataset, 'TRD212')
-        return shiny_app.render_table_standard(df)
-
-    @render.data_frame
-    def inveng_source_info_text():
-        df = source_info_df(dataset, 'INVENG')
-        return shiny_app.render_table_standard(df)
+    # @render.data_frame
+    # def hsbc_source_info_text():
+    #     df = source_info_df(dataset, 'HSBC')
+    #     return shiny_app.render_table_standard(df)
+    #
+    # @render.data_frame
+    # def monzo_export_source_info_text():
+    #     df = source_info_df(dataset, 'Monzo')
+    #     return shiny_app.render_table_standard(df)
+    #
+    # @render.data_frame
+    # def monzo_api_source_info_text():
+    #     df = source_info_df(dataset, 'MonzoAPI')
+    #     logging.info(f"Source: {df=}")
+    #     return shiny_app.render_table_standard(df)
+    #
+    # @render.data_frame
+    # def revo_source_info_text():
+    #     df = source_info_df(dataset, 'Revolut')
+    #     return shiny_app.render_table_standard(df)
+    #
+    # @render.data_frame
+    # def hsbcsvr_source_info_text():
+    #     df = source_info_df(dataset, 'HSBCSVR')
+    #     return shiny_app.render_table_standard(df)
+    #
+    # @render.data_frame
+    # def trd212_source_info_text():
+    #     df = source_info_df(dataset, 'TRD212')
+    #     return shiny_app.render_table_standard(df)
+    #
+    # @render.data_frame
+    # def inveng_source_info_text():
+    #     df = source_info_df(dataset, 'INVENG')
+    #     return shiny_app.render_table_standard(df)
 
     @render.data_frame
     def statements_info_dataframe():
@@ -340,8 +340,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @render.data_frame
     def tagged_transactions_info_dataframe():
         df_tags_info = create_tagged_transactions_info_dataframe(data_manager)
-        res = render.DataGrid(df_tags_info, selection_mode="row")
-        return res
+        return shiny_app.render_table_standard(df_tags_info)
 
     @reactive.effect
     @reactive.event(input.fetch_data_button)
