@@ -223,6 +223,7 @@ def filter_url_params_function_factory(input: Inputs,
         filter_out_tags_raw = _get_single_param(_raw_url_params, 'filter_out_tags', '')
         params['filter_out_tags'] = filter_out_tags_raw.split(',') if len(filter_out_tags_raw) > 0 else []
         params['time_unit'] = _get_single_param(_raw_url_params, 'time_unit', DEFAULT_FILTER_TIME_UNIT)
+        params['period'] = _get_single_param(_raw_url_params, 'period')
         params['start_date'] = _parse_date(_get_single_param(_raw_url_params, 'start_date'))
         params['end_date'] = _parse_date(_get_single_param(_raw_url_params, 'end_date'))
         logging.info(f"Input params: {params=}")
@@ -238,6 +239,8 @@ def filter_funcs_factory(
 ):
     filter_url_params_calc = filter_url_params_function_factory(input, output, session, data_manager)
     initialized = reactive.Value(False)
+    skip_period_sync = reactive.Value(False)
+    last_period = reactive.Value(None)
 
     def _clamp_date_range(transactions, start_date: datetime.date, end_date: datetime.date):
         min_date, max_date = transactions.date_range()
@@ -330,9 +333,19 @@ def filter_funcs_factory(
         with reactive.isolate():
             current_period = input.date_period_input_select()
 
-        has_custom_dates = filter_url_params['start_date'] is not None and filter_url_params['end_date'] is not None
+        requested_period = filter_url_params.get('period')
+        if requested_period:
+            ui.update_select(id='date_period_input_select', selected=requested_period)
+            current_period = requested_period
+
+        start_date_override = filter_url_params['start_date']
+        end_date_override = filter_url_params['end_date']
+        has_custom_dates = start_date_override is not None or end_date_override is not None
+
         if has_custom_dates:
-            start_date, end_date = filter_url_params['start_date'], filter_url_params['end_date']
+            start_date = start_date_override
+            end_date = end_date_override
+            skip_period_sync.set(True)
         else:
             start_date, end_date = _dates_for_period(current_period, all_transactions)
 
@@ -343,6 +356,7 @@ def filter_funcs_factory(
                              min=min_date,
                              max=max_date)
 
+        last_period.set(current_period)
         initialized.set(True)
 
         # if len(input.compare_tags_select()) == 0:  TODO
@@ -384,9 +398,14 @@ def filter_funcs_factory(
     def period_change_effect():
         if not initialized.get():
             return
+        current_period = input.date_period_input_select()
+        if skip_period_sync.get() and current_period == last_period.get():
+            skip_period_sync.set(False)
+            return
+        skip_period_sync.set(False)
         _all_transactions = data_manager.get_transactions()
-        logging.info(f"Changed period to '{input.date_period_input_select()}'")
-        start_date, end_date = _dates_for_period(input.date_period_input_select(), _all_transactions)
+        logging.info(f"Changed period to '{current_period}'")
+        start_date, end_date = _dates_for_period(current_period, _all_transactions)
         start_date, end_date, min_date, max_date = _clamp_date_range(_all_transactions, start_date, end_date)
         logging.info(f"date_range set to {min_date=} and {max_date=}")
 
@@ -396,11 +415,17 @@ def filter_funcs_factory(
                              min=min_date,
                              max=max_date
                              )
+        last_period.set(current_period)
 
     @reactive.calc
     def filtered_transactions():
         req(initialized.get())
-        start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params().values()
+        params = get_filter_params()
+        start_date = params['start_date']
+        end_date = params['end_date']
+        time_unit = params['time_unit']
+        filter_in_tags = params['filter_in_tags']
+        filter_out_tags = params['filter_out_tags']
         transactions = data_manager.get_transactions()
 
         in_date_range_transactions = transactions.select_date_range(start_date, end_date)
