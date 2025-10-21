@@ -444,10 +444,16 @@ def filter_funcs_factory(
             error_msg = f"No transactions found for '{time_unit}' time unit after filtering out {filter_out_tags} tags."
             raise ShinyTransactionFilterError(error_msg)
 
-        logging.info(
-            f"Filtered transactions size: {filtered_in_and_out_transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
+        agg_filtered_transactions = filtered_in_and_out_transactions.group_and_fill_transactions(
+            grouping_key = time_unit,
+            aggregation_key = 'sum'
+        )
 
-        return filtered_in_and_out_transactions
+        logging.info(
+            f"Filtered transactions size: {agg_filtered_transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
+
+
+        return agg_filtered_transactions
 
     return get_filter_params, default_transactions, init, filtered_transactions
 

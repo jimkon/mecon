@@ -24,7 +24,7 @@ app_ui = shiny_app.app_ui_factory(
             ui.navset_tab(
                 ui.nav_panel(
                     "Get filter params",
-                    ui.output_ui(id="get_filter_params_ui"),
+                    ui.output_ui(id="get_filter_params_text"),
                 ),
                 ui.nav_panel(
                     "Default transactions",
@@ -53,9 +53,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         session,
         data_manager)
 
-    @render.ui
-    def get_filter_params_ui():
-        return ui.HTML(get_filter_params())
+    @render.text
+    def get_filter_params_text():
+        return get_filter_params()
 
     @render.data_frame
     def default_transactions_table():
