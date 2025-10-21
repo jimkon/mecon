@@ -23,6 +23,10 @@ app_ui = shiny_app.app_ui_factory(
         ui.page_fluid(
             ui.navset_tab(
                 ui.nav_panel(
+                    "Get filter params",
+                    ui.output_ui(id="get_filter_params_ui"),
+                ),
+                ui.nav_panel(
                     "Default transactions",
                     ui.output_data_frame(id="default_transactions_table"),
                 ),
@@ -40,12 +44,6 @@ data_manager = CachedFileDataManager(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    filter_url_params = shiny_app.filter_url_params_function_factory(
-        input,
-        output,
-        session,
-        data_manager)
-
     (get_filter_params,
      default_transactions,
      init,
@@ -54,6 +52,10 @@ def server(input: Inputs, output: Outputs, session: Session):
         output,
         session,
         data_manager)
+
+    @render.ui
+    def get_filter_params_ui():
+        return ui.HTML(get_filter_params())
 
     @render.data_frame
     def default_transactions_table():
