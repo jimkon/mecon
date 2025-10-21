@@ -373,7 +373,7 @@ class Trading212StatementTransformer(StatementTransformer):
 
     def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Trading212 raw transactions ({df.shape} shape)")
-        df = df.copy()
+        # df = df[~df['Currency (Result)'].isna()].copy()
 
         dt = pd.to_datetime(df['time'].apply(lambda s: s[:19]), format="%Y-%m-%d %H:%M:%S")
         df_transformed = pd.DataFrame({'datetime': dt})
