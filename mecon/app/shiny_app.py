@@ -3,7 +3,7 @@ import logging
 from urllib.parse import urlparse, parse_qs
 
 import pandas as pd
-from shiny import ui, Inputs, Outputs, Session, reactive, render
+from shiny import ui, Inputs, Outputs, Session, reactive, render, req
 
 from mecon import config
 from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
