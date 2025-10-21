@@ -99,7 +99,7 @@ DEFAULT_FILTER_TIME_UNIT = config.SHINY_DEFAULT_FILTER_TIME_UNIT
 
 def transactions_intersection_filtered_factory(
         default_period=None,
-        fixed_time_unit=True,
+        fixed_time_unit=False,
         default_time_unit=None,
 ):
     # TODO add custom date period option
