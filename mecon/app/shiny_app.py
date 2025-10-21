@@ -3,7 +3,7 @@ import logging
 from urllib.parse import urlparse, parse_qs
 
 import pandas as pd
-from shiny import ui, Inputs, Outputs, Session, reactive, render
+from shiny import ui, Inputs, Outputs, Session, reactive, render, req
 
 from mecon import config
 from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
@@ -399,7 +399,7 @@ def filter_funcs_factory(
 
     @reactive.calc
     def filtered_transactions():
-        reactive.req(initialized.get())
+        req(initialized.get())
         start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params().values()
         transactions = data_manager.get_transactions()
 
