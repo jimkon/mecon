@@ -188,6 +188,9 @@ class Trading212CashISAAccountStatementsSource(AccountStatementsSource):
         super().__init__(working_dir, trans_transformer)
 
 
+class GeneralCredentialsError(Exception):
+    pass
+
 class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
     def __init__(self,
                  working_dir: str | Path,
@@ -197,7 +200,7 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
                  ):
         super().__init__(working_dir=working_dir, trans_transformer=trans_transformer)
         self.api_handler = api_handler
-        if auto_fetch:
+        if auto_fetch and self.api_handler is not None:
             self.fetch()
 
     def _log_fetch_banner(self) -> None:
@@ -210,7 +213,6 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
         pass
 
-    @abc.abstractmethod
     def fetch(self, since: dt.datetime | None = None):
         """Fetch new statement data from the remote API.
 
@@ -218,7 +220,8 @@ class APIAccountStatementsSource(AccountStatementsSource, abc.ABC):
             since: Fetch transactions occurring after this datetime. If ``None``
                 the implementation should fetch all available data.
         """
-        pass
+        if self.api_handler is None:
+            raise GeneralCredentialsError(f"{self.__class__.__name__}.fetch(...) failed because of an uninitialized api_handler. Check if the credential are valid.")
 
     def fetch_if_needed_and_transform(
             self, *, force_fetch: bool = False
@@ -269,15 +272,22 @@ class TrueLayerStatements(APIAccountStatementsSource):
 
     @classmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        try:
+            api_handler = TrueLayerClient(creds)
+        except Exception as e:
+            logging.warning(f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
+            api_handler = None
+
         return cls(
             working_dir=working_dir,
             trans_transformer=transformers.TrueLayerStatementTransformer(
                 source=cls.id,
             ),
-            api_handler=TrueLayerClient(creds)
+            api_handler=api_handler
         )
 
     def fetch(self, since: dt.datetime | None = None):
+        super().fetch(since)
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
@@ -362,13 +372,19 @@ class Trading212APIStatements(APIAccountStatementsSource):
 
     @classmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        try:
+            api_handler = Trading212Client(creds)
+        except Exception as e:
+            logging.warning(f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
+            api_handler = None
         return cls(
             working_dir=working_dir,
             trans_transformer=transformers.Trading212StatementTransformer(cls.id),
-            api_handler=Trading212Client(creds)
+            api_handler=api_handler
         )
 
     def fetch(self, since: dt.datetime | None = None):
+        super().fetch(since)
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
@@ -484,13 +500,20 @@ class MonzoAPIStatements(APIAccountStatementsSource):
 
     @classmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        try:
+            api_handler = MonzoClient(creds)
+        except Exception as e:
+            logging.warning(f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
+            api_handler = None
+
         return cls(
             working_dir=working_dir,
             trans_transformer=transformers.MonzoAPIFileStatementTransformer(),
-            api_handler=MonzoClient(creds)
+            api_handler=api_handler
         )
 
     def fetch(self, since: dt.datetime | None = None):
+        super().fetch(since)
         fetch_datetime = datetime.now().date()
         fetch_job_id = str(uuid.uuid4())
 
