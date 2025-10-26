@@ -24,7 +24,7 @@ app_ui = shiny_app.app_ui_factory(
             ui.navset_tab(
                 ui.nav_panel(
                     "Get filter params",
-                    ui.output_ui(id="get_filter_params_text"),
+                    ui.output_text(id="get_filter_params_text"),
                 ),
                 ui.nav_panel(
                     "Default transactions",
@@ -39,8 +39,11 @@ app_ui = shiny_app.app_ui_factory(
     )
 )
 
+from dataset_helper import create_manual_check_dataset
+dataset_path = create_manual_check_dataset()
+logging.info(f"{dataset_path=}")
 data_manager = CachedFileDataManager(
-    Dataset(r"C:\Users\dimitris\PycharmProjects\mecon\tests\tests_with_datasets\datasets\test_full"))
+    Dataset(dataset_path))
 
 
 def server(input: Inputs, output: Outputs, session: Session):
@@ -61,13 +64,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     def default_transactions_table():
         df = default_transactions().dataframe()
         logging.info(f"default_transactions_table: {df.shape}")
-        return shiny_app.render_table_standard(df)
+        return df
 
     @render.data_frame
     def filtered_transactions_table():
         df = filtered_transactions().dataframe()
         logging.info(f"filtered_transactions_table: {df.shape}")
-        return shiny_app.render_table_standard(df)
+        return df
 
 
 app = App(app_ui, server)

@@ -74,7 +74,7 @@ EXPECTED_MONZO_COLUMNS_IN_RAW_STATEMENT = {'Transaction',
                                            "Money Out", "Money In"}
 
 
-SHINY_DEFAULT_FILTER_PERIOD = 'Last 30 days'
-SHINY_DEFAULT_FILTER_TIME_UNIT = 'month'
+SHINY_DEFAULT_FILTER_PERIOD = 'Last 7 days'
+SHINY_DEFAULT_FILTER_TIME_UNIT = 'day'
 
 logging.info(f"Configuration has been set.")

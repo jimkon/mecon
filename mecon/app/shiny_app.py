@@ -2,6 +2,7 @@ import datetime
 import logging
 from urllib.parse import urlparse, parse_qs
 
+import dateparser
 import pandas as pd
 from shiny import ui, Inputs, Outputs, Session, reactive, render, req
 
@@ -113,14 +114,14 @@ def transactions_intersection_filtered_factory(
         ui.input_select(
             id='date_period_input_select',
             label='Select date period',
-            choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'], # TODO last week, q1-4 (if exist), <2020, 2020, 2021, 2022, etc...
+            choices=['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last year', 'All'], # TODO last week, q1-4 (if exist), <2020, 2020, 2021, 2022, etc...
             selected=selected_period
         ),
         ui.input_date_range(
             id='transactions_date_range',
             label='Select date range',
-            start=datetime.date.today() - datetime.timedelta(days=365),
-            end=datetime.date.today(),
+            start=dateparser.parse('today'), #datetime.date.today() - datetime.timedelta(days=365),
+            end=dateparser.parse('today'),#datetime.date.today(),
             format='dd-mm-yyyy',
             separator=':'
         ),
@@ -242,15 +243,23 @@ def filter_funcs_factory(
     skip_period_sync = reactive.Value(False)
     last_period = reactive.Value(None)
 
-    def _clamp_date_range(transactions, start_date: datetime.date, end_date: datetime.date):
-        min_date, max_date = transactions.date_range()
-        start = max(start_date if start_date is not None else min_date, min_date)
-        end = min(end_date if end_date is not None else max_date, max_date)
-        return start, end, min_date, max_date
+    def _clamp_date_range(transactions, requested_start_date: datetime.date, requested_end_date: datetime.date):
+        """
+        make sure that the start_date and end_date are valid for the transactions.date_range
+        """
+        tx_min_date, tx_max_date = transactions.date_range()
+        if tx_max_date < requested_start_date:
+            return None
+
+        start = max(requested_start_date if requested_start_date is not None else tx_min_date, tx_min_date)
+        end = min(requested_end_date if requested_end_date is not None else tx_max_date, tx_max_date)
+        return start, end, tx_min_date, tx_max_date
 
     def _dates_for_period(period: str, transactions):
         today = datetime.date.today()
-        if period == 'Last 30 days':
+        if period == 'Last 7 days':
+            start_date, end_date = today - datetime.timedelta(days=7), today
+        elif period == 'Last 30 days':
             start_date, end_date = today - datetime.timedelta(days=30), today
         elif period == 'Last 90 days':
             start_date, end_date = today - datetime.timedelta(days=90), today
@@ -349,12 +358,12 @@ def filter_funcs_factory(
         else:
             start_date, end_date = _dates_for_period(current_period, all_transactions)
 
-        start_date, end_date, min_date, max_date = _clamp_date_range(all_transactions, start_date, end_date)
-        ui.update_date_range(id='transactions_date_range',
-                             start=start_date,
-                             end=end_date,
-                             min=min_date,
-                             max=max_date)
+        # start_date, end_date, min_date, max_date = _clamp_date_range(all_transactions, start_date, end_date)
+        # ui.update_date_range(id='transactions_date_range',
+        #                      start=start_date,
+        #                      end=end_date,
+        #                      min=min_date,
+        #                      max=max_date)
 
         last_period.set(current_period)
         initialized.set(True)
@@ -406,7 +415,11 @@ def filter_funcs_factory(
         _all_transactions = data_manager.get_transactions()
         logging.info(f"Changed period to '{current_period}'")
         start_date, end_date = _dates_for_period(current_period, _all_transactions)
-        start_date, end_date, min_date, max_date = _clamp_date_range(_all_transactions, start_date, end_date)
+        date_range_values = _clamp_date_range(_all_transactions, start_date, end_date)
+        if date_range_values:
+            start_date, end_date, min_date, max_date = date_range_values
+        else:
+            start_date, end_date, min_date, max_date = [end_date]*4
         logging.info(f"date_range set to {min_date=} and {max_date=}")
 
         ui.update_date_range(id='transactions_date_range',
