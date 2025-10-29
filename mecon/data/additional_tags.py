@@ -63,10 +63,11 @@ class HighLevelDataProviderTagSet(set):
 
         providers_mapping = {}
         for source in all_statements_sources.sources:
+            prov_name = f"{source.original_provider}"
             if source.original_provider in providers_mapping:
-                providers_mapping[source.original_provider].append(source)
+                providers_mapping[prov_name].append(source)
             else:
-                providers_mapping[source.original_provider] = [source]
+                providers_mapping[prov_name] = [source]
 
         high_level_sources = {
             Tag.from_json(
