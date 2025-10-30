@@ -373,12 +373,14 @@ class Trading212StatementTransformer(StatementTransformer):
 
     def _transform(self, df: pd.DataFrame) -> pd.DataFrame:
         logging.info(f"Transforming Trading212 raw transactions ({df.shape} shape)")
-        # df = df[~df['Currency (Result)'].isna()].copy()
+        if 'currency_(result)' in df.columns:
+            df = df[~df['currency_(result)'].isna()].copy()
 
         dt = pd.to_datetime(df['time'].apply(lambda s: s[:19]), format="%Y-%m-%d %H:%M:%S")
         df_transformed = pd.DataFrame({'datetime': dt})
-        df_transformed['amount'] = df['total']
-        df_transformed['amount_cur'] = df['total']
+        df['sign'] = df['action'].apply(lambda a: -1 if a=='Market buy' else 1)
+        df_transformed['amount'] = df['total']*df['sign']
+        df_transformed['amount_cur'] = df['total']*df['sign']
         df_transformed['currency'] = df['currency_(total)']
 
         cols_to_concat = df.columns.difference(df_transformed.columns).difference(['time', 'total', 'id'])
@@ -395,6 +397,10 @@ class Trading212StatementTransformer(StatementTransformer):
         df_final = df_transformed[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
 
         return df_final
+
+if __name__ == '__main__':
+    t = Trading212StatementTransformer()
+    t.transform(t.read_df(r"C:\Users\dimitris\PycharmProjects\datasets\20250924\data\statements\Trading212API\from_2024-11-25_to_2025-10-29_MTc2MTc4MDMwNzkzNQ.csv"))
 
 
 class TrueLayerStatementTransformer(StatementTransformer):
