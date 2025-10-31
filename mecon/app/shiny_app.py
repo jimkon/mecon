@@ -419,11 +419,15 @@ def filter_funcs_factory(
             return
         logging.info('Init')
         filter_url_params = filter_url_params_calc()
-        transactions = default_transactions()
         all_transactions = data_manager.get_transactions()
         all_tags_names = [tag.name for tag in data_manager.all_tags()]
-        new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
-                       cnt > 0]
+
+        try:
+            transactions = default_transactions()
+            new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
+                           cnt > 0]
+        except ShinyTransactionFilterError as e:
+            new_choices = all_tags_names
 
         current_filter_in = input.filter_in_tags_select() or []
         if len(current_filter_in) == 0:

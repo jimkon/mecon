@@ -23,8 +23,31 @@ app_ui = shiny_app.app_ui_factory(
         ui.page_fluid(
             ui.navset_tab(
                 ui.nav_panel(
-                    "Get filter params",
-                    ui.output_text(id="get_filter_params_text"),
+                    "params",
+                    ui.card(
+                        ui.card_header(
+                            ui.HTML("URL params"),
+                        ),
+                        ui.card_body(
+                            ui.output_text(id="get_url_params_text"),
+                        ),
+                    ),
+                    ui.card(
+                        ui.card_header(
+                            ui.HTML("Get filter URL params"),
+                        ),
+                        ui.card_body(
+                            ui.output_text(id="get_filter_url_params_text"),
+                        ),
+                    ),
+                    ui.card(
+                        ui.card_header(
+                            ui.HTML("Get filter params"),
+                        ),
+                        ui.card_body(
+                            ui.output_text(id="get_filter_params_text"),
+                        )
+                    )
                 ),
                 ui.nav_panel(
                     "Default transactions",
@@ -38,8 +61,8 @@ app_ui = shiny_app.app_ui_factory(
         )
     )
 )
-
 from dataset_helper import create_manual_check_dataset
+
 dataset_path = create_manual_check_dataset()
 logging.info(f"{dataset_path=}")
 data_manager = CachedFileDataManager(
@@ -47,6 +70,19 @@ data_manager = CachedFileDataManager(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
+    url_params = shiny_app.url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager
+    )
+
+    filter_url_params = shiny_app.filter_url_params_function_factory(
+        input,
+        output,
+        session,
+        data_manager)
+
     (get_filter_params,
      default_transactions,
      init,
@@ -55,6 +91,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         output,
         session,
         data_manager)
+
+    @render.text
+    def get_url_params_text():
+        return url_params()
+
+    @render.text
+    def get_filter_url_params_text():
+        return filter_url_params()
 
     @render.text
     def get_filter_params_text():
