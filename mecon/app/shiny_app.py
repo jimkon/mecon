@@ -546,7 +546,8 @@ def filter_funcs_factory(
         time_unit = params['time_unit']
         filter_in_tags = params['filter_in_tags']
         filter_out_tags = params['filter_out_tags']
-        transactions = data_manager.get_transactions()
+        # transactions = data_manager.get_transactions()
+        transactions = default_transactions()
 
         in_date_range_transactions = transactions.select_date_range(start_date, end_date)
         if in_date_range_transactions.size() == 0:
