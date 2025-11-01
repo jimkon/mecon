@@ -1,9 +1,11 @@
 import datetime
 import logging
+from enum import Enum
 from urllib.parse import urlparse, parse_qs
 
+import dateparser
 import pandas as pd
-from shiny import ui, Inputs, Outputs, Session, reactive, render
+from shiny import ui, Inputs, Outputs, Session, reactive, render, req
 
 from mecon import config
 from mecon.app.current_data import WorkingDataManager, WorkingDatasetDir
@@ -52,9 +54,11 @@ def url_for_tag_report(**kwargs):
     url = build_url("http://127.0.0.1:8001/reports/tags/", kwargs)
     return url
 
+
 def url_for_comparison_report(**kwargs):
     url = build_url("http://127.0.0.1:8001/reports/compare/", kwargs)
     return url
+
 
 def url_for_tag_edit(**kwargs):
     url = build_url("http://127.0.0.1:8002/edit_data/tags/edit/", kwargs)
@@ -67,8 +71,10 @@ def url_for_tag_edit(**kwargs):
 # all_transactions = dm.get_transactions()
 
 tab_title = ui.tags.title("μEcon App")
-page_title = ui.HTML(f"<big><big><big>mEcon</big></big></big><sub><small><u><i>v{config.MECON_VERSION}</i></u></small></sub><br>")
-dataset_label = ui.tooltip(ui.HTML(f"<sub><small>Selected dataset: {get_working_dataset().name}</small></sub>"), f"Dataset directory: {config.DEFAULT_DATASETS_DIR_PATH}")
+page_title = ui.HTML(
+    f"<big><big><big>mEcon</big></big></big><sub><small><u><i>v{config.MECON_VERSION}</i></u></small></sub><br>")
+dataset_label = ui.tooltip(ui.HTML(f"<sub><small>Selected dataset: {get_working_dataset().name}</small></sub>"),
+                           f"Dataset directory: {config.DEFAULT_DATASETS_DIR_PATH}")
 navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
     ui.nav_control(ui.tags.a("Datasets", href=f"http://127.0.0.1:8000/datasets")),
@@ -97,6 +103,95 @@ DEFAULT_FILTER_PERIOD = config.SHINY_DEFAULT_FILTER_PERIOD
 DEFAULT_FILTER_TIME_UNIT = config.SHINY_DEFAULT_FILTER_TIME_UNIT
 
 
+class DatePeriod:
+    _relative_period_names = ['Today',
+                              'Current week',
+                              'Last 7 days',
+                              'Previous week',
+                              'This month',
+                              'Last 30 days',
+                              'Last 3 months',
+                              f"YtD ({datetime.date.today().year})",
+                              'All']
+
+    @staticmethod
+    def _quarter_names():
+        today = datetime.date.today()
+        quarters = [f"Q{q_n}" for q_n in range(1, 2 + (today.month - 1) // 3)]
+        return quarters
+
+    @staticmethod
+    def _past_year_names():
+        today = datetime.date.today()
+        years = ['<2020'] + [f"{y}" for y in range(2020, today.year)]
+        return years
+
+    @staticmethod
+    def date_periods_key_values():
+        all_periods = DatePeriod._relative_period_names + DatePeriod._quarter_names() + DatePeriod._past_year_names()
+        return {i: i for i in all_periods}
+
+    @staticmethod
+    def date_periods_categorised():
+        return {
+            'Relative': {p: p for p in DatePeriod._relative_period_names},
+            'Years': {y: y for y in DatePeriod._past_year_names()},
+            'Quarters': {q: q for q in DatePeriod._quarter_names()}
+        }
+
+    @staticmethod
+    def date_range_for_period(period: str,
+                              min_date: datetime.datetime = None,
+                              max_date: datetime.datetime = None):
+        today = datetime.date.today()
+        if period in 'Today':
+            start_date, end_date = today, today
+        elif period == 'Current week':
+            start_date, end_date = dateparser.parse('Monday').date(), today
+        elif period == 'Last 7 days':
+            start_date, end_date = dateparser.parse('a week ago').date(), today
+        elif period == 'Previous week':
+            sunday = dateparser.parse('Sunday').date()
+            start_date, end_date = sunday - datetime.timedelta(days=6), sunday
+        elif period == 'This month':
+            start_date, end_date = today - datetime.timedelta(days=today.day - 1), today
+        elif period == 'Last 30 days':
+            start_date, end_date = today - datetime.timedelta(days=30), today
+        elif period == 'Last 3 months':
+            start_date, end_date = today - datetime.timedelta(days=90), today
+        elif period == 'Last 30 days':
+            start_date, end_date = today - datetime.timedelta(days=30), today
+        elif period.startswith('YtD (20'):
+            start_date, end_date = datetime.date(year=today.year, month=1, day=1), today
+        elif period == 'Last year':
+            start_date, end_date = datetime.date(year=2019, month=1, day=1), today
+        elif period.startswith('Q1'):
+            start_date, end_date = datetime.date(year=today.year, month=1, day=1), \
+                min(datetime.date(year=today.year, month=3, day=1), today)
+        elif period.startswith('Q2'):
+            start_date, end_date = datetime.date(year=today.year, month=3, day=1), \
+                min(datetime.date(year=today.year, month=6, day=1), today)
+        elif period.startswith('Q3'):
+            start_date, end_date = datetime.date(year=today.year, month=6, day=1), \
+                min(datetime.date(year=today.year, month=9, day=1), today)
+        elif period.startswith('Q4'):
+            start_date, end_date = datetime.date(year=today.year, month=9, day=1), \
+                min(datetime.date(year=today.year, month=12, day=1), today)
+        elif period.startswith('<2020'):
+            start_date, end_date = min_date if min_date else datetime.date(year=2019, month=1, day=1), \
+                        datetime.date(year=2019, month=12, day=31)
+        elif period.startswith('202') and period.isnumeric():
+            int_year = int(period)
+            start_date, end_date = datetime.date(year=int_year, month=1, day=1), \
+                        datetime.date(year=int_year, month=12, day=31)
+        else:
+            start_date, end_date = min_date, max_date
+        return start_date, end_date
+
+
+# t ={v:DatePeriod.date_range_for_period(v) for v in DatePeriod.date_periods_key_values().values()}
+
+
 def transactions_intersection_filtered_factory(
         default_period=None,
         fixed_time_unit=False,
@@ -113,14 +208,16 @@ def transactions_intersection_filtered_factory(
         ui.input_select(
             id='date_period_input_select',
             label='Select date period',
-            choices=['Last 30 days', 'Last 90 days', 'Last year', 'All'], # TODO last week, q1-4 (if exist), <2020, 2020, 2021, 2022, etc...
+            # choices=['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last year', 'All'],
+            choices=DatePeriod.date_periods_categorised(),
+            # TODO last week, q1-4 (if exist), <2020, 2020, 2021, 2022, etc...
             selected=selected_period
         ),
         ui.input_date_range(
             id='transactions_date_range',
             label='Select date range',
-            start=datetime.date.today() - datetime.timedelta(days=365),
-            end=datetime.date.today(),
+            start=dateparser.parse('today'),  # datetime.date.today() - datetime.timedelta(days=365),
+            end=dateparser.parse('today'),  # datetime.date.today(),
             format='dd-mm-yyyy',
             separator=':'
         ),
@@ -164,8 +261,8 @@ class ShinyTransactionFilterError(ValueError):
         super().__init__(message)
 
 
-def _parse_params(input_url:str,
-                  ensure_exists:str|list[str]|None=None):
+def _parse_params(input_url: str,
+                  ensure_exists: str | list[str] | None = None):
     urlparse_result = urlparse(input_url)
     _url_params = parse_qs(urlparse_result.query)
 
@@ -183,31 +280,53 @@ def url_params_function_factory(input: Inputs,
                                 session: Session,
                                 data_manager: WorkingDataManager,
                                 ensure_exists=None):
-
     @reactive.calc
     def get_url_params() -> dict:
         logging.info(f"{input['.clientdata_url_search'].get()=}")
-        _url_params = _parse_params(input['.clientdata_url_search'].get(), ensure_exists=ensure_exists)  # TODO move to a reactive.calc func
+        _url_params = _parse_params(input['.clientdata_url_search'].get(),
+                                    ensure_exists=ensure_exists)  # TODO move to a reactive.calc func
         logging.info(f"Input params: {_url_params=}")
         return _url_params
+
     return get_url_params
 
+
 def filter_url_params_function_factory(input: Inputs,
-                                output: Outputs,
-                                session: Session,
-                                data_manager: WorkingDataManager, ):
+                                       output: Outputs,
+                                       session: Session,
+                                       data_manager: WorkingDataManager, ):
+    url_params = url_params_function_factory(input, output, session, data_manager)
+
+    def _get_single_param(params: dict, key: str, default=None):
+        values = params.get(key)
+        if not values:
+            return default
+        return values[0]
+
+    def _parse_date(value: str | None):
+        if value is None or len(value) == 0:
+            return None
+        try:
+            return datetime.date.fromisoformat(value)
+        except ValueError:
+            logging.warning(f"Invalid date provided for '{value}', ignoring")
+            return None
 
     @reactive.calc
     def filter_url_params():
-        _url_params = url_params_function_factory(input, output, session, data_manager)()
+        _raw_url_params = url_params()
         params = {}
-        params['filter_in_tags'] = _url_params.get('filter_in_tags', [''])[0]
-        params['filter_in_tags'] = params['filter_in_tags'].split(',') if len(params['filter_in_tags']) > 0 else []
-        params['filter_out_tags'] = _url_params.get('filter_out_tags', [''])[0]
-        params['filter_out_tags'] = params['filter_out_tags'].split(',') if len(params['filter_out_tags']) > 0 else []
-        params['time_unit'] = _url_params.get('time_unit', DEFAULT_FILTER_TIME_UNIT)
+        filter_in_tags_raw = _get_single_param(_raw_url_params, 'filter_in_tags', '')
+        params['filter_in_tags'] = filter_in_tags_raw.split(',') if len(filter_in_tags_raw) > 0 else []
+        filter_out_tags_raw = _get_single_param(_raw_url_params, 'filter_out_tags', '')
+        params['filter_out_tags'] = filter_out_tags_raw.split(',') if len(filter_out_tags_raw) > 0 else []
+        params['time_unit'] = _get_single_param(_raw_url_params, 'time_unit', DEFAULT_FILTER_TIME_UNIT)
+        params['period'] = _get_single_param(_raw_url_params, 'period')
+        params['start_date'] = _parse_date(_get_single_param(_raw_url_params, 'start_date'))
+        params['end_date'] = _parse_date(_get_single_param(_raw_url_params, 'end_date'))
         logging.info(f"Input params: {params=}")
         return params
+
     return filter_url_params
 
 
@@ -217,6 +336,41 @@ def filter_funcs_factory(
         session: Session,
         data_manager: WorkingDataManager,
 ):
+    filter_url_params_calc = filter_url_params_function_factory(input, output, session, data_manager)
+    initialized = reactive.Value(False)
+    skip_period_sync = reactive.Value(False)
+    last_period = reactive.Value(None)
+
+    def _clamp_date_range(transactions, requested_start_date: datetime.date, requested_end_date: datetime.date):
+        # """
+        # make sure that the start_date and end_date are valid for the transactions.date_range
+        # """
+        # tx_min_date, tx_max_date = transactions.date_range()
+        # if tx_max_date < requested_start_date:
+        #     return None
+        #
+        # start = max(requested_start_date if requested_start_date is not None else tx_min_date, tx_min_date)
+        # end = min(requested_end_date if requested_end_date is not None else tx_max_date, tx_max_date)
+        # return start, end, tx_min_date, tx_max_date
+        return  requested_start_date, requested_end_date, requested_start_date, requested_end_date
+
+    def _dates_for_period(period: str, transactions):
+        start_date, end_date = DatePeriod.date_range_for_period(period)
+        if start_date is None or end_date is None:
+            start_date, end_date = transactions.date_range()
+        # today = datetime.date.today()
+        # if period == 'Last 7 days':
+        #     start_date, end_date = today - datetime.timedelta(days=7), today
+        # elif period == 'Last 30 days':
+        #     start_date, end_date = today - datetime.timedelta(days=30), today
+        # elif period == 'Last 90 days':
+        #     start_date, end_date = today - datetime.timedelta(days=90), today
+        # elif period == 'Last year':
+        #     start_date, end_date = today - datetime.timedelta(days=365), today
+        # else:
+        #     start_date, end_date = transactions.date_range()
+        return start_date, end_date
+
     @reactive.calc
     def get_filter_params():
         logging.info('Fetching filter params')
@@ -235,45 +389,90 @@ def filter_funcs_factory(
 
     @reactive.calc
     def default_transactions():
-        filter_url_params = filter_url_params_function_factory(input, output, session, data_manager)()
+        filter_url_params = filter_url_params_calc()
         filter_in_tags = filter_url_params['filter_in_tags']
         filter_out_tags = filter_url_params['filter_out_tags']
         transactions = data_manager.get_transactions()
-        filtered_in_transactions = transactions.containing_tags(filter_in_tags)
-        if filtered_in_transactions.size() == 0:
-            error_msg = f"No transactions found containing {filter_url_params['filter_in_tags']} tags."
-            raise ShinyTransactionFilterError(error_msg)
+        filtered_in_transactions = transactions
+        if len(filter_in_tags) > 0:
+            filtered_in_transactions = transactions.containing_tags(filter_in_tags)
+            if filtered_in_transactions.size() == 0:
+                error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit containing {filter_url_params['filter_in_tags']} tags."
+                raise ShinyTransactionFilterError(error_msg)
 
-        filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(filter_out_tags,
-                                                                                        empty_tags_strategy='all_true')
-        if filtered_in_and_out_transactions.size() == 0:
-            error_msg = f"No transactions found after filtering out {filter_url_params['filter_in_tags']} tags."
-            raise ShinyTransactionFilterError(error_msg)
+        filtered_in_and_out_transactions = filtered_in_transactions
+        if len(filter_out_tags) > 0:
+            filtered_in_and_out_transactions = filtered_in_transactions.not_containing_tags(
+                filter_out_tags,
+                empty_tags_strategy='all_true')
+            if filtered_in_and_out_transactions.size() == 0:
+                error_msg = f"No transactions found for {filter_url_params['time_unit']} time unit after filtering out {filter_url_params['filter_in_tags']} tags."
+                raise ShinyTransactionFilterError(error_msg)
 
         logging.info(f"URL param transactions: {filtered_in_and_out_transactions.size()=}")
         return filtered_in_and_out_transactions
 
     @reactive.effect
+    @reactive.event(filter_url_params_calc)
     def init():
+        if initialized.get():
+            return
         logging.info('Init')
-        ui.update_select(id='date_period_input_select', selected=DEFAULT_FILTER_PERIOD)# TODO not set correctly, check mecon.app.shiny_app.init for that
-        filter_url_params = filter_url_params_function_factory(input, output, session, data_manager)()
-        transactions = default_transactions()
+        filter_url_params = filter_url_params_calc()
+        all_transactions = data_manager.get_transactions()
         all_tags_names = [tag.name for tag in data_manager.all_tags()]
-        new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
-                       cnt > 0]
 
-        if len(input.filter_in_tags_select()) == 0:
+        try:
+            transactions = default_transactions()
+            new_choices = [tag_name for tag_name, cnt in transactions.all_tag_counts().items() if
+                           cnt > 0]
+        except ShinyTransactionFilterError as e:
+            new_choices = all_tags_names
+
+        current_filter_in = input.filter_in_tags_select() or []
+        if len(current_filter_in) == 0:
             logging.info(f"Updating filter In tags: {len(new_choices)} {filter_url_params['filter_in_tags']}")
             ui.update_selectize(id='filter_in_tags_select',
                                 choices=sorted(new_choices),
                                 selected=filter_url_params['filter_in_tags'])
 
-        if len(input.filter_out_tags_select()) == 0:
+        current_filter_out = input.filter_out_tags_select() or []
+        if len(current_filter_out) == 0:
             logging.info(f"Updating filter OUT tags: {len(all_tags_names)} {filter_url_params['filter_out_tags']}")
             ui.update_selectize(id='filter_out_tags_select',
                                 choices=all_tags_names,
                                 selected=filter_url_params['filter_out_tags'])
+
+        ui.update_radio_buttons(id='time_unit_select', selected=filter_url_params['time_unit'])
+
+        with reactive.isolate():
+            current_period = input.date_period_input_select()
+
+        requested_period = filter_url_params.get('period')
+        if requested_period:
+            ui.update_select(id='date_period_input_select', selected=requested_period)
+            current_period = requested_period
+
+        start_date_override = filter_url_params['start_date']
+        end_date_override = filter_url_params['end_date']
+        has_custom_dates = start_date_override is not None or end_date_override is not None
+
+        if has_custom_dates:
+            start_date = start_date_override
+            end_date = end_date_override
+            skip_period_sync.set(True)
+        else:
+            start_date, end_date = _dates_for_period(current_period, all_transactions)
+
+        # start_date, end_date, min_date, max_date = _clamp_date_range(all_transactions, start_date, end_date)
+        # ui.update_date_range(id='transactions_date_range',
+        #                      start=start_date,
+        #                      end=end_date,
+        #                      min=min_date,
+        #                      max=max_date)
+
+        last_period.set(current_period)
+        initialized.set(True)
 
         # if len(input.compare_tags_select()) == 0:  TODO
         #     logging.info(f"Updating compare tags: {len(new_choices)} {filter_url_params['compare_tags']}")
@@ -312,33 +511,43 @@ def filter_funcs_factory(
     @reactive.effect
     @reactive.event(input.date_period_input_select)
     def period_change_effect():
+        if not initialized.get():
+            return
+        current_period = input.date_period_input_select()
+        if skip_period_sync.get() and current_period == last_period.get():
+            skip_period_sync.set(False)
+            return
+        skip_period_sync.set(False)
         _all_transactions = data_manager.get_transactions()
-        logging.info(f"Changed period to '{input.date_period_input_select()}'")
-        if input.date_period_input_select() == 'Last 30 days':
-            start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
-        elif input.date_period_input_select() == 'Last 90 days':
-            start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
-        elif input.date_period_input_select() == 'Last year':
-            start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
-        else:
-            start_date, end_date = _all_transactions.date_range()
-
-        min_date, max_date = _all_transactions.date_range()
+        logging.info(f"Changed period to '{current_period}'")
+        start_date, end_date = _dates_for_period(current_period, _all_transactions)
+        min_date, max_date = start_date, end_date
+        # date_range_values = _clamp_date_range(_all_transactions, start_date, end_date)
+        # if date_range_values:
+        #     start_date, end_date, min_date, max_date = date_range_values
+        # else:
+        #     start_date, end_date, min_date, max_date = [end_date] * 4
         logging.info(f"date_range set to {min_date=} and {max_date=}")
-        # if transactions.size()==0:
-        #     ui.update_select(id='date_period_input_select', selected="All")
 
         ui.update_date_range(id='transactions_date_range',
                              start=start_date,
-                             end=min(max_date, end_date),
+                             end=end_date,
                              min=min_date,
                              max=max_date
                              )
+        last_period.set(current_period)
 
     @reactive.calc
     def filtered_transactions():
-        start_date, end_date, time_unit, filter_in_tags, filter_out_tags = get_filter_params().values()
-        transactions = data_manager.get_transactions()
+        req(initialized.get())
+        params = get_filter_params()
+        start_date = params['start_date']
+        end_date = params['end_date']
+        time_unit = params['time_unit']
+        filter_in_tags = params['filter_in_tags']
+        filter_out_tags = params['filter_out_tags']
+        # transactions = data_manager.get_transactions()
+        transactions = default_transactions()
 
         in_date_range_transactions = transactions.select_date_range(start_date, end_date)
         if in_date_range_transactions.size() == 0:
@@ -356,10 +565,15 @@ def filter_funcs_factory(
             error_msg = f"No transactions found for '{time_unit}' time unit after filtering out {filter_out_tags} tags."
             raise ShinyTransactionFilterError(error_msg)
 
-        logging.info(
-            f"Filtered transactions size: {filtered_in_and_out_transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
+        agg_filtered_transactions = filtered_in_and_out_transactions.group_and_fill_transactions(
+            grouping_key=time_unit,
+            aggregation_key='sum'
+        )
 
-        return filtered_in_and_out_transactions
+        logging.info(
+            f"Filtered transactions size: {agg_filtered_transactions.size()=} for filter params=({start_date, end_date, time_unit, filter_in_tags, filter_out_tags})")
+
+        return agg_filtered_transactions
 
     return get_filter_params, default_transactions, init, filtered_transactions
 
@@ -441,7 +655,7 @@ def render_table_standard(df,
                           format_columns=False,
                           format_boolean_values=False,
                           empty_message=None):
-    if len(df)==0 and empty_message is not None:
+    if len(df) == 0 and empty_message is not None:
         return pd.DataFrame({empty_message: ['0 rows']})
 
     if format_columns:
