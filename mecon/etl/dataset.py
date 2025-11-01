@@ -321,3 +321,55 @@ class CustomisedDatasetDir(DatasetDir):
     @property
     def settings(self):
         return self._settings
+
+
+class DateRollingDataset:
+    def __init__(self,
+                 path: str | Path,
+                 max_number_of_datasets: int):
+        self._path = pathlib.Path(path)
+        self.max_number_of_datasets = max_number_of_datasets
+        self._datasets = {}
+
+    @property
+    def name(self):
+        return self.path.name
+
+    @property
+    def path(self):
+        return self._path
+
+    def datasets(self):
+        return list(self._datasets.values())
+
+    def dataset_names(self):
+        return list(self._datasets.keys())
+
+    def is_empty(self):
+        return len(self.datasets()) == 0
+
+    def datasets(self):
+        for dataset in self.path.iterdir():
+            if dataset.is_dir() and dataset.name.isnumeric() and len(dataset.name) == 8:
+                self._datasets[dataset.name] = Dataset.from_dirpath(dataset)
+        logging.info(f"Adding {len(self._datasets)} datasets. #info#filesystem")
+
+    def get_dataset(self, dataset_name: str) -> Dataset | None:
+        if dataset_name is None or self.is_empty():
+            return None
+
+        # dataset_path = self.path / dataset_name
+        # return Dataset.from_dirpath(dataset_path) if dataset_path.exists() else None
+        return self._datasets.get(dataset_name)
+
+    def get_last_dataset(self) -> Dataset | None:
+        if self.is_empty():
+            return None
+
+        dataset_names = self._datasets.keys()
+        last_dataset = max(dataset_names)
+        return self.get_dataset(last_dataset)
+
+
+
+
