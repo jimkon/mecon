@@ -3,6 +3,8 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from datetime import datetime
+from unittest import mock
 
 import pandas as pd
 
@@ -181,6 +183,60 @@ class DatasetV2TestCase(unittest.TestCase):
         self.assertEqual(statement_files_info_df['rows'].tolist(), [0])
 
         csv_file.unlink()
+
+
+class DateRollingDatasetTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.mkdtemp()
+        self.datasets_root = Path(self.temp_dir)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.datasets_root)
+
+    def _create_dataset(self, dataset_id: str) -> Path:
+        dataset_path = self.datasets_root / dataset_id
+        dataset_path.mkdir()
+        fs.Dataset.from_dirpath(dataset_path)
+        return dataset_path
+
+    def test_find_datasets_ignores_invalid_entries(self):
+        today_id = datetime.today().strftime("%Y%m%d")
+        self._create_dataset(today_id)
+        self._create_dataset("20240101")
+        (self.datasets_root / "not_a_dataset").mkdir()
+        (self.datasets_root / "2024010").mkdir()
+        (self.datasets_root / "README.txt").write_text("not a dataset")
+
+        with mock.patch("mecon.etl.dataset.datetime") as mock_datetime:
+            mock_datetime.today.return_value.strftime.return_value = today_id
+            dataset_dir = fs.DateRollingDataset(self.datasets_root, max_number_of_datasets=5)
+
+        expected_dataset_names = {today_id, "20240101"}
+        self.assertEqual(set(dataset_dir.dataset_names()), expected_dataset_names)
+
+    def test_rollover_creates_copy_and_limits_history(self):
+        dataset_ids = ["20240101", "20240102"]
+        for dataset_id in dataset_ids:
+            self._create_dataset(dataset_id)
+
+        latest_dataset_path = self.datasets_root / "20240102"
+        file_to_copy = latest_dataset_path / "data" / "current" / "existing.txt"
+        file_to_copy.parent.mkdir(parents=True, exist_ok=True)
+        file_to_copy.write_text("content")
+
+        new_dataset_id = "20240103"
+        with mock.patch("mecon.etl.dataset.datetime") as mock_datetime:
+            mock_datetime.today.return_value.strftime.return_value = new_dataset_id
+            dataset_dir = fs.DateRollingDataset(self.datasets_root, max_number_of_datasets=2)
+
+        self.assertTrue((self.datasets_root / new_dataset_id).exists())
+        copied_file = self.datasets_root / new_dataset_id / "data" / "current" / "existing.txt"
+        self.assertTrue(copied_file.exists())
+        self.assertEqual(copied_file.read_text(), "content")
+
+        self.assertFalse((self.datasets_root / "20240101").exists())
+        self.assertEqual(set(dataset_dir.dataset_names()), {"20240102", new_dataset_id})
+        self.assertEqual(dataset_dir.get_last_dataset().name, new_dataset_id)
 
 
 if __name__ == '__main__':

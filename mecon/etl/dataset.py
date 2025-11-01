@@ -17,7 +17,7 @@ def _subfolder_csvs(path):
     for subfolder in path.iterdir():
         if subfolder.is_dir():
             # csv_files = [p.name for p in subfolder.glob("*.csv")]
-            csv_files = list(subfolder.glob("*.csv"))
+            csv_files = sorted(subfolder.glob("*.csv"))
             result[subfolder.name] = csv_files
 
     return result
@@ -355,6 +355,7 @@ class DateRollingDataset:
         return len(self.datasets()) == 0
 
     def find_datasets(self):
+        self._datasets = {}
         for dataset in self.path.iterdir():
             if dataset.is_dir() and dataset.name.isnumeric() and len(dataset.name) == 8:
                 self._datasets[dataset.name] = Dataset.from_dirpath(dataset)
@@ -372,7 +373,7 @@ class DateRollingDataset:
         if self.is_empty():
             return None
 
-        dataset_names = self._datasets.keys()
+        dataset_names = self.dataset_names()
         last_dataset = max(dataset_names)
         return self.get_dataset(last_dataset)
 
@@ -380,14 +381,15 @@ class DateRollingDataset:
         if self.is_empty():
             return
 
-        dataset_names = self._datasets.keys()
+        dataset_names = self.dataset_names()
         first_dataset = min(dataset_names)
         shutil.rmtree(self.path / first_dataset)
-        logging.info(f"Removed {len(dataset_names)} datasets. #info#filesystem")
+        logging.info(f"Removed dataset {first_dataset}. #info#filesystem")
+        self.find_datasets()
 
     def rollover(self):
         today_id = datetime.today().strftime("%Y%m%d")
-        if today_id in self.datasets():
+        if today_id in self.dataset_names():
             logging.info(f"No Dataset rollover needed for {today_id}. #info#filesystem")
             return
 
