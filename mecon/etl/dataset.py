@@ -1,7 +1,9 @@
 import logging
 import pathlib
+import shutil
 from pathlib import Path
 from typing import Dict, Literal
+from datetime import datetime
 
 import pandas as pd
 
@@ -329,7 +331,11 @@ class DateRollingDataset:
                  max_number_of_datasets: int):
         self._path = pathlib.Path(path)
         self.max_number_of_datasets = max_number_of_datasets
+
         self._datasets = {}
+        self.find_datasets()
+
+        self.rollover()
 
     @property
     def name(self):
@@ -348,7 +354,7 @@ class DateRollingDataset:
     def is_empty(self):
         return len(self.datasets()) == 0
 
-    def datasets(self):
+    def find_datasets(self):
         for dataset in self.path.iterdir():
             if dataset.is_dir() and dataset.name.isnumeric() and len(dataset.name) == 8:
                 self._datasets[dataset.name] = Dataset.from_dirpath(dataset)
@@ -370,6 +376,29 @@ class DateRollingDataset:
         last_dataset = max(dataset_names)
         return self.get_dataset(last_dataset)
 
+    def delete_first_dataset(self):
+        if self.is_empty():
+            return
+
+        dataset_names = self._datasets.keys()
+        first_dataset = min(dataset_names)
+        shutil.rmtree(self.path / first_dataset)
+        logging.info(f"Removed {len(dataset_names)} datasets. #info#filesystem")
+
+    def rollover(self):
+        today_id = datetime.today().strftime("%Y%m%d")
+        if today_id in self.datasets():
+            logging.info(f"No Dataset rollover needed for {today_id}. #info#filesystem")
+            return
+
+        last_dataset_path = self.get_last_dataset().path
+        today_path = last_dataset_path.parent / today_id
+        shutil.copytree(last_dataset_path, today_path)
+        logging.info(f"Dataset rollover from {last_dataset_path.name} to {today_id}. #info#filesystem")
+        self.find_datasets()
+
+        if len(self.datasets()) > self.max_number_of_datasets:
+            self.delete_first_dataset()
 
 
 
