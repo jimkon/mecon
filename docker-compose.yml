@@ -1,28 +1,40 @@
 version: '3'
 services:
+  setup_service:
+    build:
+      dockerfile: services/setup/Dockerfile
+    volumes:
+      #      - ./datasets:/mecon/datasets
+      - "${MECON_DATASETS_DIR}:/mecon/datasets"
   main_app:
     build:
       dockerfile: services/main_shiny/Dockerfile
+    depends_on:
+      - setup_service
     ports:
       - 8000:8000
     volumes:
-#      - ./datasets:/mecon/datasets
+      #      - ./datasets:/mecon/datasets
       - "${MECON_DATASETS_DIR}:/mecon/datasets"
 
   reports_app:
     build:
       dockerfile: services/reports/Dockerfile
+    depends_on:
+      - setup_service
     ports:
       - 8001:8000
     volumes:
-#      - ./datasets:/mecon/datasets
+      #      - ./datasets:/mecon/datasets
       - "${MECON_DATASETS_DIR}:/mecon/datasets"
   edit_data_app:
     build:
       dockerfile: services/edit_data/Dockerfile
+    depends_on:
+      - setup_service
     ports:
       - 8002:8000
     volumes:
-#      - ./datasets:/mecon/datasets
+      #      - ./datasets:/mecon/datasets
       - "${MECON_DATASETS_DIR}:/mecon/datasets"
 

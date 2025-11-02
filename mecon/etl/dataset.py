@@ -328,14 +328,14 @@ class CustomisedDatasetDir(DatasetDir):
 class DateRollingDataset:
     def __init__(self,
                  path: str | Path,
-                 max_number_of_datasets: int):
+                 max_number_of_datasets: int = 10):
         self._path = pathlib.Path(path)
         self.max_number_of_datasets = max_number_of_datasets
 
         self._datasets = {}
         self.find_datasets()
 
-        self.rollover()
+        # self.rollover()
 
     @property
     def name(self):
@@ -356,9 +356,12 @@ class DateRollingDataset:
 
     def find_datasets(self):
         self._datasets = {}
+        logging.info(f"{list(self.path.iterdir())=}")
         for dataset in self.path.iterdir():
             if dataset.is_dir() and dataset.name.isnumeric() and len(dataset.name) == 8:
                 self._datasets[dataset.name] = Dataset.from_dirpath(dataset)
+            else:
+                logging.info(f"Skipping {dataset} as it is not a valid path.")
         logging.info(f"Adding {len(self._datasets)} datasets. #info#filesystem")
 
     def get_dataset(self, dataset_name: str) -> Dataset | None:
@@ -371,6 +374,7 @@ class DateRollingDataset:
 
     def get_last_dataset(self) -> Dataset | None:
         if self.is_empty():
+            logging.info(f"DatasetDir.get_last_dataset: Dataset Directory '{self.path}' has no datasets inside.")
             return None
 
         dataset_names = self.dataset_names()
@@ -390,9 +394,10 @@ class DateRollingDataset:
     def rollover(self):
         today_id = datetime.today().strftime("%Y%m%d")
         if today_id in self.dataset_names():
-            logging.info(f"No Dataset rollover needed for {today_id}. #info#filesystem")
+            logging.info(f"No Dataset rollover needed,  '{today_id}' dataset already exists. #info#filesystem")
             return
 
+        logging.info(f"Dataset '{today_id}' not found among the datasets {self.dataset_names()}. Rolling over...")
         last_dataset_path = self.get_last_dataset().path
         today_path = last_dataset_path.parent / today_id
         shutil.copytree(last_dataset_path, today_path)

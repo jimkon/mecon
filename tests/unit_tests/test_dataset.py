@@ -238,6 +238,23 @@ class DateRollingDatasetTestCase(unittest.TestCase):
         self.assertEqual(set(dataset_dir.dataset_names()), {"20240102", new_dataset_id})
         self.assertEqual(dataset_dir.get_last_dataset().name, new_dataset_id)
 
+    def test_rollover_skips_when_today_dataset_already_exists(self):
+        existing_dataset_id = "20240101"
+        today_id = "20240102"
+
+        self._create_dataset(existing_dataset_id)
+        today_dataset_path = self._create_dataset(today_id)
+        sentinel_file = today_dataset_path / "data" / "current" / "sentinel.txt"
+        sentinel_file.parent.mkdir(parents=True, exist_ok=True)
+        sentinel_file.write_text("original")
+
+        with mock.patch("mecon.etl.dataset.datetime") as mock_datetime:
+            mock_datetime.today.return_value.strftime.return_value = today_id
+            dataset_dir = fs.DateRollingDataset(self.datasets_root, max_number_of_datasets=5)
+
+        self.assertEqual(dataset_dir.get_last_dataset().name, today_id)
+        self.assertEqual(set(dataset_dir.dataset_names()), {existing_dataset_id, today_id})
+        self.assertEqual(sentinel_file.read_text(), "original")
 
 if __name__ == '__main__':
     unittest.main()

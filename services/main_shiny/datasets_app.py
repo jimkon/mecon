@@ -24,7 +24,7 @@ def format_current_dataset_directory_text(path) -> str:
 
 def update_working_dataset_selection(datasets_obj, dataset_name: str):
     datasets_obj.set_working_dataset(dataset_name)
-    datasets_obj.settings['CURRENT_DATASET'] = dataset_name
+    # datasets_obj.settings['CURRENT_DATASET'] = dataset_name
 
 
 app_ui = shiny_app.app_ui_factory(

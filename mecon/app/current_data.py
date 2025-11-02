@@ -9,13 +9,31 @@ from mecon.data.data_management import CachedFileDataManager
 from mecon.app.data_manager import CachedDBDataManager
 from mecon.app.db_extension import DBWrapper
 from mecon.data.datafields import InvalidInputDataFrameColumns, NullDataframeInDataframeWrapper
-from mecon.etl.dataset import CustomisedDatasetDir, Dataset
+from mecon.etl.dataset import CustomisedDatasetDir, Dataset, DateRollingDataset
 from mecon.etl.statements import HSBCStatementCSV, MonzoStatementCSV, RevoStatementCSV
 
 
 # todo rename to working/current and file system to datasets
 
-class WorkingDatasetDir(CustomisedDatasetDir):
+class WorkingDatasetDir(DateRollingDataset):
+    def __init__(self):
+        path = config.DEFAULT_DATASETS_DIR_PATH
+        super().__init__(path)
+        self.working_dataset_name = None
+
+    @property
+    def working_dataset(self) -> Dataset:
+        if self.working_dataset_name is not None and self.working_dataset_name in self.dataset_names():
+            return self.get_dataset(self.working_dataset_name)
+
+        return self.get_last_dataset()
+
+    def set_working_dataset(self, dataset_name: str) -> Dataset:
+        self.working_dataset_name = dataset_name
+        return self.working_dataset
+
+
+class WorkingDatasetDirLegacy(CustomisedDatasetDir):
     def __init__(self):
         path = config.DEFAULT_DATASETS_DIR_PATH
         super().__init__(path)
@@ -35,6 +53,7 @@ class WorkingDatasetDir(CustomisedDatasetDir):
             raise ValueError(f"Working dataset {dataset_name} does not exist in {self.path}")
         logging.info(f"Setting new current working dataset to '{dataset_name}': {self._working_dataset}")
         return self.working_dataset
+
 
 
 class WorkingDatasetDirInfo:
