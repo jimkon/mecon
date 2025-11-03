@@ -362,7 +362,7 @@ class DateRollingDataset:
                 self._datasets[dataset.name] = Dataset.from_dirpath(dataset)
             else:
                 logging.info(f"Skipping {dataset} as it is not a valid path.")
-        logging.info(f"Adding {len(self._datasets)} datasets. #info#filesystem")
+        logging.info(f"Found {len(self._datasets)} datasets. #info#filesystem")
 
     def get_dataset(self, dataset_name: str) -> Dataset | None:
         if dataset_name is None or self.is_empty():
@@ -400,7 +400,7 @@ class DateRollingDataset:
         logging.info(f"Dataset '{today_id}' not found among the datasets {self.dataset_names()}. Rolling over...")
         last_dataset_path = self.get_last_dataset().path
         today_path = last_dataset_path.parent / today_id
-        shutil.copytree(last_dataset_path, today_path)
+        shutil.copytree(last_dataset_path, today_path, dirs_exist_ok=True)
         logging.info(f"Dataset rollover from {last_dataset_path.name} to {today_id}. #info#filesystem")
         self.find_datasets()
 
