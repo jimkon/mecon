@@ -179,7 +179,8 @@ class DatasetV2:
 
     def statement_files(self, filter_option: Literal['all', 'settings'] | None = 'settings') -> Dict:
         if filter_option is None:
-            filter_option = "all" if 'sources' not in self.settings and 'filter' not in self.settings['sources'] else self.settings['sources']['filter']
+            filter_option = "all" if 'sources' not in self.settings and 'filter' not in self.settings['sources'] else \
+            self.settings['sources']['filter']
 
         all_files = _subfolder_csvs(self.statements)
 
@@ -191,9 +192,11 @@ class DatasetV2:
                 return all_files
 
             if set(all_files.keys()) != set(self.settings['sources'].keys()):
-                logging.warning(f"Discrepancy between sources found ({set(all_files.keys())}) and the ones defined in settings file settings ({set(self.settings['sources'].keys())})")
+                logging.warning(
+                    f"Discrepancy between sources found ({set(all_files.keys())}) and the ones defined in settings file settings ({set(self.settings['sources'].keys())})")
 
-            selected_files = {source_name: all_files[source_name] for source_name, is_enabled in self.settings['sources'].items() if is_enabled}
+            selected_files = {source_name: all_files[source_name] for source_name, is_enabled in
+                              self.settings['sources'].items() if is_enabled}
             logging.info(f"Selected files: {self.settings['sources']}")
             return selected_files
         else:
@@ -406,6 +409,3 @@ class DateRollingDataset:
 
         if len(self.datasets()) > self.max_number_of_datasets:
             self.delete_first_dataset()
-
-
-
