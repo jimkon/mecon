@@ -17,7 +17,7 @@ def _subfolder_csvs(path):
     for subfolder in path.iterdir():
         if subfolder.is_dir():
             # csv_files = [p.name for p in subfolder.glob("*.csv")]
-            csv_files = list(subfolder.glob("*.csv"))
+            csv_files = sorted(subfolder.glob("*.csv"))
             result[subfolder.name] = csv_files
 
     return result
@@ -179,7 +179,8 @@ class DatasetV2:
 
     def statement_files(self, filter_option: Literal['all', 'settings'] | None = 'settings') -> Dict:
         if filter_option is None:
-            filter_option = "all" if 'sources' not in self.settings and 'filter' not in self.settings['sources'] else self.settings['sources']['filter']
+            filter_option = "all" if 'sources' not in self.settings and 'filter' not in self.settings['sources'] else \
+            self.settings['sources']['filter']
 
         all_files = _subfolder_csvs(self.statements)
 
@@ -191,9 +192,11 @@ class DatasetV2:
                 return all_files
 
             if set(all_files.keys()) != set(self.settings['sources'].keys()):
-                logging.warning(f"Discrepancy between sources found ({set(all_files.keys())}) and the ones defined in settings file settings ({set(self.settings['sources'].keys())})")
+                logging.warning(
+                    f"Discrepancy between sources found ({set(all_files.keys())}) and the ones defined in settings file settings ({set(self.settings['sources'].keys())})")
 
-            selected_files = {source_name: all_files[source_name] for source_name, is_enabled in self.settings['sources'].items() if is_enabled}
+            selected_files = {source_name: all_files[source_name] for source_name, is_enabled in
+                              self.settings['sources'].items() if is_enabled}
             logging.info(f"Selected files: {self.settings['sources']}")
             return selected_files
         else:
@@ -328,14 +331,14 @@ class CustomisedDatasetDir(DatasetDir):
 class DateRollingDataset:
     def __init__(self,
                  path: str | Path,
-                 max_number_of_datasets: int):
+                 max_number_of_datasets: int = 10):
         self._path = pathlib.Path(path)
         self.max_number_of_datasets = max_number_of_datasets
 
         self._datasets = {}
         self.find_datasets()
 
-        self.rollover()
+        # self.rollover()
 
     @property
     def name(self):
@@ -355,10 +358,14 @@ class DateRollingDataset:
         return len(self.datasets()) == 0
 
     def find_datasets(self):
+        self._datasets = {}
+        logging.info(f"{list(self.path.iterdir())=}")
         for dataset in self.path.iterdir():
             if dataset.is_dir() and dataset.name.isnumeric() and len(dataset.name) == 8:
                 self._datasets[dataset.name] = Dataset.from_dirpath(dataset)
-        logging.info(f"Adding {len(self._datasets)} datasets. #info#filesystem")
+            else:
+                logging.info(f"Skipping {dataset} as it is not a valid path.")
+        logging.info(f"Found {len(self._datasets)} datasets. #info#filesystem")
 
     def get_dataset(self, dataset_name: str) -> Dataset | None:
         if dataset_name is None or self.is_empty():
@@ -370,9 +377,10 @@ class DateRollingDataset:
 
     def get_last_dataset(self) -> Dataset | None:
         if self.is_empty():
+            logging.info(f"DatasetDir.get_last_dataset: Dataset Directory '{self.path}' has no datasets inside.")
             return None
 
-        dataset_names = self._datasets.keys()
+        dataset_names = self.dataset_names()
         last_dataset = max(dataset_names)
         return self.get_dataset(last_dataset)
 
@@ -380,25 +388,24 @@ class DateRollingDataset:
         if self.is_empty():
             return
 
-        dataset_names = self._datasets.keys()
+        dataset_names = self.dataset_names()
         first_dataset = min(dataset_names)
         shutil.rmtree(self.path / first_dataset)
-        logging.info(f"Removed {len(dataset_names)} datasets. #info#filesystem")
+        logging.info(f"Removed dataset {first_dataset}. #info#filesystem")
+        self.find_datasets()
 
     def rollover(self):
         today_id = datetime.today().strftime("%Y%m%d")
-        if today_id in self.datasets():
-            logging.info(f"No Dataset rollover needed for {today_id}. #info#filesystem")
+        if today_id in self.dataset_names():
+            logging.info(f"No Dataset rollover needed,  '{today_id}' dataset already exists. #info#filesystem")
             return
 
+        logging.info(f"Dataset '{today_id}' not found among the datasets {self.dataset_names()}. Rolling over...")
         last_dataset_path = self.get_last_dataset().path
         today_path = last_dataset_path.parent / today_id
-        shutil.copytree(last_dataset_path, today_path)
+        shutil.copytree(last_dataset_path, today_path, dirs_exist_ok=True)
         logging.info(f"Dataset rollover from {last_dataset_path.name} to {today_id}. #info#filesystem")
         self.find_datasets()
 
         if len(self.datasets()) > self.max_number_of_datasets:
             self.delete_first_dataset()
-
-
-
