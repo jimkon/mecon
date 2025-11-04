@@ -189,7 +189,7 @@ class TrueLayerClient:
         self._creds.pop("_transient", None)
         self._save()
 
-    def exchange_code_from_code_url(self, url):
+    def exchange_code_from_code_url(self, url, bank):
         auth_link_resp_split = url.split('?')[1].split('&')
         code = auth_link_resp_split[0].split('=')[1]
         state = auth_link_resp_split[2].split('=')[1]

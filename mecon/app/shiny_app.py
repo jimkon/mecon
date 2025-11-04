@@ -77,6 +77,7 @@ dataset_label = ui.tooltip(ui.HTML(f"<sub><small>Selected dataset: {get_working_
                            f"Dataset directory: {config.DEFAULT_DATASETS_DIR_PATH}")
 navbar = ui.navset_pill(
     ui.nav_control(ui.tags.a("Main page", href=f"http://127.0.0.1:8000/")),
+    ui.nav_control(ui.tags.a("Providers", href=f"http://127.0.0.1:8003/auth")),
     ui.nav_control(ui.tags.a("Datasets", href=f"http://127.0.0.1:8000/datasets")),
     ui.nav_control(ui.tags.a("Data Flow", href=f"http://127.0.0.1:8000/data")),
     ui.nav_control(ui.tags.a("Edit data", href=f"http://127.0.0.1:8002/edit_data/")),
