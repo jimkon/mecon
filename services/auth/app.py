@@ -2,17 +2,17 @@ from starlette.applications import Starlette
 from starlette.responses import RedirectResponse
 from starlette.routing import Mount, Route
 
-from auth_app import auth_app
+from truelayer_auth_app import auth_app as tl_auth_app
 
 
 async def redirect_to_menu(request):
-    return RedirectResponse(url='/auth/')
+    return RedirectResponse(url='/auth/truelayer')
 
 
 # combine apps ----
 routes = [
     Route('/auth', endpoint=redirect_to_menu),
-    Mount('/auth/', app=auth_app),
+    Mount('/auth/truelayer', app=tl_auth_app),
 ]
 
 app = Starlette(routes=routes)
