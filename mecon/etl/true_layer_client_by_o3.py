@@ -110,6 +110,7 @@ class TrueLayerClient:
     # --------------------------------------------------------------------- auth
     def build_auth_link(
             self,
+            bank: str,
             provider_id: Optional[str] = None,
             scopes: str = "info accounts balance transactions offline_access",  # keep minimal
     ) -> str:
@@ -126,11 +127,16 @@ class TrueLayerClient:
         state = secrets.token_urlsafe(16)
         nonce = secrets.token_urlsafe(16)
 
-        # cache PKCE + anti‑csrf bits
-        self._creds["_transient"] = {
+        # cache PKCE + anti‑csrf bits per source/provider
+        sources = self._creds.setdefault("sources", {})
+        source_creds = sources.setdefault(bank, {})
+        transient_store = source_creds.setdefault("_transient_store", {})
+        key = provider_id or "__default__"
+        transient_store[key] = {
             "code_verifier": code_verifier,
             "state": state,
             "nonce": nonce,
+            "created_at": _utc_now().isoformat(),
         }
         self._save()
 
@@ -150,11 +156,27 @@ class TrueLayerClient:
 
         return f"{self.AUTH_BASE}/?{up.urlencode(params)}"
 
-    def exchange_code(self, bank: str, code: str, returned_state: str) -> None:
+    def _get_transient_store(self, bank: str) -> Dict[str, Dict[str, Any]]:
+        sources = self._creds.setdefault("sources", {})
+        if bank not in sources:
+            raise AuthFlowError(f"No source credentials found for '{bank}'")
+        return sources[bank].setdefault("_transient_store", {})
+
+    def exchange_code(
+            self,
+            bank: str,
+            code: str,
+            returned_state: str,
+            provider_id: Optional[str] = None,
+    ) -> None:
         """
         Swap `code` for an access+refresh token and persist to creds.
         """
-        t = self._creds["_transient"]
+        transient_store = self._get_transient_store(bank)
+        key = provider_id or "__default__"
+        t = transient_store.get(key)
+        if not t:
+            raise AuthFlowError("No PKCE verifier/state found for this session")
         if returned_state != t["state"]:
             raise AuthFlowError("state mismatch in OAuth redirect")
 
@@ -167,7 +189,11 @@ class TrueLayerClient:
             "code": code,
         }
 
-        resp = httpx.post(f"{self.AUTH_BASE}/connect/token", data=data)
+        resp = httpx.post(
+            f"{self.AUTH_BASE}/connect/token",
+            data=data,
+            headers={"Accept": "application/json"},
+        )
         if resp.status_code != 200:
             raise AuthFlowError(
                 f"token exchange failed: {resp.status_code} → {resp.text}"
@@ -182,17 +208,37 @@ class TrueLayerClient:
             refreshed_at=None,
             expires_at=now + dt.timedelta(seconds=raw["expires_in"]),
         )
-        self._creds.setdefault("sources", {}).setdefault(bank, {})["token"] = (
-            token.to_json()
-        )
+        source_creds = self._creds.setdefault("sources", {}).setdefault(bank, {})
+        source_creds["token"] = token.to_json()
         # clean transient fields
-        self._creds.pop("_transient", None)
+        transient_store.pop(key, None)
+        if not transient_store:
+            source_creds.pop("_transient_store", None)
         self._save()
 
-    def exchange_code_from_code_url(self, url, bank):
+    def exchange_code_from_code_url(
+            self,
+            url: str,
+            bank: str,
+            provider_id: Optional[str] = None,
+    ):
         """Extract the OAuth code+state parameters from a redirect URL."""
 
         parsed = up.urlparse(url)
+        expected_redirect = up.urlparse(self._creds["redirect_uri"])
+        if (
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+        ) != (
+                expected_redirect.scheme,
+                expected_redirect.netloc,
+                expected_redirect.path,
+        ):
+            raise AuthFlowError(
+                "Redirect URI does not match the configured redirect_uri. "
+                "Did you use the TrueLayer Console redirect page?"
+            )
         query_params = up.parse_qs(parsed.query)
 
         code_values = query_params.get("code")
@@ -204,7 +250,12 @@ class TrueLayerClient:
         code = code_values[0]
         state = state_values[0]
         # … user completes flow …
-        self.exchange_code(bank, code=code, returned_state=state)
+        self.exchange_code(
+            bank,
+            code=code,
+            returned_state=state,
+            provider_id=provider_id,
+        )
 
     # ----------------------------------------------------------------- refresh
     def _ensure_token(self, bank: str) -> Token:

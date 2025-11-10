@@ -139,7 +139,9 @@ def source_ui(source: str):
                 "Authentication",
                 ui.card(
                     ui.card_body(
-                        ui.markdown(f"Visit this [link]({tl.build_auth_link(provider_id=source)})"),
+                        ui.markdown(
+                            f"Visit this [link]({tl.build_auth_link(bank=source, provider_id=source)})"
+                        ),
                         ui.input_text(id=f"{sid}_auth_link_input",
                                       label="Enter the url from the authentication page: "),
                     ),
@@ -203,7 +205,11 @@ def mount_source_server(source: str, input, output, session):
     def _auth_source_button():
         try:
             auth_link_resp = getattr(input, f"{sid}_auth_link_input")()
-            tl.exchange_code_from_code_url(auth_link_resp, bank=source)
+            tl.exchange_code_from_code_url(
+                auth_link_resp,
+                bank=source,
+                provider_id=source,
+            )
             accounts = tl.get_accounts(source)
             ui.notification_show(
                 f"Successfully pinged the '{source}' account. Received payload: {accounts}",
