@@ -124,6 +124,8 @@ def fetch_data(source, account_id, which_data: Literal['max', 'last'] = 'last'):
 
 def source_ui(source: str):
     sid = sanitize(source)
+    accounts = get_accounts_info_from_creds(source) or []
+    account_choices = ['All'] + [account['account_id'] for account in accounts]
     return ui.layout_columns(
         ui.navset_pill(
             ui.nav_panel(
@@ -155,7 +157,7 @@ def source_ui(source: str):
                     ui.card_body(ui.input_selectize(
                         id=f"{sid}_fetch_account_select",
                         label="Select account",
-                        choices=['All'] + [account['account_id'] for account in get_accounts_info_from_creds(source)]
+                        choices=account_choices
                     ),
                         ui.input_radio_buttons(
                             id=f"{sid}_fetch_period_radio",
@@ -237,7 +239,7 @@ def mount_source_server(source: str, input, output, session):
 
         for account_id in account_ids:
             try:
-                fetch_data(input, account_id, period_selection)
+                fetch_data(source, account_id, period_selection)
                 ui.notification_show(
                     f"Fetching data from '{source}', account: '{account_id}', period: '{period_selection}'...DISABLED.",
                     type='warning',
