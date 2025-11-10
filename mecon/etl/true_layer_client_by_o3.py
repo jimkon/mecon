@@ -190,9 +190,19 @@ class TrueLayerClient:
         self._save()
 
     def exchange_code_from_code_url(self, url, bank):
-        auth_link_resp_split = url.split('?')[1].split('&')
-        code = auth_link_resp_split[0].split('=')[1]
-        state = auth_link_resp_split[2].split('=')[1]
+        """Extract the OAuth code+state parameters from a redirect URL."""
+
+        parsed = up.urlparse(url)
+        query_params = up.parse_qs(parsed.query)
+
+        code_values = query_params.get("code")
+        state_values = query_params.get("state")
+
+        if not code_values or not state_values:
+            raise AuthFlowError("missing code or state in OAuth redirect")
+
+        code = code_values[0]
+        state = state_values[0]
         # … user completes flow …
         self.exchange_code(bank, code=code, returned_state=state)
 
