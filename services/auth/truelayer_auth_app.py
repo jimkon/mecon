@@ -253,17 +253,18 @@ def mount_source_server(source: str, input, output, session):
         for account_id in account_ids:
             try:
                 df = fetch_data(source, account_id, period_selection)
+                shape = df.shape if df else None
 
                 if source in _source_current_data_info_cache:
                     del _source_current_data_info_cache[source]
                 ui.notification_show(
-                    f"Fetching data from '{source}', account: '{account_id}', period: '{period_selection}' returned results with shape {df.shape}",
+                    f"Fetching data from '{source}', account: '{account_id}', period: '{period_selection}' returned results with shape {shape}",
                     type='message',
                     duration=5
                 )
             except Exception as e:
                 ui.notification_show(
-                    f"Failed to exchange token for 'ob-hsbc': {e}",
+                    f"Failed to exchange token for '{source}': {e}",
                     type='error',
                     duration=None
                 )
