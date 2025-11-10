@@ -117,9 +117,13 @@ def fetch_data(source, account_id, which_data: Literal['max', 'last'] = 'last'):
     elif which_data == 'last':
         acc_data_info = source_current_data_info_cached(source)[account_id]
         last_date = acc_data_info['end_date']
-        from_date, to_date = last_date, datetime.today()
-    # tl.get_transactions(source, account_id, from_date, to_date)
-    raise ValueError(f"ERROR for inputs: {source=} {account_id=}, {which_data=}, {from_date=}, {to_date=}")
+        from_date, to_date = datetime.strptime(last_date, "%Y-%m-%d"), datetime.today()
+
+    logging.info(
+        f"Fetching data from '{source}', account: '{account_id}', period: '{which_data}', {from_date=}, {to_date=} ")
+    account_statement = TrueLayerStatements.from_account_id(dataset, account_id)
+    df = account_statement.fetch(since=from_date)
+    return df
 
 
 def source_ui(source: str):
@@ -154,18 +158,21 @@ def source_ui(source: str):
                 "Data",
                 ui.card(
                     ui.card_header("Data"),
-                    ui.card_body(ui.input_selectize(
-                        id=f"{sid}_fetch_account_select",
-                        label="Select account",
-                        choices=account_choices
-                    ),
-                        ui.input_radio_buttons(
-                            id=f"{sid}_fetch_period_radio",
-                            label="Period",
-                            choices={'last': 'Since last fetch', 'max': 'All available (90 days)'},
-                            selected='last',
-                        ),
-                        ui.input_task_button(id=f"fetch_{sid}_button", label="Fetch data...")
+                    ui.card_body(
+                        ui.row(
+                            ui.input_selectize(
+                                id=f"{sid}_fetch_account_select",
+                                label="Select account",
+                                choices=account_choices
+                            ),
+                            ui.input_radio_buttons(
+                                id=f"{sid}_fetch_period_radio",
+                                label="Period",
+                                choices={'last': 'Since last fetch', 'max': 'All available (90 days)'},
+                                selected='last',
+                            ),
+                            ui.input_task_button(id=f"fetch_{sid}_button", label="Fetch data...", width='10%', height='10%'),
+                        )
                     ),
                     ui.card_footer(
                         ui.output_ui(id=f"{sid}_data_info")
@@ -239,11 +246,14 @@ def mount_source_server(source: str, input, output, session):
 
         for account_id in account_ids:
             try:
-                fetch_data(source, account_id, period_selection)
+                df = fetch_data(source, account_id, period_selection)
+
+                if source in _source_current_data_info_cache:
+                    del _source_current_data_info_cache[source]
                 ui.notification_show(
-                    f"Fetching data from '{source}', account: '{account_id}', period: '{period_selection}'...DISABLED.",
-                    type='warning',
-                    duration=2
+                    f"Fetching data from '{source}', account: '{account_id}', period: '{period_selection}' returned results with shape {df.shape}",
+                    type='message',
+                    duration=5
                 )
             except Exception as e:
                 ui.notification_show(

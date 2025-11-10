@@ -343,7 +343,7 @@ class TrueLayerStatements(APIAccountStatementsSource):
         filepath.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(filepath, index_label=None)
         logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
-
+        return df
 
 class TrueLayerHSBCStatements(TrueLayerStatements):
     id = 'TLHSBC'

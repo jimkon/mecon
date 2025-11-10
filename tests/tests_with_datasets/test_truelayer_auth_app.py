@@ -1,4 +1,5 @@
 import importlib
+import unittest
 
 import pytest
 
@@ -88,3 +89,7 @@ def test_format_helpers_include_account_data(truelayer_auth_app_module):
     assert "TrueLayerHSBC" in data_html
     assert "2024-03-01" in data_html
     assert "2024-03-06" in data_html
+
+
+if __name__ == '__main__':
+    unittest.main()
