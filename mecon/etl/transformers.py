@@ -381,6 +381,8 @@ class Trading212StatementTransformer(StatementTransformer):
         df['sign'] = df['action'].apply(lambda a: -1 if a=='Market buy' else 1)
         df_transformed['amount'] = df['total']*df['sign']
         df_transformed['amount_cur'] = df['total']*df['sign']
+        del df['sign']
+
         df_transformed['currency'] = df['currency_(total)']
 
         cols_to_concat = df.columns.difference(df_transformed.columns).difference(['time', 'total', 'id'])
