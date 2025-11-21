@@ -42,6 +42,10 @@ def get_accounts_info_from_creds(source):
         logging.warning(f"No {source} found in TrueLayer sources credentials")
         return None
 
+    if 'accounts' not in creds['truelayer']['sources'][source]:
+        logging.warning(f"No '{source}' found in TrueLayer sources credentials")
+        return None
+
     import copy
     accounts = copy.deepcopy(creds['truelayer']['sources'][source]['accounts'])
 
