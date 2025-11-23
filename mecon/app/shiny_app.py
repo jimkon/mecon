@@ -1,6 +1,5 @@
 import datetime
 import logging
-from enum import Enum
 from urllib.parse import urlparse, parse_qs
 
 import dateparser
@@ -14,14 +13,6 @@ from mecon.utils.html import build_url
 logging.basicConfig()
 logging.getLogger().setLevel(logging.INFO)
 
-
-# datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
-# if not datasets_dir.exists():
-#     raise ValueError(f"Unable to locate Datasets directory: {datasets_dir} does not exists")
-#
-# datasets_obj = WorkingDatasetDir()
-# datasets_dict = {dataset.name: dataset.name for dataset in datasets_obj.datasets()} if datasets_obj else {}
-# dataset = datasets_obj.working_dataset
 
 def get_all_datasets():
     datasets_dir = config.DEFAULT_DATASETS_DIR_PATH
@@ -64,11 +55,6 @@ def url_for_tag_edit(**kwargs):
     url = build_url("http://127.0.0.1:8002/edit_data/tags/edit/", kwargs)
     return url
 
-
-# dm = WorkingDataManager()
-# all_tags = dm.all_tags()
-#
-# all_transactions = dm.get_transactions()
 
 tab_title = ui.tags.title("μEcon App")
 page_title = ui.HTML(
@@ -190,8 +176,6 @@ class DatePeriod:
         return start_date, end_date
 
 
-# t ={v:DatePeriod.date_range_for_period(v) for v in DatePeriod.date_periods_key_values().values()}
-
 
 def transactions_intersection_filtered_factory(
         default_period=None,
@@ -242,11 +226,6 @@ def transactions_intersection_filtered_factory(
             selected=None,
             multiple=True
         ),
-        # ui.input_task_button( # too much trouble for now, just do it manually or refresh the page
-        #     id='reset_filter_values_button',
-        #     label='Reset Values',
-        #     label_busy='Filtering...'
-        # )
     )
 
 
@@ -359,17 +338,6 @@ def filter_funcs_factory(
         start_date, end_date = DatePeriod.date_range_for_period(period)
         if start_date is None or end_date is None:
             start_date, end_date = transactions.date_range()
-        # today = datetime.date.today()
-        # if period == 'Last 7 days':
-        #     start_date, end_date = today - datetime.timedelta(days=7), today
-        # elif period == 'Last 30 days':
-        #     start_date, end_date = today - datetime.timedelta(days=30), today
-        # elif period == 'Last 90 days':
-        #     start_date, end_date = today - datetime.timedelta(days=90), today
-        # elif period == 'Last year':
-        #     start_date, end_date = today - datetime.timedelta(days=365), today
-        # else:
-        #     start_date, end_date = transactions.date_range()
         return start_date, end_date
 
     @reactive.calc
@@ -390,6 +358,10 @@ def filter_funcs_factory(
 
     @reactive.calc
     def default_transactions():
+        """
+        Uses the filter_in_tags and filter_out_tags arguments from the URL parameters to
+        filter the transactions.
+        """
         filter_url_params = filter_url_params_calc()
         filter_in_tags = filter_url_params['filter_in_tags']
         filter_out_tags = filter_url_params['filter_out_tags']
@@ -465,49 +437,11 @@ def filter_funcs_factory(
         else:
             start_date, end_date = _dates_for_period(current_period, all_transactions)
 
-        # start_date, end_date, min_date, max_date = _clamp_date_range(all_transactions, start_date, end_date)
-        # ui.update_date_range(id='transactions_date_range',
-        #                      start=start_date,
-        #                      end=end_date,
-        #                      min=min_date,
-        #                      max=max_date)
-
         last_period.set(current_period)
         initialized.set(True)
 
-        # if len(input.compare_tags_select()) == 0:  TODO
-        #     logging.info(f"Updating compare tags: {len(new_choices)} {filter_url_params['compare_tags']}")
-        #     ui.update_selectize(id='compare_tags_select',
-        #                         choices=sorted(new_choices),
-        #                         selected=filter_url_params['compare_tags'])
-
         logging.info(f"init->{input.filter_in_tags_select()=} {input.compare_tags_select()=}")
 
-    # @reactive.calc
-    # def reset_filter_inputs():
-    #     logging.info('Reset filters')
-    #     default_params = url_params()
-    #     default_tags = default_params['tags']
-    #
-    #     if input.date_period_input_select() == 'Last 30 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=30), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last 90 days':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=90), datetime.date.today()
-    #     elif input.date_period_input_select() == 'Last year':
-    #         start_date, end_date = datetime.date.today() - datetime.timedelta(days=365), datetime.date.today()
-    #     else:
-    #         start_date, end_date = all_transactions.date_range()
-    #
-    #     default_time_unit = default_params['time_unit']
-    #     ui.update_radio_buttons(id='time_unit_select', selected=default_time_unit)
-    #
-    #     new_choices = [tag_name for tag_name, cnt in all_transactions.containing_tag(default_tags).all_tag_counts().items() if
-    #                    cnt > 0]
-    #     ui.update_selectize(id='filter_in_tags_select',
-    #                         choices=sorted(new_choices),
-    #                         selected=default_tags)
-    #
-    #     return start_date, end_date, default_time_unit, default_tags
 
     @reactive.effect
     @reactive.event(input.date_period_input_select)
@@ -523,11 +457,7 @@ def filter_funcs_factory(
         logging.info(f"Changed period to '{current_period}'")
         start_date, end_date = _dates_for_period(current_period, _all_transactions)
         min_date, max_date = start_date, end_date
-        # date_range_values = _clamp_date_range(_all_transactions, start_date, end_date)
-        # if date_range_values:
-        #     start_date, end_date, min_date, max_date = date_range_values
-        # else:
-        #     start_date, end_date, min_date, max_date = [end_date] * 4
+
         logging.info(f"date_range set to {min_date=} and {max_date=}")
 
         ui.update_date_range(id='transactions_date_range',
@@ -614,11 +544,7 @@ filter_menu = ui.sidebar(
         selected=None,
         multiple=True
     ),
-    # ui.input_task_button( # too much trouble for now, just do it manually or refresh the page
-    #     id='reset_filter_values_button',
-    #     label='Reset Values',
-    #     label_busy='Filtering...'
-    # )
+
 )
 
 datatable_styles = [
