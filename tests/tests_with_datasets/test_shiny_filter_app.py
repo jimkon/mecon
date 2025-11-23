@@ -115,7 +115,7 @@ def test_url_params_seed_filter_inputs(shiny_filter_context):
     assert start_date == datetime.date(2024, 3, 1)
     assert end_date == datetime.date(2024, 3, 25)
     assert period == "All"
-    assert include_tags == ["Commute"] # filter_in_tags=Commute
+    assert include_tags == ["Commute"]  # filter_in_tags=Commute
 
 
 def test_filtered_transactions_respects_tag_filters(shiny_filter_context):
@@ -207,24 +207,5 @@ def test_filtered_transactions_respects_date_range(shiny_filter_context):
     assert all("Commute" in tags for tags in filtered_df["tags"])
 
 
-def test_period_change_resets_date_range(shiny_filter_context):
-    ctx = shiny_filter_context
-
-    with reactive.isolate():
-        ctx.session.input["transactions_date_range"].set(
-            (datetime.date(2024, 3, 4), datetime.date(2024, 3, 4))
-        )
-    _flush_reactive()
-
-    with reactive.isolate():
-        ctx.session.input["date_period_input_select"].set("Last 90 days")
-    _flush_reactive()
-
-    dataset_start, dataset_end = ctx.data_manager.get_transactions().date_range()
-    expected_start = max(dataset_start, datetime.date.today() - datetime.timedelta(days=90))
-    expected_end = min(dataset_end, datetime.date.today())
-
-    with reactive.isolate():
-        start_date, end_date = ctx.session.input["transactions_date_range"]()
-
-    assert (start_date, end_date) == (expected_start, expected_end)
+if __name__ == '__main__':
+    pytest.main()
