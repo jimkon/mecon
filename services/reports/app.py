@@ -13,6 +13,7 @@ async def redirect_to_menu(request):
 
 
 routes = [
+    Route('/', endpoint=redirect_to_menu),
     Route('/reports/', endpoint=redirect_to_menu),
     Mount('/reports/menu/', app=reports_menu_app),
     Mount('/reports/tags/', app=tag_info_app),
@@ -21,3 +22,7 @@ routes = [
 ]
 
 app = Starlette(routes=routes)
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='localhost', port=8001)
