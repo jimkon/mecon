@@ -381,6 +381,8 @@ class Trading212StatementTransformer(StatementTransformer):
         df['sign'] = df['action'].apply(lambda a: -1 if a=='Market buy' else 1)
         df_transformed['amount'] = df['total']*df['sign']
         df_transformed['amount_cur'] = df['total']*df['sign']
+        del df['sign']
+
         df_transformed['currency'] = df['currency_(total)']
 
         cols_to_concat = df.columns.difference(df_transformed.columns).difference(['time', 'total', 'id'])
@@ -420,10 +422,7 @@ class TrueLayerStatementTransformer(StatementTransformer):
         df = df.copy()
 
         df_transformed = pd.DataFrame({'id': df['transaction_id']})
-        try:
-            df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%SZ")
-        except ValueError as ve:
-            df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%S.%fZ")
+        df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="ISO8601", utc=True,)
 
         df_transformed['amount'] = self.convert_amounts(df['amount'], df['currency'],
                                                         df_transformed['datetime'].dt.date)

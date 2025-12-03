@@ -11,8 +11,13 @@ async def redirect_to_menu(request):
 
 # combine apps ----
 routes = [
+    Route('/', endpoint=redirect_to_menu),
     Route('/auth', endpoint=redirect_to_menu),
     Mount('/auth/truelayer', app=tl_auth_app),
 ]
 
 app = Starlette(routes=routes)
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='localhost', port=8003)

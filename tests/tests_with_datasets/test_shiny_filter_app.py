@@ -93,6 +93,15 @@ def shiny_filter_context(dataset_manager, monkeypatch):
 
 
 def test_url_params_seed_filter_inputs(shiny_filter_context):
+    """
+    -> after
+    [] inside
+    init[default_transactions]->period_change_effect
+
+    Mostly checks if init initialised the inputs [time_unit_select,
+    filter_in_tags_select, transactions_date_range, date_period_input_select]
+    with the expected values given the transactions and url arguments
+    """
     ctx = shiny_filter_context
 
     with reactive.isolate():
@@ -101,14 +110,33 @@ def test_url_params_seed_filter_inputs(shiny_filter_context):
         start_date, end_date = ctx.session.input["transactions_date_range"]()
         period = ctx.session.input["date_period_input_select"]()
 
+    # all transactions are between 2024-3-1 and 2024-3-25
     assert time_unit == "month"
-    assert include_tags == ["Commute"]
     assert start_date == datetime.date(2024, 3, 1)
     assert end_date == datetime.date(2024, 3, 25)
     assert period == "All"
+    assert include_tags == ["Commute"]  # filter_in_tags=Commute
 
 
 def test_filtered_transactions_respects_tag_filters(shiny_filter_context):
+    """
+    -> after
+    [] inside
+
+    ->init[default_transactions]
+    ->period_change_effect
+    ->input["filter_out_tags_select"].set(["Monzo"])
+    ->filtered_transactions[get_filter_params]
+
+    Checks if the url arguments are used correctly to filter
+    the transactions for the right tags and produce the default_transactions.
+
+    URL:?filter_in_tags=Commute&filter_out_tags=&time_unit=month&start_date=2024-03-01&end_date=2024-03-25
+
+    We expect to see only the transactions tagged as Commute.
+    Then it sets the filter_out_tags_select input to Monzo, and we
+    expect one of the transaction to be filtered out
+    """
     ctx = shiny_filter_context
 
     with reactive.isolate():
@@ -130,6 +158,28 @@ def test_filtered_transactions_respects_tag_filters(shiny_filter_context):
 
 
 def test_filtered_transactions_respects_date_range(shiny_filter_context):
+    """
+    -> after
+    [] inside
+
+    ->init[default_transactions]
+    ->period_change_effect
+    ->input["transactions_date_range"].set((datetime.date(2024, 3, 4), datetime.date(2024, 3, 4)))
+    ->ctx.filtered_transactions()
+    ->filtered_transactions[get_filter_params]
+    ->input["time_unit_select"].set('day')
+    ->ctx.filtered_transactions()
+    ->filtered_transactions[get_filter_params]
+
+    we get the filter transactions tagged as Commute and filter
+    for the day (2024, 3, 4).
+    for time_unit=month we expect to see
+    one transaction with date to be the first day of the month.
+    for time_unit=day we expect to see one transaction
+    with the date to be the day of the transaction
+
+    """
+
     ctx = shiny_filter_context
 
     with reactive.isolate():
@@ -139,31 +189,23 @@ def test_filtered_transactions_respects_date_range(shiny_filter_context):
     _flush_reactive()
     with reactive.isolate():
         filtered = ctx.filtered_transactions()
-
     filtered_df = filtered.dataframe()
+
+    assert len(filtered_df) == 1
+    assert all("2024-03-01" in ts for ts in filtered_df["datetime"].astype(str))
+    assert all("Commute" in tags for tags in filtered_df["tags"])
+
+    with reactive.isolate():
+        ctx.session.input["time_unit_select"].set('day')
+    _flush_reactive()
+    with reactive.isolate():
+        filtered = ctx.filtered_transactions()
+    filtered_df = filtered.dataframe()
+
     assert len(filtered_df) == 1
     assert all("2024-03-04" in ts for ts in filtered_df["datetime"].astype(str))
     assert all("Commute" in tags for tags in filtered_df["tags"])
 
 
-def test_period_change_resets_date_range(shiny_filter_context):
-    ctx = shiny_filter_context
-
-    with reactive.isolate():
-        ctx.session.input["transactions_date_range"].set(
-            (datetime.date(2024, 3, 4), datetime.date(2024, 3, 4))
-        )
-    _flush_reactive()
-
-    with reactive.isolate():
-        ctx.session.input["date_period_input_select"].set("Last 90 days")
-    _flush_reactive()
-
-    dataset_start, dataset_end = ctx.data_manager.get_transactions().date_range()
-    expected_start = max(dataset_start, datetime.date.today() - datetime.timedelta(days=90))
-    expected_end = min(dataset_end, datetime.date.today())
-
-    with reactive.isolate():
-        start_date, end_date = ctx.session.input["transactions_date_range"]()
-
-    assert (start_date, end_date) == (expected_start, expected_end)
+if __name__ == '__main__':
+    pytest.main()

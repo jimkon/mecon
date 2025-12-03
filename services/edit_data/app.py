@@ -13,6 +13,7 @@ async def redirect_to_menu(request):
 
 # combine apps ----
 routes = [
+    Route('/', endpoint=redirect_to_menu),
     Route('/edit_data/', endpoint=redirect_to_menu),
     Route('/edit_data/tags/', endpoint=redirect_to_menu),
     Mount('/edit_data/tags/menu', app=menu_tags_app),
@@ -21,3 +22,8 @@ routes = [
 ]
 
 app = Starlette(routes=routes)
+
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host='localhost', port=8002)
+
