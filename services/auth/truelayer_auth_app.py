@@ -257,7 +257,7 @@ def mount_source_server(source: str, input, output, session):
         for account_id in account_ids:
             try:
                 df = fetch_data(source, account_id, period_selection)
-                shape = df.shape if df else None
+                shape = df.shape if df is not None else None
 
                 if source in _source_current_data_info_cache:
                     del _source_current_data_info_cache[source]
