@@ -96,10 +96,10 @@ class AccountStatementsSource:
         transformer = transformers.statement_transformers_factory(source)
         return AccountStatementsSource(dir_path, transformer)
 
-    @classmethod
-    def from_dataset(cls, dataset: Dataset) -> list["AccountStatementsSource"]:
-        statements_dirs = [p.name for p in dataset.statements.glob('*') if p.is_dir()]
-        return [account_statements_factory(dataset, d) for d in statements_dirs]
+    # @classmethod TODO remove?
+    # def from_dataset(cls, dataset: Dataset) -> list["AccountStatementsSource"]:
+    #     statements_dirs = [p.name for p in dataset.statements.glob('*') if p.is_dir()]
+    #     return [account_statements_factory(dataset, d) for d in statements_dirs]
 
     def __repr__(self):
         return f"{self.id} #AccountStatement({self.dir_name})"
@@ -543,6 +543,30 @@ class MonzoAPIStatements(APIAccountStatementsSource):
             api_handler = None
 
         return cls(
+            working_dir=working_dir,
+            trans_transformer=transformers.MonzoAPIFileStatementTransformer(),
+            api_handler=api_handler
+        )
+
+    @classmethod
+    def from_dataset(cls, dataset):
+        creds = dataset.creds
+
+        try:
+            api_handler = MonzoClient(creds)
+        except Exception as e:
+            logging.warning(
+                f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
+            api_handler = None
+
+        _class = MonzoAPIStatements
+        working_dir = dataset.statements / _class.dir_name
+        if not working_dir.exists():
+            logging.warning(
+                f"TrueLayer account_statement cannot be created: '{_class.dir_name}' directory is not found in {dataset.statements}.")
+            return None
+
+        return _class(
             working_dir=working_dir,
             trans_transformer=transformers.MonzoAPIFileStatementTransformer(),
             api_handler=api_handler
