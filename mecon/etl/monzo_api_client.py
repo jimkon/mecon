@@ -142,10 +142,12 @@ class MonzoClient:
         try:
             self.monzo_auth.authenticate(authorization_token=code, state_token=state)
         except Exception as e:
+            logging.exception(e)
             # Provide a clearer error including the common causes
             raise MonzoCredentialsError(
                 "Could not fetch a valid access token. "
-                "Common causes: (1) redirect_url mismatch, (2) expired code, or (3) wrong URL pasted."
+                "Common causes: (1) redirect_url mismatch, (2) expired code, or (3) wrong URL pasted. "
+                f"Error message: {e}"
             ) from e
 
         self._refresh_token_in_creds()
