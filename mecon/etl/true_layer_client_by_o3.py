@@ -210,6 +210,8 @@ class TrueLayerClient:
         )
         source_creds = self._creds.setdefault("sources", {}).setdefault(bank, {})
         source_creds["token"] = token.to_json()
+        source_creds["last_authenticated_at"] = now.isoformat()
+        source_creds["last_token_refresh_at"] = now.isoformat()
         # clean transient fields
         transient_store.pop(key, None)
         if not transient_store:
@@ -269,7 +271,17 @@ class TrueLayerClient:
         if not token.is_expired:
             return token
 
-        # refresh
+        return self.refresh_token(bank)
+
+    def refresh_token(self, bank: str) -> Token:
+        """Force-refresh a bank token and persist metadata."""
+
+        src = self._creds["sources"].get(bank, {})
+        if "token" not in src:
+            raise AuthFlowError(f"no token stored for bank '{bank}'")
+
+        token = Token.from_json(src["token"])
+
         data = {
             "grant_type": "refresh_token",
             "client_id": self._creds["client_id"],
@@ -293,6 +305,7 @@ class TrueLayerClient:
         )
         # persist
         src["token"] = token.to_json()
+        src["last_token_refresh_at"] = now.isoformat()
         self._save()
         return token
 

@@ -6,6 +6,7 @@ import copy
 
 from json2html import json2html
 from shiny import App, ui, render, reactive
+from dateparser import parse
 
 from mecon.app import shiny_app
 from mecon.etl.account_statements import TrueLayerStatements
@@ -28,6 +29,13 @@ def sanitize(source: str) -> str:
     return source.replace("-", "_")
 
 
+def date_to_days_since(date_str: str | None) -> str:
+    if date_str is None:
+        return "null"
+    date_in = datetime.fromisoformat(date_str).date()
+    days_since_today = (datetime.today().date() - date_in).days
+    return f"{days_since_today} days ago"
+
 def get_accounts_info_from_creds(source):
     if 'truelayer' not in creds:
         logging.warning(f"No TrueLayer credentials found in creds")
@@ -46,6 +54,21 @@ def get_accounts_info_from_creds(source):
         return None
 
     accounts = copy.deepcopy(creds['truelayer']['sources'][source]['accounts'])
+    for i in range(len(accounts)):
+        del accounts[i]['provider']
+        accounts[i]['update_timestamp'] =  date_to_days_since(accounts[i]['update_timestamp'])
+        token_info = {}
+        token_info['last_token_refresh_at'] = date_to_days_since(creds['truelayer']['sources'][source].get('last_token_refresh_at', None))
+        if 'token' in creds['truelayer']['sources'][source]:
+            token_info['token_expires_at'] = date_to_days_since(creds['truelayer']['sources'][source]['token'].get('expires_at', None))
+            token_info['token_fetched_at'] = date_to_days_since(creds['truelayer']['sources'][source]['token'].get('fetched_at', None))
+            token_info['token_refreshed_at'] = date_to_days_since(creds['truelayer']['sources'][source]['token'].get('refreshed_at', None))
+        else:
+            token_info['token_expires_at'] = 'null'
+            token_info['token_fetched_at'] = 'null'
+            token_info['token_refreshed_at'] = 'null'
+
+        accounts[i]['token_info'] = token_info
 
     return accounts
 
@@ -140,6 +163,7 @@ def source_ui(source: str):
                     ui.card_body(ui.output_ui(id=f"{sid}_api_status")),
                     ui.card_footer(
                         ui.input_task_button(id=f"refresh_{sid}_accounts_button", label="Refresh accounts"),
+                        ui.input_task_button(id=f"refresh_{sid}_token_button", label="Refresh token"),
                     )
                 )
             ),
@@ -209,6 +233,19 @@ def mount_source_server(source: str, input, output, session):
         except Exception as e:
             ui.notification_show(
                 f"Ping failed for {source}: {e}", type="error", duration=None
+            )
+
+    @reactive.effect
+    @reactive.event(input[f"refresh_{sid}_token_button"])
+    def _refresh_token():
+        try:
+            tl.refresh_token(source)
+            ui.notification_show(
+                f"Successfully refreshed token for {source}", type="message", duration=2
+            )
+        except Exception as e:
+            ui.notification_show(
+                f"Refreshing token failed for {source}: {e}", type="error", duration=None
             )
 
     @reactive.effect
