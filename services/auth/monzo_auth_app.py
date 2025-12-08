@@ -36,6 +36,20 @@ def get_accounts_info_from_creds():
         return None
 
     accounts = copy.deepcopy(creds['monzo-api']['accounts'])
+    if 'token' in creds['monzo-api']:
+        accounts[0]['token_info'] = {}
+        accounts[0]['token_info']['expires_at'] = creds['monzo-api']['token']['expires_at'] if 'expires_at' in \
+                                                                                            creds['monzo-api'][
+                                                                                                'token'] else 'No expires_at field'
+
+        accounts[0]['token_info']['expiry'] = str(datetime.fromtimestamp(creds['monzo-api']['token']['expiry'])) if 'expiry' in \
+                                                                                                            creds[
+                                                                                                                'monzo-api'][
+                                                                                                                'token'] else 'No expiry field',
+        accounts[0]['token_info']['refresh_token'] = '****' if 'refresh_token' in creds['monzo-api']['token'] else 'No refresh_token field'
+        accounts[0]['token_info']['access_token'] = '****' if 'access_token' in creds['monzo-api']['token'] else 'No access_token field'
+    else:
+        accounts[0]['token_info'] = 'No token found'
 
     return accounts
 
@@ -131,6 +145,7 @@ def source_ui():
                     ui.card_body(ui.output_ui(id=f"{sid}_api_status")),
                     ui.card_footer(
                         ui.input_task_button(id=f"refresh_{sid}_accounts_button", label="Refresh accounts"),
+                        ui.input_task_button(id=f"refresh_{sid}_token_button", label="Refresh Token"),
                     )
                 )
             ),
@@ -139,7 +154,8 @@ def source_ui():
                 ui.card(
                     ui.card_body(
                         ui.markdown(
-                            f"Visit this [link]({monzo_client.get_authentication_url()})"
+                            f"Visit this [link]({monzo_client.get_authentication_url()}) *note each link can be used"
+                            f"only once. If anything goes wrong in the process create a new link by refreshing the page"
                         ),
                         ui.markdown(
                             "Enter your email address that is linked with your Monzo account"
@@ -150,6 +166,9 @@ def source_ui():
                         ),
                         ui.input_text(id=f"{sid}_auth_link_input",
                                       label="Paste the link address here: "),
+                        ui.markdown(
+                            "Go to the Monzo app on your phone and approve the request"
+                        ),
                     ),
                     ui.card_footer(
                         ui.input_task_button(id=f"auth_{sid}_button", label="Authenticate"),
@@ -206,6 +225,20 @@ def mount_source_server(input, output, session):
         except Exception as e:
             ui.notification_show(
                 f"Ping failed for 'monzo-api': {e}", type="error", duration=None
+            )
+
+
+    @reactive.effect
+    @reactive.event(input[f"refresh_{sid}_token_button"])
+    def _on_test_click():
+        try:
+            monzo_client.refresh_token()  # for example
+            ui.notification_show(
+                f"Successfully refreshed token", type="message", duration=2
+            )
+        except Exception as e:
+            ui.notification_show(
+                f"Refreshing the token failed for 'monzo-api': {e}", type="error", duration=None
             )
 
     @reactive.effect
