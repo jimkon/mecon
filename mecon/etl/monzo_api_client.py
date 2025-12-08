@@ -112,12 +112,21 @@ class MonzoClient:
 
     # -------- OAuth helpers --------
     def get_authentication_url(self):
-        return self.monzo_auth.authentication_url
+        url, state = self.get_authentication_url_and_state()
+        self._mark_pending_state(state)
+        return url
 
     def get_authentication_url_and_state(self):
-        url_and_state = self.get_authentication_url()
+        url_and_state = self.monzo_auth.authentication_url
         url, state = url_and_state.split('&state=')
         return url, state
+
+    def _mark_pending_state(self, state: str):
+        self.monzo_creds['_pending_auth'] = {
+            'state': state,
+            'created_at': datetime.datetime.utcnow().isoformat()
+        }
+        self.creds_file.save()
 
     def set_authentication_code_from_url(self, response_url: str):
         """
