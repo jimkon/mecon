@@ -5,6 +5,7 @@ from typing import Dict, Optional, Tuple
 import starlette.status as status
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
+from starlette.responses import RedirectResponse
 
 from mecon.etl.monzo_api_client import MonzoClient
 from mecon.etl.true_layer_client_by_o3 import TrueLayerClient
@@ -49,6 +50,9 @@ def _build_success_response(message: str) -> Response:
         status_code=status.HTTP_200_OK,
     )
 
+def _build_success_redirect(to: str) -> Response:
+    return RedirectResponse(url=to, status_code=302)
+
 
 async def handle_callback(request: Request) -> Response:
     provider = request.path_params.get("provider")
@@ -68,7 +72,7 @@ async def handle_callback(request: Request) -> Response:
         )
 
     try:
-        from mecon.app import shiny_app  # Local import to avoid importing Shiny during test discovery
+        from mecon.app import shiny_app  # TODO get the creds without importing shiny_app
 
         dataset = shiny_app.get_working_dataset()
         creds = dataset.creds
@@ -125,7 +129,9 @@ async def _handle_truelayer_callback(query_params, creds: Dict) -> Response:
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    return _build_success_response(f"TrueLayer: credentials stored for {bank}")
+    # return _build_success_response(f"TrueLayer: credentials stored for {bank}")
+    logging.info(f"TrueLayer: credentials stored for {bank}")
+    return _build_success_redirect(to="http://127.0.0.1:8003/auth/truelayer/")
 
 
 async def _handle_monzo_callback(request: Request, query_params, creds: Dict) -> Response:
@@ -168,4 +174,6 @@ async def _handle_monzo_callback(request: Request, query_params, creds: Dict) ->
     except Exception:
         LOGGER.exception("Failed to persist Monzo credentials")
 
-    return _build_success_response("Monzo authorisation complete")
+    # return _build_success_response("Monzo authorisation complete")
+    logging.info("Monzo authorisation complete")
+    return _build_success_redirect(to="http://127.0.0.1:8003/auth/monzo/")

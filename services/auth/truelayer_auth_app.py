@@ -175,7 +175,8 @@ def source_ui(source: str):
                                 choices={'last': 'Since last fetch', 'max': 'All available (90 days)'},
                                 selected='last',
                             ),
-                            ui.input_task_button(id=f"fetch_{sid}_button", label="Fetch data...", width='10%', height='10%'),
+                            ui.input_task_button(id=f"fetch_{sid}_button", label="Fetch data...", width='10%',
+                                                 height='10%'),
                         )
                     ),
                     ui.card_footer(
@@ -278,6 +279,10 @@ def mount_source_server(source: str, input, output, session):
 sources = ["ob-hsbc", "ob-revolut", "ob-monzo"]
 
 app_ui = shiny_app.app_ui_factory(
+    ui.row(
+        ui.tags.a("Monzo auth", href=f"http://127.0.0.1:8003/auth/monzo"),
+        ui.tags.a("True Layer auth", href=f"http://127.0.0.1:8003/auth/truelayer"),
+    ),
     ui.navset_tab(
         *(ui.nav_panel(src.upper(), source_ui(src)) for src in sources)
     )
