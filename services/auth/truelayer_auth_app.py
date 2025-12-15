@@ -55,8 +55,9 @@ def get_accounts_info_from_creds(source):
 
     accounts = copy.deepcopy(creds['truelayer']['sources'][source]['accounts'])
     for i in range(len(accounts)):
-        del accounts[i]['provider']
-        accounts[i]['update_timestamp'] =  date_to_days_since(accounts[i]['update_timestamp'])
+        if 'provider' in accounts[i]:
+            del accounts[i]['provider']
+        accounts[i]['update_timestamp'] =  date_to_days_since(accounts[i].get('update_timestamp', None))
         token_info = {}
         token_info['last_token_refresh_at'] = date_to_days_since(creds['truelayer']['sources'][source].get('last_token_refresh_at', None))
         if 'token' in creds['truelayer']['sources'][source]:
