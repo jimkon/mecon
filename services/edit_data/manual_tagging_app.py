@@ -306,7 +306,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     def enhance_transactions_df(df_tx, all_tags: set[str]):
         logging.info(f"Enhancing transactions df with {df_tx.shape[0]} rows")
-        df_ench = df_tx.copy()
+        df_ench = df_tx.copy().sort_values(by=['datetime'], ascending=False)
         df_ench['current_tags'] = df_ench['tags'].apply(lambda tags: ','.join(sorted(tags.split(','))))
         df_ench['tags'] = df_ench['tags'].apply(lambda tags: set(tags.split(',')))
         df_ench['date'] = df_tx['datetime'].apply(lambda dt: dt.date().strftime('%Y-%m-%d'))
