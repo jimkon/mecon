@@ -12,6 +12,7 @@ from mecon.etl.account_statements import (
     MonzoAPIStatements,
     Trading212APIStatements,
     TrueLayerHSBCStatements,
+    TrueLayerStatements,
 )
 from mecon.etl.dataset import Dataset
 
@@ -288,6 +289,27 @@ class TrueLayerDatasetFlowTests(unittest.TestCase):
                 },
             ],
         )
+
+    def test_tl_from_id_and_creds(self):
+        dataset_path = (
+                Path(__file__).resolve().parent
+                / "datasets"
+                / "test_statements_and_tags"
+        )
+        dataset = Dataset.from_dirpath(dataset_path)
+
+        tl_hsbc = TrueLayerStatements.from_account_id(dataset, account_id='d4aa58643585c1e3a5f7d3e24cf5e829')
+        self.assertIsNotNone(tl_hsbc)
+
+        tl_hsbc_saver = TrueLayerStatements.from_account_id(dataset, account_id='875dba485407b435dfddccc5a91e772b')
+        self.assertIsNotNone(tl_hsbc_saver)
+
+        tl_invalid_id = TrueLayerStatements.from_account_id(dataset, account_id='a random id')
+        self.assertIsNone(tl_invalid_id)
+
+        tl_invalid_id = TrueLayerStatements.from_account_id(dataset,
+                                                            account_id='fa5ddbfc7431ffd009445263b4259094') # valid but not existing dir
+        self.assertIsNone(tl_invalid_id)
 
 
 if __name__ == "__main__":

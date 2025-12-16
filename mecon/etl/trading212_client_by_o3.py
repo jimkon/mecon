@@ -282,7 +282,7 @@ class Trading212Client:
         logging.info(
             "Requesting a new full export by year from %s until %s (UTC).",
             since.isoformat(),
-            end.isoformat(),
+            # end.isoformat(),
         )
         end = dt.datetime.now(timezone.utc)
         cur = since.astimezone(timezone.utc)

@@ -62,7 +62,7 @@ class AccountStatementsSource:
                 dfs.append(df)
 
         logging.info(
-            f"AccountStatements({self.name}) discovered {len(dfs)} statement files with {sum(len(df) for df in dfs)} total rows")
+            f"AccountStatements({self.name}) discovered {len(dfs)} statement files with {sum(len(df) for df in dfs)} total rows. Paths-> {self.statement_filepaths}")
         return dfs
 
     def to_transactions(self) -> Transactions:
@@ -96,10 +96,10 @@ class AccountStatementsSource:
         transformer = transformers.statement_transformers_factory(source)
         return AccountStatementsSource(dir_path, transformer)
 
-    @classmethod
-    def from_dataset(cls, dataset: Dataset) -> list["AccountStatementsSource"]:
-        statements_dirs = [p.name for p in dataset.statements.glob('*') if p.is_dir()]
-        return [account_statements_factory(dataset, d) for d in statements_dirs]
+    # @classmethod TODO remove?
+    # def from_dataset(cls, dataset: Dataset) -> list["AccountStatementsSource"]:
+    #     statements_dirs = [p.name for p in dataset.statements.glob('*') if p.is_dir()]
+    #     return [account_statements_factory(dataset, d) for d in statements_dirs]
 
     def __repr__(self):
         return f"{self.id} #AccountStatement({self.dir_name})"
@@ -286,6 +286,42 @@ class TrueLayerStatements(APIAccountStatementsSource):
             api_handler=api_handler
         )
 
+    @classmethod
+    def from_account_id(cls, dataset, account_id):
+        creds = dataset.creds
+        accs = [TrueLayerHSBCStatements,
+                TrueLayerHSBCSSaverStatements,
+                TrueLayerRevolutGBPStatements,
+                TrueLayerRevolutEURStatements,
+                TrueLayerRevolutRONStatements,
+                TrueLayerRevolutHUFStatements,
+                TrueLayerMonzoStatements
+                ]
+        try:
+            api_handler = TrueLayerClient(creds)
+        except Exception as e:
+            logging.warning(f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
+            api_handler = None
+
+        class_matches = [acc for acc in accs if acc.account_id == account_id]
+        if len(class_matches) == 0:
+            logging.warning(f"TrueLayer account_statement cannot be created: Account ID {account_id} not found for {cls.__name__}.")
+            return None
+
+        _class = class_matches[0]
+        working_dir = dataset.statements / _class.dir_name
+        if not working_dir.exists():
+            logging.warning(f"TrueLayer account_statement cannot be created: '{_class.dir_name}' directory is not found in {dataset.statements}.")
+            return None
+
+        return _class(
+            working_dir=working_dir,
+            trans_transformer=transformers.TrueLayerStatementTransformer(
+                source=cls.id,
+            ),
+            api_handler=api_handler
+        )
+
     def fetch(self, since: dt.datetime | None = None):
         super().fetch(since)
         fetch_datetime = datetime.now().date()
@@ -307,7 +343,7 @@ class TrueLayerStatements(APIAccountStatementsSource):
         filepath.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(filepath, index_label=None)
         logging.info(f"A statement file for {self.id} with {df.shape=} rows got added to the source dir: {filepath}")
-
+        return df
 
 class TrueLayerHSBCStatements(TrueLayerStatements):
     id = 'TLHSBC'
@@ -317,7 +353,7 @@ class TrueLayerHSBCStatements(TrueLayerStatements):
     account_id = 'd4aa58643585c1e3a5f7d3e24cf5e829'
 
 
-class TrueLayerHSBCSSaverStatements(TrueLayerStatements):
+class TrueLayerHSBCSSaverStatements(TrueLayerStatements): # typo HSBC>S<Sa
     id = 'TLHSBCSVR'
     dir_name = 'TrueLayerHSBCSaver'
     original_provider = 'HSBC'
@@ -507,6 +543,30 @@ class MonzoAPIStatements(APIAccountStatementsSource):
             api_handler = None
 
         return cls(
+            working_dir=working_dir,
+            trans_transformer=transformers.MonzoAPIFileStatementTransformer(),
+            api_handler=api_handler
+        )
+
+    @classmethod
+    def from_dataset(cls, dataset):
+        creds = dataset.creds
+
+        try:
+            api_handler = MonzoClient(creds)
+        except Exception as e:
+            logging.warning(
+                f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
+            api_handler = None
+
+        _class = MonzoAPIStatements
+        working_dir = dataset.statements / _class.dir_name
+        if not working_dir.exists():
+            logging.warning(
+                f"TrueLayer account_statement cannot be created: '{_class.dir_name}' directory is not found in {dataset.statements}.")
+            return None
+
+        return _class(
             working_dir=working_dir,
             trans_transformer=transformers.MonzoAPIFileStatementTransformer(),
             api_handler=api_handler

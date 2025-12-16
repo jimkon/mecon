@@ -7,6 +7,7 @@ from datetime import datetime
 from unittest import mock
 
 import pandas as pd
+import pytest
 
 from mecon.etl import dataset as fs
 
@@ -184,7 +185,6 @@ class DatasetV2TestCase(unittest.TestCase):
 
         csv_file.unlink()
 
-
 class DateRollingDatasetTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
@@ -214,6 +214,7 @@ class DateRollingDatasetTestCase(unittest.TestCase):
         expected_dataset_names = {today_id, "20240101"}
         self.assertEqual(set(dataset_dir.dataset_names()), expected_dataset_names)
 
+    @pytest.mark.skip("DateRollingDataset is disabled")
     def test_rollover_creates_copy_and_limits_history(self):
         dataset_ids = ["20240101", "20240102"]
         for dataset_id in dataset_ids:

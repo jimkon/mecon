@@ -112,6 +112,7 @@ class MonzoStatementTransformer(DataframeTransformer):
         df_transformed = df_transformed.reindex(
             columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
+        df_transformed['datetime'] = StatementTransformer._strip_timezone(df_transformed['datetime'])
         return df_transformed
 
 
@@ -145,11 +146,17 @@ class RevoStatementTransformer(DataframeTransformer):
         )
         df_transformed['description'] = 'bank:Revolut, ' + df_transformed['description']
 
+        df_transformed['datetime'] = StatementTransformer._strip_timezone(df_transformed['datetime'])
         return df_transformed
 
 
 class StatementTransformer(DataframeTransformer, abc.ABC):
     SOURCES = ['Monzo', 'MonzoAPI', 'HSBC', 'Revolut', 'INVENG', 'HSBCSVR', 'TRD212']
+
+    @staticmethod
+    def _strip_timezone(datetime_series: pd.Series) -> pd.Series:
+        # TODO: reintroduce proper timezone handling once all sources share the same convention
+        return pd.to_datetime(datetime_series).dt.tz_localize(None)
 
     def read_df(self, path):  # TODO moved to statement class
         df = pd.read_csv(path, index_col=None)
@@ -211,6 +218,7 @@ class HSBCFileStatementTransformer(StatementTransformer):
         df_transformed = df_transformed.rename(columns={'id': 'id', 'datetime': 'datetime', 'amount': 'amount',
                                                         'currency': 'currency', 'amount_cur': 'amount_cur',
                                                         'description': 'description'})
+        df_transformed['datetime'] = self._strip_timezone(df_transformed['datetime'])
         df_transformed.sort_values('datetime', inplace=True)
         return df_transformed
 
@@ -257,6 +265,7 @@ class MonzoFileStatementTransformer(StatementTransformer):
         df_transformed = df_transformed.reindex(
             columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
+        df_transformed['datetime'] = self._strip_timezone(df_transformed['datetime'])
         return df_transformed
 
 
@@ -299,6 +308,7 @@ class MonzoAPIFileStatementTransformer(StatementTransformer):
         df_transformed = df_transformed.reindex(
             columns=['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description'])
 
+        df_transformed['datetime'] = self._strip_timezone(df_transformed['datetime'])
         return df_transformed
 
 
@@ -336,6 +346,7 @@ class RevoFileStatementTransformer(StatementTransformer):
         )
         df_transformed['description'] = f'bank:{self.source_name}, ' + df_transformed['description']
 
+        df_transformed['datetime'] = self._strip_timezone(df_transformed['datetime'])
         return df_transformed
 
 
@@ -356,6 +367,7 @@ class InvestEngineStatementTransformer(StatementTransformer):
 
         df_final = df[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
 
+        df_final['datetime'] = self._strip_timezone(df_final['datetime'])
         return df_final
 
 
@@ -381,6 +393,8 @@ class Trading212StatementTransformer(StatementTransformer):
         df['sign'] = df['action'].apply(lambda a: -1 if a=='Market buy' else 1)
         df_transformed['amount'] = df['total']*df['sign']
         df_transformed['amount_cur'] = df['total']*df['sign']
+        del df['sign']
+
         df_transformed['currency'] = df['currency_(total)']
 
         cols_to_concat = df.columns.difference(df_transformed.columns).difference(['time', 'total', 'id'])
@@ -396,6 +410,7 @@ class Trading212StatementTransformer(StatementTransformer):
 
         df_final = df_transformed[['id', 'datetime', 'amount', 'currency', 'amount_cur', 'description']]
 
+        df_final['datetime'] = self._strip_timezone(df_final['datetime'])
         return df_final
 
 if __name__ == '__main__':
@@ -420,10 +435,7 @@ class TrueLayerStatementTransformer(StatementTransformer):
         df = df.copy()
 
         df_transformed = pd.DataFrame({'id': df['transaction_id']})
-        try:
-            df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%SZ")
-        except ValueError as ve:
-            df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="%Y-%m-%dT%H:%M:%S.%fZ")
+        df_transformed['datetime'] = pd.to_datetime(df['timestamp'], format="ISO8601", utc=True,)
 
         df_transformed['amount'] = self.convert_amounts(df['amount'], df['currency'],
                                                         df_transformed['datetime'].dt.date)
@@ -444,6 +456,7 @@ class TrueLayerStatementTransformer(StatementTransformer):
 
         logging.info(
             f"Transformed True Layer raw transactions shape {df.shape} for {df_transformed['datetime'].min()} to {df_transformed['datetime'].max()}")
+        df_transformed['datetime'] = self._strip_timezone(df_transformed['datetime'])
         return df_transformed
 
 

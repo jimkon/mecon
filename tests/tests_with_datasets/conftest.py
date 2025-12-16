@@ -52,6 +52,9 @@ def dataset_manager(tmp_path, monkeypatch):
         current_dir / "op_monitoring.csv", index=False
     )
 
+    rolling_dataset = datasets_root / "20240301"
+    shutil.copytree(target_dataset, rolling_dataset)
+
     (datasets_root / "settings.json").write_text(
         json.dumps({"CURRENT_DATASET": "test_statements_and_tags"})
     )
@@ -68,7 +71,14 @@ def dataset_manager(tmp_path, monkeypatch):
                         "refresh_token": "refresh",
                         "expires_at": "1970-01-01T00:00:00Z",
                         "fetched_at": "1970-01-01T00:00:00Z",
-                    }
+                    },
+                    "accounts": [
+                        {
+                            "account_id": "d4aa58643585c1e3a5f7d3e24cf5e829",
+                            "display_name": "HSBC Current Account",
+                            "currency": "GBP",
+                        }
+                    ],
                 }
             },
         },

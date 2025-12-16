@@ -1,17 +1,15 @@
 # mecon/etl/monzo_api_client.py
 
-import logging
 import datetime
-from urllib.parse import urlparse, parse_qs
+import logging
+from urllib.parse import parse_qs, urlencode, urlparse
+
 import pandas as pd
-
-from monzo.authentication import Authentication
+from monzo.authentication import Authentication, MONZO_AUTH_URL
 from monzo.endpoints.account import Account
-from monzo.monzo import Monzo
 from monzo.errors import ForbiddenError, BadRequestError
+from monzo.monzo import Monzo
 from oauthlib.oauth2.rfc6749.errors import InvalidClientIdError
-
-from mecon.settings import DictFile
 
 logging.basicConfig(level=logging.INFO)
 
@@ -112,12 +110,28 @@ class MonzoClient:
 
     # -------- OAuth helpers --------
     def get_authentication_url(self):
-        return self.monzo_auth.authentication_url
+        url, state = self.get_authentication_url_and_state()
+        self._mark_pending_state(state)
+        return url
 
     def get_authentication_url_and_state(self):
-        url_and_state = self.get_authentication_url()
-        url, state = url_and_state.split('&state=')
+        state = self.monzo_auth.state_token
+        url = f"{MONZO_AUTH_URL}?" + urlencode(
+            {
+                "client_id": self.monzo_creds["client_id"],
+                "redirect_uri": self.monzo_creds["redirect_url"],
+                "response_type": "code",
+                "state": state,
+            }
+        )
         return url, state
+
+    def _mark_pending_state(self, state: str):
+        self.monzo_creds['_pending_auth'] = {
+            'state': state,
+            'created_at': datetime.datetime.utcnow().isoformat()
+        }
+        self.creds_file.save()
 
     def set_authentication_code_from_url(self, response_url: str):
         """
@@ -142,10 +156,12 @@ class MonzoClient:
         try:
             self.monzo_auth.authenticate(authorization_token=code, state_token=state)
         except Exception as e:
+            logging.exception(e)
             # Provide a clearer error including the common causes
             raise MonzoCredentialsError(
                 "Could not fetch a valid access token. "
-                "Common causes: (1) redirect_url mismatch, (2) expired code, or (3) wrong URL pasted."
+                "Common causes: (1) redirect_url mismatch, (2) expired code, or (3) wrong URL pasted. "
+                f"Error message: {e}"
             ) from e
 
         self._refresh_token_in_creds()
