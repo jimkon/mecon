@@ -1,15 +1,13 @@
 import logging
-import re
 from itertools import chain
 
 import pandas as pd
 from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
-import utils
-from mecon.app import shiny_app
-from mecon.data import groupings
-from mecon.data.transactions import Transactions
 import mecon.utils.calendar_utils as cu
+import utils
+from mecon.app import shiny_utils as shiny_app
+from mecon.data.transactions import Transactions
 
 # from mecon.monitoring.logs import setup_logging
 # setup_logging()
@@ -333,7 +331,9 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.text
     def transactions_header_text():
-        filtered_transactions_tx: Transactions = filtered_transactions_calc()
+        filtered_transactions_tx = filtered_transactions_calc()
+        if filtered_transactions_tx is None:
+            return shiny_app.EMPTY_TX.dataframe()
         filtered_transactions_df = filtered_transactions_tx.dataframe()
         start_date, end_date = filtered_transactions_tx.date_range()
         unique_tags = filtered_transactions_tx.all_tags()
@@ -345,7 +345,10 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def transactions_output_df():
-        df = enhance_transactions_df(filtered_transactions_calc().dataframe(), addable_tags_set)
+        tx = filtered_transactions_calc()
+        if tx is None:
+            return shiny_app.EMPTY_TX.dataframe()
+        df = enhance_transactions_df(tx.dataframe(), addable_tags_set)
         return render_table_customised_width(
             df,
             width='100%',
