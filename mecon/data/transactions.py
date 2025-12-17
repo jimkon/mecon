@@ -31,7 +31,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
 
     def __init__(self, df: pd.DataFrame):
         if set(self.columns) != set(df.columns):
-            raise ValueError(f"A Transaction object needs all {self.columns} columns: {set(self.columns).difference(df.columns)} is missing")
+            raise ValueError(f"A Transaction object needs all {self.columns} columns: {set(self.columns).difference(df.columns)} are missing")
         super().__init__(df=df)
         fields.IdColumnMixin.__init__(self, df_wrapper=self)
         fields.AmountColumnMixin.__init__(self, df_wrapper=self)
@@ -80,6 +80,9 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
     def empty_transactions_factory(cls):
         empty_df = pd.DataFrame({col: [] for col in cls.columns})
         return cls(empty_df)
+
+    def is_empty(self):
+        return self.size() == 0
 
     def __repr__(self):
         return f"Transactions({len(self.dataframe())}, {self.date_range()})"
