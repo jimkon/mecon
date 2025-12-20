@@ -128,6 +128,13 @@ class DatasetV2:
         self._name = self.path.stem
         self._data = self._path / 'data'
         self._current_data = self._data / 'current'
+        self.transactions_path = self._current_data / 'transactions.csv'
+        self.tags_metadata_path = self._current_data / 'tags_metadata.csv'
+
+        self.tags_path = self._current_data / 'tags'
+        self.custom_tags_path = self.tags_path / 'custom_tags.csv'
+        self.additional_tags_path = self.tags_path / 'additional_tags.csv'
+
         self._statements = self._data / 'statements'
         self._settings = None
         self._build_file_structure()

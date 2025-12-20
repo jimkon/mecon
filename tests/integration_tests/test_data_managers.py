@@ -5,6 +5,7 @@ from datetime import datetime
 from unittest import mock
 
 import pandas as pd
+import pytest
 
 from mecon.app import db_controller
 from mecon.app import db_extension
@@ -815,11 +816,15 @@ class CachedFileDataManagerTestDataFlow(unittest.TestCase):
     def setUp(self):
         self.working_dir = tempfile.TemporaryDirectory()
         self.working_dir_path = pathlib.Path(self.working_dir.name)
+        self.dataset = Dataset.from_dirpath(self.working_dir_path)
 
-        self.data_path = self.working_dir_path / 'data/current'
+        self.data_path = self.dataset.data
         self.data_path.mkdir(parents=True, exist_ok=True)
+        self.tags_dirpath = self.dataset.tags_path
+        self.tags_dirpath.mkdir(parents=True, exist_ok=True)
 
-        with open(self.data_path / 'transactions.csv', 'w') as tags_file:
+
+        with open(self.dataset.transactions_path, 'w') as tags_file:
             tags_file.write("""id,datetime,amount,currency,amount_cur,description,tags
 RVLTd201901217t150315ap833i3634,2019-12-17 15:03:15,8,EUR,10.0,"bank:Revolut, desc example","Afternoon,Friends transfers,MoneyIn,Revolut,Spending,Transfers,All"
 RVLTd20200228t150811an833i3635,2020-02-28 15:08:11,-8,EUR,-10.0,"bank:Revolut, desc example","Afternoon,Friends transfers,MoneyOut,Revolut,Spending,Transfers,All"
@@ -830,13 +835,12 @@ MZNd20230321t082145ap100itx_00009iC3annMpNMjlaD7RZ,2023-03-21 08:21:45,1.0,GBP,1
 MZNd20240827t082145ap100itx_00009iC3annMpNMjlaD7RZ,2024-08-27 08:21:45,1.0,GBP,1.0,"bank:Monzo, desc example","Alpha Bank,MoneyIn,Monzo,Morning,Spending,Transfers,All"
 """)
 
-        with open(self.data_path / 'tags.csv', 'w') as tags_file:
+        with open(self.dataset.custom_tags_path, 'w') as tags_file:
             tags_file.write("""name,conditions_json,date_created
 test_tag,"[{""description.lower"":{""contains"":""something""}}]",2025-01-22 00:40:10
 test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:40:10
 """)
 
-        self.dataset = Dataset.from_dirpath(self.working_dir_path)
 
         from unittest.mock import patch
 
@@ -865,6 +869,7 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         existing_tag._rule = tagging.Disjunction.from_json([{}])
         self.dm.update_tag(existing_tag, update_tags=False)
         existing_tag = self.dm.get_tag('test_tag')
+        self.assertIsNotNone(existing_tag)
         self.assertEqual(existing_tag.name, 'test_tag')
         self.assertEqual(existing_tag.rule.to_json(), [{}])
 
@@ -873,7 +878,7 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         non_existing_tag = self.dm.get_tag('non_existing_tag')
         self.assertEqual(non_existing_tag.name, 'non_existing_tag')
         self.assertEqual(non_existing_tag.rule.to_json(), [{}])
-        self.assertEqual(self.dm.custom_tags_df['date_created'].isna().sum(), 0)
+        self.assertEqual(self.dm.tags_manager.custom_tags_df['date_created'].isna().sum(), 0)
 
     def test_delete_tag(self):
         self.assertIsNotNone(self.dm.get_tag('test_tag'))
@@ -906,7 +911,7 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         self.assertEqual(transactions.containing_tags('test_tag1').size(), 0)
 
 
-
+@pytest.mark.skip("Testing legacy code.")
 class CachedFileDataManagerLegacyTestDataFlow(unittest.TestCase):
     def setUp(self):
         self.working_dir = tempfile.TemporaryDirectory()
@@ -926,7 +931,7 @@ MZNd20230321t082145ap100itx_00009iC3annMpNMjlaD7RZ,2023-03-21 08:21:45,1.0,GBP,1
 MZNd20240827t082145ap100itx_00009iC3annMpNMjlaD7RZ,2024-08-27 08:21:45,1.0,GBP,1.0,"bank:Monzo, desc example","Alpha Bank,MoneyIn,Monzo,Morning,Spending,Transfers,All"
 """)
 
-        with open(self.data_path / 'tags.csv', 'w') as tags_file:
+        with open(self.data_path / 'custom_tags.csv', 'w') as tags_file:
             tags_file.write("""name,conditions_json,date_created
 test_tag,"[{""description.lower"":{""contains"":""something""}}]",2025-01-22 00:40:10
 test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:40:10

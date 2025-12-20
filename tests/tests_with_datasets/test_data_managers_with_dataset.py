@@ -82,9 +82,8 @@ def test_cached_file_data_manager_creates_expected_files(dataset_copy):
     dataset, dataset_path = dataset_copy
     manager = CachedFileDataManager(dataset)
 
-    current_data = dataset_path / "data" / "current"
-    transactions_path = current_data / "transactions.csv"
-    tags_metadata_path = current_data / "tags_metadata.csv"
+    transactions_path = dataset.transactions_path
+    tags_metadata_path = dataset.tags_metadata_path
 
     _expected_current_data = dataset_path / "data" / "_expected_current"
 

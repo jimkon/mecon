@@ -281,9 +281,12 @@ def server(input: Inputs, output: Outputs, session: Session):
     data_manager = shiny_app.create_data_manager()
     # all_tags = data_manager.all_tags()
 
-    custom_tags = set(data_manager.custom_tags_df['name'])
+    if data_manager.tags_manager.custom_tags_df is not None:
+        custom_tags = set(data_manager.tags_manager.custom_tags_df['name'])
+    else:
+        custom_tags = None
 
-    addable_tags_set = {tag for tag in custom_tags}
+    addable_tags_set = {tag for tag in custom_tags} if custom_tags else set()
 
     # transactions = data_manager.get_transactions()
     #
@@ -348,6 +351,14 @@ def server(input: Inputs, output: Outputs, session: Session):
         tx = filtered_transactions_calc()
         if tx is None:
             return shiny_app.EMPTY_TX.dataframe()
+
+        if len(addable_tags_set) == 0:
+            ui.notification_show(
+                f"No custom tags found, you won't be able to add any tags manually.",
+                type='warning',
+                duration=10
+            )
+
         df = enhance_transactions_df(tx.dataframe(), addable_tags_set)
         return render_table_customised_width(
             df,
@@ -389,7 +400,8 @@ def server(input: Inputs, output: Outputs, session: Session):
     def save_changes():
         tag_diffs = fetch_tag_diffs()
         changes_per_tag = transform_tag_diffs(tag_diffs)
-        utils.save_tag_changes(changes_per_tag, data_manager)
+        # utils.save_tag_changes(changes_per_tag, data_manager)
+        data_manager.add_id_tag(changes_per_tag)
 
 
 manual_tagging_app = App(app_ui, server)

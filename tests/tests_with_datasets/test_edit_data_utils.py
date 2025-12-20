@@ -86,7 +86,7 @@ def test_save_tag_changes_appends_id_condition(data_manager_with_dataset):
         for condition in id_conditions
     ), "The new transaction id should be included in the ID condition"
 
-    tags_df = pd.read_csv(dataset.current_data / "tags.csv")
+    tags_df = pd.read_csv(dataset.custom_tags_path)
     commute_row = tags_df.loc[tags_df["name"] == "Commute", "conditions_json"].iloc[0]
     commute_json = json.loads(commute_row)
     id_entries = [entry for entry in commute_json if "id" in entry]

@@ -216,7 +216,7 @@ def create_manual_check_dataset(dataset_name: str = "manual_check_dataset") -> P
     """Create a fresh dataset folder backed by temporary storage.
 
     The dataset contains a transactions CSV with a curated set of transactions and a
-    ``tags.csv`` file with a single custom tag (``Commute``). Built-in tags are
+    ``custom_tags.csv`` file with a single custom tag (``Commute``). Built-in tags are
     automatically provided by :class:`~mecon.data.data_management.CachedFileDataManager`.
 
     Args:
@@ -239,7 +239,7 @@ def create_manual_check_dataset(dataset_name: str = "manual_check_dataset") -> P
         (statements_dir / source_dir).mkdir(parents=True, exist_ok=True)
 
     _write_transactions_csv(current_dir / "transactions.csv", _TRANSACTIONS_DATA)
-    _write_tags_csv(current_dir / "tags.csv")
+    _write_tags_csv(current_dir / "custom_tags.csv")
     _write_empty_tags_metadata(current_dir / "tags_metadata.csv")
     _write_settings(dataset_path / "settings.json", dataset_name)
     _write_credentials(temp_root / "credentials.json")

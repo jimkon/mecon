@@ -46,7 +46,7 @@ def tag_actions(tag_name, edit_enabled=True):
 
 
 def build_tags_table(data_manager):
-    tags_df = data_manager.all_tags_df
+    tags_df = data_manager.tags_manager.all_tags_df
     tag_stats_df = data_manager.get_tags_metadata()
     tag_merged_info_df = tags_df.merge(tag_stats_df, on=['name', 'type', 'date_created'], how='left')
     tag_merged_info_df.columns = [col.capitalize().replace('_', ' ') for col in tag_merged_info_df.columns]
