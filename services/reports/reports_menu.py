@@ -12,9 +12,6 @@ logging.getLogger().setLevel(logging.INFO)
 
 dataset = shiny_app.get_working_dataset()
 
-
-
-
 app_ui = shiny_app.app_ui_factory(
     ui.page_fluid(
         ui.h1('Not implemented yet')
@@ -24,8 +21,8 @@ app_ui = shiny_app.app_ui_factory(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    dm = shiny_app.create_data_manager()
-    all_tags = dm.all_tags()
+    # dm = shiny_app.create_data_manager()
+    # all_tags = dm.all_tags()
     pass
 
 
