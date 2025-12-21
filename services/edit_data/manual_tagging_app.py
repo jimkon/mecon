@@ -205,7 +205,8 @@ def ui_tags_transformation(transaction_id: str, current_tags: set[str], tag_choi
 
     return container
 
-def ui_view_tx_button(tx_row: dict, input):
+
+def ui_view_tx_button(tx_row: dict, input_comps):
     _id = f"{tx_row['selectize_id']}_view_tx_button"
     button = ui.input_action_button(
         id=_id,
@@ -213,7 +214,7 @@ def ui_view_tx_button(tx_row: dict, input):
     )
 
     @reactive.effect
-    @reactive.event(getattr(input, _id))
+    @reactive.event(getattr(input_comps, _id))
     def _():
         m = ui.modal(
             tx_row['description'],
@@ -223,9 +224,35 @@ def ui_view_tx_button(tx_row: dict, input):
         )
         ui.modal_show(m)
 
-
     return button
 
+
+def enhance_transactions_df(df_tx, all_tags: set[str], input_comps):
+    logging.info(f"Enhancing transactions df with {df_tx.shape[0]} rows")
+    df_ench = df_tx.copy().sort_values(by=['datetime'], ascending=False)
+    df_ench['current_tags'] = df_ench['tags'].apply(lambda tags: ','.join(sorted(tags.split(','))))
+    df_ench['tags'] = df_ench['tags'].apply(lambda tags: set(tags.split(',')))
+    df_ench['date'] = df_tx['datetime'].apply(lambda dt: dt.date().strftime('%Y-%m-%d'))
+    df_ench['time'] = df_tx['datetime'].apply(lambda dt: dt.time().strftime('%H:%M:%S'))
+    df_ench['amount'] = df_tx.apply(lambda row: construct_amount_str(row), axis=1)
+    df_ench['week_id'] = df_tx['datetime'].apply(
+        lambda dt: f"{dt.date().strftime('%Y-%m-%d')}/{cu.week_of_year(dt)}")
+    df_ench['n_tags'] = df_tx['tags'].apply(lambda tags: len(tags.split(',')))
+
+    df_ench['Tx_ID'] = df_ench['id'].apply(ui_id_transformation)
+    # df_ench['short_desc'] = df_tx['description'].apply(ui_description_transformation)
+    df_ench['selectize_id'] = df_tx['id'].apply(build_selectize_id)
+    df_ench['add_tags'] = df_ench.apply(
+        lambda row: ui_tags_transformation(row['id'], row['tags'], all_tags, row['selectize_id']),
+        axis=1
+    )
+    df_ench['view_full'] = df_ench.apply(lambda row: ui_view_tx_button(row, input_comps), axis=1)
+
+    cols_to_keep = ['Tx_ID', 'amount', 'date', 'time', 'week_id', 'n_tags', 'current_tags', 'add_tags',
+                    # 'short_desc',
+                    'view_full']
+    df_res = df_ench[cols_to_keep]
+    return df_res
 
 
 def transform_tag_diffs(tag_diffs):
@@ -305,33 +332,6 @@ def server(input: Inputs, output: Outputs, session: Session):
         session,
         data_manager)
 
-    def enhance_transactions_df(df_tx, all_tags: set[str]):
-        logging.info(f"Enhancing transactions df with {df_tx.shape[0]} rows")
-        df_ench = df_tx.copy().sort_values(by=['datetime'], ascending=False)
-        df_ench['current_tags'] = df_ench['tags'].apply(lambda tags: ','.join(sorted(tags.split(','))))
-        df_ench['tags'] = df_ench['tags'].apply(lambda tags: set(tags.split(',')))
-        df_ench['date'] = df_tx['datetime'].apply(lambda dt: dt.date().strftime('%Y-%m-%d'))
-        df_ench['time'] = df_tx['datetime'].apply(lambda dt: dt.time().strftime('%H:%M:%S'))
-        df_ench['amount'] = df_tx.apply(lambda row: construct_amount_str(row), axis=1)
-        df_ench['week_id'] = df_tx['datetime'].apply(
-            lambda dt: f"{dt.date().strftime('%Y-%m-%d')}/{cu.week_of_year(dt)}")
-        df_ench['n_tags'] = df_tx['tags'].apply(lambda tags: len(tags.split(',')))
-
-        df_ench['Tx_ID'] = df_ench['id'].apply(ui_id_transformation)
-        # df_ench['short_desc'] = df_tx['description'].apply(ui_description_transformation)
-        df_ench['selectize_id'] = df_tx['id'].apply(build_selectize_id)
-        df_ench['add_tags'] = df_ench.apply(
-            lambda row: ui_tags_transformation(row['id'], row['tags'], all_tags, row['selectize_id']),
-            axis=1
-        )
-        df_ench['view_full'] = df_ench.apply(lambda row: ui_view_tx_button(row, input), axis=1)
-
-        cols_to_keep = ['Tx_ID', 'amount', 'date', 'time', 'week_id', 'n_tags', 'current_tags', 'add_tags',
-                        # 'short_desc',
-                        'view_full']
-        df_res = df_ench[cols_to_keep]
-        return df_res
-
     @render.text
     def transactions_header_text():
         filtered_transactions_tx = filtered_transactions_calc()
@@ -359,7 +359,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 duration=10
             )
 
-        df = enhance_transactions_df(tx.dataframe(), addable_tags_set)
+        df = enhance_transactions_df(tx.dataframe(), addable_tags_set, input_comps=input)
         return render_table_customised_width(
             df,
             width='100%',

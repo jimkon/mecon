@@ -1,3 +1,6 @@
+from unittest.mock import patch
+
+
 
 def test_sanitize_tx_id(shiny_helpers):
     assert shiny_helpers.manual_tagging.sanitize_tx_id('test_id1') == 'test_id1'
@@ -23,9 +26,12 @@ def test_enhance_transactions_df(dataset_manager, shiny_helpers):
     _, manager, _ = dataset_manager
     df = manager.get_transactions().dataframe()
     all_tags = {tag.name for tag in manager.all_tags()}
-    df_enhanced = shiny_helpers.manual_tagging.enhance_transactions_df(df, all_tags)
+
+    with patch("services.edit_data.manual_tagging_app.ui_view_tx_button") as mck_view_tx_btn:
+        mck_view_tx_btn.return_value = 'dummy_mck_view_tx_btn'
+        df_enhanced = shiny_helpers.manual_tagging.enhance_transactions_df(df, all_tags, input_comps=None)
     assert len(df_enhanced.columns) == 9
-    assert df_enhanced.columns.tolist() == ['Tx_ID', 'amount', 'date', 'time', 'week_id', 'n_tags', 'current_tags', 'add_tags', 'short_desc']
+    assert df_enhanced.columns.tolist() == ['Tx_ID', 'amount', 'date', 'time', 'week_id', 'n_tags', 'current_tags', 'add_tags', 'view_full']
 
 
 def test_transform_tag_diffs(shiny_helpers):
