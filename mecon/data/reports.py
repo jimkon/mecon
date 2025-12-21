@@ -41,7 +41,7 @@ def transactions_stats_markdown(trans: transactions.Transactions, grouping='none
     general = stats_json.get('General', {})
     general_md = (
         f"### General Information\n"
-        f"- **Total number of transactions (#)**: {general.get('#', 'N/A')}\n"
+        f"- **Total number of data points (#)**: {general.get('#', 'N/A')}\n"
         f"- **Average amount per event**: {general.get('avg Amount (per event)', 'N/A')}\n"
         f"- **Average amount per non-event**: {general.get('avg Amount (per none)', 'N/A')}\n"
         f"- **Average frequency**: {general.get('avg Frequency', 'N/A')}\n"
