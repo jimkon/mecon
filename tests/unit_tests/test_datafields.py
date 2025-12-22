@@ -59,21 +59,19 @@ class TestColumnMixinValidation(unittest.TestCase):
         except datafields.MissingRequiredColumnInDataframeWrapperError as e:
             self.fail(f"Unexpected exception raised: {e}")
 
+
 class TestTaggedRowsLookup(unittest.TestCase):
 
     def _wrapper_with_ids_and_tags(self):
-        # Uses your existing ExampleDataframeWrapper pattern
         return ExampleDataframeWrapper(pd.DataFrame({
-            "id":   ["id1", "id2", "id3", "id4", "id5"],
+            "id": ["id1", "id2", "id3", "id4", "id5"],
             "tags": ["", "tag1", "tag1,tag2", "tag2", "tag3"],
         }))
 
     def test_build_lookup_creates_expected_mapping(self):
         wrapper = self._wrapper_with_ids_and_tags()
-
         lookup = datafields.TaggedRowsLookup(wrapper, tags_set={"tag1", "tag2", "tag3"}).build_lookup()
 
-        # The _lookup dict is "private" but for basic correctness tests it’s OK to assert on it.
         expected = {
             "tag1": {"id2", "id3"},
             "tag2": {"id3", "id4"},
@@ -81,46 +79,76 @@ class TestTaggedRowsLookup(unittest.TestCase):
         }
         self.assertEqual(lookup._lookup, expected)
 
+    def test_build_lookup_default_tags_set_indexes_all_tags_found(self):
+        # When tags_set is None, TaggedRowsLookup uses df_wrapper_obj.all_tags()
+        wrapper = self._wrapper_with_ids_and_tags()
+        lookup = datafields.TaggedRowsLookup(wrapper).build_lookup()
+
+        # We don't care about order; just that all expected tags are indexed.
+        self.assertEqual(set(lookup._lookup.keys()), {"tag1", "tag2", "tag3"})
+
     def test_lookup_with_single_tag_string(self):
         wrapper = self._wrapper_with_ids_and_tags()
         lookup = datafields.TaggedRowsLookup(wrapper).build_lookup()
 
-        result = set(lookup.lookup("tag1"))
-        self.assertEqual(result, {"id2", "id3"})
+        self.assertEqual(set(lookup.lookup("tag1")), {"id2", "id3"})
 
     def test_lookup_with_multiple_tags_iterable_unions_ids(self):
         wrapper = self._wrapper_with_ids_and_tags()
         lookup = datafields.TaggedRowsLookup(wrapper).build_lookup()
 
-        result = set(lookup.lookup(["tag1", "tag2"]))
-        # union of {"id2","id3"} and {"id3","id4"} => {"id2","id3","id4"}
-        self.assertEqual(result, {"id2", "id3", "id4"})
+        self.assertEqual(set(lookup.lookup(["tag1", "tag2"])), {"id2", "id3", "id4"})
 
-    def test_build_lookup_matches_whole_tags_not_substrings(self):
+    def test_lookup_does_not_match_substrings(self):
         wrapper = ExampleDataframeWrapper(pd.DataFrame({
             "id": ["id1", "id2"],
             "tags": ["tag10", "tag1,tag2"],
         }))
         lookup = datafields.TaggedRowsLookup(wrapper, tags_set={"tag1"}).build_lookup()
-        self.assertEqual(lookup._lookup["tag1"], {"id2"})
 
-    def test_lookup_warns_for_unindexed_tags_and_raises_keyerror(self):
-        wrapper = self._wrapper_with_ids_and_tags()
+        self.assertEqual(set(lookup.lookup("tag1")), {"id2"})
+
+    def test_lookup_warns_for_unindexed_tags_and_ignores_them(self):
+        wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            "id": ["id1", "id2", "id3"],
+            "tags": ["tag1", "tag2", "tag1,tag2"],
+        }))
         lookup = datafields.TaggedRowsLookup(wrapper, tags_set={"tag1"}).build_lookup()
 
-        # Your implementation warns, then still tries self._lookup[tag] which KeyErrors.
-        with patch("mecon.data.datafields.logging.warning") as warn_mock:
-            with self.assertRaises(KeyError):
-                lookup.lookup(["tag1", "not_indexed"])
+        with patch.object(datafields.logging, "warning") as warn_mock:
+            res = set(lookup.lookup(["tag1", "not_indexed"]))
 
-            warn_mock.assert_called()  # simple check that warning happened
+        self.assertEqual(res, {"id1", "id3"})  # only tag1 ids
+        warn_mock.assert_called()
+
+    def test_lookup_tag_in_tags_set_but_not_in_dataframe_warns_and_returns_empty(self):
+        wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            "id": ["id1", "id2"],
+            "tags": ["tag1", ""],
+        }))
+        lookup = datafields.TaggedRowsLookup(wrapper, tags_set={"tag_missing"}).build_lookup()
+
+        with patch.object(datafields.logging, "warning") as warn_mock:
+            res = lookup.lookup("tag_missing")
+
+        self.assertEqual(res, [])
+        warn_mock.assert_called()
 
     def test_lookup_empty_iterable_returns_empty_list(self):
         wrapper = self._wrapper_with_ids_and_tags()
         lookup = datafields.TaggedRowsLookup(wrapper).build_lookup()
 
-        result = lookup.lookup([])
-        self.assertEqual(result, [])
+        self.assertEqual(lookup.lookup([]), [])
+
+    def test_lookup_without_build_returns_empty_list(self):
+        wrapper = self._wrapper_with_ids_and_tags()
+        lookup = datafields.TaggedRowsLookup(wrapper)  # build_lookup not called
+
+        with patch.object(datafields.logging, "warning") as warn_mock:
+            res = lookup.lookup("tag1")
+
+        self.assertEqual(res, [])
+        warn_mock.assert_called()
 
 
 class TestTagsColumnMixin(unittest.TestCase):
@@ -153,7 +181,6 @@ class TestTagsColumnMixin(unittest.TestCase):
                                        pd.Series([True, True, True, True, True]))
         pd.testing.assert_series_equal(example_wrapper.contains_tags('tag4'),
                                        pd.Series([False, False, False, False, False]))
-
 
     def test_contains_tags_empty_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -333,11 +360,10 @@ class TestTagsColumnMixin(unittest.TestCase):
         }))
 
         pd.testing.assert_series_equal(a_wrapper.tag_row_wise_equality(b_wrapper.tags),
-                         pd.Series([True, True, True, True, False, False, False]))
+                                       pd.Series([True, True, True, True, False, False, False]))
 
         pd.testing.assert_series_equal(a_wrapper.tag_row_wise_equality(b_wrapper.tags, target_tags=['tag1', 'tag6']),
                                        pd.Series([True, True, True, True, True, True, True]))
-
 
 
 class TestDateTimeColumnMixin(unittest.TestCase):
@@ -559,7 +585,6 @@ class TestAmountColumnMixin(unittest.TestCase):
         pd.testing.assert_frame_equal(pos_nonzero_amounts_wrapper.dataframe().reset_index(drop=True),
                                       expected_wrapper_df.reset_index(drop=True))
 
-
     def test_invalid_amounts(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
             'amount': [1, -1, .1, False, '12321', -12.2, datetime(2019, 1, 1, 0, 0, 0)]
@@ -594,6 +619,7 @@ class TestDescriptionColumnMixin(unittest.TestCase):
         self.assertEqual(example_wrapper.invalid_descriptions().to_list(),
                          [True, True, True, True, False, True, True])
 
+
 class TestIDColumnMixin(unittest.TestCase):
     def test_invalid_ids(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -602,7 +628,6 @@ class TestIDColumnMixin(unittest.TestCase):
 
         self.assertEqual(example_wrapper.invalid_ids().to_list(),
                          [True, True, True, True, False, True, True])
-
 
     def test_select_by_ids(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({

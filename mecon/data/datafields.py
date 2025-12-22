@@ -324,7 +324,7 @@ class TaggedRowsLookup:
         )
 
         # Clean up tokens
-        # exploded["tag"] = exploded["tag"].fillna("").astype(str).str.strip()
+        exploded["tag"] = exploded["tag"].fillna("").astype(str).str.strip()
         exploded = exploded[exploded["tag"] != ""]
 
         # Optional: restrict to tags_set
@@ -339,14 +339,19 @@ class TaggedRowsLookup:
         return self
 
     def lookup(self, tags: str | Iterable[str]) -> list[str]:
+        if not self._lookup:
+            logging.warning("Lookup table not built; call build_lookup() first")
+            return []
+
         if isinstance(tags, str):
             tags = {tags}
         else:
             tags = set(tags)
 
-        indexed_tags = self._lookup.keys() if self._lookup is not None else set()
+        indexed_tags = set(self._lookup.keys()) if self._lookup is not None else set()
         if not tags.issubset(indexed_tags):
-            logging.warning(f'Tags not in indexed tags: {indexed_tags-tags}, lookup will not work for them')
+            logging.warning(f'Tags not in indexed tags: {tags - indexed_tags}, lookup will not work for them')
+            tags = indexed_tags.intersection(tags)
 
         result_ids = set()
         for tag in tags:
