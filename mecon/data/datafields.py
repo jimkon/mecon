@@ -4,6 +4,8 @@ import abc
 import itertools
 import json
 import logging
+import re
+import time
 from collections import Counter
 from datetime import datetime, date
 from itertools import chain
@@ -129,7 +131,8 @@ class IdColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.dataframe()['id']
 
     def invalid_ids(self):
-        return self.id.isna() | self.id.isnull() | self.id.duplicated(keep=False) | self.id.apply(lambda x: not isinstance(x, str))
+        return self.id.isna() | self.id.isnull() | self.id.duplicated(keep=False) | self.id.apply(
+            lambda x: not isinstance(x, str))
 
     def select_by_ids(self, ids: Iterable[str]):
         rule = tagging.Condition.from_string_values(
@@ -151,7 +154,8 @@ class DateTimeColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.dataframe()['datetime']
 
     def invalid_datetimes(self):
-        return self.datetime.isna() | self.datetime.isnull() | self.datetime.apply(lambda x: not isinstance(x, datetime) and not isinstance(x, pd.Timestamp))
+        return self.datetime.isna() | self.datetime.isnull() | self.datetime.apply(
+            lambda x: not isinstance(x, datetime) and not isinstance(x, pd.Timestamp))
 
     @property
     def date(self) -> pd.Series:
@@ -203,17 +207,19 @@ class AmountColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.dataframe()['amount_cur']
 
     def invalid_amounts(self):
-        return self.amount.isna() | self.amount.isnull() |  self.amount.apply(lambda x: not isinstance(x, int) and not isinstance(x, float))
+        return self.amount.isna() | self.amount.isnull() | self.amount.apply(
+            lambda x: not isinstance(x, int) and not isinstance(x, float))
 
     def invalid_amount_curs(self):
-        return self.amount_cur.isna() | self.amount_cur.isnull() |  self.amount_cur.apply(lambda x: not isinstance(x, int) and not isinstance(x, float))
+        return self.amount_cur.isna() | self.amount_cur.isnull() | self.amount_cur.apply(
+            lambda x: not isinstance(x, int) and not isinstance(x, float))
         # return (self.amount_cur.isna() |
         #         self.amount_cur.isnull() |
         #         self.amount_cur.apply(lambda x: not isinstance(x, int) and not isinstance(x, float)) |
         #         self.amount_cur.apply(lambda x: isinstance(x, bool)))
 
     def invalid_currencies(self):
-        return self.currency.isna() | self.currency.isnull() |  self.currency.apply(lambda x: not isinstance(x, str))
+        return self.currency.isna() | self.currency.isnull() | self.currency.apply(lambda x: not isinstance(x, str))
 
     @property
     def currency_list(self) -> pd.Series:
@@ -254,15 +260,65 @@ class DescriptionColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.dataframe()['description']
 
     def invalid_descriptions(self):
-        return self.description.isna() | self.description.isnull() |  self.description.apply(lambda x: not isinstance(x, str))
+        return self.description.isna() | self.description.isnull() | self.description.apply(
+            lambda x: not isinstance(x, str))
 
 
 class TagsColumnDoesNotExistInDataframe(Exception):
     pass
 
 
+class TaggedRowsLookup:
+    def __init__(
+            self,
+            df_wrapper_obj: TagsColumnMixin,
+            tags_set: set[str] | None = None,
+    ) -> None:
+        self._df_wrapper_obj = df_wrapper_obj
+        self._df = None
+        self._tags_set = tags_set if tags_set is not None else self._df_wrapper_obj.all_tags()
+        self._lookup = None
+
+    def build_lookup(self, ):
+        time_start = time.time()
+        logging.info('Building lookup table...')
+        self._df = self._df_wrapper_obj.dataframe().copy()
+        self._lookup = {}
+        for tag in self._tags_set:
+            tag_col = f"{tag}_col"
+            pattern = rf"(^|,){re.escape(tag)}($|,)"
+            self._df[tag_col] = self._df['tags'].str.contains(pattern, regex=True, na=False)
+            self._lookup[tag] = set(self._df[self._df[tag_col]].id)
+
+        time_elapsed = time.time() - time_start
+        logging.info(f'Building lookup table...Done in {time_elapsed} seconds')
+        return self
+
+    def lookup(self, tags: str | Iterable[str]) -> list[str]:
+        if isinstance(tags, str):
+            tags = {tags}
+        else:
+            tags = set(tags)
+
+        indexed_tags = self._lookup.keys() if self._lookup is not None else set()
+        if not tags.issubset(indexed_tags):
+            logging.warning(f'Tags not in indexed tags: {indexed_tags-tags}, lookup will not work for them')
+
+        result_ids = set()
+        for tag in tags:
+            tag_ids = self._lookup[tag]
+            result_ids.update(tag_ids)
+
+        return list(result_ids)
+
+
+
 class TagsColumnMixin(ColumnMixin):
     _required_columns = 'tags'
+
+    def __init__(self, df_wrapper: DataframeWrapper, validate=False):
+        super().__init__(df_wrapper, validate)
+        self._tags_lookup = None
 
     @property
     def tags(self) -> pd.Series:
@@ -270,7 +326,7 @@ class TagsColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.dataframe()['tags']
 
     def invalid_tags(self):
-        return self.tags.isna() | self.tags.isnull() |  self.tags.apply(lambda x: not isinstance(x, str))
+        return self.tags.isna() | self.tags.isnull() | self.tags.apply(lambda x: not isinstance(x, str))
 
     def all_tag_counts(self) -> dict:
         """ Returns all the unique tags in the dataframe wrapper along with their counts. """
@@ -321,13 +377,27 @@ class TagsColumnMixin(ColumnMixin):
         not_contains_tags_flags = ~contains_tags_flags
         return not_contains_tags_flags
 
-    def containing_tags(self, tags: str | list | None, empty_tags_strategy: Literal[
+    def build_tags_lookup(self):
+        if 'id' not in self.dataframe_wrapper_obj.dataframe():
+            logging.warning(f"Could not find 'id' column in dataframe wrapper {self.dataframe_wrapper_obj}, lookup table cannot be built.")
+            return self
+
+        self._tags_lookup = TaggedRowsLookup(self).build_lookup()
+        return self
+
+    def containing_tags(self,
+                        tags: str | list | None,
+                        empty_tags_strategy: Literal[
         "all_true", "raise", "all_false"] = 'all_true') -> DataframeWrapper:
         """
         Returns a copy of the df_wrapper with all the rows where tags are present.
         """
-        contains_tags_flags = self.contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
-        df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags].reset_index(drop=True)
+        if self._tags_lookup is not None and tags is not None:
+            ids = self._tags_lookup.lookup(tags)
+            df = self._df_wrapper_obj.dataframe()[self._df_wrapper_obj.dataframe().id.isin(ids)]
+        else:
+            contains_tags_flags = self.contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
+            df = self.dataframe_wrapper_obj.dataframe()[contains_tags_flags].reset_index(drop=True)
 
         try:
             return self._df_wrapper_obj.factory(df)
@@ -341,15 +411,20 @@ class TagsColumnMixin(ColumnMixin):
         The opposite of containing_tag, it returns a copy of the df_wrapper with all the rows where tags are NOT present.
         """
 
-        not_contains_tags_flags = self.not_contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
-        df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags].reset_index(drop=True)
+        if self._tags_lookup is not None and tags is not None:
+            ids = self._tags_lookup.lookup(tags)
+            df = self._df_wrapper_obj.dataframe()[~self._df_wrapper_obj.dataframe().id.isin(ids)]
+        else:
+            not_contains_tags_flags = self.not_contains_tags(tags, empty_tags_strategy=empty_tags_strategy)
+            df = self.dataframe_wrapper_obj.dataframe()[not_contains_tags_flags].reset_index(drop=True)
 
         try:
             return self._df_wrapper_obj.factory(df)
         except InvalidInputDataFrameColumns as e:
             logging.error(f"Invalid input dataframe columns: {e}")
             original_df = self.dataframe_wrapper_obj.dataframe()
-            raise ValueError(f"TagsColumnMixin failed to create dataframe NOT containing tags {tags} from {original_df.shape=}, result {df.shape=}")
+            raise ValueError(
+                f"TagsColumnMixin failed to create dataframe NOT containing tags {tags} from {original_df.shape=}, result {df.shape=}")
 
     def reset_tags(self):
         """
@@ -357,6 +432,7 @@ class TagsColumnMixin(ColumnMixin):
         """
         new_df = self._df_wrapper_obj.dataframe().copy()
         new_df['tags'] = ''
+        self._tags_lookup = None
         return self._df_wrapper_obj.factory(new_df)
 
     def apply_tag(self, tag: tagging.Tag) -> DataframeWrapper:
@@ -378,11 +454,10 @@ class TagsColumnMixin(ColumnMixin):
         tx_tagged = sess.tag(self, monitor=monitor)
         return tx_tagged
 
-
     def tag_row_wise_equality(self,
-              other_tags: list[str],
-              target_tags: list[str] | None = None
-              ) -> pd.Series:
+                              other_tags: list[str],
+                              target_tags: list[str] | None = None
+                              ) -> pd.Series:
         if len(self.tags) != len(other_tags):
             raise ValueError(f"Different number of tags lists: {len(self.tags)} != {len(other_tags)}")
 
@@ -392,13 +467,13 @@ class TagsColumnMixin(ColumnMixin):
             tags_this_set = [ts.intersection(target_tags) for ts in tags_this_set]
             tags_other_set = [ts.intersection(target_tags) for ts in tags_other_set]
 
-        comps = [tags_this==tags_other for tags_this, tags_other in zip(tags_this_set, tags_other_set)]
+        comps = [tags_this == tags_other for tags_this, tags_other in zip(tags_this_set, tags_other_set)]
         return pd.Series(comps)
 
     def tag_row_wise_diffs(self,
-              other_tags: list[str],
-              target_tags: list[str] | None = None
-              ) -> pd.Series:
+                           other_tags: list[str],
+                           target_tags: list[str] | None = None
+                           ) -> pd.Series:
         return ~self.tag_row_wise_equality(other_tags, target_tags)
 
 
@@ -483,10 +558,12 @@ class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
     #     df.sort_values(by='datetime', inplace=True)
     #     return self.factory(df)
 
-    def merge(self, df_wrappers: DatedDataframeWrapper | list[DatedDataframeWrapper], dedup_cols=None) -> DatedDataframeWrapper:  # TODO untested
+    def merge(self, df_wrappers: DatedDataframeWrapper | list[DatedDataframeWrapper],
+              dedup_cols=None) -> DatedDataframeWrapper:  # TODO untested
         df_wrappers_list = df_wrappers if isinstance(df_wrappers, list) else [df_wrappers]
         df_wrappers_list.insert(0, self)
-        not_empty_dfs = [df_wrp.dataframe() for df_wrp in df_wrappers_list if df_wrp.size() > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
+        not_empty_dfs = [df_wrp.dataframe() for df_wrp in df_wrappers_list if
+                         df_wrp.size() > 0]  # silencing FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated
         df = pd.concat(not_empty_dfs)
         if dedup_cols:
             df.drop_duplicates(subset=dedup_cols, inplace=True)
@@ -520,7 +597,8 @@ class DateFiller:
         end_date = df_end_date if end_date is None else end_date
 
         if df_wrapper.size() > 0:
-            fill_dates_to_remove = [calendar_utils.date_floor(dt, date_unit=self._fill_unit) for dt in df_wrapper.datetime]
+            fill_dates_to_remove = [calendar_utils.date_floor(dt, date_unit=self._fill_unit) for dt in
+                                    df_wrapper.datetime]
         else:
             fill_dates_to_remove = None
 
