@@ -279,19 +279,63 @@ class TaggedRowsLookup:
         self._tags_set = tags_set if tags_set is not None else self._df_wrapper_obj.all_tags()
         self._lookup = None
 
-    def build_lookup(self, ):
+    # def build_lookup(self, ):
+    #     time_start = time.time()
+    #     logging.info('Building lookup table...')
+    #     self._df = self._df_wrapper_obj.dataframe().copy()
+    #     self._lookup = {}
+    #     for tag in self._tags_set:
+    #         tag_col = f"{tag}_col"
+    #         pattern = rf"(?:^|,){re.escape(tag)}(?:$|,)"
+    #         self._df[tag_col] = self._df['tags'].str.contains(pattern, regex=True, na=False)
+    #         self._lookup[tag] = set(self._df[self._df[tag_col]].id)
+    #
+    #     time_elapsed = time.time() - time_start
+    #     logging.info(f'Building lookup table...Done in {time_elapsed} seconds')
+    #     return self
+
+    # def build_lookup(self, ):
+    #     """optimised solution 7 times faster"""
+    #     time_start = time.time()
+    #     logging.info('Building lookup table...')
+    #     self._df = self._df_wrapper_obj.dataframe().copy()
+    #     self._df['tags'] = self._df['tags'].str.split(',').apply(set)
+    #     self._lookup = {}
+    #     for tag in self._tags_set:
+    #         tag_col = f"{tag}_col"
+    #         self._df[tag_col] = self._df['tags'].apply(lambda tags: tag in tags)
+    #         self._lookup[tag] = set(self._df[self._df[tag_col]].id)
+    #
+    #     time_elapsed = time.time() - time_start
+    #     logging.info(f'Building lookup table...Done in {time_elapsed} seconds')
+    #     return self
+
+    def build_lookup(self):
+        """ChatGPT solution is even faster (:"""
         time_start = time.time()
-        logging.info('Building lookup table...')
-        self._df = self._df_wrapper_obj.dataframe().copy()
-        self._lookup = {}
-        for tag in self._tags_set:
-            tag_col = f"{tag}_col"
-            pattern = rf"(^|,){re.escape(tag)}($|,)"
-            self._df[tag_col] = self._df['tags'].str.contains(pattern, regex=True, na=False)
-            self._lookup[tag] = set(self._df[self._df[tag_col]].id)
+        logging.info("Building lookup table...")
+
+        df = self._df_wrapper_obj.dataframe()[["id", "tags"]].copy()
+
+        # Split tags into lists and explode to one tag per row
+        exploded = (
+            df.assign(tag=df["tags"].str.split(","))
+            .explode("tag")
+        )
+
+        # Clean up tokens
+        # exploded["tag"] = exploded["tag"].fillna("").astype(str).str.strip()
+        exploded = exploded[exploded["tag"] != ""]
+
+        # Optional: restrict to tags_set
+        if self._tags_set is not None:
+            exploded = exploded[exploded["tag"].isin(self._tags_set)]
+
+        # Build lookup: tag -> set(ids)
+        self._lookup = exploded.groupby("tag")["id"].agg(set).to_dict()
 
         time_elapsed = time.time() - time_start
-        logging.info(f'Building lookup table...Done in {time_elapsed} seconds')
+        logging.info(f"Building lookup table...Done in {time_elapsed} seconds")
         return self
 
     def lookup(self, tags: str | Iterable[str]) -> list[str]:

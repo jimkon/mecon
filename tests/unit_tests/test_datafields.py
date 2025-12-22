@@ -81,27 +81,6 @@ class TestTaggedRowsLookup(unittest.TestCase):
         }
         self.assertEqual(lookup._lookup, expected)
 
-    def test_build_lookup_adds_boolean_columns_for_each_tag(self):
-        wrapper = self._wrapper_with_ids_and_tags()
-
-        lookup = datafields.TaggedRowsLookup(wrapper, tags_set={"tag1", "tag2"}).build_lookup()
-
-        # Ensure those helper columns exist and have correct booleans
-        df = lookup._df
-        self.assertIn("tag1_col", df.columns)
-        self.assertIn("tag2_col", df.columns)
-
-        pd.testing.assert_series_equal(
-            df["tag1_col"].reset_index(drop=True),
-            pd.Series([False, True, True, False, False]),
-            check_names=False,
-        )
-        pd.testing.assert_series_equal(
-            df["tag2_col"].reset_index(drop=True),
-            pd.Series([False, False, True, True, False]),
-            check_names=False,
-        )
-
     def test_lookup_with_single_tag_string(self):
         wrapper = self._wrapper_with_ids_and_tags()
         lookup = datafields.TaggedRowsLookup(wrapper).build_lookup()
