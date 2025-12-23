@@ -146,8 +146,56 @@ class IdColumnMixin(ColumnMixin):
         return self._df_wrapper_obj.factory(df)
 
 
+class DatedRowsLookup:
+    def __init__(
+            self,
+            df_wrapper_obj: DateTimeColumnMixin,
+    ) -> None:
+        self._df_wrapper_obj = df_wrapper_obj
+        self._dates_set = set(self._df_wrapper_obj.datetime.dt.date)
+        self._lookup = None
+
+    def build_lookup(self):
+        time_start = time.time()
+        logging.info("Building dates lookup table...")
+
+        df = self._df_wrapper_obj.dataframe()[["id", "datetime"]].copy()
+        df['date'] = df['datetime'].dt.strftime("%Y-%m-%d")
+        del df['datetime']
+
+        # Build lookup: tag -> set(ids)
+        self._lookup = df.groupby("date")["id"].agg(set).to_dict()
+
+        time_elapsed = time.time() - time_start
+        logging.info(f"Building dates lookup table...Done in {time_elapsed} seconds")
+        return self
+
+    def lookup(
+            self,
+            start_date: str | datetime | date | None,
+            end_date: str | datetime | date | None
+        ) -> list[str]:
+        if not self._lookup:
+            logging.warning("Dates lookup table not built; call build_lookup() first")
+            return []
+
+        dates = calendar_utils.date_range(start_date, end_date, step=calendar_utils.DateRangeUnit.DAY.value)
+        dates_str = map(lambda date: date.strftime(format="%Y-%m-%d"), dates)
+
+        result_ids = set()
+        for date in dates_str:
+            date_ids = self._lookup.get(date, {})
+            result_ids.update(date_ids)
+
+        return list(result_ids)
+
+
 class DateTimeColumnMixin(ColumnMixin):
     _required_columns = 'datetime'
+
+    def __init__(self, df_wrapper: DataframeWrapper, validate=False):
+        super().__init__(df_wrapper, validate)
+        self._dates_lookup = None
 
     @property
     def datetime(self) -> pd.Series:
@@ -170,9 +218,18 @@ class DateTimeColumnMixin(ColumnMixin):
             return None, None
         return self.date.min(), self.date.max()
 
+    def build_dates_lookup(self):
+        if 'id' not in self.dataframe_wrapper_obj.dataframe():
+            logging.warning(
+                f"Could not find 'id' column in dataframe wrapper {self.dataframe_wrapper_obj}, dates lookup table cannot be built.")
+            return self
+
+        self._dates_lookup = DatedRowsLookup(self).build_lookup()
+        return self
+
     def select_date_range(self,
-                          start_date: [str | datetime | date, None],
-                          end_date: [str | datetime | date, None]
+                          start_date: str | datetime | date | None,
+                          end_date: str | datetime | date | None
                           ) -> DatedDataframeWrapper:  # TODO fix type hinting issues
         if start_date is None or end_date is None:
             self_start_date, self_end_date = self.date_range()
@@ -182,13 +239,18 @@ class DateTimeColumnMixin(ColumnMixin):
         start_date = calendar_utils.to_date(start_date) if start_date is not None else self_start_date
         end_date = calendar_utils.to_date(end_date) if end_date is not None else self_end_date
 
-        rule = tagging.Conjunction([
-            tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
-            tagging.Condition.from_string_values('datetime', 'date', 'less_equal', end_date),
-        ])
-        new_df_wrapper = self._df_wrapper_obj.apply_rule(
-            rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
-        return new_df_wrapper
+        if self._dates_lookup is not None and start_date is not None and end_date is not None:
+            ids = self._dates_lookup.lookup(start_date, end_date)
+            df = self._df_wrapper_obj.dataframe()[self._df_wrapper_obj.dataframe().id.isin(ids)]
+            return self._df_wrapper_obj.factory(df)
+        else:
+            rule = tagging.Conjunction([
+                tagging.Condition.from_string_values('datetime', 'date', 'greater_equal', start_date),
+                tagging.Condition.from_string_values('datetime', 'date', 'less_equal', end_date),
+            ])
+            new_df_wrapper = self._df_wrapper_obj.apply_rule(
+                rule)  # TODO if self._df_wrapper is empty, self._df_wrapper_obj.apply_rule returned object has no columns
+            return new_df_wrapper
 
 
 class AmountColumnMixin(ColumnMixin):
@@ -275,7 +337,6 @@ class TaggedRowsLookup:
             tags_set: set[str] | None = None,
     ) -> None:
         self._df_wrapper_obj = df_wrapper_obj
-        self._df = None
         self._tags_set = tags_set if tags_set is not None else self._df_wrapper_obj.all_tags()
         self._lookup = None
 
@@ -313,7 +374,7 @@ class TaggedRowsLookup:
     def build_lookup(self):
         """ChatGPT solution is even faster (:"""
         time_start = time.time()
-        logging.info("Building lookup table...")
+        logging.info("Building tags lookup table...")
 
         df = self._df_wrapper_obj.dataframe()[["id", "tags"]].copy()
 
@@ -335,12 +396,12 @@ class TaggedRowsLookup:
         self._lookup = exploded.groupby("tag")["id"].agg(set).to_dict()
 
         time_elapsed = time.time() - time_start
-        logging.info(f"Building lookup table...Done in {time_elapsed} seconds")
+        logging.info(f"Building tags lookup table...Done in {time_elapsed} seconds")
         return self
 
     def lookup(self, tags: str | Iterable[str]) -> list[str]:
         if not self._lookup:
-            logging.warning("Lookup table not built; call build_lookup() first")
+            logging.warning("Tags lookup table not built; call build_lookup() first")
             return []
 
         if isinstance(tags, str):
@@ -359,7 +420,6 @@ class TaggedRowsLookup:
             result_ids.update(tag_ids)
 
         return list(result_ids)
-
 
 
 class TagsColumnMixin(ColumnMixin):
@@ -428,7 +488,8 @@ class TagsColumnMixin(ColumnMixin):
 
     def build_tags_lookup(self):
         if 'id' not in self.dataframe_wrapper_obj.dataframe():
-            logging.warning(f"Could not find 'id' column in dataframe wrapper {self.dataframe_wrapper_obj}, lookup table cannot be built.")
+            logging.warning(
+                f"Could not find 'id' column in dataframe wrapper {self.dataframe_wrapper_obj}, tags lookup table cannot be built.")
             return self
 
         self._tags_lookup = TaggedRowsLookup(self).build_lookup()
@@ -437,7 +498,7 @@ class TagsColumnMixin(ColumnMixin):
     def containing_tags(self,
                         tags: str | list | None,
                         empty_tags_strategy: Literal[
-        "all_true", "raise", "all_false"] = 'all_true') -> DataframeWrapper:
+                            "all_true", "raise", "all_false"] = 'all_true') -> DataframeWrapper:
         """
         Returns a copy of the df_wrapper with all the rows where tags are present.
         """
