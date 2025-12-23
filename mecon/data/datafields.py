@@ -160,7 +160,7 @@ class DatedRowsLookup:
         logging.info("Building dates lookup table...")
 
         df = self._df_wrapper_obj.dataframe()[["id", "datetime"]].copy()
-        df['date'] = df['datetime'].dt.strftime("%Y-%m-%d")
+        df['date'] = df['datetime'].dt.date
         del df['datetime']
 
         # Build lookup: tag -> set(ids)
@@ -179,12 +179,11 @@ class DatedRowsLookup:
             logging.warning("Dates lookup table not built; call build_lookup() first")
             return []
 
-        dates = calendar_utils.date_range(start_date, end_date, step=calendar_utils.DateRangeUnit.DAY.value)
-        dates_str = map(lambda date: date.strftime(format="%Y-%m-%d"), dates)
+        dates = calendar_utils.date_range(start_date, end_date, step=calendar_utils.DateRangeUnit.DAY.value).date
 
         result_ids = set()
-        for date in dates_str:
-            date_ids = self._lookup.get(date, {})
+        for date in dates:
+            date_ids = self._lookup.get(date, set())
             result_ids.update(date_ids)
 
         return list(result_ids)
@@ -653,9 +652,9 @@ class EmptyDataframeWrapper(Exception):
 
 
 class DatedDataframeWrapper(DataframeWrapper, DateTimeColumnMixin):
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, validate=False):
         super().__init__(df=df)
-        DateTimeColumnMixin.__init__(self, df_wrapper=self)
+        DateTimeColumnMixin.__init__(self, df_wrapper=self, validate=validate)
         self._validate_datetime_order()
 
     def _validate_datetime_order(self):

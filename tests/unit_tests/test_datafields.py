@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, date
-from unittest.mock import patch
+from unittest.mock import patch, call
 
 import pandas as pd
 
@@ -58,6 +58,73 @@ class TestColumnMixinValidation(unittest.TestCase):
             self._NoRequiredWrapper(pd.DataFrame({'not_id': ['a']}))
         except datafields.MissingRequiredColumnInDataframeWrapperError as e:
             self.fail(f"Unexpected exception raised: {e}")
+
+
+class TestDatedRowsLookup(unittest.TestCase):
+
+    def _wrapper_with_ids_and_datetimes(self):
+        return ExampleDataframeWrapper(pd.DataFrame({
+            "id": ["id1", "id2", "id3", "id4", "id5"],
+            "datetime": [
+                datetime(2020, 1, 1, 10, 0, 0),
+                datetime(2020, 1, 1, 12, 0, 0),  # same date as id1
+                datetime(2020, 1, 2, 9, 0, 0),
+                datetime(2020, 1, 4, 8, 0, 0),
+                datetime(2020, 1, 4, 23, 59, 59),  # same date as id4
+            ],
+        }))
+
+    def test_build_lookup_creates_expected_mapping(self):
+        wrapper = self._wrapper_with_ids_and_datetimes()
+        lookup = datafields.DatedRowsLookup(wrapper).build_lookup()
+
+        expected = {
+            date(2020, 1, 1): {"id1", "id2"},
+            date(2020, 1, 2): {"id3"},
+            date(2020, 1, 4): {"id4", "id5"},
+        }
+        self.assertEqual(lookup._lookup, expected)
+
+    def test_lookup_single_day_returns_ids_for_that_day(self):
+        wrapper = self._wrapper_with_ids_and_datetimes()
+        lookup = datafields.DatedRowsLookup(wrapper).build_lookup()
+
+        res = set(lookup.lookup(date(2020, 1, 1), date(2020, 1, 1)))
+        self.assertEqual(res, {"id1", "id2"})
+
+    def test_lookup_date_range_unions_ids_across_days(self):
+        wrapper = self._wrapper_with_ids_and_datetimes()
+        lookup = datafields.DatedRowsLookup(wrapper).build_lookup()
+
+        # Range includes 2020-01-01, 2020-01-02, 2020-01-03, 2020-01-04
+        # 01-03 has no rows and should be ignored
+        res = set(lookup.lookup(date(2020, 1, 1), date(2020, 1, 4)))
+        self.assertEqual(res, {"id1", "id2", "id3", "id4", "id5"})
+
+    def test_lookup_range_with_missing_dates_returns_empty_for_those_days(self):
+        wrapper = self._wrapper_with_ids_and_datetimes()
+        lookup = datafields.DatedRowsLookup(wrapper).build_lookup()
+
+        # 2020-01-03 not present in data
+        res = set(lookup.lookup(date(2020, 1, 3), date(2020, 1, 3)))
+        self.assertEqual(res, set())
+
+    def test_lookup_without_build_returns_empty_and_warns(self):
+        wrapper = self._wrapper_with_ids_and_datetimes()
+        lookup = datafields.DatedRowsLookup(wrapper)  # build_lookup not called
+
+        with patch.object(datafields.logging, "warning") as warn_mock:
+            res = lookup.lookup(date(2020, 1, 1), date(2020, 1, 1))
+
+        self.assertEqual(res, [])
+        warn_mock.assert_called()
+
+    def test_lookup_accepts_string_dates(self):
+        wrapper = self._wrapper_with_ids_and_datetimes()
+        lookup = datafields.DatedRowsLookup(wrapper).build_lookup()
+
+        res = set(lookup.lookup("2020-01-01", "2020-01-02"))
+        self.assertEqual(res, {"id1", "id2", "id3"})
 
 
 class TestTaggedRowsLookup(unittest.TestCase):
@@ -236,11 +303,19 @@ class TestTagsColumnMixin(unittest.TestCase):
             'id': ['id2', 'id3'],
             'tags': ['tag1', 'tag1,tag2']
         })
-        pd.testing.assert_frame_equal(example_wrapper.containing_tags('tag1').dataframe().reset_index(drop=True),
-                                      expected_wrapper_df)
 
-        pd.testing.assert_frame_equal(example_wrapper.containing_tags(None).dataframe().reset_index(drop=True),
-                                      example_wrapper.dataframe())
+        with patch.object(
+                example_wrapper._tags_lookup,
+                "lookup",
+                wraps=example_wrapper._tags_lookup.lookup
+        ) as lookup_spy:
+            pd.testing.assert_frame_equal(example_wrapper.containing_tags('tag1').dataframe().reset_index(drop=True),
+                                          expected_wrapper_df)
+
+            pd.testing.assert_frame_equal(example_wrapper.containing_tags(None).dataframe().reset_index(drop=True),
+                                          example_wrapper.dataframe())
+
+            lookup_spy.assert_called_once_with('tag1')
 
     def test_containing_tags_empty_tags_with_lookup(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -248,12 +323,20 @@ class TestTagsColumnMixin(unittest.TestCase):
             'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
         })).build_tags_lookup()
 
-        self.assertEqual(example_wrapper.containing_tags(None).size(), 4)
-        self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_true').size(), 4)
-        self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_false').size(), 0)
+        with patch.object(
+                example_wrapper._tags_lookup,
+                "lookup",
+                wraps=example_wrapper._tags_lookup.lookup
+        ) as lookup_spy:
 
-        with self.assertRaises(ValueError):
-            example_wrapper.containing_tags(None, empty_tags_strategy='raise')
+            self.assertEqual(example_wrapper.containing_tags(None).size(), 4)
+            self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_true').size(), 4)
+            self.assertEqual(example_wrapper.containing_tags(None, empty_tags_strategy='all_false').size(), 0)
+
+            with self.assertRaises(ValueError):
+                example_wrapper.containing_tags(None, empty_tags_strategy='raise')
+
+            lookup_spy.assert_not_called()
 
     def test_not_contains_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -325,10 +408,17 @@ class TestTagsColumnMixin(unittest.TestCase):
             'id': ['id1', 'id4'],
             'tags': ['', 'tag3']
         })
-        pd.testing.assert_frame_equal(example_wrapper.not_containing_tags('tag1').dataframe().reset_index(drop=True),
-                                      expected_wrapper_df.reset_index(drop=True))
 
-        self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
+        with patch.object(
+                example_wrapper._tags_lookup,
+                "lookup",
+                wraps=example_wrapper._tags_lookup.lookup
+        ) as lookup_spy:
+            pd.testing.assert_frame_equal(example_wrapper.not_containing_tags('tag1').dataframe().reset_index(drop=True),
+                                          expected_wrapper_df.reset_index(drop=True))
+
+            self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
+            lookup_spy.assert_called_once_with('tag1')
 
     def test_not_containing_tags_empty_tags_with_lookup(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -336,12 +426,19 @@ class TestTagsColumnMixin(unittest.TestCase):
             'tags': ['', 'tag1', 'tag1,tag2', 'tag3']
         })).build_tags_lookup()
 
-        self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
-        self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_false').size(), 0)
-        self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_true').size(), 4)
+        with patch.object(
+                example_wrapper._tags_lookup,
+                "lookup",
+                wraps=example_wrapper._tags_lookup.lookup
+        ) as lookup_spy:
+            self.assertEqual(example_wrapper.not_containing_tags(None).size(), 0)
+            self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_false').size(), 0)
+            self.assertEqual(example_wrapper.not_containing_tags(None, empty_tags_strategy='all_true').size(), 4)
 
-        with self.assertRaises(ValueError):
-            example_wrapper.not_containing_tags(None, empty_tags_strategy='raise')
+            with self.assertRaises(ValueError):
+                example_wrapper.not_containing_tags(None, empty_tags_strategy='raise')
+
+            lookup_spy.assert_not_called()
 
     def test_invalid_tags(self):
         example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
@@ -527,6 +624,37 @@ class TestDateTimeColumnMixin(unittest.TestCase):
         self.assertEqual(example_wrapper.invalid_datetimes().to_list(),
                          [False, False, True, True, True, True])
 
+    def test_select_date_range_with_lookup(self):
+        example_wrapper = ExampleDataframeWrapper(pd.DataFrame({
+            'id': ['id1', 'id2', 'id3', 'id4', 'id5'],
+            'datetime': [
+                datetime(2020, 1, 1, 0, 0, 0),
+                datetime(2019, 1, 1, 0, 0, 0),
+                datetime(2021, 1, 1, 0, 0, 0),
+                datetime(2022, 1, 1, 0, 0, 0),
+                datetime(2023, 1, 1, 0, 0, 0),
+            ]
+        })).build_dates_lookup()
+        expected_wrapper_df = pd.DataFrame({
+            'id': ['id1', 'id3', 'id4'],
+            'datetime': [
+                datetime(2020, 1, 1, 0, 0, 0),
+                datetime(2021, 1, 1, 0, 0, 0),
+                datetime(2022, 1, 1, 0, 0, 0),
+            ]
+        })
+        with patch.object(
+                example_wrapper._dates_lookup,
+                "lookup",
+                wraps=example_wrapper._dates_lookup.lookup
+        ) as lookup_spy:
+            result_df = example_wrapper.select_date_range(
+                start_date=datetime(2020, 1, 1, 0, 0, 0),
+                end_date=datetime(2022, 1, 1, 0, 0, 0)
+            ).dataframe()
+            lookup_spy.assert_called_once()
+            pd.testing.assert_frame_equal(result_df.reset_index(drop=True),
+                                          expected_wrapper_df.reset_index(drop=True))
 
 class TestAmountColumnMixin(unittest.TestCase):
     def test_all_currencies(self):
