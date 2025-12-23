@@ -1,7 +1,7 @@
+from mecon.etl.account_statements import APIAccountStatementsSource
 from mecon.tags.tagging import Tag
 from mecon.utils import calendar_utils as cu
 from mecon.etl import account_statements
-
 
 MISC_TAG_SET = {
     Tag.from_json('Money In', [{"amount": {"greater": 0}}]),
@@ -83,11 +83,27 @@ class HighLevelDataProviderTagSet(set):
         super().__init__(high_level_sources)
 
 
+def get_providers_details(dataset, source_names_to_look_for=None):
+    all_statements_sources = account_statements.StatementsManager.from_dataset(dataset,
+                                                                               source_names_to_look_for=source_names_to_look_for)
+    providers_details = {}
+    for source in all_statements_sources.sources:
+        providers_details[source.id] = {
+            "name": str(source),
+            "dir_name": source.dir_name,
+            "original_provider": source.original_provider,
+            'is_api': issubclass(source.__class__, APIAccountStatementsSource),
+            'enabled': dataset.settings['sources'].get(source.dir_name, 'N/A')
+        }
+
+    return providers_details
+
+
 CURRENCY_TAG_SET = {
     Tag.from_json('£', [{"currency": {'equal': 'GBP'}}]),
     Tag.from_json('€', [{"currency": {'equal': 'EUR'}}]),
     Tag.from_json('$', [{"currency": {'equal': 'USD'}}]),
-    Tag.from_json('Hungarian Forint', [{"currency": {'equal': 'HUF'}}]), # 0 HUF transactions
+    Tag.from_json('Hungarian Forint', [{"currency": {'equal': 'HUF'}}]),  # 0 HUF transactions
     Tag.from_json('Romanian Leu', [{"currency": {'equal': 'RON'}}]),
     Tag.from_json('Swiss Franc', [{"currency": {'equal': 'CHF'}}]),
     # or use a list of all currencies
@@ -114,3 +130,10 @@ def get_additional_tags(dataset, source_names_to_look_for=None):
     all_tags = all_tags.union(CURRENCY_TRANSFER_TAG_SET)
 
     return all_tags
+
+
+if __name__ == '__main__':
+    from mecon.etl.dataset import Dataset
+
+    d = Dataset(r"C:\Users\dimitris\PycharmProjects\mecon_dataset\20250931")
+    mapping = get_providers_details(d)
