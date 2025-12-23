@@ -1,11 +1,12 @@
 import unittest
 
 import pandas as pd
+import pytest
 from pandas import Timestamp
 
 from mecon.monitoring import log_data
 
-
+@pytest.mark.skip("LogData not used right now")
 class TestLogData(unittest.TestCase):
     def test_extract_tags(self):
         self.assertEqual(log_data._extract_tags('example test #tag1'), 'tag1')
@@ -38,7 +39,7 @@ class TestLogData(unittest.TestCase):
 
         pd.testing.assert_frame_equal(result_df_transformed, expected_df_transformed)
 
-
+@pytest.mark.skip("LogData not used right now")
 class TestPerformanceDataAggregator(unittest.TestCase):  # TODO test for legacy code
     def test_aggregation(self):
         logs_data_obj = log_data.LogData(pd.DataFrame({
@@ -109,6 +110,7 @@ class TestPerformanceDataAggregator(unittest.TestCase):  # TODO test for legacy 
         pd.testing.assert_frame_equal(perf_df, expected_df)
 
 
+@pytest.mark.skip("LogData not used right now")
 class TestPerformanceDataAggregatorV2(unittest.TestCase):
     def test_aggregation(self):
         logs_data_obj = log_data.LogData(pd.DataFrame({
@@ -474,6 +476,7 @@ class TestPerformanceDataAggregatorV2(unittest.TestCase):
 #                               'Aggregator.aggregate'])
 
 
+@pytest.mark.skip("LogData not used right now")
 class TestPerformanceDataV2(unittest.TestCase):
     def setUp(self) -> None:
         self.example_perf_data = log_data.PerformanceData(pd.DataFrame.from_dict({

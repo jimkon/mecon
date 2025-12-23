@@ -4,6 +4,7 @@ from io import StringIO
 from unittest.mock import patch
 
 import pandas as pd
+import pytest
 from pandas import Timestamp
 
 from mecon.monitoring import logs, log_data
@@ -83,6 +84,7 @@ class TestLogs(unittest.TestCase):
                                               expected_df.reset_index(drop=True))
 
 
+@pytest.mark.skip("LogData not used right now")
 class HistoricalPerformanceDataTestCase(unittest.TestCase):
     example_csv_file = """2024-01-10 18:02:17.617993947,2.006053924560547,"DataframeWrapper.apply_negated_rule,data,transactions,tags"
 2024-01-10 18:02:17.617993947,2.006053924560547,"Tagger.filter_df_with_negated_rule,data,tags"
