@@ -311,7 +311,12 @@ def time_aggregated_amount_and_frequency_fig(time: pd.Series, amount: pd.Series 
     return fig
 
 @logging_utils.codeflow_log_wrapper('#graphs')
-def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], names: List[str]):
+def stacked_bars_graph_html(
+        times: List[pd.Series],
+        lines: List[pd.Series],
+        names: List[str],
+        reverse_y_axis: bool = False,
+):
     fig = go.Figure()
 
     for time, line, name in zip(times, lines, names):
@@ -321,7 +326,7 @@ def stacked_bars_graph_html(times: List[pd.Series], lines: List[pd.Series], name
         barmode='stack',  # Stacked bar mode
         autosize=True,
         hovermode='closest',
-        yaxis=dict(title='£'),
+        yaxis=dict(title='£', autorange="reversed" if reverse_y_axis else True),
         # xaxis=dict(title=f"({len(time)} points)"),
         uirevision=str(datetime.datetime.now())
     )

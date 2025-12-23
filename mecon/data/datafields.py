@@ -486,6 +486,7 @@ class TagsColumnMixin(ColumnMixin):
         return not_contains_tags_flags
 
     def build_tags_lookup(self):
+        # if self._tags_lookup is not None: return self
         if 'id' not in self.dataframe_wrapper_obj.dataframe():
             logging.warning(
                 f"Could not find 'id' column in dataframe wrapper {self.dataframe_wrapper_obj}, tags lookup table cannot be built.")
