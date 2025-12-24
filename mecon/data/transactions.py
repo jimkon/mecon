@@ -153,7 +153,7 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
                                     fill_dates_before_groupagg=False,
                                     fill_dates_after_groupagg=False) -> Transactions:
 
-        transactions = self.copy()
+        transactions = self.copy() # TODO redundant??
 
         if grouping_key == 'none':
             return transactions

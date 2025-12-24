@@ -698,6 +698,8 @@ class DateFiller:
              start_date: datetime | date | None = None,
              end_date: datetime | date | None = None
              ) -> DatedDataframeWrapper:
+        if df_wrapper.size() == 0:
+            return df_wrapper
         df_start_date, df_end_date = df_wrapper.date_range()
 
         # if df_start_date is None or df_end_date is None:

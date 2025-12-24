@@ -690,6 +690,52 @@ class TestFillTransactions(unittest.TestCase):
 
         pd.testing.assert_frame_equal(result_df, expected_df)
 
+    def test_fill_empty_dataset_and_no_dates(self):
+        transactions = Transactions(pd.DataFrame({
+            'id': [],
+            'datetime': [],
+            'amount': [],
+            'currency': [],
+            'amount_cur': [],
+            'description': [],
+            'tags': []
+        }))
+
+        filler = TransactionDateFiller(
+            fill_unit='day',
+            id_fill=ID_FILL_VALUE,
+            amount_fill=1.0,
+            currency_fill='currency_fill',
+            amount_curr=1.0,
+            description_fill='description_fill',
+            tags_fills='tags_fills'
+        )
+
+        result_tx = filler.fill(
+            transactions,
+            start_date=None,
+            end_date=None
+        )
+
+        # expected_df = pd.DataFrame([{'datetime': Timestamp('2023-09-01 00:00:00'), 'id': 'filled', 'amount': 1.0,
+        #                              'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+        #                              'tags': 'tags_fills'},
+        #                             {'datetime': Timestamp('2023-09-02 00:00:00'), 'id': 'filled', 'amount': 1.0,
+        #                              'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+        #                              'tags': 'tags_fills'},
+        #                             {'datetime': Timestamp('2023-09-03 00:00:00'), 'id': 'filled', 'amount': 1.0,
+        #                              'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+        #                              'tags': 'tags_fills'},
+        #                             {'datetime': Timestamp('2023-09-04 00:00:00'), 'id': 'filled', 'amount': 1.0,
+        #                              'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+        #                              'tags': 'tags_fills'},
+        #                             {'datetime': Timestamp('2023-09-05 00:00:00'), 'id': 'filled', 'amount': 1.0,
+        #                              'currency': 'currency_fill', 'amount_cur': 1.0, 'description': 'description_fill',
+        #                              'tags': 'tags_fills'}])
+        #
+        # pd.testing.assert_frame_equal(result_df, expected_df)
+        self.assertEqual(result_tx.size(), 0)
+
     def test_fill_months(self):
         transactions = Transactions(pd.DataFrame({
             'id': ['11', '13', '15'],
