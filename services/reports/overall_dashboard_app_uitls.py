@@ -3,15 +3,20 @@ import pandas as pd
 from mecon.data import graphs
 
 def tag_sums_table(transactions, tags):
-    transactions = transactions.build_tags_lookup()
+    transactions.build_tags_lookup()
+    min_date, max_date = transactions.date_range()
     merged_df = None
     for tag in tags:
         filtered_tx = transactions.containing_tags(tag)
-        tx_grouped = filtered_tx.group_and_fill_transactions(
-            grouping_key='month',
-            aggregation_key='sum',
-            # fill_dates_after_groupagg=True,
-        )
+        if filtered_tx.is_empty():
+            tx_grouped = filtered_tx.fill_values('month', min_date, max_date)
+        else:
+            tx_grouped = filtered_tx.group_and_fill_transactions(
+                grouping_key='month',
+                aggregation_key='sum',
+                # fill_dates_before_groupagg=True,
+                # fill_dates_after_groupagg=True,
+            )
         df = tx_grouped.dataframe()[['datetime', 'amount']].rename(columns={'amount': tag})
         df['date'] = pd.to_datetime(df['datetime'].dt.date)
         del df['datetime']

@@ -134,9 +134,9 @@ dataset = data_manager.dataset
 transactions = data_manager.transactions.build_tags_lookup()
 providers_details = additional_tags.get_providers_details(dataset)
 
-banks_tags = ['Monzo', 'HSBC', 'Revolut']
+banks_tags = ['Monzo', 'HSBC', 'Revolut'] # TODO make it dynamic
 monthly_basics_tags = ['Rent', 'Home Bills', 'Subscription', 'Super Market']
-monthly_extras_tags = ["Eating out", "Entertainment", "Drinks", "Online orders", 'Therapy']
+monthly_extras_tags = ["Eating out", "Entertainment", "Online orders", 'Therapy']
 finance_tags = ["Investments", "Savings", 'Interest']
 
 
@@ -226,7 +226,7 @@ def server(input: Inputs, output: Outputs, session: Session):
         return df
 
     @render.data_frame
-    def finances_agg_table():
+    def finance_agg_table():
         table = finance_agg_table_calc()
         return shiny_app.render_table_standard(table, format_boolean_values=True)
 
