@@ -516,3 +516,10 @@ class RuleToJsonConverter:
                         comparison_values]
 
         return merged_dict
+
+class TagList(list[Tag]):
+
+    def to_dataframe(self):
+        records = [{'name': tag.name, 'conditions_json': tag.rule.to_json()} for tag in self]
+        df = pd.DataFrame(records)
+        return df

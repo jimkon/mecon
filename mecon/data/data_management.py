@@ -10,6 +10,7 @@ import pandas as pd
 from mecon.data.transactions import Transactions
 from mecon.etl import io_framework, account_statements
 from mecon.etl.dataset import Dataset
+from mecon.tags import tagging
 from mecon.tags.process import OptREPTagging, RuleExecutionPlanMonitor
 from mecon.tags.tag_helpers import tag_stats_from_transactions
 from mecon.tags.tagging import Tag
@@ -404,7 +405,6 @@ class CachedFileDataManagerLegacy:
         self.reset_transaction_tags()
 
 
-
 class CachedFileDataManagerLegacy2:
     def __init__(self, dataset: Dataset):
         assert dataset is not None, "None given as dataset"
@@ -479,7 +479,8 @@ class CachedFileDataManagerLegacy2:
 
     def get_statement_manager(self):
         source_names_to_look_for = [source for source, flag in self.dataset.settings['sources'].items() if flag]
-        logging.info(f"Creating new StatementsManager with {len(source_names_to_look_for)} sources: {source_names_to_look_for}")
+        logging.info(
+            f"Creating new StatementsManager with {len(source_names_to_look_for)} sources: {source_names_to_look_for}")
         am = account_statements.StatementsManager.from_dataset(self.dataset, source_names_to_look_for)
         return am
 
@@ -539,7 +540,7 @@ class CachedFileDataManagerLegacy2:
                                         'date_created': date_created}])
 
         self.custom_tags_df = pd.concat([
-            self.custom_tags_df[self.custom_tags_df['name'] != tag.name].copy(), # removed old tag if existed
+            self.custom_tags_df[self.custom_tags_df['name'] != tag.name].copy(),  # removed old tag if existed
             updated_tag_df
         ])
 
@@ -586,7 +587,8 @@ class CachedFileDataManagerLegacy2:
 
     def replace_tags_metadata(self, metadata_df: pd.DataFrame):
         if metadata_df.empty:
-            logging.warning(f"An empty metadata dataframe was found for this {self.dataset.name} and will replace the old one")
+            logging.warning(
+                f"An empty metadata dataframe was found for this {self.dataset.name} and will replace the old one")
         self.tags_metadata_df = metadata_df
         self.tags_metadata_df['date_modified'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
         self._save_tags_metadata()
@@ -598,6 +600,20 @@ class CachedFileDataManagerLegacy2:
 
 
 class DatasetTagsManager:
+    _default_custom_tags = tagging.TagList([
+        Tag.from_json('Rent', [{}]),
+        Tag.from_json('Home Bills', [{}]),
+        Tag.from_json('Subscription', [{}]),
+        Tag.from_json('Super Market', [{}]),
+        Tag.from_json('Eating out', [{}]),
+        Tag.from_json('Entertainment', [{}]),
+        Tag.from_json('Online orders', [{}]),
+        Tag.from_json('Therapy', [{}]),
+        Tag.from_json('Investments', [{}]),
+        Tag.from_json('Savings', [{}]),
+        Tag.from_json('Interest', [{}]),
+    ])
+
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
         self.tags_dir_path = self.dataset.current_data / 'tags'
@@ -613,9 +629,17 @@ class DatasetTagsManager:
         # self.all_tags_path = self.tags_dir_path / 'all_tags.csv'
 
     def load_custom_tags(self):
-        if not self.custom_tags_path.exists():
-            return
-        self.custom_tags_df = pd.read_csv(self.custom_tags_path, index_col=None)
+        df_defaults = self._default_custom_tags.to_dataframe()
+        df_defaults['conditions_json'] = df_defaults['conditions_json'].apply(json.dumps)
+        df_defaults['date_created'] = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
+
+        if self.custom_tags_path.exists():
+            df_custom_tags = pd.read_csv(self.custom_tags_path, index_col=None)
+            non_existing_custom_tags = list(set(df_defaults['name'])-set(df_custom_tags['name']))
+            self.custom_tags_df = pd.concat([df_custom_tags, df_defaults[df_defaults['name'].isin(non_existing_custom_tags)]])
+        else:
+            self.custom_tags_df = df_defaults
+
         self.custom_tags_df['type'] = 'Custom'
 
     def save_custom_tags(self):
@@ -767,7 +791,8 @@ class CachedFileDataManager:
                                         'date_created': date_created}])
 
         self.tags_manager.custom_tags_df = pd.concat([
-            self.tags_manager.custom_tags_df[self.tags_manager.custom_tags_df['name'] != tag.name].copy(),  # removed old tag if existed
+            self.tags_manager.custom_tags_df[self.tags_manager.custom_tags_df['name'] != tag.name].copy(),
+            # removed old tag if existed
             updated_tag_df
         ])
 
@@ -779,9 +804,10 @@ class CachedFileDataManager:
         self.tags_manager.save_custom_tags()
 
     def delete_tag(self, tag_name: str, update_tags=True):
-        self.tags_manager.custom_tags_df = self.tags_manager.custom_tags_df[self.tags_manager.custom_tags_df['name'] != tag_name].copy()
+        self.tags_manager.custom_tags_df = self.tags_manager.custom_tags_df[
+            self.tags_manager.custom_tags_df['name'] != tag_name].copy()
 
-        self.tags_manager.merge_all_tags() # instead of doing: self.all_tags_df = self.all_tags_df[self.all_tags_df['name'] != tag_name].copy()
+        self.tags_manager.merge_all_tags()  # instead of doing: self.all_tags_df = self.all_tags_df[self.all_tags_df['name'] != tag_name].copy()
         if update_tags:
             self.reset_transaction_tags()
 
@@ -832,5 +858,3 @@ class CachedFileDataManager:
         target_path = self.dataset.current_data / 'tags' / 'id_rules' / date_id / f"{hex_id}.json"
         target_path.parent.mkdir(exist_ok=True, parents=True)
         json.dump(tag_id_dict, open(target_path, 'w'), indent=4)
-
-

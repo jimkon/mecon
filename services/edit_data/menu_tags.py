@@ -68,7 +68,7 @@ def build_tags_table(data_manager):
                     'Date modified',
                     'Type',
                     'Actions']
-    return tag_merged_info_df[cols_to_show]
+    return shiny_app.render_table_standard(tag_merged_info_df[cols_to_show])
 
 
 def create_tag_creation_modal():
