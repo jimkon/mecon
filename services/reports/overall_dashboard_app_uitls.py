@@ -1,10 +1,11 @@
 import pandas as pd
 
-def monthly_basic_agg_table(transactions):
+from mecon.data import graphs
+
+def tag_sums_table(transactions, tags):
     transactions = transactions.build_tags_lookup()
-    monthly_basic_tags = ['Rent', 'Home Bills', 'Subscription', 'Super Market']
     merged_df = None
-    for tag in monthly_basic_tags:
+    for tag in tags:
         filtered_tx = transactions.containing_tags(tag)
         tx_grouped = filtered_tx.group_and_fill_transactions(
             grouping_key='month',
@@ -19,7 +20,16 @@ def monthly_basic_agg_table(transactions):
 
     merged_df.fillna(0, inplace=True)
     merged_df.sort_values('date', inplace=True, ascending=False)
-    return merged_df[['date']+monthly_basic_tags]
+    return merged_df[['date'] + tags]
+
+
+def tag_sums_graph(tag_sums, cols):
+    return graphs.stacked_bars_graph_html(
+        times=[tag_sums['date']] * len(cols),
+        lines=[tag_sums[c] for c in cols],
+        names=cols,
+        reverse_y_axis=True
+    )
 
 
 if __name__ == '__main__':
