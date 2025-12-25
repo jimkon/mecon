@@ -68,7 +68,7 @@ def build_tags_table(data_manager):
                     'Date modified',
                     'Type',
                     'Actions']
-    return shiny_app.render_table_standard(tag_merged_info_df[cols_to_show])
+    return tag_merged_info_df[cols_to_show]
 
 
 def create_tag_creation_modal():
@@ -118,7 +118,7 @@ def server(input: Inputs, output: Outputs, session: Session):
 
     @render.data_frame
     def menu_tags_table():
-        return build_tags_table(data_manager)
+        return shiny_app.render_table_standard(build_tags_table(data_manager))
 
     @reactive.effect
     @reactive.event(input.create_button)
