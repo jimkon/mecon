@@ -201,11 +201,12 @@ class Transactions(fields.DatedDataframeWrapper, fields.IdColumnMixin, fields.Am
         df_this, df_other = self.dataframe(), transactions.dataframe()
         diffs = {}
         for column in columns:
+            series_this, series_other = df_this[column].values, df_other[column].values
             if column == 'tags':
                 diff = [set(tags_this.split(',')) != set(tags_other.split(',')) for tags_this, tags_other in
-                        zip(df_this[column], df_other[column])]
+                        zip(series_this, series_other)]
             else:
-                diff = df_this[column] != df_other[column]
+                diff = series_this != series_other
             diffs[column] = diff
         df_diffs = pd.DataFrame(diffs)
         the_other_minus_this = df_other[df_diffs.any(axis=1)]
