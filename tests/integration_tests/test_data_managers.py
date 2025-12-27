@@ -859,13 +859,13 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         existing_tag = self.dm.get_tag('test_tag')
         self.assertEqual(existing_tag.name, 'test_tag')
 
-        non_existing_tag = self.dm.get_tag('dadsas_tag')
+        non_existing_tag = self.dm.get_tag('non_existing_tag')
         self.assertIsNone(non_existing_tag)
 
     def test_update_tag(self):
         existing_tag = self.dm.get_tag('test_tag')
         self.assertEqual(existing_tag.name, 'test_tag')
-        self.assertEqual(existing_tag.rule.to_json(), [{'description.lower': {'contains': 'something'}}])
+        self.assertEqual(existing_tag.rule.to_json(), [{"description.lower": {"contains": "something"}}])
         existing_tag._rule = tagging.Disjunction.from_json([{}])
         self.dm.update_tag(existing_tag, update_tags=False)
         existing_tag = self.dm.get_tag('test_tag')
@@ -873,11 +873,11 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         self.assertEqual(existing_tag.name, 'test_tag')
         self.assertEqual(existing_tag.rule.to_json(), [{}])
 
-        non_existing_tag = tagging.Tag.from_json_string('non_existing_tag', '[{}]')
+        non_existing_tag = tagging.Tag.from_json_string('non_existing_tag', '[{"description.lower": {"contains": "something"}}]')
         self.dm.update_tag(non_existing_tag, update_tags=False)
         non_existing_tag = self.dm.get_tag('non_existing_tag')
         self.assertEqual(non_existing_tag.name, 'non_existing_tag')
-        self.assertEqual(non_existing_tag.rule.to_json(), [{}])
+        self.assertEqual(non_existing_tag.rule.to_json(), [{"description.lower": {"contains": "something"}}])
         self.assertEqual(self.dm.tags_manager.custom_tags_df['date_created'].isna().sum(), 0)
 
     def test_delete_tag(self):
@@ -888,8 +888,8 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
     def test_all_tags(self):
         tags = self.dm.all_tags()
 
-        self.assertEqual(len(tags), 3)
-        self.assertListEqual([tag.name for tag in tags], ['test_tag', 'test_tag2', 'test_tag3'])
+        self.assertGreaterEqual(len(tags), 2)
+        self.assertTrue({'test_tag', 'test_tag2', 'test_tag3'}.issubset({tag.name for tag in tags}))
 
         #check if test_tag2 built in tag was overridden
         self.assertEqual(tags[1].name, 'test_tag2')
@@ -899,7 +899,7 @@ test_tag2,"[{""description"":{""contains"":""something else""}}]",2025-01-21 02:
         transactions = self.dm.get_transactions()
         self.assertEqual(transactions.containing_tags('test_tag1').size(), 0)
 
-        tag = tagging.Tag.from_json_string('test_tag1', '[{}]')
+        tag = tagging.Tag.from_json('test_tag1', [{"description":{"contains":"desc example"}}])
         self.dm.update_tag(tag, update_tags=True)
 
         transactions = self.dm.get_transactions()

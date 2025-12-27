@@ -407,6 +407,28 @@ class TestTagger(unittest.TestCase):
         pd.testing.assert_frame_equal(df, expected_df)
 
 
+    def test_tag_with_no_rules(self):
+        tag = tagging.Tag.from_json_string('empty_tag', '[{}]')
+        df = pd.DataFrame({'field': [0, 1, 2, 3, 4],
+                           'tags': ['',
+                                    'test_tag',
+                                    'another_tag',
+                                    'test_tag',
+                                    'another_tag']})
+
+        tagger = tagging.Tagger()
+        tagger.tag(tag, df, remove_old_tags=False)
+
+        expected_df = pd.DataFrame({'field': [0, 1, 2, 3, 4],
+                                    'tags': ['',
+                                            'test_tag',
+                                            'another_tag',
+                                            'test_tag',
+                                            'another_tag']})
+        pd.testing.assert_frame_equal(df, expected_df)
+
+
+
 class TestTagMatchCondition(unittest.TestCase):
     def test_match(self):
         match_condition = tagging.TagMatchCondition('test_tag')

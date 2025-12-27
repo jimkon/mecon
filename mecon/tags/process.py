@@ -220,7 +220,10 @@ class RuleExecutionPlanTagging(TaggingSession):
         elif isinstance(rule, tagging.Conjunction):
             def conjunction_op(df_in) -> pd.Series:
                 in_cols = [self._rule_aliases.get(subrule) for subrule in rule.rules]
-                res = df_in[in_cols].all(axis=1).rename(rule_alias)
+                if len(in_cols) == 0:
+                    res = pd.Series([False] * len(df_in), index=df_in.index).rename(rule_alias)
+                else:
+                    res = df_in[in_cols].all(axis=1).rename(rule_alias)
                 self._op_monitoring.append(
                     {'tag': rule.parent_tag,
                      'in': in_cols,

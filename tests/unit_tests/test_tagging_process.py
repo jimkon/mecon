@@ -25,8 +25,15 @@ class RuleExecutionPlanTaggingTestCase(unittest.TestCase):
                                     [{'description': {'contains': 'landlord'}}])
         self.tag_22 = Tag.from_json('Airbnb',
                                     [{'description.lower': {'contains': 'airbnb'}}])
+        self.tags_empty = Tag.from_json_string('Saving', '[{}]')
 
-        self.tags = [self.tag_0, self.tag_1, self.tag_21, self.tag_22]
+        self.tags = [
+            self.tag_0,
+            self.tag_1,
+            self.tag_21,
+            self.tag_22,
+            self.tags_empty
+        ]
         self.rep = RuleExecutionPlanTagging(self.tags)
         self.rep.create_rule_execution_plan()
 
@@ -73,7 +80,11 @@ class RuleExecutionPlanTaggingTestCase(unittest.TestCase):
             {'priority': '0.2', 'rule': '<mecon.tags.tagging.Conjunction object at 0x000001B06CC04610>',
              'tag': 'Airbnb',
              'type': 'Conjunction'},
-            {'priority': '0.0', 'rule': 'lower(description) contains airbnb', 'tag': 'Airbnb', 'type': 'Condition'}
+            {'priority': '0.0', 'rule': 'lower(description) contains airbnb', 'tag': 'Airbnb', 'type': 'Condition'},
+            {'priority': '0.8', 'rule': 'TagApplicator(Saving)', 'tag': 'Saving', 'type': 'TagApplicator'},
+            {'priority': '0.4', 'rule': '<mecon.tags.tagging.Disjunction object at 0x0000023FFF6F5B90>', 'tag': 'Saving', 'type': 'Disjunction'},
+            {'priority': '0.2', 'rule': '<mecon.tags.tagging.Conjunction object at 0x0000023FFF6F5A90>', 'tag': 'Saving',
+             'type': 'Conjunction'},
         ])
         pd.testing.assert_frame_equal(df_plan[['priority', 'tag', 'type']], expected_df[['priority', 'tag', 'type']])
 
@@ -86,9 +97,9 @@ class RuleExecutionPlanTaggingTestCase(unittest.TestCase):
         self.assertListEqual(list(batches.keys()),
                              ['0.0', '0.2', '0.4', '0.8', '1.1', '1.2', '1.4', '1.8', '2.1', '2.2', '2.4', '2.8'])
         self.assertEqual(len(batches['0.0']), 5)
-        self.assertEqual(len(batches['0.2']), 2)
-        self.assertEqual(len(batches['0.4']), 2)
-        self.assertEqual(len(batches['0.8']), 2)
+        self.assertEqual(len(batches['0.2']), 3)
+        self.assertEqual(len(batches['0.4']), 3)
+        self.assertEqual(len(batches['0.8']), 3)
         self.assertEqual(len(batches['1.1']), 2)
         self.assertEqual(len(batches['1.2']), 3)
         self.assertEqual(len(batches['1.4']), 1)
