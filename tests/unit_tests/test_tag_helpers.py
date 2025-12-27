@@ -74,7 +74,17 @@ class TagHelpersTestCase(unittest.TestCase):
         rules.append('not_a_rule_type')
 
         with self.assertRaises(ValueError):
-            expanded_rules = tag_helpers.expand_rule_to_subrules(rule5)
+            tag_helpers.expand_rule_to_subrules(rule5)
+
+    # def test_expand_rule_to_subrules_empty(self): # TODO deactivated because it needs more changes
+    #     rule1 = tagging.Disjunction.from_json_string('[{}]')
+    #     expanded_rules = tag_helpers.expand_rule_to_subrules(rule1)
+    #     self.assertEqual(len(expanded_rules), 0)
+    #
+    #     rule2 = tagging.Disjunction.from_json_string('{"col1": {"greater": 1}}')
+    #     expanded_rules = tag_helpers.expand_rule_to_subrules(rule2)
+    #     self.assertNotEqual(len(expanded_rules), 0)
+
 
 
 if __name__ == '__main__':

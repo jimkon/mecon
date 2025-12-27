@@ -26,9 +26,12 @@ def add_rule_for_id(tag: tagging.Tag, ids_to_add: str | list[str]) -> tagging.Ta
     return tag
 
 
-def expand_rule_to_subrules(rule: tagging.AbstractRule) -> list[tagging.AbstractRule]:
+def expand_rule_to_subrules(
+        rule: tagging.AbstractRule
+) -> list[tagging.AbstractRule] | None:
     expanded_rules = []
     rule_to_expand = [rule]
+    only_composite_rules = True
     while len(rule_to_expand) > 0:
         rule = rule_to_expand.pop(0)
         expanded_rules.append(rule)
@@ -38,11 +41,17 @@ def expand_rule_to_subrules(rule: tagging.AbstractRule) -> list[tagging.Abstract
         elif isinstance(rule, tagging.Conjunction):
             subrules = rule.rules
         elif isinstance(rule, tagging.Condition):
+            only_composite_rules = False
             continue
         else:
             raise ValueError(f"Unexpected rule type: {type(rule)}")
 
         rule_to_expand.extend(subrules)
+
+    # If the subrules contain only composite rules like Conjunctions and disjunction
+    # we can skip because it will be all False anyway
+    # if only_composite_rules: # TODO needs more changes
+    #     return []
 
     return expanded_rules
 
