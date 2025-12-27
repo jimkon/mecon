@@ -8,8 +8,8 @@ import pandas as pd
 import pytest
 
 from mecon.data.data_management import CachedFileDataManager
+from mecon.data.transactions import Transactions
 from mecon.etl.dataset import Dataset
-
 
 _OTHER_FIELDS_PATTERN = re.compile(r"other_fields:\s*\{(?P<content>[^}]*)\}")
 
@@ -34,9 +34,9 @@ def _normalise_other_fields(description: str) -> str:
 @pytest.fixture
 def dataset_copy(tmp_path):
     source_dataset = (
-        Path(__file__).resolve().parent
-        / "datasets"
-        / "test_statements_and_tags"
+            Path(__file__).resolve().parent
+            / "datasets"
+            / "test_statements_and_tags"
     )
     dataset_path = tmp_path / "test_statements_and_tags"
     shutil.copytree(source_dataset, dataset_path)
@@ -83,12 +83,19 @@ def test_cached_file_data_manager_creates_expected_files(dataset_copy):
     manager = CachedFileDataManager(dataset)
 
     transactions_path = dataset.transactions_path
+    custom_tags_path = dataset.custom_tags_path
+    additional_tags_path = dataset.additional_tags_path
     tags_metadata_path = dataset.tags_metadata_path
 
     _expected_current_data = dataset_path / "data" / "_expected_current"
 
     assert not transactions_path.exists()
+    assert custom_tags_path.exists()
+    assert additional_tags_path.exists()
     assert not tags_metadata_path.exists()
+    assert manager.get_tags_metadata() is None
+
+    assert manager.tags_manager.custom_tags_df['name'].nunique() > 1
 
     manager.reset_transactions()
     assert transactions_path.exists()
@@ -96,29 +103,37 @@ def test_cached_file_data_manager_creates_expected_files(dataset_copy):
     manager.reset_transaction_tags()
     assert tags_metadata_path.exists()
 
-    actual_transactions = pd.read_csv(transactions_path)
-    expected_transactions = pd.read_csv(_expected_current_data / "transactions.csv")
+    # make sure reset_transaction_tags saves the new transactions to disk
+    saved_transactions = Transactions.from_csv(transactions_path)
+    transactions = manager.transactions
+    assert saved_transactions.equals(transactions)
 
-    actual_transactions["description"] = actual_transactions["description"].map(
+    transactions_df = transactions.dataframe()
+    expected_transactions = Transactions.from_csv(_expected_current_data / "transactions.csv")
+    expected_transactions_df = expected_transactions.dataframe()
+
+    transactions_df["description"] = transactions_df["description"].map(
         _normalise_other_fields
     )
-    expected_transactions["description"] = expected_transactions["description"].map(
+    expected_transactions_df["description"] = expected_transactions_df["description"].map(
         _normalise_other_fields
     )
 
     pd.testing.assert_frame_equal(
-        actual_transactions.sort_values("id").reset_index(drop=True),
-        expected_transactions.sort_values("id").reset_index(drop=True),
+        transactions_df.sort_values("id").reset_index(drop=True),
+        expected_transactions_df.sort_values("id").reset_index(drop=True),
         check_dtype=False,
     )
 
-    actual_tags_metadata = pd.read_csv(tags_metadata_path)
+    actual_tags_metadata = manager.get_tags_metadata()
+    custom_tag_names = set(manager.tags_manager.custom_tags_df['name'])
+    additional_tag_names = set(manager.tags_manager.additional_tags_df['name'])
+    assert set(actual_tags_metadata["name"]).issubset(custom_tag_names.union(additional_tag_names))
     assert "date_modified" in actual_tags_metadata.columns
     assert actual_tags_metadata["date_modified"].notna().all()
 
-    actual_tags_summary = actual_tags_metadata.drop(columns=["date_modified"])
+    actual_tags_summary = actual_tags_metadata.drop(columns=["date_modified", "date_created"])
     expected_tags_summary = pd.read_csv(_expected_current_data / "tags_metadata.csv").drop(columns=["date_modified"])
-
 
     pd.testing.assert_frame_equal(
         actual_tags_summary.sort_values("name").reset_index(drop=True),

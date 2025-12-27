@@ -641,9 +641,11 @@ class DatasetTagsManager:
             self.custom_tags_df = df_defaults
 
         self.custom_tags_df['type'] = 'Custom'
+        self.save_custom_tags()
+
 
     def save_custom_tags(self):
-        logging.info(f"Saving tags file to {self.custom_tags_path}")
+        logging.info(f"Saving custom tags file to {self.custom_tags_path}")
         self.custom_tags_df.to_csv(self.custom_tags_path, index=False)
 
     def load_additional_tags(self):
@@ -832,7 +834,10 @@ class CachedFileDataManager:
 
     def get_tags_metadata(self):
         if self.tags_metadata_df is None:  # TODO redundant?
-            self.tags_metadata_df = pd.read_csv(self._tags_metadata_path, index_col=None)
+            if self._tags_metadata_path.exists():
+                self.tags_metadata_df = pd.read_csv(self._tags_metadata_path, index_col=None)
+            else:
+                return None
 
         df_metadata = self.tags_manager.all_tags_df.merge(self.tags_metadata_df, on='name')
         del df_metadata['conditions_json']
