@@ -28,7 +28,13 @@ def tag_sums_table(transactions, tags):
     return merged_df[['date'] + tags]
 
 
-def tag_sums_graph(tag_sums, cols):
+def tag_sums_graph(tag_sums, cols, order=True):
+    if order:
+        from collections import OrderedDict
+        sums = {col: tag_sums[col].abs().sum() for col in cols}
+        ordered_sums = OrderedDict({el[0]: el[1] for el in sorted(sums.items(), key=lambda item: item[1], reverse=True)})
+        cols = list(ordered_sums.keys())
+
     return graphs.stacked_bars_graph_html(
         times=[tag_sums['date']] * len(cols),
         lines=[tag_sums[c] for c in cols],
