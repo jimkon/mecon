@@ -22,6 +22,11 @@ DEFAULT_TIME_UNIT = 'month'
 
 app_ui = shiny_app.app_ui_factory(
     ui.h3("Main Dashboard"),
+    ui.input_task_button(
+        id='refresh_data_button',
+        label='Refresh data',
+        label_busy='Loading...'
+    ),
     ui.layout_sidebar(
         ui.sidebar(
             shiny_app.transactions_intersection_filtered_factory()
@@ -134,7 +139,7 @@ dataset = data_manager.dataset
 transactions = data_manager.transactions.build_tags_lookup()
 providers_details = additional_tags.get_providers_details(dataset)
 
-banks_tags = ['Monzo', 'HSBC', 'Revolut'] # TODO make it dynamic
+banks_tags = ['Monzo', 'HSBC', 'Revolut']  # TODO make it dynamic
 monthly_basics_tags = ['Rent', 'Home Bills', 'Subscription', 'Super Market']
 monthly_extras_tags = ["Eating out", "Entertainment", "Online orders", 'Therapy']
 finance_tags = ["Investments", "Savings", 'Interest']
@@ -155,6 +160,17 @@ def server(input: Inputs, output: Outputs, session: Session):
         output,
         session,
         data_manager)
+
+
+    @reactive.effect
+    @reactive.event(input.refresh_data_button)
+    def _():
+        logging.info("Refreshing data...")
+        global data_manager, dataset, transactions, providers_details
+        data_manager = WorkingDataManager()
+        dataset = data_manager.dataset
+        transactions = data_manager.transactions.build_tags_lookup()
+        providers_details = additional_tags.get_providers_details(dataset)
 
     @render.data_frame
     def sources_table():
