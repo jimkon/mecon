@@ -9,7 +9,7 @@ import pandas as pd
 from mecon.etl.account_statements import (
     APIAccountStatementsSource,
     TrueLayerStatements,
-    Trading212APIStatements,
+    Trading212APIO3Statements,
     MonzoAPIStatements,
 )
 
@@ -64,7 +64,7 @@ class FetchImplementationTests(unittest.TestCase):
         api_handler = mock.MagicMock()
         api_handler.fetch_history_dataframe.return_value = pd.DataFrame()
         with TemporaryDirectory() as tmpdir:
-            source = Trading212APIStatements(
+            source = Trading212APIO3Statements(
                 working_dir=Path(tmpdir),
                 trans_transformer=mock.MagicMock(),
                 api_handler=api_handler,
@@ -89,7 +89,7 @@ class FetchImplementationTests(unittest.TestCase):
             pd.DataFrame({"_reportid": ["222"]}).to_csv(
                 tmp_path / "existing_lower.csv", index=False
             )
-            source = Trading212APIStatements(
+            source = Trading212APIO3Statements(
                 working_dir=tmp_path,
                 trans_transformer=mock.MagicMock(),
                 api_handler=api_handler,
@@ -114,7 +114,7 @@ class FetchImplementationTests(unittest.TestCase):
                     "_chunk_to": ["2020-12-31 23:59:59+00:00"],
                 }
             ).to_csv(tmp_path / "existing.csv", index=False)
-            source = Trading212APIStatements(
+            source = Trading212APIO3Statements(
                 working_dir=tmp_path,
                 trans_transformer=mock.MagicMock(),
                 api_handler=api_handler,
@@ -138,7 +138,7 @@ class FetchImplementationTests(unittest.TestCase):
             pd.DataFrame({"_reportid": [None, "333"], "_chunk_to": ["2021-01-01T00:00:00Z", None]}).to_csv(
                 tmp_path / "existing_lower.csv", index=False
             )
-            source = Trading212APIStatements(
+            source = Trading212APIO3Statements(
                 working_dir=tmp_path,
                 trans_transformer=mock.MagicMock(),
                 api_handler=api_handler,
@@ -153,7 +153,7 @@ class FetchImplementationTests(unittest.TestCase):
 
     def test_trading212_log_cached_report_ids(self):
         """Log a summary of the cached report IDs when present."""
-        source = Trading212APIStatements(
+        source = Trading212APIO3Statements(
             working_dir=Path("/tmp"),
             trans_transformer=mock.MagicMock(),
             api_handler=mock.MagicMock(),
@@ -167,7 +167,7 @@ class FetchImplementationTests(unittest.TestCase):
 
     def test_trading212_determine_since(self):
         """Derive an appropriate since datetime based on cached metadata."""
-        source = Trading212APIStatements(
+        source = Trading212APIO3Statements(
             working_dir=Path("/tmp"),
             trans_transformer=mock.MagicMock(),
             api_handler=mock.MagicMock(),
@@ -182,7 +182,7 @@ class FetchImplementationTests(unittest.TestCase):
 
     def test_trading212_determine_since_returns_none_when_up_to_date(self):
         """Return None when cached metadata already covers the current time."""
-        source = Trading212APIStatements(
+        source = Trading212APIO3Statements(
             working_dir=Path("/tmp"),
             trans_transformer=mock.MagicMock(),
             api_handler=mock.MagicMock(),

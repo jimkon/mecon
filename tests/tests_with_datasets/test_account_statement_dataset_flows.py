@@ -10,7 +10,7 @@ import pandas as pd
 
 from mecon.etl.account_statements import (
     MonzoAPIStatements,
-    Trading212APIStatements,
+    Trading212APIO3Statements,
     TrueLayerHSBCStatements,
     TrueLayerStatements,
 )
@@ -117,7 +117,7 @@ class Trading212DatasetFlowTests(unittest.TestCase):
             dataset = Dataset.from_dirpath(dataset_path)
             working_dir = dataset.statements / "Trading212API"
 
-            source = Trading212APIStatements(
+            source = Trading212APIO3Statements(
                 working_dir=working_dir,
                 trans_transformer=mock.MagicMock(),
                 api_handler=api_client,
