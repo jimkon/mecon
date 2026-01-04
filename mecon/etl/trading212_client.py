@@ -1,4 +1,5 @@
 import logging
+import pathlib
 import time
 import uuid
 from typing import Literal, Optional
@@ -174,6 +175,7 @@ class Trading212APICaller:
             report_id = ReportId.model_validate(data)
             return report_id
         else:
+            logging.info(f"Trading212 API: API returned {r.status_code} for {r.json()}.")
             raise Exception(f"Trading212 API: API returned {r.status_code}.")
 
     @staticmethod
@@ -222,22 +224,25 @@ class Trading212APICaller:
 
 
 class Trading212Client:
-    def __init__(self, dataset: Dataset):
-        self.dataset = dataset
+    def __init__(self, creds: "DictFile"):
+        self.creds = creds
         self.api_key = None
         self.api_caller = None
         self.existing_data = None
         self.reports_list : list[ExportReport] | None = None
 
+    @classmethod
+    def from_dataset(cls, dataset: Dataset):
+        return cls(dataset.creds)
+
     def load_api_key(self):
-        creds = self.dataset.creds
-        if not creds \
-                or 'trading212' not in creds \
-                or 'api_key' not in creds['trading212'] \
-                or creds['trading212']['api_key'] is None:
+        if not self.creds \
+                or 'trading212' not in self.creds \
+                or 'api_key' not in self.creds['trading212'] \
+                or self.creds['trading212']['api_key'] is None:
             raise Trading212CredentialsError('Trading212 credentials not configured')
 
-        self.api_key = creds['trading212']['api_key']
+        self.api_key = self.creds['trading212']['api_key']
         logging.info('Trading212 credentials loaded.')
 
     def init_api_caller(self):
@@ -246,9 +251,8 @@ class Trading212Client:
         self.api_caller = Trading212APICaller(self.api_key)
         logging.info('Trading212 API caller initialized.')
 
-    def load_existing_data(self, remove_na=True):
-        trd212_statements = self.dataset.statements / 'Trading212API'
-        files = trd212_statements.glob('*.csv')
+    def load_existing_data(self, from_dirpath: pathlib.Path, remove_na=True):
+        files = from_dirpath.glob('*.csv')
         df = pd.concat([pd.read_csv(file) for file in files])
 
         if remove_na:
@@ -300,13 +304,14 @@ class Trading212Client:
 
         _id = report.reportId
         from_str, to_str = str(report.timeFrom)[:10], str(report.timeTo)[:10]
-        filename = self.dataset.statements / 'Trading212API' / f"from_{from_str}_to_{to_str}_rid{_id}.csv"
+        # filename = self.dataset.statements / 'Trading212API' / f"from_{from_str}_to_{to_str}_rid{_id}.csv"
         # df["_file_name"] = filename
         df["_reportId"] = _id
         df["_chunk_from"] = from_str
         df["_chunk_to"] = to_str
-        df.to_csv(filename, index=False)
-        logging.info(f"Trading212Client.download_report_id: Downloaded report {_id} to {filename}.")
+        # df.to_csv(filename, index=False)
+        logging.info(f"Trading212Client.download_report_id: Downloaded report {_id}.")
+        return df
 
     def download_report_id(self, report_id):
         if self.reports_list is None or report_id not in [rep.reportId for rep in self.reports_list]:
@@ -316,7 +321,7 @@ class Trading212Client:
         if len(filtered_report) == 0:
             raise Exception(f"Trading212Client.download_report_id: {report_id} is not a valid report id.")
 
-        self.download_report(filtered_report[0])
+        return self.download_report(filtered_report[0])
 
 
 if __name__ == '__main__':
@@ -325,10 +330,10 @@ if __name__ == '__main__':
     data_manager = WorkingDataManager()
     dataset = data_manager.dataset
 
-    client = Trading212Client(dataset)
+    client = Trading212Client.from_dataset(dataset)
     client.load_api_key()
     client.init_api_caller()
-    client.load_existing_data()
+    client.load_existing_data(dataset.statements / 'Trading212API')
     client.existing_data_stats()
     # t = client.api_caller.list_generated_reports()
     # t = client.api_caller.request_a_csv_report()
@@ -361,8 +366,7 @@ if __name__ == '__main__':
     #     time.sleep(10)
     #     is_ready = client.api_caller.check_requested_report_status(report_id.reportId)
 
-    client.download_report_id(5009667)
-    client.download_report_id(5010507)
+    print(client.download_report_id(5009667).shape)
+    print(client.download_report_id(5010507).shape)
 
-    breakpoint()
     t = 0

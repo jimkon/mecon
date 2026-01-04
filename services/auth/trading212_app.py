@@ -13,10 +13,17 @@ from mecon.etl.trading212_client import Trading212Client, Trading212CredentialsE
 
 
 def generate_export_reports_table(trd212_client, input_comps):
+    ui.notification_show(
+        f"Requesting data from the API, it might take a while...",
+        type="default",
+        duration=2,
+    )
     reports_list = trd212_client.list_generated_reports()
     _export_reports = trd212_client.existing_data_stats()
     df = pd.DataFrame([dict(rep) for rep in reports_list])
-    df.sort_values(by=["timeTo"], inplace=True, ascending=False)
+    df['timeFrom'] = pd.to_datetime(df['timeFrom']).dt.strftime("%Y-%m-%d")
+    df['timeTo'] = pd.to_datetime(df['timeTo']).dt.strftime("%Y-%m-%d")
+    df.sort_values(by=["timeTo", "timeFrom"], inplace=True, ascending=False)
 
     def generate_download_button(report_id):
         btn = ui.input_task_button(
@@ -52,8 +59,8 @@ def generate_export_reports_table(trd212_client, input_comps):
 data_manager = WorkingDataManager()
 dataset = data_manager.dataset
 
-client = Trading212Client(dataset)
-client.load_existing_data()
+client = Trading212Client.from_dataset(dataset)
+client.load_existing_data(dataset.statements / 'Trading212API')
 last_fetched_date = client.last_fetched_date()
 existing_data_stats_dict = client.existing_data_stats()
 
@@ -112,13 +119,15 @@ def server(input: Inputs, output: Outputs, session: Session):
         logging.warning(f"Trading212 credentials error: {e}")
         export_reports_df = pd.DataFrame()
 
+    export_reports_df_value = reactive.Value(export_reports_df)
+
     @render.text
     def api_key_status_text():
         return f"**** ({len(str(client.api_key))})" if client.api_key else "No API key"
 
     @render.data_frame
     def export_reports_table():
-        return shiny_app.render_grid_standard(export_reports_df, format_boolean_values=True)
+        return shiny_app.render_grid_standard(export_reports_df_value.get(), format_boolean_values=True)
 
     @render.ui
     def existing_data_stats_table():
@@ -129,6 +138,13 @@ def server(input: Inputs, output: Outputs, session: Session):
     def _():
         try:
             date_from, date_to = input.time_from_input_date(), input.time_to_input_date()
+            if date_from >= date_to:
+                ui.notification_show(
+                    f"'From' date cannot be greater or equal to the 'To' date -> ERROR: {date_from} >= {date_to}",
+                    type="error",
+                    duration=5
+                )
+                return
             report_id = client.api_caller.request_a_csv_report(time_from=date_from, time_to=date_to)
             ui.notification_show(
                 f"Requested a CSV report from {date_from} to {date_to}. Report ID will be '{report_id}'",
@@ -201,6 +217,9 @@ def server(input: Inputs, output: Outputs, session: Session):
         except Trading212CredentialsError as e:
             logging.warning(f"Trading212 credentials error: {e}")
             export_reports_df = pd.DataFrame()
+
+        export_reports_df_value.set(export_reports_df)
+
 
 
 
