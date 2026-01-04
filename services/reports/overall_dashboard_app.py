@@ -140,7 +140,7 @@ transactions = data_manager.transactions.build_tags_lookup()
 providers_details = additional_tags.get_providers_details(dataset)
 
 banks_tags = ['Monzo', 'HSBC', 'Revolut']  # TODO make it dynamic
-monthly_basics_tags = ['Rent', 'Home Bills', 'Subscription', 'Super Market']
+monthly_basics_tags = ['Rent', 'Home Bills', 'Subscription', 'Super Market'] # TODO also commute
 monthly_extras_tags = ["Eating out", "Entertainment", "Online orders", 'Therapy']
 finance_tags = ["Investments", "Savings", 'Interest']
 
