@@ -839,7 +839,12 @@ class CachedFileDataManager:
             else:
                 return None
 
-        df_metadata = self.tags_manager.all_tags_df.merge(self.tags_metadata_df, on='name')
+        # TODO tags metadata don't need to have 'type' as column
+        df_metadata = self.tags_metadata_df.copy()
+        if 'type' in df_metadata.columns:
+            del df_metadata['type']
+
+        df_metadata = self.tags_manager.all_tags_df.merge(df_metadata, on='name')
         del df_metadata['conditions_json']
 
         return df_metadata
