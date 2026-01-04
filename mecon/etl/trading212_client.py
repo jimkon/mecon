@@ -16,6 +16,8 @@ from mecon.etl.dataset import Dataset
 
 
 def _sleep_for(seconds, message):
+    if seconds == 0:
+        return
     logging.info(message)
     for _ in tqdm(range(seconds), desc='Waiting...'):
         time.sleep(1)
@@ -112,7 +114,7 @@ class Trading212APICaller:
         if r.status_code == 401:
             raise Trading212CredentialsError("Trading212 API: Authentication error while requesting exports history.")
         if r.status_code == 429:
-            if retry_after > 0:
+            if retry_after >= 0:
                 _sleep_for(retry_after,
                            f"Trading212 API: API[list_generated_reports] responded with a 429 'Limited: 1 / 1m0s' status. Waiting for {retry_after} seconds.")
                 r = requests.get(url, headers=headers, timeout=30)
@@ -204,7 +206,10 @@ class Trading212APICaller:
             report_id: int,
     ):
         try:
-            reports_list = self.list_generated_reports()
+            try:
+                reports_list = self.list_generated_reports(retry_after=-1)
+            except requests.exceptions.HTTPError as e:
+                return False
             filtered_reports = [rep for rep in reports_list.root if rep.reportId == report_id]
             if len(filtered_reports) == 0:
                 return None
@@ -302,6 +307,7 @@ class Trading212Client:
     def list_generated_reports(self, force_api_call=False) -> list[ExportReport] | None:
         if force_api_call or (self.reports_list is None and self.api_key is not None):
             self.reports_list = self.api_caller.list_generated_reports().root
+            logging.info("Retrieved and cached reports list.")
         return self.reports_list
 
     def download_report(self, report: ExportReport):
@@ -319,7 +325,7 @@ class Trading212Client:
         return df
 
     def download_report_id(self, report_id):
-        if self.reports_list is None or report_id not in [rep.reportId for rep in self.reports_list]:
+        if self.reports_list is None or report_id not in self.all_report_ids():
             self.list_generated_reports()
 
         filtered_report = [rep for rep in self.reports_list if rep.reportId == report_id]

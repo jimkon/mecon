@@ -1,6 +1,7 @@
 import abc
 import logging
 import pathlib
+import time
 import uuid
 from abc import abstractclassmethod
 import datetime as dt
@@ -9,6 +10,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Iterable
 
+import dateparser
 import pandas as pd
 
 from mecon.data.transactions import Transactions
@@ -18,7 +20,7 @@ from mecon.etl import transformers
 #     HSBCFileStatementTransformer
 # from mecon.etl.true_layer import TrueLayerAccount, TrueLayerAPIHandler
 from mecon.etl.true_layer_client_by_o3 import TrueLayerClient
-from mecon.etl.trading212_client_by_o3 import Trading212Client
+from mecon.etl import trading212_client, trading212_client_by_o3
 from mecon.etl.monzo_api_client import MonzoClient
 from mecon.settings import DictFile
 from mecon.utils.datatype_transformations import json_to_csv
@@ -401,7 +403,8 @@ class TrueLayerMonzoStatements(TrueLayerStatements):
     account_id = 'bee16ba99227a5079f78408115b05686'
 
 
-class Trading212APIStatements(APIAccountStatementsSource):
+
+class Trading212APIO3Statements(APIAccountStatementsSource):
     id = 'Trading212API'
     dir_name = 'Trading212API'
     original_provider = 'Trading212'
@@ -409,7 +412,7 @@ class Trading212APIStatements(APIAccountStatementsSource):
     @classmethod
     def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
         try:
-            api_handler = Trading212Client(creds)
+            api_handler = trading212_client_by_o3.Trading212Client(creds)
         except Exception as e:
             logging.warning(f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
             api_handler = None
@@ -529,6 +532,78 @@ class Trading212APIStatements(APIAccountStatementsSource):
         return next_since
 
 
+class Trading212APIStatements(APIAccountStatementsSource):
+    id = 'Trading212API'
+    dir_name = 'Trading212API'
+    original_provider = 'Trading212'
+
+    @classmethod
+    def from_path_and_creds(cls, working_dir: Path, creds: DictFile):
+        try:
+            api_handler = trading212_client.Trading212Client(creds)
+            api_handler.load_existing_data(working_dir)
+            api_handler.load_api_key()
+            api_handler.init_api_caller()
+        except Exception as e:
+            logging.warning(f"Failed to initialize api_handler for {cls.__name__} because of {e}. 'fetch' functionality will be turned off.")
+            api_handler = None
+        return cls(
+            working_dir=working_dir,
+            trans_transformer=transformers.Trading212StatementTransformer(cls.id),
+            api_handler=api_handler
+        )
+
+    def fetch(self,
+              since: dt.datetime | None = None,
+              max_wait_duration=180):
+        super().fetch(since)
+
+        if since is None:
+            last_fetched_date = self.api_handler.last_fetched_date()
+            since = last_fetched_date if last_fetched_date else dateparser.parse('a year ago')
+
+        report_id = self.api_handler.api_caller.request_a_csv_report(
+            time_from=since,
+            time_to=dateparser.parse('today'),
+        ).reportId
+
+        logging.info(f"Requested report ID: {report_id}")
+        is_ready = self.api_handler.api_caller.check_requested_report_status(report_id)
+        if is_ready is None:
+            logging.error('An error occurred while requesting a CSV report. Requested report ID cannot be found.')
+            return None
+
+        wait_duration = 10
+        time_start = time.time()
+        while time.time() < time_start + max_wait_duration and not is_ready:
+            logging.info(f"Waiting for {wait_duration} seconds for the report to be ready...")
+            time.sleep(wait_duration)
+            is_ready = self.api_handler.api_caller.check_requested_report_status(report_id)
+
+        logging.info(f"fetch() finished waiting: report '{report_id}' {is_ready=}")
+        if is_ready:
+            logging.info("Trading212APIStatements: Report ID is ready.")
+            return self.download_and_save_report(report_id)
+        else:
+            logging.error('An error occurred while requesting a CSV report. Requested report ID cannot be found.')
+            return None
+
+
+    def save_statement(self, df_statement):
+        report_ids = df_statement["_reportId"].unique()
+        logging.info(f"Trading212APIStatements.save_statement: Found {len(report_ids)} report IDs {report_ids}.")
+        for report_id in report_ids:
+            from_str, to_str = str(df_statement['_chunk_from'].min())[:10], str(df_statement['_chunk_to'].max())[:10]
+            filename = self.working_dir / f"from_{from_str}_to_{to_str}_rid{report_id}.csv"
+            df_statement.to_csv(filename, index=False)
+            logging.info(f"Trading212APIStatements.save_statement: Saved report {report_id} to {filename}.")
+
+    def download_and_save_report(self, report_id):
+        df = self.api_handler.download_report_id(report_id)
+        self.save_statement(df)
+        return df
+
+
 class MonzoAPIStatements(APIAccountStatementsSource):
     id = 'MonzoAPI'
     dir_name = 'MonzoAPI'
@@ -611,7 +686,7 @@ ACCOUNT_STATEMENT_SOURCES = [
     TrueLayerRevolutRONStatements,
     TrueLayerRevolutHUFStatements,
     TrueLayerMonzoStatements,
-    Trading212APIStatements,
+    Trading212APIO3Statements,
     MonzoAPIStatements,
 ]
 

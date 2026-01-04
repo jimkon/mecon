@@ -77,8 +77,9 @@ def generate_export_reports_table(trd212_account, input_comps):
 data_manager = WorkingDataManager()
 dataset = data_manager.dataset
 statements = Trading212APIStatements.from_path_and_creds(dataset.statements / 'Trading212API', creds=dataset.creds)
-
 client = statements.api_handler
+
+
 client.load_existing_data(dataset.statements / 'Trading212API')
 last_fetched_date = client.last_fetched_date()
 existing_data_stats_dict = client.existing_data_stats()
@@ -194,7 +195,8 @@ def server(input: Inputs, output: Outputs, session: Session):
             )
             is_ready = client.api_caller.check_requested_report_status(report_id.reportId)
             if is_ready is None:
-                raise Exception('Not ready')
+                raise Exception('An error occurred while requesting a CSV report. Requested report ID cannot be found.')
+
             time_start = time.time()
             while time.time() < time_start + max_wait_duration and not is_ready:
                 logging.info(f"Waiting for {wait_duration} seconds...")
