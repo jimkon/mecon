@@ -13,6 +13,8 @@ async def redirect_to_menu(request):
     return RedirectResponse(url='/auth/truelayer')
 
 
+# TODO  rename from auth to api
+
 # combine apps ----
 routes = [
     Route('/', endpoint=redirect_to_menu),
