@@ -13,3 +13,4 @@ Monzo-API==0.3.0
 monzo==0.10.0
 httpx==0.28.1
 dateparser==1.2.2
+pydantic>= 2.0

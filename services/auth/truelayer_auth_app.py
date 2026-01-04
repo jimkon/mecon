@@ -320,6 +320,7 @@ app_ui = shiny_app.app_ui_factory(
     ui.row(
         ui.tags.a("Monzo auth", href=f"http://127.0.0.1:8003/auth/monzo"),
         ui.tags.a("True Layer auth", href=f"http://127.0.0.1:8003/auth/truelayer"),
+        ui.tags.a("Trading 212 API", href=f"http://127.0.0.1:8003/auth/trd212"),
     ),
     ui.navset_tab(
         *(ui.nav_panel(src.upper(), source_ui(src)) for src in sources)
