@@ -251,22 +251,26 @@ class Trading212Client:
         self.api_caller = Trading212APICaller(self.api_key)
         logging.info('Trading212 API caller initialized.')
 
-    def load_existing_data(self, from_dirpath: pathlib.Path, remove_na=True):
+    def load_existing_data(self, from_dirpath: pathlib.Path):
         files = from_dirpath.glob('*.csv')
         df = pd.concat([pd.read_csv(file) for file in files])
 
-        if remove_na:
-            self.existing_data = df[~df['_reportId'].isna()].copy()
-        else:
-            self.existing_data = df
+        self.existing_data = df
 
-        logging.info(f"Existing data loaded, {len(self.existing_data)} rows (filtered from {len(df)} rows).")
+        logging.info(f"Existing data loaded, {len(self.existing_data)} rows.")
+
+    def get_existing_data(self, remove_na=True):
+        if remove_na:
+            return self.existing_data[~self.existing_data['_reportId'].isna()].copy()
+        else:
+            return self.existing_data
+
 
     def existing_data_stats(self):
-        df = self.existing_data.copy()
+        df = self.get_existing_data()
         df['_reportId'] = df['_reportId'].astype(int)
         df['transaction_date'] = df['Time'].str.split().apply(lambda sp: sp[0])
-        reports_data = self.existing_data.groupby('_reportId').agg(
+        reports_data = df.groupby('_reportId').agg(
             {'_chunk_from': min, '_chunk_to': max}).reset_index().set_index('_reportId').to_dict('index')
         stats = {
             'report_ids': reports_data,
@@ -291,8 +295,12 @@ class Trading212Client:
         else:
             return None
 
-    def list_generated_reports(self) -> list[ExportReport] | None:
-        if self.reports_list is None and self.api_key is not None:
+    def all_report_ids(self) -> list[int]:
+        return self.existing_data['_reportId'].unique().tolist()
+
+
+    def list_generated_reports(self, force_api_call=False) -> list[ExportReport] | None:
+        if force_api_call or (self.reports_list is None and self.api_key is not None):
             self.reports_list = self.api_caller.list_generated_reports().root
         return self.reports_list
 
@@ -304,12 +312,9 @@ class Trading212Client:
 
         _id = report.reportId
         from_str, to_str = str(report.timeFrom)[:10], str(report.timeTo)[:10]
-        # filename = self.dataset.statements / 'Trading212API' / f"from_{from_str}_to_{to_str}_rid{_id}.csv"
-        # df["_file_name"] = filename
         df["_reportId"] = _id
         df["_chunk_from"] = from_str
         df["_chunk_to"] = to_str
-        # df.to_csv(filename, index=False)
         logging.info(f"Trading212Client.download_report_id: Downloaded report {_id}.")
         return df
 

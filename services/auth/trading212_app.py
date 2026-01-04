@@ -8,17 +8,19 @@ from shiny import App, Inputs, Outputs, Session, render, ui, reactive
 
 from mecon.app import shiny_app
 from mecon.app.current_data import WorkingDataManager
-from mecon.etl.trading212_client import Trading212Client, Trading212CredentialsError, Trading212APICaller
+from mecon.etl.account_statements import Trading212APIStatements
+from mecon.etl.trading212_client import Trading212Client, Trading212CredentialsError
 
 
 
-def generate_export_reports_table(trd212_client, input_comps):
+def generate_export_reports_table(trd212_account, input_comps):
     ui.notification_show(
         f"Requesting data from the API, it might take a while...",
         type="default",
         duration=2,
     )
-    reports_list = trd212_client.list_generated_reports()
+    trd212_client = trd212_account.api_handler
+    reports_list = trd212_client.list_generated_reports(force_api_call=True)
     _export_reports = trd212_client.existing_data_stats()
     df = pd.DataFrame([dict(rep) for rep in reports_list])
     df['timeFrom'] = pd.to_datetime(df['timeFrom']).dt.strftime("%Y-%m-%d")
@@ -39,34 +41,48 @@ def generate_export_reports_table(trd212_client, input_comps):
                 type="warning",
                 duration=2,
             )
-            trd212_client.download_report_id(report_id)
-            ui.notification_show(
-                f"Downloading report {report_id}... Done!",
-                type="default",
-                duration=2,
-            )
+            try:
+                trd212_account.download_and_save_report(report_id)
+                ui.notification_show(
+                    f"Downloading report {report_id}... Done!",
+                    type="default",
+                    duration=2,
+                )
+            except pd.errors.EmptyDataError as empty_df_error:
+                logging.exception(empty_df_error)
+                ui.notification_show(
+                    f"Empty report error: Downloading report {report_id}... Failed with exception: {empty_df_error}!",
+                    type="error",
+                    duration=5,
+                )
+            except Exception as e:
+                logging.exception(e)
+                ui.notification_show(
+                    f"Downloading report {report_id}... Failed with exception: {e}!",
+                    type="error",
+                    duration=5,
+                )
+
 
         return btn
 
     # df['downloadLink'] = df['downloadLink'].apply(lambda url: ui.HTML(f"<a href='{url}' target='_blank' rel='noopener'>Download</a>")
     #     if url else "")
     df['downloadLink'] = df['reportId'].apply(lambda rid: generate_download_button(rid))
-    df['downloaded'] = df['reportId'].apply(lambda rid: rid in _export_reports['report_ids'].keys())
+    df['downloaded'] = df['reportId'].apply(lambda rid: rid in client.all_report_ids())
     return reports_list, df
 
 
 
 data_manager = WorkingDataManager()
 dataset = data_manager.dataset
+statements = Trading212APIStatements.from_path_and_creds(dataset.statements / 'Trading212API', creds=dataset.creds)
 
-client = Trading212Client.from_dataset(dataset)
+client = statements.api_handler
 client.load_existing_data(dataset.statements / 'Trading212API')
 last_fetched_date = client.last_fetched_date()
 existing_data_stats_dict = client.existing_data_stats()
 
-
-
-# from mecon.monitoring.logs import setup_logging
 
 logging.basicConfig()
 
@@ -93,14 +109,14 @@ app_ui = shiny_app.app_ui_factory(
                 ui.input_date(id="time_to_input_date", label="To", value=dateparser.parse('today')),
             ),
             ui.card_footer(
-                ui.input_action_button(id="export_reports_request_button", label="Request", disabled=False),
-                ui.input_action_button(id="export_reports_request_and_download_button", label="Request and download", disabled=False),
+                ui.input_task_button(id="export_reports_request_button", label="Request", disabled=False),
+                ui.input_task_button(id="export_reports_request_and_download_button", label="Request and download", disabled=False),
             ),
         ),
         ui.card(
             ui.card_header("Requested export reports"),
             ui.output_data_frame(id="export_reports_table"),
-            ui.card_footer(ui.input_action_button(id="export_reports_refresh_button", label="Refresh", disabled=False)),
+            ui.card_footer(ui.input_task_button(id="export_reports_refresh_button", label="Refresh", disabled=False)),
         ),
         ui.card(
             ui.card_header("Existing data"),
@@ -111,15 +127,19 @@ app_ui = shiny_app.app_ui_factory(
 
 
 def server(input: Inputs, output: Outputs, session: Session):
-    try:
-        client.load_api_key()
-        client.init_api_caller()
-        reports_list, export_reports_df = generate_export_reports_table(client, input_comps=input)
-    except Trading212CredentialsError as e:
-        logging.warning(f"Trading212 credentials error: {e}")
-        export_reports_df = pd.DataFrame()
+    export_reports_df_value = reactive.Value()
+    def refresh_client():
+        global reports_list, export_reports_df
+        try:
+            client.load_api_key()
+            client.init_api_caller()
+            reports_list, export_reports_df = generate_export_reports_table(statements, input_comps=input)
+        except Trading212CredentialsError as e:
+            logging.warning(f"Trading212 credentials error: {e}")
+            export_reports_df = pd.DataFrame()
+        export_reports_df_value.set(export_reports_df)
+    refresh_client()
 
-    export_reports_df_value = reactive.Value(export_reports_df)
 
     @render.text
     def api_key_status_text():
@@ -150,6 +170,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                 f"Requested a CSV report from {date_from} to {date_to}. Report ID will be '{report_id}'",
                 type="default",
             )
+            refresh_client()
         except Exception as e:
             logging.exception(e)
             ui.notification_show(
@@ -186,7 +207,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                     type="warning",
                     duration=2,
                 )
-                client.download_report_id(report_id)
+                statements.download_and_save_report(report_id)
                 ui.notification_show(
                     f"Downloading report {report_id}... Done!",
                     type="default",
@@ -198,6 +219,7 @@ def server(input: Inputs, output: Outputs, session: Session):
                     type="error",
                     duration=5,
                 )
+            refresh_client()
 
         except Exception as e:
             logging.exception(e)
@@ -209,15 +231,7 @@ def server(input: Inputs, output: Outputs, session: Session):
     @reactive.effect
     @reactive.event(input.export_reports_refresh_button)
     def _():
-        global reports_list, export_reports_df
-        try:
-            client.load_api_key()
-            client.init_api_caller()
-            reports_list, export_reports_df = generate_export_reports_table(client, input_comps=input)
-        except Trading212CredentialsError as e:
-            logging.warning(f"Trading212 credentials error: {e}")
-            export_reports_df = pd.DataFrame()
-
+        refresh_client()
         export_reports_df_value.set(export_reports_df)
 
 
